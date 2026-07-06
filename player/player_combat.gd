@@ -63,7 +63,7 @@ func cancel_input() -> void:
 func weapons_out() -> bool:
 	return World.now() - _last_attack_time < _body.tuning.weapons_out_duration
 
-func _unhandled_input(event: InputEvent) -> void:
+func _input(event: InputEvent) -> void:
 	if _body != null and _body.is_stunned():
 		return
 	if event.is_action_pressed("attack_x"):
