@@ -5,10 +5,28 @@ class_name SwordTuning extends WeaponTuning
 
 @export_group("Combo X")
 @export var combo_window := 0.6
+## Rama "espera": tardar al menos esto (dentro de la ventana) en encadenar el 3er golpe
+## convierte los golpes 3-4 de estocadas a vueltas completas.
+@export var ground_wait_branch_threshold := 0.3
+
+@export_group("Swings (ángulos)")
+## Barrido del golpe Y básico (tap, launcher y cargada aérea).
+@export var strike_angle := 150.0
+## Medio arco de los swings 1-2 del combo terrestre (de -esto a +esto).
+@export var combo_swing_angle := 70.0
+## Medio arco del hachazo vertical del finisher aéreo.
+@export var air_finisher_angle := 95.0
+## Swing degradado del X cargado cuando no hay barra para el dash.
+@export var charged_fallback_angle := 130.0
 
 @export_group("X cargado (dash sweet spot)")
 @export var charged_dash_distance := 5.0
 @export var charged_dash_duration := 0.14
+## El dash cargado tiene su PROPIO hitbox (en la espada), separado del dash de movimiento
+## del dodge: su daño/stun/tamaño se tunean acá, no en PlayerTuning.
+@export var charged_dash_damage := 1.0
+@export var charged_dash_hit_radius := 1.1
+@export var charged_dash_stun: StunSettings
 
 @export_group("Y cargada aérea (spike + rebote)")
 ## Velocidad del spike hacia el suelo antes de rebotar. La altura del auto-launch y del

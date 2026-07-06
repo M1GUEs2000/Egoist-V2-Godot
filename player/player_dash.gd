@@ -30,6 +30,7 @@ func setup(body: Player, loco: PlayerLocomotion, register_air_hit_stall: Callabl
 	_hitbox.source = body
 	_hitbox.damage = t.dash_damage
 	_hitbox.stun = t.dash_stun
+	_hitbox.can_be_parried = false  # el dash nunca se parria (solo la espada)
 	(_hitbox_shape.shape as SphereShape3D).radius = t.dash_hit_radius
 	_hitbox.landed.connect(_on_dash_hit)
 
@@ -48,8 +49,9 @@ func dodge() -> void:
 		if not _can_airdash:
 			return
 		_can_airdash = false
-	if _body.meter != null:
-		_body.meter.spend_dash()
+	# El dodge golpea SOLO si había barra: spend_dash devuelve si alcanzaba el coste
+	# (igual mueve sin barra, solo que sin daño).
+	var had_bar := _body.meter != null and _body.meter.spend_dash()
 
 	var input := _loco.read_move_input()
 	var camera_dir := _loco.camera_relative(input)
@@ -57,13 +59,16 @@ func dodge() -> void:
 		_dash_dir = _loco.movement_direction(input, camera_dir).normalized()
 	else:
 		_dash_dir = _body.forward()
-	_start_dash(_dash_dir, _body.tuning.dash_distance, _body.tuning.dash_duration, true, false)
+	_start_dash(_dash_dir, _body.tuning.dash_distance, _body.tuning.dash_duration, true, false,
+			had_bar and _body.tuning.dash_deals_damage)
 
+## Dash dirigido por otra mecánica (ej: el dash cargado de la espada). SOLO movimiento: el
+## daño de esos dashes lo pone su propio hitbox (no el del dodge). Ver Sword._run_charged_dash_window.
 func force_dash(dir: Vector3, distance: float, duration: float, boost_bump_momentum: bool) -> void:
 	dir.y = 0.0
 	if dir.length_squared() < 0.0001:
 		dir = _body.forward()
-	_start_dash(dir.normalized(), distance, duration, boost_bump_momentum, true)
+	_start_dash(dir.normalized(), distance, duration, boost_bump_momentum, true, false)
 
 func tick(delta: float) -> void:
 	_timer -= delta
@@ -77,7 +82,7 @@ func tick(delta: float) -> void:
 		_end_dash()
 
 func _start_dash(dir: Vector3, distance: float, duration: float, boost_bump_momentum: bool,
-		cancel_controlled: bool) -> void:
+		cancel_controlled: bool, deal_damage: bool) -> void:
 	if cancel_controlled:
 		_cancel_controlled_movement.call()
 	_dash_dir = dir
@@ -88,7 +93,7 @@ func _start_dash(dir: Vector3, distance: float, duration: float, boost_bump_mome
 	is_dashing = true
 	_timer = _active_duration
 	_body.collision_mask &= ~World.LAYER_ENEMY  # atraviesa enemigos durante el dash
-	if _body.tuning.dash_deals_damage:
+	if deal_damage:
 		_hitbox.begin_swing()
 
 func _end_dash() -> void:

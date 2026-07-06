@@ -51,6 +51,12 @@ class_name PlayerTuning extends Resource
 @export var meter_charged_cost := 1.0      # 1 barra por ataque cargado (sweet spot)
 @export var meter_charged_kill_window := 0.6  # ventana tras el cargado para el kill especial
 
+@export_group("Input feel")
+## Input durante animación se guarda esto y dispara en el primer frame libre (InputBuffer).
+@export var input_buffer_time := 0.15
+## Tap ejecuta al PRESS; si sigue presionado más que esto → hold (InputBuffer).
+@export var input_hold_threshold := 0.18
+
 @export_group("Combat")
 ## Cuánto duran las "armas afuera" tras el último ataque (gatilla el lock-on, batch 6).
 @export var weapons_out_duration := 3.0

@@ -6,23 +6,20 @@ extends Node
 
 signal hit_registered(count: int)
 
-const COMBO_WINDOW := 1.5  # segundos entre hits para mantener combo
+var tuning: GameTuning = preload("res://data/game_tuning.tres")
 
 var hit_count := 0
 
 var _last_hit_time := -999.0
 
 func _process(_delta: float) -> void:
-	if hit_count > 0 and _now() - _last_hit_time > COMBO_WINDOW:
+	if hit_count > 0 and World.now() - _last_hit_time > tuning.combo_window:
 		reset_combo()
 
 func register_hit() -> void:
 	hit_count += 1
-	_last_hit_time = _now()
+	_last_hit_time = World.now()
 	hit_registered.emit(hit_count)
 
 func reset_combo() -> void:
 	hit_count = 0
-
-func _now() -> float:
-	return Time.get_ticks_msec() / 1000.0

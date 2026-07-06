@@ -23,10 +23,7 @@ func _ready() -> void:
 	collision_mask = 0                     # yo no detecto a nadie
 	monitoring = false
 	if health == null:
-		for sibling in owner_node.get_children():
-			if sibling is Health:
-				health = sibling
-				break
+		health = World.find_sibling(self, Health) as Health
 
 func can_receive_hit() -> bool:
 	if owner_node.has_method("can_receive_hit") and not owner_node.call("can_receive_hit"):

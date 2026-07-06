@@ -6,8 +6,6 @@ enum Hostility { PASSIVE, REACTIVE, AGGRESSIVE, ULTRA_AGGRESSIVE }
 enum CombatState { NORMAL, STUNNED, ARMORED }
 enum AirState { GROUNDED, AIRBORNE }
 
-static var active := []
-
 @export var hostility := Hostility.AGGRESSIVE
 @export var alert_radius := 8.0
 @export var initial_combat_state := CombatState.NORMAL
@@ -40,8 +38,6 @@ var _launch_id := 0
 
 func _ready() -> void:
 	add_to_group("enemy")
-	if not active.has(self):
-		active.append(self)
 	collision_layer = World.LAYER_ENEMY
 	collision_mask = World.LAYER_WORLD | World.LAYER_PLAYER | World.LAYER_ENEMY
 
@@ -57,9 +53,6 @@ func _ready() -> void:
 
 	combat_state = CombatState.ARMORED if armored else initial_combat_state
 	_refresh_visual_state()
-
-func _exit_tree() -> void:
-	active.erase(self)
 
 func is_dead() -> bool:
 	return _dead
@@ -146,7 +139,7 @@ func launch(height: float, hang_time: float) -> bool:
 	return true
 
 func _launch_routine(id: int, height: float, hang_time: float) -> void:
-	var rise_time := 0.15
+	var rise_time := World.LAUNCH_RISE_TIME
 	var rise_speed := height / rise_time
 	var rise_left := rise_time
 	while rise_left > 0.0 and not _dead and id == _launch_id:
@@ -235,7 +228,8 @@ func _damage_armor(hits: int) -> void:
 
 func _provoke_nearby() -> void:
 	hostility = Hostility.AGGRESSIVE
-	for enemy in active:
+	for node in get_tree().get_nodes_in_group("enemy"):
+		var enemy := node as EnemyBase
 		if enemy == null or enemy == self or enemy.is_dead():
 			continue
 		if enemy.hostility != Hostility.PASSIVE:
@@ -283,7 +277,7 @@ func _land() -> void:
 
 func _die() -> void:
 	_dead = true
-	active.erase(self)
+	remove_from_group("enemy")  # los vivos ya no lo ven (targeting/provocación)
 	collision_layer = 0
 	collision_mask = 0
 	if hurtbox != null:

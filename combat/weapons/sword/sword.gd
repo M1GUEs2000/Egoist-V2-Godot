@@ -2,32 +2,37 @@ class_name Sword extends WeaponBase
 ## Espada (bóveda: Armas/Espada): combo X de 4 + rama espera + sweet spot;
 ## Y = launcher / Y cargada aérea. X cargado = dash ofensivo (gasta 1 barra).
 ## Swings 100% procedurales (tweens de quaternion sobre el Pivot), SIN AnimationPlayer.
+## Los combos corren sobre el motor genérico de WeaponBase (run_combo_chain);
+## acá vive solo la coreografía. Ángulos y ventanas se tunean en SwordTuning.
 # ponytail: personalidades X/Y como funcs aquí; extraer strategy cuando exista la 2ª arma.
 
 const STEP_COUNT := 4
-const STRIKE_ANGLE := 150.0
-## Rama "espera": tardar al menos esto (dentro de la ventana) en encadenar el 3er golpe
-## convierte los golpes 3-4 de estocadas a vueltas completas.
-const WAIT_BRANCH_THRESHOLD := 0.3
 
-var _step := 0
-var _combo_playing := false
-var _window_open := false
-var _queued := false
-var _queued_time := 0.0
-var _window_expiry := 0.0
-var _spin_branch := false
 var _launcher_id := 0
+var _charged_dash_id := 0
 var _swing_tween: Tween
 
 @onready var _launcher_hitbox: Hitbox = $LauncherHitbox
+@onready var _charged_dash_hitbox: Hitbox = $ChargedDashHitbox
+@onready var _charged_dash_shape: CollisionShape3D = $ChargedDashHitbox/CollisionShape3D
 
 func setup(player: Player) -> void:
 	super.setup(player)
 	_launcher_hitbox.source = player
 	_launcher_hitbox.damage = 1.0 if _t().launcher_deals_damage else 0.0
 	_launcher_hitbox.stun = tuning.stun
+	_launcher_hitbox.can_be_parried = false  # el cono launcher nunca se parria (ex ConeLauncherHitbox)
+	_launcher_hitbox.about_to_hit.connect(_on_launcher_about_to_hit)
 	_launcher_hitbox.landed.connect(_on_launcher_hit)
+
+	# Dash cargado: hitbox PROPIO de la espada (no comparte con el dash de movimiento del
+	# dodge). Su daño/stun/tamaño salen de SwordTuning; nunca se parria.
+	_charged_dash_hitbox.source = player
+	_charged_dash_hitbox.damage = _t().charged_dash_damage
+	_charged_dash_hitbox.stun = _t().charged_dash_stun
+	_charged_dash_hitbox.can_be_parried = false
+	(_charged_dash_shape.shape as SphereShape3D).radius = _t().charged_dash_hit_radius
+	_charged_dash_hitbox.landed.connect(_on_charged_dash_hit)
 
 func tap(slot: World.Slot) -> void:
 	if slot == World.Slot.X:
@@ -43,85 +48,37 @@ func hold(slot: World.Slot, _level: int) -> void:
 
 # ---- Personalidad X: combo de 4 + cargado (dash sweet spot) ----
 
+## Combo terrestre (bóveda Armas): X X X X → swing, swing, estocada, estocada.
+## X X (espera) X X → los golpes 3-4 pasan a vueltas completas.
 func _tap_x() -> void:
 	# En el aire: combo aéreo (motor genérico en WeaponBase), no el terrestre.
 	if _player.is_airborne():
 		play_aerial_combo()
 		return
-
-	if _combo_playing:
-		if _window_open:
-			_queued = true
-			_queued_time = World.now()
+	if try_queue_combo(&"ground"):
 		return
+	run_combo_chain(&"ground", STEP_COUNT, tuning.swing_time, _t().combo_window,
+			2, _t().ground_wait_branch_threshold, _begin_ground_step)
 
-	if World.now() > _window_expiry:
-		_step = 0
-	_run_ground_combo()
+func _begin_ground_step(step: int, _finisher: bool, spin: bool) -> void:
+	_play_combo_step(step, spin)
+	_player.attack_step(tuning.swing_time)  # avanza hacia el lockeado / al frente
+	_player.hold_airborne_for_attack()
 
-## Combo terrestre (bóveda Armas): X X X X → swing, swing, estocada, estocada.
-## X X (espera) X X → los golpes 3-4 pasan a vueltas completas.
-func _run_ground_combo() -> void:
-	_combo_playing = true
-	_spin_branch = false
-	_routine_id += 1
-	var id := _routine_id
-
-	while true:
-		_queued = false
-		_window_open = false
-		_step = (_step % STEP_COUNT) + 1
-
-		_play_combo_step(_step, _spin_branch)
-		_player.attack_step(tuning.swing_time)  # avanza hacia el lockeado / al frente
-		_player.hold_airborne_for_attack()
-		begin_damage_window(tuning.swing_time)
-		ComboTracker.register_hit()
-
-		await wait_seconds(tuning.swing_time)
-		if id != _routine_id:
-			return
-		var last_step_end := World.now()
-
-		if _step >= STEP_COUNT:
-			_step = 0
-			break
-
-		# Ventana de encadene: esperar el siguiente tap o cortar el combo.
-		_window_open = true
-		_window_expiry = World.now() + _t().combo_window
-		while World.now() < _window_expiry and not _queued:
-			await get_tree().process_frame
-			if id != _routine_id:
-				return
-		_window_open = false
-
-		if not _queued:
-			_step = 0
-			break
-
-		# Al pasar del 2º al 3er golpe: si hubo "espera", rama de vueltas.
-		if _step == 2:
-			_spin_branch = (_queued_time - last_step_end) >= WAIT_BRANCH_THRESHOLD
-
-	_combo_playing = false
-	_window_open = false
-
-## X cargado: dash ofensivo (sweet spot). Gasta 1 barra; el daño lo pone el hitbox del
-## dash (PlayerDash) → un kill en la ventana del cargado devuelve la barra completa.
+## X cargado: dash ofensivo (sweet spot). Gasta 1 barra; el daño lo pone el hitbox PROPIO
+## de la espada (no el del dash de movimiento) → un kill en la ventana del cargado devuelve
+## la barra completa.
 func _hold_x() -> void:
 	# Move de compromiso: interrumpe el combo en curso y dashea.
 	cancel_routines()
-	_combo_playing = false
-	_window_open = false
-	_step = 0
 
 	if _player.meter.spend_charged():
 		_player.force_dash(_player.forward(), _t().charged_dash_distance, _t().charged_dash_duration, true)
+		_run_charged_dash_window()
 	else:
 		# ponytail: sin barra no hay dash — cae a un swing cargado normal.
 		# "sweet spot degradado sin meter" es diseño futuro, ver bóveda Combate.
-		swing(130.0)
+		swing(_t().charged_fallback_angle)
 		_player.hold_airborne_for_attack()
 		begin_damage_window(tuning.swing_time)
 	ComboTracker.register_hit()
@@ -129,7 +86,7 @@ func _hold_x() -> void:
 # ---- Personalidad Y: golpe simple + launcher / cargada aérea ----
 
 func _tap_y() -> void:
-	swing(STRIKE_ANGLE)
+	swing(_t().strike_angle)
 	_player.attack_step(tuning.swing_time)  # encara y avanza hacia el enemigo lockeado
 	_player.hold_airborne_for_attack()
 	begin_damage_window(tuning.swing_time)
@@ -141,7 +98,7 @@ func _hold_y() -> void:
 		_aerial_charged_y()
 		return
 	# Launcher terrestre (ex AttackLauncher: solo desde el suelo — ya garantizado acá).
-	swing_up(STRIKE_ANGLE)
+	swing_up(_t().strike_angle)
 	_run_launcher()
 
 func _run_launcher() -> void:
@@ -171,7 +128,7 @@ func _aerial_charged_y() -> void:
 func _run_aerial_charged_y() -> void:
 	var t := _t()
 	_player.launch(t.launcher_height, t.launcher_hang_time)  # auto-empuje hacia arriba
-	swing_up(STRIKE_ANGLE)
+	swing_up(t.strike_angle)
 	begin_damage_window(tuning.swing_time)
 	ComboTracker.register_hit()
 	await wait_seconds(tuning.swing_time)
@@ -182,14 +139,34 @@ func _run_aerial_charged_y() -> void:
 					func() -> float: return _player.global_position.y,
 					t.launcher_hang_time)
 
-func _on_launcher_hit(hurtbox: Hurtbox, died: bool) -> void:
-	_on_hit(hurtbox, died)  # meter / air-hit-stall, igual que la hoja
+## Lanza al enemigo ANTES de que el Hitbox aplique el daño (v1: "lanza primero, así el golpe
+## ya ve is_airborne = true y usa el stun aéreo, no el de suelo" — ConeLauncherHitbox.TryHit).
+func _on_launcher_about_to_hit(hurtbox: Hurtbox) -> void:
 	# Solo lanza lo lanzable: una pared o un pickup no salen volando.
-	# (v1 lanzaba ANTES del daño para que el golpe viera el stun aéreo; acá el Hitbox
-	# ya aplicó el daño — revisar el orden en batch 5 cuando existan enemigos.)
 	var target := hurtbox.owner_node
 	if target.has_method("launch"):
 		target.call("launch", _t().launcher_height, _t().launcher_hang_time)
+
+func _on_launcher_hit(hurtbox: Hurtbox, died: bool) -> void:
+	_on_hit(hurtbox, died)  # meter / air-hit-stall, igual que la hoja
+
+# ---- Dash cargado: ventana de daño con hitbox propio de la espada ----
+
+## Prende el hitbox del dash cargado mientras dura el dash (la espada mueve al player vía
+## PlayerDash.force_dash, pero el daño lo pone ESTE hitbox, no el del dodge).
+func _run_charged_dash_window() -> void:
+	_charged_dash_id += 1
+	var id := _charged_dash_id
+	_charged_dash_hitbox.begin_swing()
+	await wait_seconds(_t().charged_dash_duration)
+	if id != _charged_dash_id:
+		return  # otro dash cargado ya arrancó: él es dueño del hitbox
+	_charged_dash_hitbox.end_swing()
+
+## Solo alimenta el meter (sin _window_hits: no es parte de un combo aéreo). Un kill en la
+## ventana del cargado devuelve la barra completa (gain_on_kill lo resuelve).
+func _on_charged_dash_hit(hurtbox: Hurtbox, died: bool) -> void:
+	register_weapon_hit(hurtbox, died)
 
 # ---- Swings visuales (procedurales, quaternions sobre el Pivot) ----
 
@@ -203,11 +180,12 @@ func swing_up(angle: float) -> void:
 
 ## Combo terrestre: swing, swing, estocada, estocada (o vueltas en la rama espera).
 func _play_combo_step(step: int, spin: bool) -> void:
+	var half := _t().combo_swing_angle
 	match step:
 		1:  # izquierda → derecha
-			_play_swing(Quaternion(Vector3.UP, deg_to_rad(-70.0)), Quaternion(Vector3.UP, deg_to_rad(70.0)))
+			_play_swing(Quaternion(Vector3.UP, deg_to_rad(-half)), Quaternion(Vector3.UP, deg_to_rad(half)))
 		2:  # derecha → izquierda
-			_play_swing(Quaternion(Vector3.UP, deg_to_rad(70.0)), Quaternion(Vector3.UP, deg_to_rad(-70.0)))
+			_play_swing(Quaternion(Vector3.UP, deg_to_rad(half)), Quaternion(Vector3.UP, deg_to_rad(-half)))
 		3, 4:
 			if spin:
 				_play_spin()  # vuelta completa
@@ -228,7 +206,8 @@ func play_air_step(step: int, finisher: bool, wait_branch: bool) -> void:
 		_play_spin()  # vuelta completa (golpe 2 y finisher)
 		return
 	if finisher:  # hachazo vertical
-		_play_swing(Quaternion(Vector3.RIGHT, deg_to_rad(-95.0)), Quaternion(Vector3.RIGHT, deg_to_rad(95.0)))
+		var half := _t().air_finisher_angle
+		_play_swing(Quaternion(Vector3.RIGHT, deg_to_rad(-half)), Quaternion(Vector3.RIGHT, deg_to_rad(half)))
 	else:
 		_play_air_diagonal(1.0)  # arriba-der → abajo-izq
 

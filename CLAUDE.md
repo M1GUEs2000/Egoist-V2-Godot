@@ -6,7 +6,7 @@ El diseño vive en la bóveda de Obsidian (`../../Boveda`) — misma fuente de v
 ## Reglas duras (lecciones de la v1)
 
 1. **Git desde el commit 0.** Commit al cerrar cada feature que funcione; nunca más 2 semanas al aire.
-2. **Todo valor tuneable vive en un Resource `.tres` en `data/`** — nunca hardcodeado ni solo en la escena. (En v1 un refactor reseteó los valores tuneados a mano.)
+2. **Todo valor tuneable vive en un Resource `.tres` en `data/`** — nunca hardcodeado ni solo en la escena. (En v1 un refactor reseteó los valores tuneados a mano.) *Excepción acordada:* el tuning de enemigos (`EnemyBase`, `MeleeAttack`, `RangedAttack`, `Perception`, `GroundLocomotion`) vive en `@export` por escena hasta que exista el segundo tipo de enemigo; ahí se extrae un `EnemyTuning` en `data/`.
 3. **Claude edita las escenas `.tscn` como texto.** Tutupa juega, tunea `.tres` y decide diseño. Nada de "yo armo la escena, dime qué hago".
 4. **Verificar headless antes de entregar** (ver abajo). Nunca declarar "listo" sin correr esto.
 5. **Composición Godot-nativa**: `Health`/`WorldMembership`/etc. son nodos hijos; hitbox/hurtbox son `Area3D` + grupo `"hurtbox"`; comunicación por **señales**, nunca polling. Los contratos C# de v1 (`IHittable`/`ILaunchable`/`IParryable`) desaparecen: `has_method()` y grupos.

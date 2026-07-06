@@ -4,14 +4,10 @@ class_name TomatoLaunchBlock extends Node
 @export var horizontal_speed := 10.0
 @export var vertical_speed := 12.0
 
-@onready var _owner_node := get_parent()
-
 func _ready() -> void:
-	for sibling in _owner_node.get_children():
-		var hurtbox := sibling as Hurtbox
-		if hurtbox != null:
-			hurtbox.hit.connect(_on_hit)
-			return
+	var hurtbox := World.find_sibling(self, Hurtbox) as Hurtbox
+	if hurtbox != null:
+		hurtbox.hit.connect(_on_hit)
 
 func _on_hit(from: Node, _damage: float) -> void:
 	var player := from as Player

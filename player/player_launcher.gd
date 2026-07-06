@@ -4,8 +4,6 @@ class_name PlayerLauncher extends Node
 ## aire SIN conectar cae con MÁS fuerza). No aplica gravedad él mismo: provee al glue la
 ## ESCALA de gravedad de este frame. (El freeze vertical de v1 nunca se usaba: eliminado.)
 
-const RISE_TIME := 0.15
-
 var is_launched := false
 
 var _body: Player
@@ -25,12 +23,12 @@ func setup(body: Player) -> void:
 func start_launch(height: float, _hang_time: float) -> void:
 	is_launched = true
 	_height = height
-	_rise_left = RISE_TIME
+	_rise_left = World.LAUNCH_RISE_TIME
 	_body.air_state = Player.AirState.AIRBORNE
 	_body.vertical_velocity = 0.0
 
 func tick_launch(delta: float) -> void:
-	_body.velocity = Vector3.UP * (_height / RISE_TIME)
+	_body.velocity = Vector3.UP * (_height / World.LAUNCH_RISE_TIME)
 	_body.move_and_slide()
 	_rise_left -= delta
 	if _rise_left <= 0.0:

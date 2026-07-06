@@ -14,13 +14,14 @@ enum When { ON_HIT, ON_DEATH }
 @export var when := When.ON_HIT
 
 func _ready() -> void:
-	for sibling in get_parent().get_children():
-		if when == When.ON_HIT and sibling is Hurtbox:
-			sibling.hit.connect(_on_hit)
-			return
-		if when == When.ON_DEATH and sibling is Health:
-			sibling.died.connect(WorldManager.switch_world)
-			return
+	if when == When.ON_HIT:
+		var hurtbox := World.find_sibling(self, Hurtbox) as Hurtbox
+		if hurtbox != null:
+			hurtbox.hit.connect(_on_hit)
+	else:
+		var health := World.find_sibling(self, Health) as Health
+		if health != null:
+			health.died.connect(WorldManager.switch_world)
 
 func _on_hit(_from: Node, _damage: float) -> void:
 	WorldManager.switch_world()

@@ -109,12 +109,12 @@ func _select_attack(distance: float) -> Node:
 	var best: Node = null
 	var best_range := INF
 	for attack in _attacks:
-		var range := float(attack.get("attack_range"))
-		if range < distance:
+		var atk_range := float(attack.get("attack_range"))
+		if atk_range < distance:
 			continue
-		if range < best_range:
+		if atk_range < best_range:
 			best = attack
-			best_range = range
+			best_range = atk_range
 	return best
 
 func _max_attack_range() -> float:
@@ -136,7 +136,8 @@ func _acquire_target() -> Node3D:
 	var best_sqr := INF
 	if _player != null:
 		best_sqr = global_position.distance_squared_to(_player.global_position)
-	for enemy in EnemyBase.active:
+	for node in get_tree().get_nodes_in_group("enemy"):
+		var enemy := node as EnemyBase
 		if enemy == null or enemy == self or not enemy.is_active_in_current_world():
 			continue
 		var sqr := global_position.distance_squared_to(enemy.global_position)

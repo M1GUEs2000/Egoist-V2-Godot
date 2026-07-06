@@ -1,4 +1,4 @@
-[gd_scene load_steps=9 format=3]
+[gd_scene load_steps=10 format=3]
 
 [ext_resource type="Script" path="res://combat/weapons/sword/sword.gd" id="1_sword"]
 [ext_resource type="Resource" path="res://data/sword_tuning.tres" id="2_tuning"]
@@ -18,6 +18,9 @@ radius = 1.35
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_launcher"]
 size = Vector3(1.2, 1.4, 1.2)
+
+[sub_resource type="SphereShape3D" id="SphereShape3D_charged_dash"]
+radius = 1.1
 
 [node name="Sword" type="Node3D"]
 script = ExtResource("1_sword")
@@ -50,3 +53,10 @@ script = ExtResource("3_hitbox")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="LauncherHitbox"]
 shape = SubResource("BoxShape3D_launcher")
+
+[node name="ChargedDashHitbox" type="Area3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, -0.6)
+script = ExtResource("3_hitbox")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="ChargedDashHitbox"]
+shape = SubResource("SphereShape3D_charged_dash")

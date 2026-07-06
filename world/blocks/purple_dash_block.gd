@@ -8,14 +8,10 @@ class_name PurpleDashBlock extends Node
 
 var _last_hit_time := -999.0
 
-@onready var _owner_node := get_parent()
-
 func _ready() -> void:
-	for sibling in _owner_node.get_children():
-		var hurtbox := sibling as Hurtbox
-		if hurtbox != null:
-			hurtbox.hit.connect(_on_hit)
-			return
+	var hurtbox := World.find_sibling(self, Hurtbox) as Hurtbox
+	if hurtbox != null:
+		hurtbox.hit.connect(_on_hit)
 
 func _on_hit(from: Node, _damage: float) -> void:
 	if World.now() - _last_hit_time < hit_cooldown:

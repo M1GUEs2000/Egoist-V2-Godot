@@ -2,7 +2,7 @@ class_name HitDummy extends Node3D
 ## Dummy golpeable para probar armas antes de que EnemyBase exista completo.
 ## Implementa los verbos duck-typed que la espada invoca: launch, slam, push y slam_bounce.
 
-@export var launch_rise_time := 0.15
+@export var launch_rise_time := World.LAUNCH_RISE_TIME
 @export var gravity := -24.0
 @export var ground_y := 0.0
 

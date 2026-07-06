@@ -8,11 +8,9 @@ class_name BreakOnDeath extends Node
 @onready var _owner_node := get_parent()
 
 func _ready() -> void:
-	for sibling in _owner_node.get_children():
-		var health := sibling as Health
-		if health != null:
-			health.died.connect(_on_died)
-			return
+	var health := World.find_sibling(self, Health) as Health
+	if health != null:
+		health.died.connect(_on_died)
 
 func _on_died() -> void:
 	if not is_instance_valid(_owner_node):

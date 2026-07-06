@@ -63,9 +63,7 @@ func _on_area_entered(area: Area3D) -> void:
 	if hurtbox == null:
 		return
 	var amount := 1.0 if hurtbox.owner_node is EnemyBase else _damage
-	var died := hurtbox.receive_hit(_shooter, amount, _velocity.normalized(), null)
-	if died and _shooter is EnemyBase:
-		pass
+	hurtbox.receive_hit(_shooter, amount, _velocity.normalized(), null)
 	queue_free()
 
 func _is_shooter(node: Node) -> bool:

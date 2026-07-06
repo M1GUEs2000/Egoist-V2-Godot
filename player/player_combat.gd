@@ -15,6 +15,8 @@ var _rest_rotations := {}  # WeaponBase → Quaternion
 
 func setup(body: Player) -> void:
 	_body = body
+	buffer.buffer_time = body.tuning.input_buffer_time
+	buffer.hold_threshold = body.tuning.input_hold_threshold
 	for weapon in _weapons():
 		weapon.setup(body)
 		_rest_rotations[weapon] = weapon.quaternion
