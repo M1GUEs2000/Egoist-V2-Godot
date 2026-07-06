@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="SwordTuning" format=3]
+
+[ext_resource type="Script" path="res://data/sword_tuning.gd" id="1_tuning"]
+[ext_resource type="Script" path="res://data/stun_settings.gd" id="2_stun"]
+
+[sub_resource type="Resource" id="Resource_swordstun"]
+script = ExtResource("2_stun")
+
+[resource]
+script = ExtResource("1_tuning")
+stun = SubResource("Resource_swordstun")

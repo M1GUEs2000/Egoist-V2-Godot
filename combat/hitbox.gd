@@ -20,6 +20,11 @@ func _ready() -> void:
 	collision_mask = World.LAYER_HURTBOX  # solo detecto hurtboxes
 	area_entered.connect(_on_area_entered)
 
+## Varios hitboxes de la misma arma (hoja + disco aéreo) comparten el dedup:
+## un enemigo cuenta una sola vez por swing aunque lo toquen los dos.
+func share_already_hit(shared: Array[Hurtbox]) -> void:
+	_already_hit = shared
+
 ## El dueño llama esto al iniciar un swing: limpia dedup y prende detección.
 func begin_swing() -> void:
 	_already_hit.clear()

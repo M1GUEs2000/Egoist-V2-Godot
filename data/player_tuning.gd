@@ -42,6 +42,21 @@ class_name PlayerTuning extends Resource
 @export var launcher_fall_duration := 0.30
 @export var launcher_fall_gravity := 0.85
 
+@export_group("Meter")
+@export var meter_max_bars := 2            # hasta 5 con mejoras (futuro)
+@export var meter_start_bars := 0.0        # arranca vacío; subir para testear cargados
+@export var meter_gain_on_hit := 0.1       # pegar a un enemigo
+@export var meter_gain_on_kill := 0.5      # matarlo
+@export var meter_dash_cost := 0.15        # ~15% de una barra por dash (dodge)
+@export var meter_charged_cost := 1.0      # 1 barra por ataque cargado (sweet spot)
+@export var meter_charged_kill_window := 0.6  # ventana tras el cargado para el kill especial
+
+@export_group("Combat")
+## Cuánto duran las "armas afuera" tras el último ataque (gatilla el lock-on, batch 6).
+@export var weapons_out_duration := 3.0
+@export var inactive_weapon_angle := 75.0  # pose de descanso del arma guardada
+@export var weapon_pose_rotate_speed := 720.0
+
 @export_group("Air hit stall")
 @export var air_stall_base := 0.08
 @export var air_stall_per_hit := 0.04
