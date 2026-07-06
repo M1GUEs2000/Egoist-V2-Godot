@@ -145,7 +145,7 @@ func _run_aerial_charged_y() -> void:
 func _on_aerial_charged_y_hit(hurtbox: Hurtbox, _died: bool) -> void:
 	if not _aerial_charged_y_active:
 		return
-	var target := hurtbox.owner_node
+	var target: Node = hurtbox.owner_node
 	if target.has_method("slam_bounce"):
 		var meet_y := _aerial_charged_meet_y
 		target.call("slam_bounce", _t().aerial_charged_down_speed,
@@ -156,7 +156,7 @@ func _on_aerial_charged_y_hit(hurtbox: Hurtbox, _died: bool) -> void:
 ## ya ve is_airborne = true y usa el stun aéreo, no el de suelo" — ConeLauncherHitbox.TryHit).
 func _on_launcher_about_to_hit(hurtbox: Hurtbox) -> void:
 	# Solo lanza lo lanzable: una pared o un pickup no salen volando.
-	var target := hurtbox.owner_node
+	var target: Node = hurtbox.owner_node
 	if target.has_method("launch"):
 		target.call("launch", _t().launcher_height, _t().launcher_hang_time)
 

@@ -15,7 +15,7 @@ signal hit(from: Node, damage: float)
 ## Enemigos true: conectarle un golpe en el aire ralentiza la caída del jugador (air-hit-stall).
 @export var triggers_air_hit_stall := false
 
-@onready var owner_node := get_parent()
+@onready var owner_node: Node = get_parent()
 
 func _ready() -> void:
 	add_to_group("hurtbox")

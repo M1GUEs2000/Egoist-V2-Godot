@@ -154,7 +154,7 @@ func _begin_air_step(step: int, finisher: bool, wait_branch: bool) -> void:
 ## Solo lo lanzable reacciona (has_method): una pared golpeada se ignora.
 func _finish_air_combo(wait_branch: bool) -> void:
 	for hurtbox in _window_hits.duplicate():
-		var target := hurtbox.owner_node
+		var target: Node = hurtbox.owner_node
 		if wait_branch and target.has_method("push"):
 			target.call("push", _player.forward(), tuning.air_push_speed, tuning.air_push_up_speed)
 		elif not wait_branch and target.has_method("slam"):
