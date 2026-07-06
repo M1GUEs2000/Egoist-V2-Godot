@@ -23,6 +23,7 @@ var _grounded_grace_until := 0.0
 @onready var launcher: PlayerLauncher = $Launcher
 @onready var meter: PlayerMeter = $Meter
 @onready var combat: PlayerCombat = $Combat
+@onready var action_world_switch: ActionWorldSwitchModifier = $ActionWorldSwitchModifier
 
 func _ready() -> void:
 	add_to_group("player")  # la cámara y los enemigos me encuentran por grupo
@@ -113,6 +114,12 @@ func restore_double_jump() -> void:
 
 func restore_airdash() -> void:
 	dash.restore_airdash()
+
+func activate_action_world_switch() -> void:
+	action_world_switch.activate()
+
+func fire_action_world_switch() -> void:
+	action_world_switch.fire_action()
 
 func register_air_hit_stall() -> void:
 	launcher.register_air_hit_stall()

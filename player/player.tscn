@@ -1,4 +1,4 @@
-[gd_scene load_steps=14 format=3]
+[gd_scene load_steps=15 format=3]
 
 [ext_resource type="Script" path="res://player/player.gd" id="1_player"]
 [ext_resource type="Script" path="res://player/player_locomotion.gd" id="2_loco"]
@@ -10,6 +10,7 @@
 [ext_resource type="Script" path="res://player/player_combat.gd" id="8_combat"]
 [ext_resource type="Script" path="res://combat/input_buffer.gd" id="9_buffer"]
 [ext_resource type="PackedScene" path="res://combat/weapons/sword/sword.tscn" id="10_sword_scene"]
+[ext_resource type="Script" path="res://core/action_world_switch_modifier.gd" id="11_action_switch"]
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_body"]
 radius = 0.4
@@ -61,3 +62,6 @@ slot_y = NodePath("../Sword")
 script = ExtResource("9_buffer")
 
 [node name="Sword" parent="." instance=ExtResource("10_sword_scene")]
+
+[node name="ActionWorldSwitchModifier" type="Node" parent="."]
+script = ExtResource("11_action_switch")

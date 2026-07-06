@@ -5,6 +5,11 @@
 [ext_resource type="Script" uid="uid://bm6520nqu8q3f" path="res://visual/camera_rig.gd" id="3_camrig"]
 [ext_resource type="Script" uid="uid://cr2mf5ypgksws" path="res://core/world_membership.gd" id="4_membership"]
 [ext_resource type="PackedScene" path="res://combat/dummies/hit_dummy.tscn" id="5_dummy"]
+[ext_resource type="PackedScene" path="res://world/pickups/world_switch_pickup.tscn" id="6_world_pickup"]
+[ext_resource type="PackedScene" path="res://world/pickups/action_curse_pickup.tscn" id="7_curse_pickup"]
+[ext_resource type="PackedScene" path="res://world/blocks/tomato_launch_block.tscn" id="8_tomato"]
+[ext_resource type="PackedScene" path="res://world/blocks/purple_dash_block.tscn" id="9_purple"]
+[ext_resource type="PackedScene" path="res://world/blocks/breakable_wall.tscn" id="10_breakable_wall"]
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_floor"]
 size = Vector3(40, 1, 40)
@@ -96,6 +101,21 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.1, 0)
 
 [node name="HitDummy" parent="." instance=ExtResource("5_dummy")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -2)
+
+[node name="WorldSwitchPickup" parent="." instance=ExtResource("6_world_pickup")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.5, 0, -2)
+
+[node name="ActionCursePickup" parent="." instance=ExtResource("7_curse_pickup")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.5, 0, -2)
+
+[node name="TomatoLaunchBlock" parent="." instance=ExtResource("8_tomato")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5, 0, -2)
+
+[node name="PurpleDashBlock" parent="." instance=ExtResource("9_purple")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5, 0, -2)
+
+[node name="BreakableWall" parent="." instance=ExtResource("10_breakable_wall")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -4.5)
 
 [node name="CameraRig" type="Node3D" parent="." unique_id=845519878]
 script = ExtResource("3_camrig")

@@ -1,0 +1,31 @@
+[gd_scene load_steps=6 format=3]
+
+[ext_resource type="Script" path="res://world/blocks/tomato_launch_block.gd" id="1_tomato"]
+[ext_resource type="Script" path="res://combat/hurtbox.gd" id="2_hurtbox"]
+
+[sub_resource type="SphereMesh" id="SphereMesh_tomato"]
+radius = 0.55
+height = 1.1
+
+[sub_resource type="StandardMaterial3D" id="Mat_tomato"]
+albedo_color = Color(0.9, 0.1, 0.08, 1)
+
+[sub_resource type="SphereShape3D" id="SphereShape3D_hurtbox"]
+radius = 0.65
+
+[node name="TomatoLaunchBlock" type="Node3D"]
+
+[node name="Mesh" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.65, 0)
+mesh = SubResource("SphereMesh_tomato")
+surface_material_override/0 = SubResource("Mat_tomato")
+
+[node name="TomatoLaunch" type="Node" parent="."]
+script = ExtResource("1_tomato")
+
+[node name="Hurtbox" type="Area3D" parent="."]
+script = ExtResource("2_hurtbox")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Hurtbox"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.65, 0)
+shape = SubResource("SphereShape3D_hurtbox")

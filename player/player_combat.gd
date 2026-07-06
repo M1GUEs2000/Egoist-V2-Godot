@@ -35,7 +35,7 @@ func _unhandled_input(event: InputEvent) -> void:
 
 ## Golpea en el press (tap) y carga mientras se mantiene; al soltar sale el cargado.
 func _on_press(weapon: WeaponBase, slot: World.Slot) -> void:
-	# ActionWorldSwitchModifier.fire_action() — llega con la maldición amarilla (batch 6)
+	_body.fire_action_world_switch()
 	_last_attack_time = World.now()
 	if weapon == null:
 		return

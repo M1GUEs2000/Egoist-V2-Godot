@@ -42,7 +42,7 @@ func cancel() -> void:
 
 ## Esquiva del jugador (el dueño ya soltó el swing si lo había).
 func dodge() -> void:
-	# ActionWorldSwitchModifier.fire_action() — llega con la maldición amarilla (batch 6)
+	_body.fire_action_world_switch()
 	# En el aire: un solo airdash por salto. En el piso: dash libre.
 	if not _body.is_on_floor():
 		if not _can_airdash:
