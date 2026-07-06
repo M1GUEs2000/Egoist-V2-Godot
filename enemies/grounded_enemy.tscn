@@ -1,0 +1,66 @@
+[gd_scene load_steps=13 format=3]
+
+[ext_resource type="Script" path="res://enemies/grounded_enemy.gd" id="1_enemy"]
+[ext_resource type="Script" path="res://combat/health.gd" id="2_health"]
+[ext_resource type="Script" path="res://combat/hurtbox.gd" id="3_hurtbox"]
+[ext_resource type="Script" path="res://core/world_membership.gd" id="4_membership"]
+[ext_resource type="Script" path="res://enemies/perception.gd" id="5_perception"]
+[ext_resource type="Script" path="res://enemies/ground_locomotion.gd" id="6_locomotion"]
+[ext_resource type="Script" path="res://enemies/attacks/melee_attack.gd" id="7_melee"]
+
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_body"]
+radius = 0.45
+height = 1.8
+
+[sub_resource type="CapsuleMesh" id="CapsuleMesh_body"]
+radius = 0.45
+height = 1.8
+
+[sub_resource type="BoxMesh" id="BoxMesh_weapon"]
+size = Vector3(0.25, 0.25, 1.1)
+
+[sub_resource type="StandardMaterial3D" id="Mat_body"]
+albedo_color = Color(0.9, 0.2, 0.2, 1)
+
+[node name="GroundedEnemy" type="CharacterBody3D"]
+script = ExtResource("1_enemy")
+hostility = 2
+normal_color = Color(0.9, 0.2, 0.2, 1)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
+shape = SubResource("CapsuleShape3D_body")
+
+[node name="Mesh" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
+mesh = SubResource("CapsuleMesh_body")
+surface_material_override/0 = SubResource("Mat_body")
+
+[node name="Health" type="Node" parent="."]
+script = ExtResource("2_health")
+max_health = 4.0
+
+[node name="WorldMembership" type="Node" parent="."]
+script = ExtResource("4_membership")
+hide_when_inactive = false
+
+[node name="Hurtbox" type="Area3D" parent="."]
+script = ExtResource("3_hurtbox")
+triggers_air_hit_stall = true
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Hurtbox"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
+shape = SubResource("CapsuleShape3D_body")
+
+[node name="Perception" type="Node" parent="."]
+script = ExtResource("5_perception")
+
+[node name="GroundLocomotion" type="Node" parent="."]
+script = ExtResource("6_locomotion")
+
+[node name="MeleeAttack" type="Node3D" parent="."]
+script = ExtResource("7_melee")
+
+[node name="Weapon" type="MeshInstance3D" parent="MeleeAttack"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.55, 0.9, -0.55)
+mesh = SubResource("BoxMesh_weapon")

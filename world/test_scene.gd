@@ -2,7 +2,7 @@ extends Node3D
 ## Escena de pruebas (reemplaza al TestSceneBuilder.cs de v1: acá el "builder" es el propio
 ## .tscn, que Claude edita como texto). Tecla T: cambia de mundo; la diana roja prueba
 ## golpes, meter y launcher; los pickups/bloques prueban reacciones de mundo/traversal;
-## el HUD muestra mundo, vida, meter y estado global.
+## el enemigo rojo prueba persecucion/ataque; el HUD muestra mundo, vida, meter y estado.
 
 func _ready() -> void:
 	WorldManager.world_changed.connect(func(world: World.Kind) -> void:

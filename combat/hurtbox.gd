@@ -29,12 +29,16 @@ func _ready() -> void:
 				break
 
 func can_receive_hit() -> bool:
+	if owner_node.has_method("can_receive_hit") and not owner_node.call("can_receive_hit"):
+		return false
 	return health == null or not health.is_dead()
 
 ## Punto de entrada único del daño. Devuelve true si el golpe mató al dueño.
 func receive_hit(from: Node, damage: float, _hit_direction: Vector3, _stun: StunSettings) -> bool:
 	if not can_receive_hit():
 		return false
+	if owner_node.has_method("on_hurtbox_hit"):
+		owner_node.call("on_hurtbox_hit", from, damage, _hit_direction, _stun)
 	hit.emit(from, damage)
 	if health != null:
 		return health.take_damage(damage)
