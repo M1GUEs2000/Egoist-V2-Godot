@@ -1,7 +1,7 @@
 extends Node3D
 ## Escena de pruebas (reemplaza al TestSceneBuilder.cs de v1: acá el "builder" es el propio
-## .tscn, que Claude edita como texto). Tecla T: cambia de mundo — debug temporal hasta que
-## existan armas y pickups (batches 4 y 6).
+## .tscn, que Claude edita como texto). Tecla T: cambia de mundo; la diana roja prueba
+## golpes, meter, launcher y reacciones duck-typed antes de EnemyBase.
 
 func _ready() -> void:
 	WorldManager.world_changed.connect(func(world: World.Kind) -> void:

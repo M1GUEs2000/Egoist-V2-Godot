@@ -4,6 +4,7 @@
 [ext_resource type="PackedScene" path="res://player/player.tscn" id="2_player"]
 [ext_resource type="Script" uid="uid://bm6520nqu8q3f" path="res://visual/camera_rig.gd" id="3_camrig"]
 [ext_resource type="Script" uid="uid://cr2mf5ypgksws" path="res://core/world_membership.gd" id="4_membership"]
+[ext_resource type="PackedScene" path="res://combat/dummies/hit_dummy.tscn" id="5_dummy"]
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_floor"]
 size = Vector3(40, 1, 40)
@@ -92,6 +93,9 @@ affiliation = 1
 
 [node name="Player" parent="." unique_id=30112187 instance=ExtResource("2_player")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.1, 0)
+
+[node name="HitDummy" parent="." instance=ExtResource("5_dummy")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -2)
 
 [node name="CameraRig" type="Node3D" parent="." unique_id=845519878]
 script = ExtResource("3_camrig")
