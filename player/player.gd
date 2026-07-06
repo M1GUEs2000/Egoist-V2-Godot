@@ -21,6 +21,8 @@ var _grounded_grace_until := 0.0
 @onready var locomotion: PlayerLocomotion = $Locomotion
 @onready var dash: PlayerDash = $Dash
 @onready var launcher: PlayerLauncher = $Launcher
+@onready var meter: PlayerMeter = $Meter
+@onready var combat: PlayerCombat = $Combat
 
 func _ready() -> void:
 	add_to_group("player")  # la cámara y los enemigos me encuentran por grupo
@@ -28,9 +30,11 @@ func _ready() -> void:
 		tuning = PlayerTuning.new()
 	collision_layer = World.LAYER_PLAYER
 	collision_mask = World.LAYER_WORLD | World.LAYER_ENEMY
+	meter.setup(self)
 	locomotion.setup(self, get_viewport().get_camera_3d())
 	launcher.setup(self)
 	dash.setup(self, locomotion, launcher.register_air_hit_stall, launcher.cancel)
+	combat.setup(self)
 
 func is_grounded() -> bool:
 	return air_state == AirState.GROUNDED

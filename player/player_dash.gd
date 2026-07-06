@@ -48,8 +48,8 @@ func dodge() -> void:
 		if not _can_airdash:
 			return
 		_can_airdash = false
-	# ponytail: el meter gasta pero no bloquea el dash; "dodge degradado sin meter"
-	# es diseño futuro — PlayerMeter llega en batch 4.
+	if _body.meter != null:
+		_body.meter.spend_dash()
 
 	var input := _loco.read_move_input()
 	var camera_dir := _loco.camera_relative(input)
