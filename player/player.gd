@@ -23,6 +23,7 @@ var _grounded_grace_until := 0.0
 @onready var launcher: PlayerLauncher = $Launcher
 
 func _ready() -> void:
+	add_to_group("player")  # la cámara y los enemigos me encuentran por grupo
 	if tuning == null:
 		tuning = PlayerTuning.new()
 	collision_layer = World.LAYER_PLAYER
