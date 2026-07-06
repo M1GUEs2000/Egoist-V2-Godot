@@ -64,5 +64,18 @@ func _ready() -> void:
 	await get_tree().process_frame
 	assert(taps == ["tap", "buffered"])  # salió en el primer frame libre
 
+	# Player (batch 3): cae con gravedad y el launcher lo sube
+	var player := (load("res://player/player.tscn") as PackedScene).instantiate() as Player
+	add_child(player)
+	await get_tree().physics_frame
+	await get_tree().physics_frame
+	assert(player.vertical_velocity < 0.0)  # gravedad actuando (no hay piso en este test)
+	var y_before := player.global_position.y
+	player.launch(3.0, 0.4)
+	assert(player.launcher.is_launched)
+	await get_tree().physics_frame
+	await get_tree().physics_frame
+	assert(player.global_position.y > y_before)  # el launcher sube
+
 	print("SMOKE OK")
 	get_tree().quit()

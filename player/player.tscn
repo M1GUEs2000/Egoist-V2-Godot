@@ -1,0 +1,46 @@
+[gd_scene load_steps=10 format=3]
+
+[ext_resource type="Script" path="res://player/player.gd" id="1_player"]
+[ext_resource type="Script" path="res://player/player_locomotion.gd" id="2_loco"]
+[ext_resource type="Script" path="res://player/player_dash.gd" id="3_dash"]
+[ext_resource type="Script" path="res://player/player_launcher.gd" id="4_launcher"]
+[ext_resource type="Script" path="res://combat/hitbox.gd" id="5_hitbox"]
+[ext_resource type="Resource" path="res://data/player_tuning.tres" id="6_tuning"]
+
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_body"]
+radius = 0.4
+height = 1.8
+
+[sub_resource type="CapsuleMesh" id="CapsuleMesh_body"]
+radius = 0.4
+height = 1.8
+
+[sub_resource type="SphereShape3D" id="SphereShape3D_dash"]
+radius = 0.8
+
+[node name="Player" type="CharacterBody3D"]
+script = ExtResource("1_player")
+tuning = ExtResource("6_tuning")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
+shape = SubResource("CapsuleShape3D_body")
+
+[node name="Mesh" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
+mesh = SubResource("CapsuleMesh_body")
+
+[node name="Locomotion" type="Node" parent="."]
+script = ExtResource("2_loco")
+
+[node name="Dash" type="Node3D" parent="."]
+script = ExtResource("3_dash")
+
+[node name="DashHitbox" type="Area3D" parent="Dash"]
+script = ExtResource("5_hitbox")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Dash/DashHitbox"]
+shape = SubResource("SphereShape3D_dash")
+
+[node name="Launcher" type="Node" parent="."]
+script = ExtResource("4_launcher")

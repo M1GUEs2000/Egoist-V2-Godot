@@ -1,0 +1,111 @@
+[gd_scene load_steps=15 format=3]
+
+[ext_resource type="Script" path="res://world/test_scene.gd" id="1_scene"]
+[ext_resource type="PackedScene" path="res://player/player.tscn" id="2_player"]
+[ext_resource type="Script" path="res://visual/camera_rig.gd" id="3_camrig"]
+[ext_resource type="Script" path="res://core/world_membership.gd" id="4_membership"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_floor"]
+size = Vector3(40, 1, 40)
+
+[sub_resource type="BoxMesh" id="BoxMesh_floor"]
+size = Vector3(40, 1, 40)
+
+[sub_resource type="StandardMaterial3D" id="Mat_floor"]
+albedo_color = Color(0.35, 0.38, 0.33, 1)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_block"]
+size = Vector3(4, 2, 1)
+
+[sub_resource type="BoxMesh" id="BoxMesh_block"]
+size = Vector3(4, 2, 1)
+
+[sub_resource type="StandardMaterial3D" id="Mat_block"]
+albedo_color = Color(0.5, 0.45, 0.4, 1)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_platform"]
+size = Vector3(3, 1, 3)
+
+[sub_resource type="BoxMesh" id="BoxMesh_platform"]
+size = Vector3(3, 1, 3)
+
+[sub_resource type="StandardMaterial3D" id="Mat_living"]
+albedo_color = Color(0.85, 0.55, 0.25, 1)
+
+[sub_resource type="StandardMaterial3D" id="Mat_dead"]
+albedo_color = Color(0.5, 0.3, 0.75, 1)
+
+[node name="TestScene" type="Node3D"]
+script = ExtResource("1_scene")
+
+[node name="Floor" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.5, 0)
+collision_layer = 1
+collision_mask = 0
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Floor"]
+shape = SubResource("BoxShape3D_floor")
+
+[node name="Mesh" type="MeshInstance3D" parent="Floor"]
+mesh = SubResource("BoxMesh_floor")
+surface_material_override/0 = SubResource("Mat_floor")
+
+[node name="Wall" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, -6)
+collision_layer = 1
+collision_mask = 0
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Wall"]
+shape = SubResource("BoxShape3D_block")
+
+[node name="Mesh" type="MeshInstance3D" parent="Wall"]
+mesh = SubResource("BoxMesh_block")
+surface_material_override/0 = SubResource("Mat_block")
+
+[node name="LivingPlatform" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4, 0.5, 4)
+collision_layer = 1
+collision_mask = 0
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="LivingPlatform"]
+shape = SubResource("BoxShape3D_platform")
+
+[node name="Mesh" type="MeshInstance3D" parent="LivingPlatform"]
+mesh = SubResource("BoxMesh_platform")
+surface_material_override/0 = SubResource("Mat_living")
+
+[node name="WorldMembership" type="Node" parent="LivingPlatform"]
+script = ExtResource("4_membership")
+affiliation = 0
+
+[node name="DeadPlatform" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4, 0.5, 4)
+collision_layer = 1
+collision_mask = 0
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="DeadPlatform"]
+shape = SubResource("BoxShape3D_platform")
+
+[node name="Mesh" type="MeshInstance3D" parent="DeadPlatform"]
+mesh = SubResource("BoxMesh_platform")
+surface_material_override/0 = SubResource("Mat_dead")
+
+[node name="WorldMembership" type="Node" parent="DeadPlatform"]
+script = ExtResource("4_membership")
+affiliation = 1
+
+[node name="Player" parent="." instance=ExtResource("2_player")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.1, 0)
+
+[node name="CameraRig" type="Node3D" parent="."]
+script = ExtResource("3_camrig")
+target = NodePath("../Player")
+
+[node name="Camera3D" type="Camera3D" parent="CameraRig"]
+projection = 1
+size = 12.0
+far = 200.0
+
+[node name="Sun" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.707107, -0.5, 0.5, 0, 0.707107, 0.707107, -0.707107, -0.5, 0.5, 0, 10, 0)
+shadow_enabled = true

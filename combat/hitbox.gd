@@ -15,6 +15,9 @@ var _already_hit: Array[Hurtbox] = []
 
 func _ready() -> void:
 	monitoring = false
+	monitorable = false
+	collision_layer = 0
+	collision_mask = World.LAYER_HURTBOX  # solo detecto hurtboxes
 	area_entered.connect(_on_area_entered)
 
 ## El dueño llama esto al iniciar un swing: limpia dedup y prende detección.

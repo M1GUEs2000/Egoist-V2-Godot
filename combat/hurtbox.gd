@@ -12,10 +12,16 @@ signal hit(from: Node, damage: float)
 ## Si null, se busca un Health hermano en _ready (puede no haber: indestructible puro).
 @export var health: Health
 
+## Enemigos true: conectarle un golpe en el aire ralentiza la caída del jugador (air-hit-stall).
+@export var triggers_air_hit_stall := false
+
 @onready var owner_node := get_parent()
 
 func _ready() -> void:
 	add_to_group("hurtbox")
+	collision_layer = World.LAYER_HURTBOX  # me detectan los Hitbox
+	collision_mask = 0                     # yo no detecto a nadie
+	monitoring = false
 	if health == null:
 		for sibling in owner_node.get_children():
 			if sibling is Health:
