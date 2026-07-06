@@ -3,6 +3,8 @@
 Port de Egoist (Unity → Godot 4.7, Jolt Physics, Forward Plus). **GDScript tipado estático** únicamente.
 El diseño vive en la bóveda de Obsidian (`../../Boveda`) — misma fuente de verdad de siempre. Las reglas de skills del CLAUDE.md raíz (`/ponytail`, etc.) siguen aplicando.
 
+**Metodología obligatoria**: antes de crear, modificar o borrar un sistema, seguir el flujo de [`METODOLOGIA.md`](METODOLOGIA.md) (incluye qué skill invocar: `/godot-gdscript-patterns` para diseñar, `/godot-best-practices` para escribir, `/godot-ui` para `ui/`).
+
 ## Reglas duras (lecciones de la v1)
 
 1. **Git desde el commit 0.** Commit al cerrar cada feature que funcione; nunca más 2 semanas al aire.
