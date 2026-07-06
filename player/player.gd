@@ -22,6 +22,8 @@ var _grounded_grace_until := 0.0
 @onready var dash: PlayerDash = $Dash
 @onready var launcher: PlayerLauncher = $Launcher
 @onready var meter: PlayerMeter = $Meter
+@onready var health: Health = $Health
+@onready var player_health: PlayerHealth = $PlayerHealth
 @onready var combat: PlayerCombat = $Combat
 @onready var action_world_switch: ActionWorldSwitchModifier = $ActionWorldSwitchModifier
 
@@ -31,6 +33,7 @@ func _ready() -> void:
 		tuning = PlayerTuning.new()
 	collision_layer = World.LAYER_PLAYER
 	collision_mask = World.LAYER_WORLD | World.LAYER_ENEMY
+	player_health.setup(self)
 	meter.setup(self)
 	locomotion.setup(self, get_viewport().get_camera_3d())
 	launcher.setup(self)
@@ -117,6 +120,9 @@ func restore_airdash() -> void:
 
 func activate_action_world_switch() -> void:
 	action_world_switch.activate()
+
+func take_damage(amount: float) -> bool:
+	return player_health.take_damage(amount)
 
 func fire_action_world_switch() -> void:
 	action_world_switch.fire_action()

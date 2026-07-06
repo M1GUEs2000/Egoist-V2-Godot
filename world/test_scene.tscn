@@ -10,6 +10,7 @@
 [ext_resource type="PackedScene" path="res://world/blocks/tomato_launch_block.tscn" id="8_tomato"]
 [ext_resource type="PackedScene" path="res://world/blocks/purple_dash_block.tscn" id="9_purple"]
 [ext_resource type="PackedScene" path="res://world/blocks/breakable_wall.tscn" id="10_breakable_wall"]
+[ext_resource type="PackedScene" path="res://ui/hud.tscn" id="11_hud"]
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_floor"]
 size = Vector3(40, 1, 40)
@@ -124,6 +125,8 @@ target = NodePath("../Player")
 [node name="Camera3D" type="Camera3D" parent="CameraRig" unique_id=1307362112]
 fov = 60.0
 far = 200.0
+
+[node name="HUD" parent="." instance=ExtResource("11_hud")]
 
 [node name="Sun" type="DirectionalLight3D" parent="." unique_id=572025473]
 transform = Transform3D(0.707107, -0.5, 0.5, 0, 0.707107, 0.707107, -0.707107, -0.5, 0.5, 0, 10, 0)

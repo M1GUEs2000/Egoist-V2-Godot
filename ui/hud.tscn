@@ -1,0 +1,42 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://ui/hud.gd" id="1_hud"]
+
+[node name="HUD" type="CanvasLayer"]
+script = ExtResource("1_hud")
+
+[node name="Root" type="MarginContainer" parent="."]
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 18.0
+offset_top = 18.0
+offset_right = -18.0
+offset_bottom = -18.0
+mouse_filter = 2
+
+[node name="VBox" type="VBoxContainer" parent="Root"]
+custom_minimum_size = Vector2(280, 0)
+mouse_filter = 2
+
+[node name="WorldLabel" type="Label" parent="Root/VBox"]
+text = "Mundo: LIVING"
+
+[node name="HealthRow" type="HBoxContainer" parent="Root/VBox"]
+custom_minimum_size = Vector2(280, 24)
+
+[node name="HealthLabel" type="Label" parent="Root/VBox/HealthRow"]
+custom_minimum_size = Vector2(96, 0)
+text = "Vida: 100 / 100"
+
+[node name="HealthBar" type="ProgressBar" parent="Root/VBox/HealthRow"]
+custom_minimum_size = Vector2(180, 18)
+size_flags_horizontal = 3
+max_value = 100.0
+value = 100.0
+show_percentage = false
+
+[node name="MeterBars" type="HBoxContainer" parent="Root/VBox"]
+custom_minimum_size = Vector2(280, 18)
+
+[node name="StateLabel" type="Label" parent="Root/VBox"]
+text = "Estado: PLAYING"

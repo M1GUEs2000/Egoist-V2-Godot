@@ -15,6 +15,7 @@ var _charged_kill_expiry := -999.0
 func setup(body: Player) -> void:
 	_body = body
 	_meter = clampf(body.tuning.meter_start_bars, 0.0, float(bars()))
+	bars_changed.emit(_meter, bars())
 
 func bars() -> int:
 	return _body.tuning.meter_max_bars
