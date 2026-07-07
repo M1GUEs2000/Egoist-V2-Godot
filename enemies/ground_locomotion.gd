@@ -61,6 +61,20 @@ func search_last_known(last_known: Vector3, delta: float) -> void:
 		face_target(last_known)
 		_stop_horizontal(delta)
 
+func flee_from(world_pos: Vector3, delta: float) -> void:
+	if _is_suspended() or _body == null:
+		return
+	var away := _body.global_position - world_pos
+	away.y = 0.0
+	if away.length_squared() < 0.01:
+		away = _body.global_basis.z
+	_apply_move(away.normalized(), chase_speed, delta)
+
+func stop(delta: float) -> void:
+	if _body == null:
+		return
+	_stop_horizontal(delta)
+
 func face_target(world_pos: Vector3) -> void:
 	if _body == null:
 		return

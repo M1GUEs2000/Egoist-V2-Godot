@@ -207,10 +207,13 @@ func on_hurtbox_hit(from: Node, damage: float, hit_direction: Vector3, stun: Stu
 		if dir.length_squared() > 0.0001:
 			_last_hit_direction = dir.normalized()
 	if hostility == Hostility.PASSIVE:
-		_provoke_nearby()
+		_on_passive_attacked(from)
 	if is_armored():
 		_damage_armor(int(ceil(damage)))
 	_apply_stun_from_settings(stun)
+
+func _on_passive_attacked(_from: Node) -> void:
+	_provoke_nearby()
 
 func _apply_stun_from_settings(stun: StunSettings) -> void:
 	if stun == null:
