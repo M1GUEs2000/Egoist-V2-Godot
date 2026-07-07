@@ -8,6 +8,7 @@ var is_launched := false
 
 var _body: Player
 var _height := 0.0
+var _rise_time := World.LAUNCH_RISE_TIME
 var _rise_left := 0.0
 var _float_until := 0.0
 var _fall_until := 0.0
@@ -20,15 +21,16 @@ func setup(body: Player) -> void:
 	_body = body
 
 ## El dueño ya canceló dash/swing antes de esto. (hang_time reservado: v1 lo recibía sin usarlo.)
-func start_launch(height: float, _hang_time: float) -> void:
+func start_launch(height: float, _hang_time: float, rise_time: float = World.LAUNCH_RISE_TIME) -> void:
 	is_launched = true
 	_height = height
-	_rise_left = World.LAUNCH_RISE_TIME
+	_rise_time = maxf(0.01, rise_time)
+	_rise_left = _rise_time
 	_body.air_state = Player.AirState.AIRBORNE
 	_body.vertical_velocity = 0.0
 
 func tick_launch(delta: float) -> void:
-	_body.velocity = Vector3.UP * (_height / World.LAUNCH_RISE_TIME)
+	_body.velocity = Vector3.UP * (_height / _rise_time)
 	_body.move_and_slide()
 	_rise_left -= delta
 	if _rise_left <= 0.0:

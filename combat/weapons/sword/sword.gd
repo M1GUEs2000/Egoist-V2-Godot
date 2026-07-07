@@ -10,6 +10,8 @@ const STEP_COUNT := 4
 
 var _launcher_id := 0
 var _charged_dash_id := 0
+var _aerial_charged_y_active := false
+var _aerial_charged_meet_y := 0.0
 var _swing_tween: Tween
 
 @onready var _launcher_hitbox: Hitbox = $LauncherHitbox
@@ -33,6 +35,10 @@ func setup(player: Player) -> void:
 	_charged_dash_hitbox.can_be_parried = false
 	(_charged_dash_shape.shape as SphereShape3D).radius = _t().charged_dash_hit_radius
 	_charged_dash_hitbox.landed.connect(_on_charged_dash_hit)
+
+	for hitbox: Hitbox in [_blade_hitbox, _air_disc_hitbox]:
+		if hitbox != null:
+			hitbox.landed.connect(_on_aerial_charged_y_hit)
 
 func tap(slot: World.Slot) -> void:
 	if slot == World.Slot.X:
@@ -127,17 +133,24 @@ func _aerial_charged_y() -> void:
 
 func _run_aerial_charged_y() -> void:
 	var t := _t()
-	_player.launch(t.launcher_height, t.launcher_hang_time)  # auto-empuje hacia arriba
+	_aerial_charged_y_active = true
+	_aerial_charged_meet_y = _player.global_position.y + t.aerial_charged_meet_height
+	_player.launch(t.aerial_charged_player_height, t.launcher_hang_time, t.aerial_charged_player_rise_time)
 	swing_up(t.strike_angle)
 	begin_damage_window(tuning.swing_time)
 	ComboTracker.register_hit()
 	await wait_seconds(tuning.swing_time)
-	for hurtbox in _window_hits.duplicate():
-		var target := hurtbox.owner_node
-		if target.has_method("slam_bounce"):
-			target.call("slam_bounce", t.aerial_charged_down_speed,
-					func() -> float: return _player.global_position.y,
-					t.launcher_hang_time)
+	_aerial_charged_y_active = false
+
+func _on_aerial_charged_y_hit(hurtbox: Hurtbox, _died: bool) -> void:
+	if not _aerial_charged_y_active:
+		return
+	var target := hurtbox.owner_node
+	if target.has_method("slam_bounce"):
+		var meet_y := _aerial_charged_meet_y
+		target.call("slam_bounce", _t().aerial_charged_down_speed,
+				func() -> float: return meet_y,
+				_t().launcher_hang_time)
 
 ## Lanza al enemigo ANTES de que el Hitbox aplique el daño (v1: "lanza primero, así el golpe
 ## ya ve is_airborne = true y usa el stun aéreo, no el de suelo" — ConeLauncherHitbox.TryHit).

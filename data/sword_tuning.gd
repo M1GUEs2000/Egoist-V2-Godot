@@ -32,6 +32,11 @@ class_name SwordTuning extends WeaponTuning
 ## Velocidad del spike hacia el suelo antes de rebotar. La altura del auto-launch y del
 ## rebote reusan el launcher Y (height/hang_time), "lo mismo que un launcher".
 @export var aerial_charged_down_speed := 30.0
+## La cargada aerea usa un auto-launch mas lento que el launcher Y normal para que el
+## enemigo alcance el punto de encuentro tras rebotar.
+@export var aerial_charged_player_height := 2.4
+@export var aerial_charged_player_rise_time := 0.32
+@export var aerial_charged_meet_height := 2.2
 
 @export_group("Launcher Y")
 @export var launcher_height := 4.0

@@ -152,10 +152,10 @@ func force_dash(dir: Vector3, distance: float, duration: float, boost_bump_momen
 	_dodge_queued = false
 	dash.force_dash(dir, distance, duration, boost_bump_momentum)
 
-func launch(height: float, hang_time: float) -> void:
+func launch(height: float, hang_time: float, rise_time: float = World.LAUNCH_RISE_TIME) -> void:
 	_dodge_queued = false
 	dash.cancel()
-	launcher.start_launch(height, hang_time)
+	launcher.start_launch(height, hang_time, rise_time)
 
 func _decay_bump(delta: float) -> void:
 	if bump_velocity.length_squared() < 0.01:
