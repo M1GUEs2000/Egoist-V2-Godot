@@ -12,11 +12,31 @@ class_name PlayerTuning extends Resource
 @export_group("Jump")
 @export var jump_force := 8.0
 
+@export_group("Wall slide")
+@export var wall_slide_min_push_speed := 2.0
+@export_range(0.0, 1.0) var wall_slide_input_dot := 0.35
+@export var wall_slide_stick_time := 0.16
+@export var wall_slide_stick_fall_speed := 0.35
+@export var wall_slide_max_fall_speed := 3.4
+@export_range(0.0, 1.0) var wall_slide_gravity_scale := 0.35
+@export var wall_slide_momentum_decay := 4.0
+@export var wall_slide_wall_jump_up_speed := 7.2
+@export var wall_slide_wall_jump_away_speed := 4.8
+@export var wall_slide_wall_jump_along_speed := 2.0
+@export var wall_slide_wall_jump_lock_time := 0.12
+
 @export_group("Motor")
 @export var gravity := -20.0
 @export var bump_decay := 8.0
 @export var grounded_bump_decay := 12.0
 @export var landing_momentum_grace := 0.18
+
+@export_group("Stun")
+@export var default_stun_duration := 0.45
+@export var stun_threshold := 1.0
+@export var armor_stun_threshold := 2.0
+@export_range(0.0, 2.0) var stun_gravity_scale := 1.0
+@export var stun_bump_decay := 3.5
 
 @export_group("Dodge")
 ## Si el golpe en curso ya pasó esta fracción (0-1), el dodge NO lo corta: se buferea

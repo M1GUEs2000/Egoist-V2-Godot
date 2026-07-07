@@ -11,6 +11,8 @@ enum AirState { GROUNDED, AIRBORNE }
 @export var initial_combat_state := CombatState.NORMAL
 @export var armored := false
 @export var armor_hits_to_break := 3
+@export var stun_threshold := 1.0
+@export var armor_stun_threshold := 2.0
 @export var airborne_gravity := -20.0
 @export var airborne_max_time := 4.0
 @export var death_destroy_delay := 0.4
@@ -101,7 +103,7 @@ func take_hit_from_enemy(hits: float = 1.0, hit_direction: Vector3 = Vector3.ZER
 	return died
 
 func apply_stun(duration: float) -> void:
-	if duration <= 0.0 or is_armored() or _dead:
+	if duration <= 0.0 or _dead:
 		return
 	combat_state = CombatState.STUNNED
 	_stunned_until = maxf(_stunned_until, World.now() + duration)
@@ -185,6 +187,17 @@ func try_parry(_player: Player, _hit_direction: Vector3 = Vector3.ZERO) -> bool:
 func apply_parry_stun(duration: float) -> void:
 	apply_stun(duration)
 
+func receive_stun(stun: StunSettings) -> bool:
+	if stun == null:
+		return false
+	return try_apply_stun(stun.duration_for(is_airborne()), stun.power)
+
+func try_apply_stun(duration: float, power: float) -> bool:
+	if power < _effective_stun_threshold():
+		return false
+	apply_stun(duration)
+	return true
+
 func _on_membership_changed(active_now: bool) -> void:
 	_is_active = active_now
 	collision_layer = World.LAYER_ENEMY if _is_active else 0
@@ -217,9 +230,9 @@ func _on_passive_attacked(_from: Node) -> void:
 
 func _apply_stun_from_settings(stun: StunSettings) -> void:
 	if stun == null:
-		apply_stun(1.0)
+		try_apply_stun(1.0, 1.0)
 	else:
-		apply_stun(stun.duration_for(is_airborne()))
+		receive_stun(stun)
 
 func _damage_armor(hits: int) -> void:
 	_armor_hits_taken += maxi(1, hits)
@@ -244,6 +257,11 @@ func _update_combat_state() -> void:
 	if combat_state == CombatState.STUNNED and World.now() >= _stunned_until:
 		combat_state = CombatState.NORMAL
 		_refresh_visual_state()
+
+func _effective_stun_threshold() -> float:
+	if is_armored():
+		return armor_stun_threshold
+	return stun_threshold
 
 func _begin_airborne() -> void:
 	if air_state == AirState.AIRBORNE:

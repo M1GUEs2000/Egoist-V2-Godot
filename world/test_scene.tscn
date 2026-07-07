@@ -12,6 +12,7 @@
 [ext_resource type="PackedScene" path="res://world/blocks/breakable_wall.tscn" id="10_breakable_wall"]
 [ext_resource type="PackedScene" path="res://ui/hud.tscn" id="11_hud"]
 [ext_resource type="PackedScene" path="res://enemies/grounded_enemy.tscn" id="12_enemy"]
+[ext_resource type="PackedScene" path="res://world/blocks/spike_wall.tscn" id="13_spike_wall"]
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_floor"]
 size = Vector3(160, 1, 160)
@@ -118,6 +119,9 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5, 0, -2)
 
 [node name="BreakableWall" parent="." instance=ExtResource("10_breakable_wall")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -4.5)
+
+[node name="LivingSpikeWall" parent="." instance=ExtResource("13_spike_wall")]
+transform = Transform3D(0.707107, 0, -0.707107, 0, 1, 0, 0.707107, 0, 0.707107, 7, 0, -5)
 
 [node name="PassiveEnemyA" parent="." instance=ExtResource("12_enemy")]
 transform = Transform3D(0.866025, 0, 0.5, 0, 1, 0, -0.5, 0, 0.866025, 3, 0.1, 12)

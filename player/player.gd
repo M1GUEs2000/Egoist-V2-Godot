@@ -21,6 +21,8 @@ var _grounded_grace_until := 0.0
 @onready var locomotion: PlayerLocomotion = $Locomotion
 @onready var dash: PlayerDash = $Dash
 @onready var launcher: PlayerLauncher = $Launcher
+@onready var wall_slide: PlayerWallSlide = $WallSlide
+@onready var stun: PlayerStun = $Stun
 @onready var meter: PlayerMeter = $Meter
 @onready var health: Health = $Health
 @onready var player_health: PlayerHealth = $PlayerHealth
@@ -37,6 +39,7 @@ func _ready() -> void:
 	meter.setup(self)
 	locomotion.setup(self, get_viewport().get_camera_3d())
 	launcher.setup(self)
+	wall_slide.setup(self)
 	dash.setup(self, locomotion, launcher.register_air_hit_stall, launcher.cancel)
 	combat.setup(self)
 
@@ -46,17 +49,31 @@ func is_grounded() -> bool:
 func is_airborne() -> bool:
 	return air_state == AirState.AIRBORNE
 
+func is_stunned() -> bool:
+	return stun != null and stun.is_stunned()
+
+func is_armored() -> bool:
+	return false
+
 func forward() -> Vector3:
 	return -global_basis.z
 
 func _unhandled_input(event: InputEvent) -> void:
+	if is_stunned():
+		return
 	if event.is_action_pressed("jump"):
 		_on_jump()
 	elif event.is_action_pressed("dodge"):
 		_on_dodge()
 
 func _physics_process(delta: float) -> void:
+	stun.tick()
+	if is_stunned():
+		_tick_stunned(delta)
+		return
+
 	if launcher.is_launched:
+		wall_slide.cancel()
 		launcher.tick_launch(delta)  # el launcher controla el movimiento
 		return
 
@@ -66,16 +83,20 @@ func _physics_process(delta: float) -> void:
 		dash.dodge()
 
 	if dash.is_dashing:
+		wall_slide.cancel()
 		dash.tick(delta)
 		_decay_bump(delta)
 		return
 
+	var input_dir := locomotion.camera_relative(locomotion.read_move_input())
 	var horizontal := locomotion.tick(delta) + locomotion.lunge_velocity()
 
 	vertical_velocity += tuning.gravity * launcher.gravity_scale() * delta
 
-	velocity = horizontal + bump_velocity + Vector3(0.0, vertical_velocity, 0.0)
+	var horizontal_with_momentum := wall_slide.apply_slide_velocity(horizontal + bump_velocity, input_dir, delta)
+	velocity = horizontal_with_momentum + Vector3(0.0, vertical_velocity, 0.0)
 	move_and_slide()
+	wall_slide.update_after_move(horizontal + bump_velocity, input_dir)
 
 	if is_on_floor():
 		if air_state != AirState.GROUNDED:
@@ -85,6 +106,7 @@ func _physics_process(delta: float) -> void:
 		dash.restore_airdash()
 		_can_double_jump = true
 		launcher.reset_air_stall()
+		wall_slide.cancel()
 	else:
 		air_state = AirState.AIRBORNE
 
@@ -95,6 +117,9 @@ func _on_jump() -> void:
 	# (swing release / begin — batch 6)
 	if is_on_floor():
 		vertical_velocity = tuning.jump_force
+		air_state = AirState.AIRBORNE
+	elif wall_slide.try_wall_jump():
+		_can_double_jump = false
 		air_state = AirState.AIRBORNE
 	elif _can_double_jump:
 		_can_double_jump = false
@@ -124,6 +149,50 @@ func activate_action_world_switch() -> void:
 func take_damage(amount: float) -> bool:
 	return player_health.take_damage(amount)
 
+func receive_stun(stun_settings: StunSettings, mode := PlayerStun.Mode.STILL,
+		push_direction := Vector3.ZERO, horizontal_speed := 0.0, vertical_speed := 0.0) -> bool:
+	if stun_settings == null:
+		return false
+	return try_apply_stun(
+			stun_settings.duration_for(is_airborne()),
+			stun_settings.power,
+			mode,
+			push_direction,
+			horizontal_speed,
+			vertical_speed)
+
+func try_apply_stun(duration: float, power: float, mode := PlayerStun.Mode.STILL,
+		push_direction := Vector3.ZERO, horizontal_speed := 0.0, vertical_speed := 0.0) -> bool:
+	if power < _effective_stun_threshold():
+		return false
+	apply_stun(duration, mode, push_direction, horizontal_speed, vertical_speed)
+	return true
+
+func apply_stun(duration: float = -1.0, mode := PlayerStun.Mode.STILL,
+		push_direction := Vector3.ZERO, horizontal_speed := 0.0, vertical_speed := 0.0) -> void:
+	var stun_duration := tuning.default_stun_duration if duration < 0.0 else duration
+	_dodge_queued = false
+	locomotion.cancel_lunge()
+	wall_slide.cancel()
+	launcher.cancel()
+	dash.cancel()
+	if combat != null:
+		combat.cancel_input()
+	match mode:
+		PlayerStun.Mode.PUSH:
+			push_direction.y = 0.0
+			if push_direction.length_squared() > 0.0001:
+				bump_velocity = push_direction.normalized() * horizontal_speed
+			else:
+				bump_velocity = Vector3.ZERO
+			vertical_velocity = vertical_speed
+			air_state = AirState.AIRBORNE
+		_:
+			bump_velocity = Vector3.ZERO
+			if is_on_floor():
+				vertical_velocity = -1.0
+	stun.apply(stun_duration, mode)
+
 func fire_action_world_switch() -> void:
 	action_world_switch.fire_action()
 
@@ -142,6 +211,7 @@ func hold_airborne_for_attack() -> void:
 
 func bump(dir: Vector3, h_speed: float, v_speed: float) -> void:
 	_dodge_queued = false
+	wall_slide.cancel()
 	launcher.cancel()
 	dash.cancel()
 	bump_velocity = Vector3(dir.x, 0.0, dir.z).normalized() * h_speed
@@ -150,18 +220,41 @@ func bump(dir: Vector3, h_speed: float, v_speed: float) -> void:
 
 func force_dash(dir: Vector3, distance: float, duration: float, boost_bump_momentum := false) -> void:
 	_dodge_queued = false
+	wall_slide.cancel()
 	dash.force_dash(dir, distance, duration, boost_bump_momentum)
 
 func launch(height: float, hang_time: float, rise_time: float = World.LAUNCH_RISE_TIME) -> void:
 	_dodge_queued = false
+	wall_slide.cancel()
+	stun.cancel()
 	dash.cancel()
 	launcher.start_launch(height, hang_time, rise_time)
 
-func _decay_bump(delta: float) -> void:
+func _tick_stunned(delta: float) -> void:
+	wall_slide.cancel()
+	vertical_velocity += tuning.gravity * tuning.stun_gravity_scale * delta
+	velocity = bump_velocity + Vector3(0.0, vertical_velocity, 0.0)
+	move_and_slide()
+	if is_on_floor():
+		vertical_velocity = -1.0
+		air_state = AirState.GROUNDED
+	else:
+		air_state = AirState.AIRBORNE
+	if stun.mode == PlayerStun.Mode.PUSH:
+		_decay_bump(delta, tuning.stun_bump_decay)
+	else:
+		bump_velocity = Vector3.ZERO
+
+func _decay_bump(delta: float, override_decay := -1.0) -> void:
 	if bump_velocity.length_squared() < 0.01:
 		bump_velocity = Vector3.ZERO
 		return
-	var decay := tuning.bump_decay
+	var decay := tuning.bump_decay if override_decay < 0.0 else override_decay
 	if is_on_floor():
 		decay = 0.0 if World.now() < _grounded_grace_until else tuning.grounded_bump_decay
 	bump_velocity = bump_velocity.move_toward(Vector3.ZERO, decay * delta)
+
+func _effective_stun_threshold() -> float:
+	if is_armored():
+		return tuning.armor_stun_threshold
+	return tuning.stun_threshold

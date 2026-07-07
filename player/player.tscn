@@ -1,4 +1,4 @@
-[gd_scene load_steps=18 format=3]
+[gd_scene load_steps=21 format=3]
 
 [ext_resource type="Script" path="res://player/player.gd" id="1_player"]
 [ext_resource type="Script" path="res://player/player_locomotion.gd" id="2_loco"]
@@ -14,6 +14,9 @@
 [ext_resource type="Script" path="res://combat/health.gd" id="12_health"]
 [ext_resource type="Script" path="res://player/player_health.gd" id="13_player_health"]
 [ext_resource type="Script" path="res://combat/hurtbox.gd" id="14_hurtbox"]
+[ext_resource type="PackedScene" path="res://combat/weapons/mace/mace.tscn" id="15_mace_scene"]
+[ext_resource type="Script" path="res://player/player_wall_slide.gd" id="16_wall_slide"]
+[ext_resource type="Script" path="res://player/player_stun.gd" id="17_stun"]
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_body"]
 radius = 0.4
@@ -67,6 +70,12 @@ shape = SubResource("SphereShape3D_dash")
 [node name="Launcher" type="Node" parent="."]
 script = ExtResource("4_launcher")
 
+[node name="WallSlide" type="Node" parent="."]
+script = ExtResource("16_wall_slide")
+
+[node name="Stun" type="Node" parent="."]
+script = ExtResource("17_stun")
+
 [node name="Meter" type="Node" parent="."]
 script = ExtResource("7_meter")
 
@@ -79,6 +88,8 @@ slot_y = NodePath("../Sword")
 script = ExtResource("9_buffer")
 
 [node name="Sword" parent="." instance=ExtResource("10_sword_scene")]
+
+[node name="Maso" parent="." instance=ExtResource("15_mace_scene")]
 
 [node name="ActionWorldSwitchModifier" type="Node" parent="."]
 script = ExtResource("11_action_switch")

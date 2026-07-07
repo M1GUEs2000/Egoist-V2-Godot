@@ -99,6 +99,8 @@ func _deal_damage() -> void:
 		return
 	if _target.has_method("take_damage"):
 		_target.call("take_damage", attack_damage)
+		if stun != null and _target.has_method("receive_stun"):
+			_target.call("receive_stun", stun)
 		return
 	var enemy := _target as EnemyBase
 	if enemy != null:

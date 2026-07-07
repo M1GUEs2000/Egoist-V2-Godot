@@ -1,0 +1,76 @@
+[gd_scene load_steps=11 format=3]
+
+[ext_resource type="Script" path="res://combat/weapons/mace/mace.gd" id="1_mace"]
+[ext_resource type="Resource" path="res://data/sword_tuning.tres" id="2_tuning"]
+[ext_resource type="Script" path="res://combat/hitbox.gd" id="3_hitbox"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_mace"]
+size = Vector3(0.8, 0.8, 1.7)
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_handle"]
+top_radius = 0.08
+bottom_radius = 0.08
+height = 1.35
+
+[sub_resource type="SphereMesh" id="SphereMesh_head"]
+radius = 0.38
+height = 0.76
+
+[sub_resource type="StandardMaterial3D" id="Mat_handle"]
+albedo_color = Color(0.45, 0.28, 0.14, 1)
+
+[sub_resource type="StandardMaterial3D" id="Mat_head"]
+albedo_color = Color(0.35, 0.36, 0.38, 1)
+
+[sub_resource type="SphereShape3D" id="SphereShape3D_air_disc"]
+radius = 1.35
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_launcher"]
+size = Vector3(1.2, 1.4, 1.2)
+
+[sub_resource type="SphereShape3D" id="SphereShape3D_charged_dash"]
+radius = 1.1
+
+[node name="Maso" type="Node3D"]
+script = ExtResource("1_mace")
+tuning = ExtResource("2_tuning")
+
+[node name="Pivot" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.965926, -0.258819, 0, 0.258819, 0.965926, 0.45, 1, -0.55)
+
+[node name="HandleMesh" type="MeshInstance3D" parent="Pivot"]
+transform = Transform3D(1, 0, 0, 0, -0.0000000437114, -1, 0, 1, -0.0000000437114, 0, 0, -0.58)
+mesh = SubResource("CylinderMesh_handle")
+surface_material_override/0 = SubResource("Mat_handle")
+
+[node name="HeadMesh" type="MeshInstance3D" parent="Pivot"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -1.28)
+mesh = SubResource("SphereMesh_head")
+surface_material_override/0 = SubResource("Mat_head")
+
+[node name="BladeHitbox" type="Area3D" parent="Pivot"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.78)
+script = ExtResource("3_hitbox")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Pivot/BladeHitbox"]
+shape = SubResource("BoxShape3D_mace")
+
+[node name="AirDiscHitbox" type="Area3D" parent="."]
+script = ExtResource("3_hitbox")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="AirDiscHitbox"]
+shape = SubResource("SphereShape3D_air_disc")
+
+[node name="LauncherHitbox" type="Area3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.866025, -0.5, 0, 0.5, 0.866025, 0, 0.65, -0.8)
+script = ExtResource("3_hitbox")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="LauncherHitbox"]
+shape = SubResource("BoxShape3D_launcher")
+
+[node name="ChargedDashHitbox" type="Area3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, -0.6)
+script = ExtResource("3_hitbox")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="ChargedDashHitbox"]
+shape = SubResource("SphereShape3D_charged_dash")
