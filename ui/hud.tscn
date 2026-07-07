@@ -1,6 +1,7 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene load_steps=3 format=3]
 
 [ext_resource type="Script" path="res://ui/hud.gd" id="1_hud"]
+[ext_resource type="PackedScene" path="res://ui/action_loadout_menu.tscn" id="2_loadout"]
 
 [node name="HUD" type="CanvasLayer"]
 script = ExtResource("1_hud")
@@ -40,3 +41,5 @@ custom_minimum_size = Vector2(280, 18)
 
 [node name="StateLabel" type="Label" parent="Root/VBox"]
 text = "Estado: PLAYING"
+
+[node name="ActionLoadoutMenu" parent="." instance=ExtResource("2_loadout")]

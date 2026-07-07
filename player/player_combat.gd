@@ -7,6 +7,8 @@ class_name PlayerCombat extends Node
 @export var slot_x: WeaponBase
 @export var slot_y: WeaponBase
 
+signal slots_changed(slot_x_weapon: WeaponBase, slot_y_weapon: WeaponBase)
+
 var _body: Player
 var _last_attack_time := -999.0
 var _rest_rotations := {}  # WeaponBase → Quaternion
@@ -20,6 +22,38 @@ func setup(body: Player) -> void:
 	for weapon in _weapons():
 		weapon.setup(body)
 		_rest_rotations[weapon] = weapon.quaternion
+	slots_changed.emit(slot_x, slot_y)
+
+func available_weapons() -> Array[WeaponBase]:
+	var out: Array[WeaponBase] = []
+	if _body != null:
+		for child in _body.get_children():
+			var weapon := child as WeaponBase
+			if weapon != null and weapon not in out:
+				out.append(weapon)
+	for weapon in _weapons():
+		if weapon != null and weapon not in out:
+			out.append(weapon)
+	return out
+
+func set_slot_weapon(slot: World.Slot, weapon: WeaponBase) -> void:
+	if weapon == null:
+		return
+	if _body != null:
+		weapon.setup(_body)
+	if weapon not in _rest_rotations:
+		_rest_rotations[weapon] = weapon.quaternion
+	match slot:
+		World.Slot.X:
+			slot_x = weapon
+		World.Slot.Y:
+			slot_y = weapon
+	slots_changed.emit(slot_x, slot_y)
+
+func weapon_label(weapon: WeaponBase) -> String:
+	if weapon == null:
+		return "Vacio"
+	return weapon.name.capitalize()
 
 ## El jugador tiene las armas afuera si atacó hace poco.
 func weapons_out() -> bool:
@@ -37,10 +71,10 @@ func _unhandled_input(event: InputEvent) -> void:
 
 ## Golpea en el press (tap) y carga mientras se mantiene; al soltar sale el cargado.
 func _on_press(weapon: WeaponBase, slot: World.Slot) -> void:
-	_body.fire_action_world_switch()
-	_last_attack_time = World.now()
 	if weapon == null:
 		return
+	_body.fire_action_world_switch()
+	_last_attack_time = World.now()
 	weapon.quaternion = _rest_rotations[weapon]
 	buffer.press_then_charge(weapon.tap.bind(slot), weapon.hold.bind(slot, 1))
 	# TODO juice: glow de carga en la hoja con buffer.charge_progress() cuando haya materiales

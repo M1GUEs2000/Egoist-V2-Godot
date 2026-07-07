@@ -7,6 +7,7 @@ class_name HUD extends CanvasLayer
 @onready var _health_bar: ProgressBar = $Root/VBox/HealthRow/HealthBar
 @onready var _meter_bars: HBoxContainer = $Root/VBox/MeterBars
 @onready var _state_label: Label = $Root/VBox/StateLabel
+@onready var _loadout_menu: ActionLoadoutMenu = $ActionLoadoutMenu
 
 var _health: Health
 var _meter: PlayerMeter
@@ -36,6 +37,13 @@ func _bind_player() -> void:
 
 	_update_health()
 	_on_meter_changed(_meter.meter(), _meter.bars())
+	if _loadout_menu != null:
+		_loadout_menu.setup(player)
+
+func _unhandled_input(event: InputEvent) -> void:
+	if event.is_action_pressed("open_loadout_menu"):
+		_loadout_menu.toggle()
+		get_viewport().set_input_as_handled()
 
 func _on_world_changed(world: World.Kind) -> void:
 	_world_label.text = "Mundo: %s" % World.Kind.keys()[world]
