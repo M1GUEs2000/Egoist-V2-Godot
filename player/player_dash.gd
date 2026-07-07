@@ -29,7 +29,10 @@ func setup(body: Player, loco: PlayerLocomotion, register_air_hit_stall: Callabl
 	var t := body.tuning
 	_hitbox.source = body
 	_hitbox.damage = t.dash_damage
-	_hitbox.stun = t.dash_stun
+	var no_stun := StunSettings.new()
+	no_stun.grounded = 0.0
+	no_stun.airborne = 0.0
+	_hitbox.stun = no_stun
 	_hitbox.can_be_parried = false  # el dash nunca se parria (solo la espada)
 	(_hitbox_shape.shape as SphereShape3D).radius = t.dash_hit_radius
 	_hitbox.landed.connect(_on_dash_hit)
