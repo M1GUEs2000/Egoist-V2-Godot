@@ -71,7 +71,9 @@ func register_air_hit_stall() -> void:
 	_last_stall_time = World.now()
 	var duration := minf(t.air_stall_base + t.air_stall_per_hit * (_stall_count - 1), t.air_stall_max)
 	_air_stall_until = maxf(_air_stall_until, World.now() + duration)
-	_body.vertical_velocity = 0.0
+	# Congela la caída (velocity negativa → 0) pero preserva una subida (ej. el hop del
+	# primer spin de la rama espera): así el air-hit no mata el impulso vertical.
+	_body.vertical_velocity = maxf(_body.vertical_velocity, 0.0)
 	_body.air_state = Player.AirState.AIRBORNE
 
 func reset_air_stall() -> void:

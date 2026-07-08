@@ -2,8 +2,9 @@ class_name PlayerDash extends Node3D
 ## Bloque (ex PlayerDash.cs): dash terrestre/aéreo + boost de momentum + dash ofensivo.
 ## El daño vive AQUÍ (Hitbox esférico hijo), no en el glue: el dash es la única mecánica
 ## de movimiento que toca combate, así que ese acoplamiento queda contenido en este bloque.
-## v2: atravesar enemigos = quitar la capa enemy del collision_mask durante el dash
-## (reemplaza el hack de Physics.IgnoreCollision de v1).
+## v2: SOLO el dash ofensivo (force_dash, ej. el cargado de la espada) atraviesa enemigos
+## quitando la capa enemy del collision_mask (reemplaza el hack de Physics.IgnoreCollision
+## de v1). El dodge de esquivar choca con enemigos y objetos, no los traspasa.
 
 var is_dashing := false
 
@@ -62,8 +63,9 @@ func dodge() -> void:
 		_dash_dir = _loco.movement_direction(input, camera_dir).normalized()
 	else:
 		_dash_dir = _body.forward()
+	# Dodge: choca con enemigos y objetos (pass_through_enemies = false).
 	_start_dash(_dash_dir, _body.tuning.dash_distance, _body.tuning.dash_duration, true, false,
-			had_bar and _body.tuning.dash_deals_damage)
+			had_bar and _body.tuning.dash_deals_damage, false)
 
 ## Dash dirigido por otra mecánica (ej: el dash cargado de la espada). SOLO movimiento: el
 ## daño de esos dashes lo pone su propio hitbox (no el del dodge). Ver Sword._run_charged_dash_window.
@@ -71,7 +73,8 @@ func force_dash(dir: Vector3, distance: float, duration: float, boost_bump_momen
 	dir.y = 0.0
 	if dir.length_squared() < 0.0001:
 		dir = _body.forward()
-	_start_dash(dir.normalized(), distance, duration, boost_bump_momentum, true, false)
+	# Dash ofensivo: atraviesa enemigos, choca con objetos (pass_through_enemies = true).
+	_start_dash(dir.normalized(), distance, duration, boost_bump_momentum, true, false, true)
 
 func tick(delta: float) -> void:
 	_timer -= delta
@@ -85,7 +88,7 @@ func tick(delta: float) -> void:
 		_end_dash()
 
 func _start_dash(dir: Vector3, distance: float, duration: float, boost_bump_momentum: bool,
-		cancel_controlled: bool, deal_damage: bool) -> void:
+		cancel_controlled: bool, deal_damage: bool, pass_through_enemies: bool) -> void:
 	if cancel_controlled:
 		_cancel_controlled_movement.call()
 	_dash_dir = dir
@@ -95,7 +98,8 @@ func _start_dash(dir: Vector3, distance: float, duration: float, boost_bump_mome
 		_boost_bump_momentum()
 	is_dashing = true
 	_timer = _active_duration
-	_body.collision_mask &= ~World.LAYER_ENEMY  # atraviesa enemigos durante el dash
+	if pass_through_enemies:
+		_body.collision_mask &= ~World.LAYER_ENEMY  # solo el dash ofensivo atraviesa enemigos
 	if deal_damage:
 		_hitbox.begin_swing()
 

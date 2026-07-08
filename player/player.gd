@@ -12,7 +12,6 @@ enum AirState { GROUNDED, AIRBORNE }
 var air_state := AirState.GROUNDED
 var vertical_velocity := 0.0
 var bump_velocity := Vector3.ZERO
-var lock_on: Node3D = null  # LockOn (batch 6); los bloques lo tratan como opcional
 
 var _can_double_jump := true
 var _dodge_queued := false  # dodge pedido tarde en un golpe: sale al terminarlo
@@ -28,6 +27,7 @@ var _grounded_grace_until := 0.0
 @onready var player_health: PlayerHealth = $PlayerHealth
 @onready var combat: PlayerCombat = $Combat
 @onready var action_world_switch: ActionWorldSwitchModifier = $ActionWorldSwitchModifier
+@onready var lock_on: LockOn = $LockOn
 
 func _ready() -> void:
 	add_to_group("player")  # la cámara y los enemigos me encuentran por grupo
@@ -37,6 +37,7 @@ func _ready() -> void:
 	collision_mask = World.LAYER_WORLD | World.LAYER_ENEMY
 	player_health.setup(self)
 	meter.setup(self)
+	lock_on.setup(self)
 	locomotion.setup(self, get_viewport().get_camera_3d())
 	launcher.setup(self)
 	wall_slide.setup(self)
@@ -90,6 +91,8 @@ func _physics_process(delta: float) -> void:
 
 	var input_dir := locomotion.camera_relative(locomotion.read_move_input())
 	var horizontal := locomotion.tick(delta) + locomotion.lunge_velocity()
+	if wall_slide.blocks_move_input():
+		horizontal = Vector3.ZERO
 
 	vertical_velocity += tuning.gravity * launcher.gravity_scale() * delta
 
@@ -118,8 +121,9 @@ func _on_jump() -> void:
 	if is_on_floor():
 		vertical_velocity = tuning.jump_force
 		air_state = AirState.AIRBORNE
-	elif wall_slide.try_wall_jump():
-		_can_double_jump = false
+	elif wall_slide.try_wall_jump(locomotion.camera_relative(locomotion.read_move_input())):
+		# Contra una pared el salto SIEMPRE es rebote hacia afuera (aunque el slide se
+		# haya cortado este frame): no consume ni recarga el doble salto.
 		air_state = AirState.AIRBORNE
 	elif _can_double_jump:
 		_can_double_jump = false
@@ -208,6 +212,12 @@ func attack_step(duration: float) -> void:
 func hold_airborne_for_attack() -> void:
 	if not is_on_floor():
 		air_state = AirState.AIRBORNE
+
+## Pequeño empujón vertical (juice del combo aéreo: la 1ra vuelta de la rama espera
+## eleva un poco al jugador). No pisa una subida mayor ya en curso.
+func air_hop(speed: float) -> void:
+	vertical_velocity = maxf(vertical_velocity, speed)
+	air_state = AirState.AIRBORNE
 
 func bump(dir: Vector3, h_speed: float, v_speed: float) -> void:
 	_dodge_queued = false

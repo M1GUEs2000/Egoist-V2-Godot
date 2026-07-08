@@ -1,0 +1,22 @@
+filters:
+  and:
+    - file.hasTag("sistema")
+    - file.ext == "md"
+properties:
+  system_status:
+    displayName: Estado
+  hito:
+    displayName: Hito
+  status:
+    displayName: Nota
+views:
+  - type: table
+    name: Sistemas por estado
+    groupBy:
+      property: system_status
+      direction: ASC
+    order:
+      - file.name
+      - system_status
+      - hito
+      - status

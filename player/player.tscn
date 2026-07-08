@@ -1,22 +1,24 @@
-[gd_scene load_steps=21 format=3]
+[gd_scene load_steps=24 format=3 uid="uid://bf1ikbdvqburt"]
 
-[ext_resource type="Script" path="res://player/player.gd" id="1_player"]
-[ext_resource type="Script" path="res://player/player_locomotion.gd" id="2_loco"]
-[ext_resource type="Script" path="res://player/player_dash.gd" id="3_dash"]
-[ext_resource type="Script" path="res://player/player_launcher.gd" id="4_launcher"]
-[ext_resource type="Script" path="res://combat/hitbox.gd" id="5_hitbox"]
-[ext_resource type="Resource" path="res://data/player_tuning.tres" id="6_tuning"]
-[ext_resource type="Script" path="res://player/player_meter.gd" id="7_meter"]
-[ext_resource type="Script" path="res://player/player_combat.gd" id="8_combat"]
-[ext_resource type="Script" path="res://combat/input_buffer.gd" id="9_buffer"]
+[ext_resource type="Script" uid="uid://dtdjcbbq5svxk" path="res://player/player.gd" id="1_player"]
+[ext_resource type="Script" uid="uid://b5vox4rloqjr0" path="res://player/player_locomotion.gd" id="2_loco"]
+[ext_resource type="Script" uid="uid://dattjsi2qh4fm" path="res://player/player_dash.gd" id="3_dash"]
+[ext_resource type="Script" uid="uid://db2vyyvad8gh5" path="res://player/player_launcher.gd" id="4_launcher"]
+[ext_resource type="Script" uid="uid://dr1ehd335mg06" path="res://combat/hitbox.gd" id="5_hitbox"]
+[ext_resource type="Resource" uid="uid://bkryybe060oiv" path="res://data/player_tuning.tres" id="6_tuning"]
+[ext_resource type="Script" uid="uid://dkevr562haiww" path="res://player/player_meter.gd" id="7_meter"]
+[ext_resource type="Script" uid="uid://dhkdpns7h4266" path="res://player/player_combat.gd" id="8_combat"]
+[ext_resource type="Script" uid="uid://cetay6uko8ait" path="res://combat/input_buffer.gd" id="9_buffer"]
 [ext_resource type="PackedScene" path="res://combat/weapons/sword/sword.tscn" id="10_sword_scene"]
-[ext_resource type="Script" path="res://core/action_world_switch_modifier.gd" id="11_action_switch"]
-[ext_resource type="Script" path="res://combat/health.gd" id="12_health"]
-[ext_resource type="Script" path="res://player/player_health.gd" id="13_player_health"]
-[ext_resource type="Script" path="res://combat/hurtbox.gd" id="14_hurtbox"]
+[ext_resource type="Script" uid="uid://dps4dtd6ln81s" path="res://core/action_world_switch_modifier.gd" id="11_action_switch"]
+[ext_resource type="Script" uid="uid://coemg5ljdfu7t" path="res://combat/health.gd" id="12_health"]
+[ext_resource type="Script" uid="uid://b8sxxvjw7ocm3" path="res://player/player_health.gd" id="13_player_health"]
+[ext_resource type="Script" uid="uid://dvxrsptoplacw" path="res://combat/hurtbox.gd" id="14_hurtbox"]
 [ext_resource type="PackedScene" path="res://combat/weapons/mace/mace.tscn" id="15_mace_scene"]
 [ext_resource type="Script" path="res://player/player_wall_slide.gd" id="16_wall_slide"]
 [ext_resource type="Script" path="res://player/player_stun.gd" id="17_stun"]
+[ext_resource type="Script" path="res://player/lock_on.gd" id="18_lock_on"]
+[ext_resource type="Script" path="res://visual/landing_indicator.gd" id="19_landing"]
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_body"]
 radius = 0.4
@@ -29,45 +31,55 @@ height = 1.8
 [sub_resource type="SphereShape3D" id="SphereShape3D_dash"]
 radius = 0.8
 
-[node name="Player" type="CharacterBody3D"]
+[sub_resource type="CylinderMesh" id="CylinderMesh_reticle"]
+top_radius = 0.6
+bottom_radius = 0.6
+height = 0.05
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_reticle"]
+shading_mode = 0
+albedo_color = Color(1, 0, 0, 1)
+
+[node name="Player" type="CharacterBody3D" unique_id=1407604159]
 script = ExtResource("1_player")
 tuning = ExtResource("6_tuning")
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+[node name="CollisionShape3D" type="CollisionShape3D" parent="." unique_id=668628315]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
 shape = SubResource("CapsuleShape3D_body")
 
-[node name="Mesh" type="MeshInstance3D" parent="."]
+[node name="Mesh" type="MeshInstance3D" parent="." unique_id=1589711640]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
 mesh = SubResource("CapsuleMesh_body")
 
-[node name="Health" type="Node" parent="."]
+[node name="Health" type="Node" parent="." unique_id=808328325]
 script = ExtResource("12_health")
 max_health = 100.0
 
-[node name="PlayerHealth" type="Node" parent="."]
+[node name="PlayerHealth" type="Node" parent="." unique_id=1979859335]
 script = ExtResource("13_player_health")
 
-[node name="Hurtbox" type="Area3D" parent="."]
+[node name="Hurtbox" type="Area3D" parent="." unique_id=570126274]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9608201, 0)
 script = ExtResource("14_hurtbox")
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="Hurtbox"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Hurtbox" unique_id=561164015]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.055541396, 0)
 shape = SubResource("CapsuleShape3D_body")
 
-[node name="Locomotion" type="Node" parent="."]
+[node name="Locomotion" type="Node" parent="." unique_id=1022513754]
 script = ExtResource("2_loco")
 
-[node name="Dash" type="Node3D" parent="."]
+[node name="Dash" type="Node3D" parent="." unique_id=1956062227]
 script = ExtResource("3_dash")
 
-[node name="DashHitbox" type="Area3D" parent="Dash"]
+[node name="DashHitbox" type="Area3D" parent="Dash" unique_id=2060658392]
 script = ExtResource("5_hitbox")
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="Dash/DashHitbox"]
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Dash/DashHitbox" unique_id=420765402]
 shape = SubResource("SphereShape3D_dash")
 
-[node name="Launcher" type="Node" parent="."]
+[node name="Launcher" type="Node" parent="." unique_id=1536080464]
 script = ExtResource("4_launcher")
 
 [node name="WallSlide" type="Node" parent="."]
@@ -76,20 +88,33 @@ script = ExtResource("16_wall_slide")
 [node name="Stun" type="Node" parent="."]
 script = ExtResource("17_stun")
 
-[node name="Meter" type="Node" parent="."]
+[node name="Meter" type="Node" parent="." unique_id=1955322637]
 script = ExtResource("7_meter")
 
-[node name="Combat" type="Node" parent="."]
+[node name="Combat" type="Node" parent="." unique_id=248473467 node_paths=PackedStringArray("slot_x", "slot_y")]
 script = ExtResource("8_combat")
 slot_x = NodePath("../Sword")
 slot_y = NodePath("../Sword")
 
-[node name="InputBuffer" type="Node" parent="Combat"]
+[node name="InputBuffer" type="Node" parent="Combat" unique_id=295178128]
 script = ExtResource("9_buffer")
 
-[node name="Sword" parent="." instance=ExtResource("10_sword_scene")]
+[node name="Sword" parent="." unique_id=28033381 instance=ExtResource("10_sword_scene")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.25856447, 0)
 
 [node name="Maso" parent="." instance=ExtResource("15_mace_scene")]
 
-[node name="ActionWorldSwitchModifier" type="Node" parent="."]
+[node name="ActionWorldSwitchModifier" type="Node" parent="." unique_id=28956879]
 script = ExtResource("11_action_switch")
+
+[node name="LockOn" type="Node3D" parent="."]
+script = ExtResource("18_lock_on")
+
+[node name="Reticle" type="MeshInstance3D" parent="LockOn"]
+visible = false
+cast_shadow = 0
+mesh = SubResource("CylinderMesh_reticle")
+surface_material_override/0 = SubResource("StandardMaterial3D_reticle")
+
+[node name="LandingIndicator" type="Node3D" parent="."]
+script = ExtResource("19_landing")

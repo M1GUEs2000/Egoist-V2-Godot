@@ -77,5 +77,18 @@ func _ready() -> void:
 	await get_tree().physics_frame
 	assert(player.global_position.y > y_before)  # el launcher sube
 
+	# LockOn (batch 6): adquiere el enemigo más cercano dentro de rango/ángulo, ignora el lejano
+	var enemy_near := EnemyBase.new()
+	add_child(enemy_near)
+	enemy_near.global_position = Vector3(0.0, 0.0, -3.0)  # adelante (forward = -Z), cerca
+	var enemy_far := EnemyBase.new()
+	add_child(enemy_far)
+	enemy_far.global_position = Vector3(0.0, 0.0, -(3.0 + player.tuning.lock_max_range * 2.0))  # fuera de rango
+	await get_tree().process_frame
+	assert(player.lock_on.acquire_target(Vector3.FORWARD) == enemy_near)
+	assert(not player.lock_on.has_visible_target())  # sin ataques recientes, sin reticle
+	enemy_near.queue_free()
+	enemy_far.queue_free()
+
 	print("SMOKE OK")
 	get_tree().quit()

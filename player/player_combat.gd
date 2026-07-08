@@ -11,6 +11,7 @@ signal slots_changed(slot_x_weapon: WeaponBase, slot_y_weapon: WeaponBase)
 
 var _body: Player
 var _last_attack_time := -999.0
+var _charging_weapon: WeaponBase  # arma del último press: recibe el glow de carga
 var _rest_rotations := {}  # WeaponBase → Quaternion
 
 @onready var buffer: InputBuffer = $InputBuffer
@@ -81,13 +82,18 @@ func _on_press(weapon: WeaponBase, slot: World.Slot) -> void:
 		return
 	_body.fire_action_world_switch()
 	_last_attack_time = World.now()
+	_charging_weapon = weapon
 	weapon.quaternion = _rest_rotations[weapon]
 	buffer.press_then_charge(weapon.tap.bind(slot), weapon.hold.bind(slot, 1))
-	# TODO juice: glow de carga en la hoja con buffer.charge_progress() cuando haya materiales
 
 ## Armas guardadas: rotan a la pose inactiva (hoja hacia abajo) al pasar el rato.
 func _process(delta: float) -> void:
-	if _body == null or weapons_out():
+	if _body == null:
+		return
+	# Glow de carga: la hoja del arma presionada brilla según el progreso de carga.
+	if _charging_weapon != null:
+		_charging_weapon.set_charge_glow(buffer.charge_progress())
+	if weapons_out():
 		return
 	for weapon in _weapons():
 		var rest: Quaternion = _rest_rotations[weapon]

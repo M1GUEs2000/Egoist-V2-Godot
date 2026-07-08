@@ -1,57 +1,78 @@
-# Egoist v2 — Godot 4.7
+# Egoist V2 - Entrada para Claude Code
 
-Port de Egoist (Unity → Godot 4.7, Jolt Physics, Forward Plus). **GDScript tipado estático** únicamente.
-El diseño vive en la bóveda de Obsidian (`../../Boveda`) — misma fuente de verdad de siempre. Las reglas de skills del CLAUDE.md raíz (`/ponytail`, etc.) siguen aplicando.
+Este archivo es solo una brujula para no perderse al abrir el repo. No es la fuente de verdad del diseno, arquitectura, backlog ni gameplay.
 
-**Metodología obligatoria**: antes de crear, modificar o borrar un sistema, seguir el flujo de [`METODOLOGIA.md`](METODOLOGIA.md) (incluye qué skill invocar: `/godot-gdscript-patterns` para diseñar, `/godot-best-practices` para escribir, `/godot-ui` para `ui/`).
+La fuente de verdad operativa esta en la boveda V2:
 
-## Reglas duras (lecciones de la v1)
+`C:/Users/Tutupa/Documents/Proyectos/Egoist/Godot/egoist-v-2/obsidian/`
 
-1. **Git desde el commit 0.** Commit al cerrar cada feature que funcione; nunca más 2 semanas al aire.
-2. **Todo valor tuneable vive en un Resource `.tres` en `data/`** — nunca hardcodeado ni solo en la escena. (En v1 un refactor reseteó los valores tuneados a mano.) *Excepción acordada:* el tuning de enemigos (`EnemyBase`, `MeleeAttack`, `RangedAttack`, `Perception`, `GroundLocomotion`) vive en `@export` por escena hasta que exista el segundo tipo de enemigo; ahí se extrae un `EnemyTuning` en `data/`.
-3. **Claude edita las escenas `.tscn` como texto.** Tutupa juega, tunea `.tres` y decide diseño. Nada de "yo armo la escena, dime qué hago".
-4. **Verificar headless antes de entregar** (ver abajo). Nunca declarar "listo" sin correr esto.
-5. **Composición Godot-nativa**: `Health`/`WorldMembership`/etc. son nodos hijos; hitbox/hurtbox son `Area3D` + grupo `"hurtbox"`; comunicación por **señales**, nunca polling. Los contratos C# de v1 (`IHittable`/`ILaunchable`/`IParryable`) desaparecen: `has_method()` y grupos.
-6. **HUD desde cero** (el de v1 era descartable).
-7. **IA: FSM simple primero.** LimboAI solo si la FSM se queda corta (el BT de v1 era prototipo).
+## 1. Entrar por la boveda
 
-## Estructura (feature-based: escena + script juntos)
+Lo primero al abrir el proyecto es entrar a la boveda y leer su README:
 
+`C:/Users/Tutupa/Documents/Proyectos/Egoist/Godot/egoist-v-2/obsidian/README.md`
+
+Ese README ensena como moverse dentro de la boveda. La boveda esta organizada por nodos: primero se entiende el mapa general en `Arquitectura Godot.md`, y desde ahi se baja al nodo que toque (`Gameplay`, `Arte`, `Tareas`, `Decisiones`, `Migracion`, etc.).
+
+Orden minimo antes de disenar, modificar o borrar algo:
+
+1. `C:/Users/Tutupa/Documents/Proyectos/Egoist/Godot/egoist-v-2/obsidian/README.md`
+2. `C:/Users/Tutupa/Documents/Proyectos/Egoist/Godot/egoist-v-2/METODOLOGIA.md`
+3. `C:/Users/Tutupa/Documents/Proyectos/Egoist/Godot/egoist-v-2/obsidian/Arquitectura Godot.md`
+4. La nota especifica del sistema dentro de `obsidian/Gameplay/`, `obsidian/Arte/`, `obsidian/Tareas/`, `obsidian/Decisiones/` o `obsidian/Migracion/`.
+
+No duplicar en este archivo lo que ya vive en la boveda. Si cambia una decision de diseno o arquitectura, actualizar la nota correcta en `obsidian/`.
+
+## 2. Proyecto activo
+
+- Proyecto Godot: `C:/Users/Tutupa/Documents/Proyectos/Egoist/Godot/egoist-v-2/`
+- Archivo de proyecto: `C:/Users/Tutupa/Documents/Proyectos/Egoist/Godot/egoist-v-2/project.godot`
+- Boveda V2: `C:/Users/Tutupa/Documents/Proyectos/Egoist/Godot/egoist-v-2/obsidian/`
+- Boveda vieja, solo historica: `C:/Users/Tutupa/Documents/Proyectos/Egoist/Boveda/`
+- Unity V1, solo referencia: `C:/Users/Tutupa/Documents/Proyectos/Egoist/Unity/Egoist V1/`
+
+Si la boveda vieja o Unity contradicen la boveda V2, manda la boveda V2.
+
+## 3. Godot
+
+- Version: Godot 4.7 stable
+- Ejecutable local: `C:/Users/Tutupa/Downloads/Godot_v4.7-stable_win64.exe/Godot_v4.7-stable_win64_console.exe`
+- Escena de prueba principal: `res://world/test_scene.tscn`
+- Smoke test: `res://world/smoke_test.tscn`
+
+## 4. Skills instaladas
+
+Usar estas skills cuando aplique:
+
+- Godot gameplay/GDScript: `C:/Users/Tutupa/.agents/skills/godot-gdscript-patterns/SKILL.md`
+- Godot UI/HUD/menus: `C:/Users/Tutupa/.agents/skills/godot-ui/SKILL.md`
+- Obsidian Markdown: `C:/Users/Tutupa/.codex/skills/obsidian-markdown/SKILL.md`
+- Obsidian Bases: `C:/Users/Tutupa/.codex/skills/obsidian-bases/SKILL.md`
+
+`METODOLOGIA.md` define cuando usar skills y como cerrar cambios. Seguirla antes de tocar codigo.
+
+## 5. Verificacion rapida
+
+Desde `C:/Users/Tutupa/Documents/Proyectos/Egoist/Godot/egoist-v-2/`:
+
+```powershell
+$GODOT="C:/Users/Tutupa/Downloads/Godot_v4.7-stable_win64.exe/Godot_v4.7-stable_win64_console.exe"
+& $GODOT --headless --path . --import
+& $GODOT --headless --path . --quit-after 2
 ```
-autoload/   WorldManager · GameManager · ComboTracker (singletons)
-core/       World (enums) · WorldMembership · WorldSwitchTrigger
-combat/     Health · Hurtbox · Hitbox · InputBuffer · weapons/ (WeaponBase, sword/)
-data/       Resources de tuning (.gd de Resource + instancias .tres)
-player/     Player (glue) + módulos: Locomotion · Dash · Launcher · Swing · Meter · LockOn
-enemies/    EnemyBase · GroundedEnemy (glue) · Perception · GroundLocomotion · attacks/ · ai/
-ui/         HUD (solo escucha señales)
-visual/     CameraRig · WorldVisual · LandingIndicator
-world/      Escenas: test_scene, bloques de traversal, pickups
-assets/     Modelos, animaciones, texturas (binarios → LFS)
+
+Si tocaste logica core:
+
+```powershell
+$GODOT="C:/Users/Tutupa/Downloads/Godot_v4.7-stable_win64.exe/Godot_v4.7-stable_win64_console.exe"
+& $GODOT --headless --path . res://world/smoke_test.tscn --quit-after 2
 ```
 
-## Mapa Unity v1 → Godot v2
+Para probar jugando:
 
-| Unity v1 | Godot v2 |
-|---|---|
-| `WorldManager.cs` singleton lazy | autoload `WorldManager` |
-| eventos C# | señales |
-| `CharacterController` + `PlayerMotor` | `CharacterBody3D` (velocity + `move_and_slide()`) — el motor ya viene |
-| `IHittable` + `GetComponentInParent` | `Hurtbox` (Area3D) + grupo |
-| `ILaunchable`/`IParryable` | `has_method("launch")` / `has_method("try_parry")` |
-| bloques `[Serializable]` + `Init(...)` | nodos hijos |
-| `ScriptableObject` (deuda nunca pagada) | Resource `.tres` en `data/` desde el día 0 |
-| `TestSceneBuilder.cs` (hack de editor) | Claude escribe `world/test_scene.tscn` directo |
-| Unity Behavior BT | FSM (enum + match) → LimboAI si hace falta |
-| Input System asset | `[input]` en `project.godot` (move_up/down/left/right, jump, dodge, attack_x, attack_y) |
-| Mixamo retarget Humanoid | mismo FBX/GLB, retarget con BoneMap en el importador |
-
-## Verificación (obligatoria antes de entregar)
-
-```bash
-GODOT="C:/Users/Tutupa/Downloads/Godot_v4.7-stable_win64.exe"
-"$GODOT" --headless --path . --import        # importa assets y construye cache de clases
-"$GODOT" --headless --path . --quit-after 2  # arranca autoloads y sale; stderr debe estar limpio
+```powershell
+$GODOT="C:/Users/Tutupa/Downloads/Godot_v4.7-stable_win64.exe/Godot_v4.7-stable_win64_console.exe"
+& $GODOT --path . res://world/test_scene.tscn
 ```
 
-Para correr una escena concreta: `"$GODOT" --path . res://world/test_scene.tscn`
+El feel lo aprueba Tutupa jugando; headless solo verifica que no este roto.

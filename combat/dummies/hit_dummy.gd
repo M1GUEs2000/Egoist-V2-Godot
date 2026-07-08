@@ -20,11 +20,14 @@ func slam(down_speed: float) -> void:
 	_airborne_until = World.now() + 4.0
 	_horizontal_velocity = Vector3.ZERO
 
-func push(direction: Vector3, horizontal_speed: float, up_speed: float) -> void:
+func push(direction: Vector3, settings: PushSettings) -> void:
+	if settings == null:
+		settings = PushSettings.new()
 	direction.y = 0.0
 	if direction.length_squared() > 0.0001:
-		_horizontal_velocity = direction.normalized() * horizontal_speed
-	_vertical_velocity = absf(up_speed)
+		_horizontal_velocity = direction.normalized() * settings.horizontal_speed
+	_vertical_velocity = absf(settings.up_speed)
+	gravity = settings.gravity  # el dummy tambien respeta el arco del push
 	_airborne_until = World.now() + 4.0
 
 func slam_bounce(down_speed: float, target_world_y: Callable, hang_time: float) -> void:

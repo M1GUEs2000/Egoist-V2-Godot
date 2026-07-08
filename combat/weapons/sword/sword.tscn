@@ -1,17 +1,17 @@
-[gd_scene load_steps=10 format=3]
+[gd_scene format=3 uid="uid://c5y7l00xx4ab"]
 
-[ext_resource type="Script" path="res://combat/weapons/sword/sword.gd" id="1_sword"]
-[ext_resource type="Resource" path="res://data/sword_tuning.tres" id="2_tuning"]
-[ext_resource type="Script" path="res://combat/hitbox.gd" id="3_hitbox"]
-
-[sub_resource type="BoxShape3D" id="BoxShape3D_blade"]
-size = Vector3(0.35, 0.35, 1.6)
+[ext_resource type="Script" uid="uid://l6rxmw0losr8" path="res://combat/weapons/sword/sword.gd" id="1_sword"]
+[ext_resource type="Resource" uid="uid://cok7ui8lum50e" path="res://data/sword_tuning.tres" id="2_tuning"]
+[ext_resource type="Script" uid="uid://dr1ehd335mg06" path="res://combat/hitbox.gd" id="3_hitbox"]
 
 [sub_resource type="BoxMesh" id="BoxMesh_blade"]
 size = Vector3(0.18, 0.18, 1.5)
 
 [sub_resource type="StandardMaterial3D" id="Mat_sword"]
 albedo_color = Color(0.75, 0.78, 0.82, 1)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_blade"]
+size = Vector3(0.35, 0.35, 1.683789)
 
 [sub_resource type="SphereShape3D" id="SphereShape3D_air_disc"]
 radius = 1.35
@@ -22,41 +22,47 @@ size = Vector3(1.2, 1.4, 1.2)
 [sub_resource type="SphereShape3D" id="SphereShape3D_charged_dash"]
 radius = 1.1
 
-[node name="Sword" type="Node3D"]
+[node name="Sword" type="Node3D" unique_id=1121969572]
 script = ExtResource("1_sword")
 tuning = ExtResource("2_tuning")
 
-[node name="Pivot" type="Node3D" parent="."]
+[node name="Pivot" type="Node3D" parent="." unique_id=1623413767]
 transform = Transform3D(1, 0, 0, 0, 0.965926, -0.258819, 0, 0.258819, 0.965926, 0.45, 1, -0.55)
 
-[node name="BladeMesh" type="MeshInstance3D" parent="Pivot"]
+[node name="BladeMesh" type="MeshInstance3D" parent="Pivot" unique_id=1928621873]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.75)
 mesh = SubResource("BoxMesh_blade")
 surface_material_override/0 = SubResource("Mat_sword")
 
-[node name="BladeHitbox" type="Area3D" parent="Pivot"]
+[node name="BladeHitbox" type="Area3D" parent="Pivot" unique_id=2004569022]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.75)
 script = ExtResource("3_hitbox")
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="Pivot/BladeHitbox"]
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Pivot/BladeHitbox" unique_id=592468529]
+transform = Transform3D(1.045, 0, 0, 0, 1.045, 1.5571755e-08, 0, -1.5571755e-08, 1.045, 0, -5.364418e-07, -0.041894436)
 shape = SubResource("BoxShape3D_blade")
 
-[node name="AirDiscHitbox" type="Area3D" parent="."]
+[node name="AirDiscHitbox" type="Area3D" parent="." unique_id=883772324]
+transform = Transform3D(0.83, 0, 0, 0, 0.83, 0, 0, 0, 0.83, 0, 0.8784466, -1.5367947)
 script = ExtResource("3_hitbox")
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="AirDiscHitbox"]
+[node name="CollisionShape3D" type="CollisionShape3D" parent="AirDiscHitbox" unique_id=2038705934]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0.17930734)
 shape = SubResource("SphereShape3D_air_disc")
+debug_color = Color(0.66560966, 0.50965834, 0.13546959, 0.41960785)
 
-[node name="LauncherHitbox" type="Area3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 0.866025, -0.5, 0, 0.5, 0.866025, 0, 0.65, -0.8)
+[node name="LauncherHitbox" type="Area3D" parent="." unique_id=138822131]
+transform = Transform3D(1.385, 0, 0, 0, 1.3797296, -0.12071069, 0, 0.12071069, 1.3797296, 0, 0.9296448, -1.4961276)
 script = ExtResource("3_hitbox")
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="LauncherHitbox"]
+[node name="CollisionShape3D" type="CollisionShape3D" parent="LauncherHitbox" unique_id=1333213508]
 shape = SubResource("BoxShape3D_launcher")
+debug_color = Color(0.8473857, 0.0009641552, 0.90749025, 0.41960785)
 
-[node name="ChargedDashHitbox" type="Area3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, -0.6)
+[node name="ChargedDashHitbox" type="Area3D" parent="." unique_id=1780498613]
+transform = Transform3D(1.165, 0, 0, 0, 1.165, 0, 0, 0, 1.165, 0, 0.9, -0.6)
 script = ExtResource("3_hitbox")
+damage = 5.0
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="ChargedDashHitbox"]
+[node name="CollisionShape3D" type="CollisionShape3D" parent="ChargedDashHitbox" unique_id=2119546284]
 shape = SubResource("SphereShape3D_charged_dash")

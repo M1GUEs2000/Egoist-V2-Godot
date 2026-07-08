@@ -33,6 +33,7 @@ var _slam_bounce := false
 var _bounce_target_y := Callable()
 var _bounce_hang_time := 0.0
 var _launch_id := 0
+var _air_gravity := 0.0  # gravedad del vuelo actual; el push la override con su propio arco
 
 @onready var health: Health = get_node_or_null("Health") as Health
 @onready var membership: WorldMembership = get_node_or_null("WorldMembership") as WorldMembership
@@ -42,6 +43,7 @@ func _ready() -> void:
 	add_to_group("enemy")
 	collision_layer = World.LAYER_ENEMY
 	collision_mask = World.LAYER_WORLD | World.LAYER_PLAYER | World.LAYER_ENEMY
+	_air_gravity = airborne_gravity
 
 	if health != null and not health.died.is_connected(_die):
 		health.died.connect(_die)
@@ -107,8 +109,13 @@ func apply_stun(duration: float) -> void:
 		return
 	combat_state = CombatState.STUNNED
 	_stunned_until = maxf(_stunned_until, World.now() + duration)
+	# El golpe frena el momentum: cancela el push (u otro impulso) en curso y deja al
+	# enemigo quieto stuneado (en aire flota quieto y cae al terminar el stun).
+	velocity = Vector3.ZERO
 	if is_airborne():
-		_airborne_until = maxf(_airborne_until, _stunned_until + airborne_max_time)
+		# Suspendido mientras dure el stun (juggle): cae cuando el stun termina.
+		# airborne_max_time NO va aca; es solo el tope de seguridad en _update_airborne.
+		_airborne_until = maxf(_airborne_until, _stunned_until)
 	_refresh_visual_state()
 
 func apply_armor(duration: float) -> void:
@@ -135,6 +142,7 @@ func launch(height: float, hang_time: float) -> bool:
 	if not can_receive_hit() or is_armored():
 		return false
 	_begin_airborne()
+	_air_gravity = airborne_gravity  # el launcher cae con la gravedad propia del enemigo
 	velocity = Vector3.ZERO
 	_launch_id += 1
 	_launch_routine(_launch_id, height, hang_time)
@@ -170,16 +178,23 @@ func slam_bounce(down_speed: float, target_world_y: Callable, hang_time: float) 
 	else:
 		slam(down_speed)
 
-func push(direction: Vector3, horizontal_speed: float, up_speed: float) -> void:
+## Empujon en arco. El arco (velocidad + altura + cierre) lo define quien ataca via
+## PushSettings, no el enemigo: asi cada arma/ataque empuja distinto (inyectable).
+func push(direction: Vector3, settings: PushSettings) -> void:
 	if not can_receive_hit() or is_armored():
 		return
 	direction.y = 0.0
 	if direction.length_squared() < 0.0001:
 		return
+	if settings == null:
+		settings = PushSettings.new()  # defaults seguros si el arma no configuro su push
 	_begin_airborne()
-	_airborne_until = World.now() + airborne_max_time
-	velocity = direction.normalized() * horizontal_speed
-	velocity.y = absf(up_speed)
+	# Sin hang: el push es un arco balistico (sube por up_speed y cae por su gravedad).
+	# airborne_max_time queda solo como tope de seguridad en _update_airborne.
+	_air_gravity = settings.gravity
+	_airborne_until = World.now()
+	velocity = direction.normalized() * settings.horizontal_speed
+	velocity.y = absf(settings.up_speed)
 
 func try_parry(_player: Player, _hit_direction: Vector3 = Vector3.ZERO) -> bool:
 	return false
@@ -202,7 +217,11 @@ func _on_membership_changed(active_now: bool) -> void:
 	_is_active = active_now
 	collision_layer = World.LAYER_ENEMY if _is_active else 0
 	if hurtbox != null:
-		hurtbox.monitorable = _is_active
+		# El switch puede venir desde un golpe/pickup (callback de area_entered), o sea
+		# durante el flush de queries de fisica, donde el motor BLOQUEA set_monitorable.
+		# set_deferred lo aplica al terminar el flush; si no, la hurtbox se desincroniza y
+		# el enemigo queda activo pero intocable (no lo detecta ningun hitbox).
+		hurtbox.set_deferred("monitorable", _is_active)
 	_refresh_visual_state()
 	on_world_changed()
 
@@ -273,7 +292,7 @@ func _update_airborne(delta: float) -> void:
 	if World.now() < _airborne_until and velocity.y <= 0.0:
 		velocity.y = 0.0
 	else:
-		velocity.y += airborne_gravity * delta
+		velocity.y += _air_gravity * delta
 	move_and_slide()
 	if is_on_floor() or World.now() >= _airborne_until + airborne_max_time:
 		if _slam_bounce:
@@ -295,6 +314,7 @@ func _do_bounce() -> void:
 func _land() -> void:
 	air_state = AirState.GROUNDED
 	velocity = Vector3.ZERO
+	_air_gravity = airborne_gravity  # limpia el override del push para el proximo vuelo
 
 func _die() -> void:
 	_dead = true

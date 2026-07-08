@@ -216,6 +216,8 @@ func play_air_step(step: int, finisher: bool, wait_branch: bool) -> void:
 		_play_air_diagonal(-1.0)  # arriba-izq → abajo-der
 		return
 	if wait_branch:
+		if step == 2:  # primera vuelta: eleva un poco al jugador (juice)
+			_player.air_hop(tuning.air_wait_spin_hop)
 		_play_spin()  # vuelta completa (golpe 2 y finisher)
 		return
 	if finisher:  # hachazo vertical

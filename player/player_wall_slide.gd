@@ -1,16 +1,25 @@
 class_name PlayerWallSlide extends Node
 ## Deslizamiento de pared por momentum: requiere input hacia la pared y contacto real.
 
+## Feedback visual: el personaje brilla verde mientras está pegado a la pared.
+@export var glow_color := Color(0.25, 1.0, 0.4)
+@export var glow_energy := 2.0
+
 var is_sliding := false
 var wall_normal := Vector3.ZERO
 
 var _body: Player
 var _stick_until := -999.0
 var _ignore_until := -999.0
+var _move_lock_until := -999.0
 var _wall_tangent_velocity := Vector3.ZERO
+var _mesh: MeshInstance3D
+var _glow_material: StandardMaterial3D
+var _glow_active := false
 
 func setup(body: Player) -> void:
 	_body = body
+	_mesh = body.get_node_or_null("Mesh") as MeshInstance3D
 
 func apply_slide_velocity(horizontal_velocity: Vector3, input_dir: Vector3, delta: float) -> Vector3:
 	if _body == null or not is_sliding:
@@ -34,7 +43,9 @@ func apply_slide_velocity(horizontal_velocity: Vector3, input_dir: Vector3, delt
 			Vector3.ZERO, t.wall_slide_momentum_decay * delta)
 	var along_wall := horizontal_velocity.slide(wall_normal)
 	along_wall.y = 0.0
-	return along_wall + _wall_tangent_velocity
+	# Presion constante contra la pared: sin esto el movimiento queda paralelo al muro,
+	# se pierde el contacto (is_on_wall) y el estado de slide titila frame a frame.
+	return along_wall + _wall_tangent_velocity - wall_normal * t.wall_slide_press_speed
 
 func update_after_move(horizontal_velocity: Vector3, input_dir: Vector3) -> void:
 	if _body == null:
@@ -64,27 +75,63 @@ func update_after_move(horizontal_velocity: Vector3, input_dir: Vector3) -> void
 	wall_normal = normal
 	if not was_sliding:
 		_stick_until = World.now() + _body.tuning.wall_slide_stick_time
+		_set_glow(true)
 
 	_wall_tangent_velocity = horizontal_velocity.slide(wall_normal)
 	_wall_tangent_velocity.y = 0.0
 
-func try_wall_jump() -> bool:
-	if _body == null or not is_sliding:
+func try_wall_jump(input_dir: Vector3) -> bool:
+	if _body == null:
 		return false
-	var tangent := _wall_tangent_velocity
+	var normal := wall_normal
+	if not is_sliding:
+		# El slide puede haberse cortado justo este frame: si sigue habiendo pared
+		# real, el salto igual es rebote hacia afuera, nunca un impulso vertical puro.
+		if World.now() < _ignore_until or _body.is_on_floor() or not _body.is_on_wall():
+			return false
+		normal = _find_wall_normal()
+		if normal.length_squared() < 0.0001:
+			return false
+	# El impulso es el input reflejado en la pared: la componente hacia la pared
+	# se invierte (sale por la normal) y la componente lateral del input se conserva.
+	var tangent := input_dir
 	tangent.y = 0.0
+	tangent = tangent.slide(normal)
 	if tangent.length_squared() > 0.0001:
 		tangent = tangent.normalized() * _body.tuning.wall_slide_wall_jump_along_speed
-	_body.bump_velocity = wall_normal * _body.tuning.wall_slide_wall_jump_away_speed + tangent
+	else:
+		tangent = Vector3.ZERO
+	_body.bump_velocity = normal * _body.tuning.wall_slide_wall_jump_away_speed + tangent
 	_body.vertical_velocity = _body.tuning.wall_slide_wall_jump_up_speed
 	_ignore_until = World.now() + _body.tuning.wall_slide_wall_jump_lock_time
+	_move_lock_until = World.now() + _body.tuning.wall_slide_wall_jump_lock_time
 	cancel()
 	return true
+
+## Durante el rebote el impulso de la pared manda: el input de movimiento queda
+## bloqueado un instante para que aplastar hacia el muro no cancele el empuje.
+func blocks_move_input() -> bool:
+	return _body != null and World.now() < _move_lock_until and not _body.is_on_floor()
 
 func cancel() -> void:
 	is_sliding = false
 	wall_normal = Vector3.ZERO
 	_wall_tangent_velocity = Vector3.ZERO
+	_set_glow(false)
+
+func _set_glow(active: bool) -> void:
+	if _mesh == null or active == _glow_active:
+		return
+	_glow_active = active
+	if active:
+		if _glow_material == null:
+			_glow_material = StandardMaterial3D.new()
+			_glow_material.emission_enabled = true
+		_glow_material.emission = glow_color
+		_glow_material.emission_energy_multiplier = glow_energy
+		_mesh.set_surface_override_material(0, _glow_material)
+	else:
+		_mesh.set_surface_override_material(0, null)
 
 func _find_wall_normal() -> Vector3:
 	for index in range(_body.get_slide_collision_count()):

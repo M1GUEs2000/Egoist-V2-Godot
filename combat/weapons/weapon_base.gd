@@ -16,6 +16,11 @@ class_name WeaponBase extends Node3D
 
 @export var tuning: WeaponTuning
 
+## Juice de carga: la hoja emite este color al mantener un ataque (glow proporcional a
+## buffer.charge_progress()). Greybox, sin assets: emission sobre el material de la hoja.
+@export var charge_glow_color := Color(1.0, 0.82, 0.28)
+@export var charge_glow_max_energy := 2.5
+
 var level := 1
 var kill_count := 0
 
@@ -34,10 +39,14 @@ var _combo_kind := &""
 @onready var _pivot: Node3D = $Pivot
 @onready var _blade_hitbox: Hitbox = $Pivot/BladeHitbox
 @onready var _air_disc_hitbox: Hitbox = get_node_or_null("AirDiscHitbox")
+@onready var _blade_mesh: MeshInstance3D = get_node_or_null("Pivot/BladeMesh") as MeshInstance3D
+
+var _blade_material: StandardMaterial3D
 
 func _ready() -> void:
 	if tuning == null:
 		tuning = _default_tuning()
+	_setup_blade_glow()
 
 func setup(player: Player) -> void:
 	_player = player
@@ -156,7 +165,7 @@ func _finish_air_combo(wait_branch: bool) -> void:
 	for hurtbox in _window_hits.duplicate():
 		var target: Node = hurtbox.owner_node
 		if wait_branch and target.has_method("push"):
-			target.call("push", _player.forward(), tuning.air_push_speed, tuning.air_push_up_speed)
+			target.call("push", _player.forward(), tuning.air_push)
 		elif not wait_branch and target.has_method("slam"):
 			target.call("slam", tuning.air_spike_down_speed)
 
@@ -201,6 +210,28 @@ func on_kill() -> void:
 	kill_count += 1
 	if level < tuning.max_level and kill_count >= tuning.kills_to_upgrade * level:
 		level += 1
+
+# ---- Juice: glow de carga en la hoja ----
+
+## Prepara un material propio en la hoja con emission apagada (energy 0), listo para el
+## glow de carga. Duplica el material base para no pisar otras instancias del arma.
+func _setup_blade_glow() -> void:
+	if _blade_mesh == null:
+		return
+	var base := _blade_mesh.get_active_material(0)
+	if base is StandardMaterial3D:
+		_blade_material = (base as StandardMaterial3D).duplicate()
+	else:
+		_blade_material = StandardMaterial3D.new()
+	_blade_material.emission_enabled = true
+	_blade_material.emission = charge_glow_color
+	_blade_material.emission_energy_multiplier = 0.0
+	_blade_mesh.set_surface_override_material(0, _blade_material)
+
+## Intensidad del glow de carga, 0→1 (lo llama PlayerCombat con buffer.charge_progress()).
+func set_charge_glow(t: float) -> void:
+	if _blade_material != null:
+		_blade_material.emission_energy_multiplier = clampf(t, 0.0, 1.0) * charge_glow_max_energy
 
 # ---- Helpers ----
 

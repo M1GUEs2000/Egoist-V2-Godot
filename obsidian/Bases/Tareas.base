@@ -1,0 +1,22 @@
+filters:
+  and:
+    - file.hasTag("tarea")
+    - file.ext == "md"
+properties:
+  hito:
+    displayName: Hito
+  status:
+    displayName: Estado
+  priority:
+    displayName: Prioridad
+views:
+  - type: table
+    name: Backlog por hito
+    groupBy:
+      property: hito
+      direction: ASC
+    order:
+      - file.name
+      - hito
+      - status
+      - priority

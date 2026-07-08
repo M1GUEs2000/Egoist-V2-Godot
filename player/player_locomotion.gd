@@ -1,8 +1,8 @@
 class_name PlayerLocomotion extends Node
 ## Bloque (ex PlayerLocomotion.cs): movimiento por input relativo a cámara + attack lunge
 ## (avance corto en cada golpe). Expone los helpers de dirección (camera_relative /
-## movement_direction) que reusan dash y swing. El ajuste hacia el target lockeado
-## llega con LockOn (batch 6) — los hooks ya están marcados.
+## movement_direction) que reusan dash y swing. El snap hacia el target lockeado (LockOn)
+## ajusta movimiento y encare del golpe; el reticle en sí lo dueña LockOn.
 
 var last_move_dir := Vector3.ZERO
 
@@ -49,25 +49,37 @@ func camera_relative(input: Vector2) -> Vector3:
 func movement_direction(input: Vector2, camera_dir: Vector3) -> Vector3:
 	if not has_move_input(input):
 		return Vector3.ZERO
-	# TODO batch 6 (LockOn): si hay target visible y el ángulo <= lock_move_snap_angle, snap hacia él
+	var target := _lock_target()
+	if target == null:
+		return camera_dir
+	var to_target := _direction_to(target.global_position)
+	if to_target == Vector3.ZERO:
+		return camera_dir
+	if rad_to_deg(camera_dir.angle_to(to_target)) <= _body.tuning.lock_move_snap_angle:
+		return to_target
 	return camera_dir
+
+## Setea la mira del lock-on a partir del input (compartido con el snap de movimiento).
+func aim_with_input(input: Vector2, camera_dir: Vector3) -> void:
+	if has_move_input(input) and camera_dir != Vector3.ZERO:
+		_body.lock_on.set_aim_direction(camera_dir)
+		_body.lock_on.acquire_target(camera_dir)
 
 ## Devuelve la velocidad horizontal del frame y maneja el facing.
 func tick(_delta: float) -> Vector3:
 	var input := read_move_input()
 	var camera_dir := camera_relative(input)
-	# TODO batch 6 (LockOn): aim_with_input(input, camera_dir)
+	aim_with_input(input, camera_dir)
 	var dir := movement_direction(input, camera_dir)
 	# Durante un golpe (lunge) no giramos por input: mantenemos la mira del ataque.
 	if dir != Vector3.ZERO and World.now() >= _lunge_until:
 		set_facing(dir)
 	return dir * _body.tuning.move_speed
 
-## Lunge: el jugador encara la dirección de ataque y avanza un poco durante el golpe.
+## Lunge: el jugador encara la dirección de ataque (target lockeado si existe, si no su
+## forward) y avanza un poco durante el golpe.
 func attack_step(duration: float) -> void:
-	# TODO batch 6 (LockOn): encarar al target lockeado si existe
-	var dir := _body.forward()
-	dir.y = 0.0
+	var dir := _attack_direction()
 	if dir.length_squared() < 0.0001:
 		return
 	dir = dir.normalized()
@@ -75,6 +87,18 @@ func attack_step(duration: float) -> void:
 	_lunge_velocity = dir * (_body.tuning.attack_step_distance / maxf(0.01, duration))
 	_lunge_start = World.now()
 	_lunge_until = World.now() + duration
+
+## Re-adquiere target sobre el forward actual (no la mira): el golpe snapea al enemigo más
+## cercano en cono aunque el reticle no esté visible (armas guardadas).
+func _attack_direction() -> Vector3:
+	var target: EnemyBase = _body.lock_on.acquire_target(_body.forward())
+	if target != null:
+		var to_target := _direction_to(target.global_position)
+		if to_target != Vector3.ZERO:
+			return to_target
+	var dir := _body.forward()
+	dir.y = 0.0
+	return dir
 
 func lunge_velocity() -> Vector3:
 	return _lunge_velocity if World.now() < _lunge_until else Vector3.ZERO
@@ -89,3 +113,13 @@ func set_facing(dir: Vector3) -> void:
 	flat = flat.normalized()
 	_body.look_at(_body.global_position + flat, Vector3.UP)
 	last_move_dir = flat
+
+func _lock_target() -> EnemyBase:
+	if not _body.lock_on.has_visible_target():
+		return null
+	return _body.lock_on.current_target
+
+func _direction_to(world_position: Vector3) -> Vector3:
+	var dir := world_position - _body.global_position
+	dir.y = 0.0
+	return dir.normalized() if dir.length_squared() > 0.0001 else Vector3.ZERO

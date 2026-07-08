@@ -1,25 +1,19 @@
-[gd_scene load_steps=12 format=3]
+[gd_scene format=3 uid="uid://b3svs3jmxxk1q"]
 
-[ext_resource type="Script" path="res://world/blocks/spike_wall.gd" id="1_spike"]
-[ext_resource type="Script" path="res://core/world_membership.gd" id="2_membership"]
+[ext_resource type="Script" uid="uid://daowpbue3mfef" path="res://world/blocks/spike_wall.gd" id="1_spike"]
+[ext_resource type="Script" uid="uid://cr2mf5ypgksws" path="res://core/world_membership.gd" id="2_membership"]
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_body"]
 size = Vector3(4, 3, 0.4)
 
-[sub_resource type="BoxShape3D" id="BoxShape3D_trigger"]
-size = Vector3(4.25, 3.25, 0.85)
-
 [sub_resource type="BoxMesh" id="BoxMesh_wall"]
 size = Vector3(4, 3, 0.35)
 
-[sub_resource type="BoxMesh" id="BoxMesh_stripe"]
-size = Vector3(0.35, 3.08, 0.38)
-
-[sub_resource type="BoxMesh" id="BoxMesh_spike"]
-size = Vector3(0.35, 0.35, 0.75)
-
 [sub_resource type="StandardMaterial3D" id="Mat_black"]
 albedo_color = Color(0.02, 0.015, 0.02, 1)
+
+[sub_resource type="BoxMesh" id="BoxMesh_stripe"]
+size = Vector3(0.35, 3.08, 0.38)
 
 [sub_resource type="StandardMaterial3D" id="Mat_living_stripe"]
 albedo_color = Color(0.55, 0.12, 0.95, 1)
@@ -27,70 +21,76 @@ emission_enabled = true
 emission = Color(0.35, 0.05, 0.8, 1)
 emission_energy_multiplier = 0.35
 
+[sub_resource type="BoxMesh" id="BoxMesh_spike"]
+size = Vector3(0.35, 0.35, 0.75)
+
 [sub_resource type="StandardMaterial3D" id="Mat_spike"]
 albedo_color = Color(0.95, 0.08, 0.12, 1)
 
 [sub_resource type="StandardMaterial3D" id="Mat_back_spike"]
 albedo_color = Color(0.38, 0.03, 0.06, 1)
 
-[node name="SpikeWall" type="StaticBody3D"]
+[sub_resource type="BoxShape3D" id="BoxShape3D_trigger"]
+size = Vector3(4.25, 3.25, 0.85)
+
+[node name="SpikeWall" type="StaticBody3D" unique_id=155930929]
 script = ExtResource("1_spike")
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+[node name="CollisionShape3D" type="CollisionShape3D" parent="." unique_id=1198980593]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, 0)
 shape = SubResource("BoxShape3D_body")
 
-[node name="Mesh" type="MeshInstance3D" parent="."]
+[node name="Mesh" type="MeshInstance3D" parent="." unique_id=441537373]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, 0)
 mesh = SubResource("BoxMesh_wall")
 surface_material_override/0 = SubResource("Mat_black")
 
-[node name="StripeA" type="MeshInstance3D" parent="."]
+[node name="StripeA" type="MeshInstance3D" parent="." unique_id=1883515715]
 transform = Transform3D(0.707107, 0.707107, 0, -0.707107, 0.707107, 0, 0, 0, 1, -1.25, 1.5, 0.02)
 mesh = SubResource("BoxMesh_stripe")
 surface_material_override/0 = SubResource("Mat_living_stripe")
 
-[node name="StripeB" type="MeshInstance3D" parent="."]
+[node name="StripeB" type="MeshInstance3D" parent="." unique_id=233974313]
 transform = Transform3D(0.707107, 0.707107, 0, -0.707107, 0.707107, 0, 0, 0, 1, 0, 1.5, 0.02)
 mesh = SubResource("BoxMesh_stripe")
 surface_material_override/0 = SubResource("Mat_living_stripe")
 
-[node name="StripeC" type="MeshInstance3D" parent="."]
+[node name="StripeC" type="MeshInstance3D" parent="." unique_id=1114484598]
 transform = Transform3D(0.707107, 0.707107, 0, -0.707107, 0.707107, 0, 0, 0, 1, 1.25, 1.5, 0.02)
 mesh = SubResource("BoxMesh_stripe")
 surface_material_override/0 = SubResource("Mat_living_stripe")
 
-[node name="SpikeFrontA" type="MeshInstance3D" parent="."]
+[node name="SpikeFrontA" type="MeshInstance3D" parent="." unique_id=623212773]
 transform = Transform3D(1, 0, 0, 0, 0.707107, -0.707107, 0, 0.707107, 0.707107, -1.35, 0.85, -0.45)
 mesh = SubResource("BoxMesh_spike")
 surface_material_override/0 = SubResource("Mat_spike")
 
-[node name="SpikeFrontB" type="MeshInstance3D" parent="."]
+[node name="SpikeFrontB" type="MeshInstance3D" parent="." unique_id=1036268614]
 transform = Transform3D(1, 0, 0, 0, 0.707107, -0.707107, 0, 0.707107, 0.707107, 0, 1.45, -0.45)
 mesh = SubResource("BoxMesh_spike")
 surface_material_override/0 = SubResource("Mat_spike")
 
-[node name="SpikeFrontC" type="MeshInstance3D" parent="."]
+[node name="SpikeFrontC" type="MeshInstance3D" parent="." unique_id=1411231605]
 transform = Transform3D(1, 0, 0, 0, 0.707107, -0.707107, 0, 0.707107, 0.707107, 1.35, 2.05, -0.45)
 mesh = SubResource("BoxMesh_spike")
 surface_material_override/0 = SubResource("Mat_spike")
 
-[node name="SpikeBackA" type="MeshInstance3D" parent="."]
+[node name="SpikeBackA" type="MeshInstance3D" parent="." unique_id=346990004]
 transform = Transform3D(1, 0, 0, 0, 0.707107, 0.707107, 0, -0.707107, 0.707107, -0.7, 2.15, 0.45)
 mesh = SubResource("BoxMesh_spike")
 surface_material_override/0 = SubResource("Mat_back_spike")
 
-[node name="SpikeBackB" type="MeshInstance3D" parent="."]
+[node name="SpikeBackB" type="MeshInstance3D" parent="." unique_id=2062911638]
 transform = Transform3D(1, 0, 0, 0, 0.707107, 0.707107, 0, -0.707107, 0.707107, 0.7, 0.95, 0.45)
 mesh = SubResource("BoxMesh_spike")
 surface_material_override/0 = SubResource("Mat_back_spike")
 
-[node name="Trigger" type="Area3D" parent="."]
+[node name="Trigger" type="Area3D" parent="." unique_id=2144766087]
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="Trigger"]
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Trigger" unique_id=1793692951]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, 0)
 shape = SubResource("BoxShape3D_trigger")
 
-[node name="WorldMembership" type="Node" parent="."]
+[node name="WorldMembership" type="Node" parent="." unique_id=806684307]
 script = ExtResource("2_membership")
-affiliation = 0
+affiliation = 1

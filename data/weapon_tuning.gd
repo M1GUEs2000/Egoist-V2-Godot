@@ -12,5 +12,5 @@ class_name WeaponTuning extends Resource
 @export var air_combo_window := 0.45       # ventana para encadenar el siguiente tap
 @export var air_wait_branch_threshold := 0.3  # esperar esto tras el 1er golpe cambia de rama
 @export var air_spike_down_speed := 30.0   # spike: velocidad hacia abajo en el finisher (rama base)
-@export var air_push_speed := 8.0          # arco: velocidad horizontal constante (rama de espera)
-@export var air_push_up_speed := 6.0       # arco: impulso vertical inicial
+@export var air_push: PushSettings         # arco del empujon (rama espera): velocidad + arco, inyectable por arma
+@export var air_wait_spin_hop := 4.0       # la 1ra vuelta de la rama espera eleva un poco al jugador
