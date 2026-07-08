@@ -1,0 +1,122 @@
+schema: egoist.fsm_decision_tree.v2
+updated: 2026-07-08
+purpose: >
+  Arbol de decision actual de GroundedEnemy._update_fsm en YAML, MAS la forma
+  destino como Behavior Tree de LimboAI. v2 marca la frontera decision/ejecucion
+  (quien setea intent vs quien ejecuta) y el mapeo HSM+BT para el port.
+
+source_docs:
+  - obsidian/Gameplay/IA/IA.md
+  - obsidian/Gameplay/IA/Comportamientos.md
+  - obsidian/Gameplay/Enemigos/Hostilidad.md
+source_code:
+  - enemies/grounded_enemy.gd
+  - enemies/perception.gd
+  - enemies/ground_locomotion.gd
+
+runtime:
+  owner: GroundedEnemy
+  enabled_by: use_simple_fsm
+  tick_method: _physics_process
+  decision_method: _update_fsm
+  base_tick_gate:
+    method: tick_base
+    stops_when: [dead, inactive_in_current_world, airborne, stunned]
+
+pre_tick_pipeline:
+  - {step: run_jump_physics, code: GroundLocomotion.run_jump_physics}
+  - {step: update_passive_memory, code: GroundedEnemy._update_passive_memory}
+  - {step: compute_effective_hostility, code: GroundedEnemy._effective_hostility}
+  - {step: acquire_target, code: GroundedEnemy._acquire_target, escribe: perception.target}
+  - {step: perception_tick, code: Perception.tick, escribe: [perception.can_see_target, last_known_position, memory_until]}
+
+decision_tree:
+  type: priority_selector
+  children:
+    - {id: keep_current_attack_state, when: _any_attacking, set_state: _active_attack_state, actions: [face_current_target], returns: true, emits_intent: false}
+    - id: flee_if_requested
+      when: _should_flee
+      returns: true
+      emits_intent: true
+      expands_to:
+        type: selector
+        children:
+          - {when: [HIDE allowed, _hide_unlocked, "can_see_target == false"], set_state: HIDE, intent: HOLD}
+          - {otherwise: true, set_state: FLEE, intent: "FLEE_FROM target.pos"}
+    - {id: no_target, when: "perception.target == null", set_state: depends_on_hostility, actions: [_process_no_target], returns: true, emits_intent: true}
+    - {id: alert_beat, when: perception.is_alerted, set_state: ALERT, fallback: _fallback_state, actions: [face_current_target], returns: true, emits_intent: false}
+    - id: visible_target_attack_or_chase
+      when: perception.can_see_target
+      type: selector
+      children:
+        - {id: attack_if_inside_max_attack_range, when: [_max_attack_range > 0.0, "perception.within(_max_attack_range)"], set_state: _best_attack_state_for_range, fallback: _fallback_state, actions: ["start_combo_attack(ai_state)"], returns: true, emits_intent: false}
+        - {id: chase_visible_target, otherwise: true, actions: [_process_chase], returns: true, emits_intent: true}
+    - {id: search_last_known, when: perception.is_searching, actions: [_process_search], returns: true, emits_intent: true}
+    - {id: final_no_target, otherwise: true, actions: [_process_no_target], returns: true, emits_intent: true}
+
+# --- Frontera decision / ejecucion (el decouple) ---
+decision_execution_boundary:
+  principio: >
+    Las ramas con emits_intent:true HOY llaman locomotion.* directo. El refactor
+    hace que en su lugar escriban blackboard.navigation.intent; MoveToIntent (hoja
+    steer) lo ejecuta. Las ramas emits_intent:false son pura decision/ataque y no
+    cambian.
+  hoy_llama_directo: [GroundLocomotion.move_toward, roam, search_last_known, flee_from, stop]
+  destino: escribir Intent; GroundLocomotion.execute_intent() lo realiza
+
+# --- Forma destino: Behavior Tree de LimboAI ---
+target_bt_shape:
+  engine: LimboAI
+  ref: obsidian/Integraciones.md
+  top_level_hsm:
+    desc: >
+      El gate de tick_base YA es un HSM implicito de modo. En LimboAI se hace
+      explicito con BTState: cada modo es un estado; solo Alive corre el BT de combate.
+    modos: [Dead, Inactive, Airborne, Stunned, Alive]
+    alive_runs: combat_behavior_tree
+  combat_behavior_tree:
+    desc: El priority_selector de 7 ramas mapea 1:1 a un Selector de LimboAI.
+    root: Selector
+    children:
+      - "Sequence[ IsAttacking?, FaceTarget, KeepAttackState ]"
+      - "Sequence[ ShouldFlee?, Selector[ Sequence[CanHide?, StopMoving(HIDE)], FleeFrom ] ]"
+      - "Sequence[ Invert(HasTarget)?, NoTargetByHostility ]"
+      - "Sequence[ IsAlerted?, FaceTarget ]"
+      - "Sequence[ CanSeeTarget?, Selector[ Sequence[InAttackRange?, StartAttack], MoveToIntent(chase) ] ]"
+      - "Sequence[ IsSearching?, MoveToIntent(SEARCH_AT) ]"
+      - "NoTargetByHostility  # fallback"
+    nota: >
+      Selector de LimboAI = mismo OR/fallback del priority_selector actual. Las hojas
+      (IsAttacking, FaceTarget, MoveToIntent, StartAttack...) estan en leaf_tasks.yaml.
+
+no_target_by_hostility:
+  PASSIVE: {desired_state: ACTIVITY, movement: {when_ai_state_activity_or_idle: StopMoving, otherwise: roam}, note: si provocado effective_hostility pasa a AGGRESSIVE}
+  REACTIVE: {desired_state: GUARD, movement: StopMoving}
+  AGGRESSIVE: {desired_state: ROAM, movement: roam}
+  ULTRA_AGGRESSIVE: {desired_state: ROAM, movement: roam}
+
+chase_rules:
+  PASSIVE: {if_not_provoked: {action: _process_no_target}}
+  ULTRA_AGGRESSIVE: {if_chase_not_allowed: {desired_state: ROAM, movement: roam}}
+  default: {desired_state: CHASE, fallback: _fallback_state, movement: {when_state_is_chase: MoveToIntent, otherwise: roam}}
+
+search_rules:
+  ULTRA_AGGRESSIVE: {if_search_not_allowed: {action: _process_no_target}}
+  default: {desired_state: SEARCH, fallback: _fallback_state, movement: {when_state_is_search: MoveToIntent(SEARCH_AT), otherwise: _process_no_target}}
+
+attack_selection:
+  method: _best_attack_state_for_range
+  priority:
+    - {state: ATTACK_MELEE, requires: [MeleeAttack exists, attack_range >= distance, ATTACK_MELEE allowed]}
+    - {state: ATTACK_RANGED, requires: [RangedAttack exists, attack_range >= distance, ATTACK_RANGED allowed]}
+    - {state: ATTACK_MELEE, note: fallback desired state}
+
+fallback_state:
+  method: _fallback_state
+  rules:
+    - return desired si allowed_state_flags lo contiene y es legal para la hostilidad
+    - else primer estado legal y permitido de fallback_order
+    - else IDLE
+  fallback_order: [ROAM, GUARD, IDLE]
+
+not_currently_produced_or_handled: [ATTACK_GROUP, EVADE, DEFEND, CALL_HELP]

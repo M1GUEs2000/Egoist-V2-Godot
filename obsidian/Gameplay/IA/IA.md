@@ -16,7 +16,25 @@ IA cubre percepcion, decision, movimiento enemigo y seleccion de ataque.
 ## Decision V2
 
 > [!important]
-> No se porta Unity Behavior Tree. Godot V2 usa FSM simple en `GroundedEnemy`; LimboAI solo entra si la FSM deja de alcanzar.
+> No se porta Unity Behavior Tree. Hoy `GroundedEnemy` corre una FSM (priority-selector escrito a mano). **Decision tomada (2026-07-08): se adopta [[Integraciones|LimboAI]] (BT + HSM) desde el inicio, no "migrar despues"** — al ser GDExtension drop-in (no fork del engine), el costo de integracion que antes lo desaconsejaba ya no existe, y el roster futuro + coordinacion de grupo la piden. La FSM actual ya ES un priority-selector, asi que el port es cambiar el selector, no reescribir.
+
+## Arquitectura destino y spec
+
+El plano construible vive **en el codigo**, en `enemies/ai_spec/*.yaml` (no en la boveda: la boveda documenta, el codigo es la fuente). *(2026-07-08)*
+
+| Archivo (`enemies/ai_spec/`) | Que define |
+|---|---|
+| `ai_states.yaml` | Los 15 estados, su capa (decide/steer/coord) y su hoja LimboAI. |
+| `fsm_decision_tree.yaml` | El selector actual + la forma destino como BT de LimboAI y la frontera decision/ejecucion. |
+| `hostility_profiles.yaml` | Los 4 perfiles como UN arbol compartido parametrizado por blackboard. |
+| `blackboard.yaml` | Schema del blackboard seccionado (el decouple: percepcion escribe, decision emite intent, locomocion ejecuta). |
+| `leaf_tasks.yaml` | Catalogo de hojas reutilizables, target scoring por utility y contrato de locomocion + stuck-check + enganche navmesh. |
+
+**Tres capas** (game-ai): `decide` (que hacer), `steer` (como moverse — `GroundLocomotion`, incluye EVADE), `coord` (multi-agente — CALL_HELP, ATTACK_GROUP). Regla del decouple: la decision **emite intent**, nunca llama locomocion directo. Asi enchufar navmesh o portar a LimboAI no toca la decision.
+
+## Telegraph del ataque del player
+
+`PlayerCombat.attack_telegraphed(origin, direction)` se emite al arrancar un ataque (en el press). Es el estimulo que DEFEND/EVADE percibiran. **Implementado el emisor** (2026-07-08); no agrega delay al ataque (los swings son procedurales, la hoja tarda en barrer). El receptor enemigo que escribe `combat.incoming_attack_until` y el estado DEFEND que lo consume estan pendientes. Ver `enemies/ai_spec/leaf_tasks.yaml` (condicion `IncomingAttack`).
 
 ## Estados FSM
 
@@ -62,8 +80,15 @@ La intencion por nivel (`PASSIVE`, `REACTIVE`, `AGGRESSIVE`, `ULTRA_AGGRESSIVE`)
 - Tuning por escena de rangos, cooldowns, vision y homing.
 - Validar seleccion melee/ranged por distancia.
 - Probar en engine la FSM ampliada por hostilidad (los valores son de primer pase). *(pendiente de probar)*
-- Decidir si H1 necesita dodge/reposicionamiento enemigo o se difiere a H2.
-- Implementar (o borrar del enum si se descartan) `ATTACK_GROUP`, `EVADE`, `DEFEND` y `CALL_HELP` — hoy son catalogo sin comportamiento real. Ver [[Comportamientos]]. *(2026-07-08)*
+- **Refactor de decouple**: mover el estado a `blackboard.yaml`, que la decision emita intent y `GroundLocomotion` lo ejecute. Es el paso previo al port de LimboAI (sin esto el port arrastra spaghetti). *(2026-07-08)*
+- **Instalar y portar a [[Integraciones|LimboAI]]** el arbol de combate segun `enemies/ai_spec/fsm_decision_tree.yaml`. *(2026-07-08)*
+- **Target scoring por utility** (proximidad + compromiso) para arreglar el flip-flop de target de [[Ultra Agresivo]]. Ver `leaf_tasks.yaml#target_selection`. *(2026-07-08)*
+- **Stuck-check** en `GroundLocomotion` (no-negociable): sin esto los enemigos muelen contra muros del greybox. *(2026-07-08)*
+- Implementar (o borrar del enum si se descartan) `ATTACK_GROUP` (coord/director, H3+), `EVADE` (steer, H2), `DEFEND` (decide + receptor del telegraph, H2), `CALL_HELP` (coord ligera, H2). Ver [[Comportamientos]]. *(2026-07-08)*
+
+## Pendiente diferido
+
+- **Navmesh** (`NavigationAgent3D` / `NavigationRegion3D`): diferido. El enganche esta disenado en `leaf_tasks.yaml#locomotion_contract` para que enchufarlo no toque la decision. Decidir sí/no segun la geometria real de Playa. *(2026-07-08)*
 
 ## Relacionado
 

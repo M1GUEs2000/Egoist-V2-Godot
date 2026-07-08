@@ -1,0 +1,81 @@
+schema: egoist.ai_blackboard.v1
+updated: 2026-07-08
+purpose: >
+  Esquema del blackboard del enemigo. Fuente unica de estado que DESACOPLA las
+  tres capas: percepcion escribe, decision lee y escribe intent, locomocion lee
+  intent. Es la piedra angular del refactor: sin esto, portar a LimboAI mete el
+  spaghetti dentro de un BTAction gigante (anti-patron God Node).
+  Seccionado a proposito para no volverse un basurero de keys.
+
+status: proposed
+implemented: false
+note: >
+  AUN NO existe en codigo. Es el plano del refactor de decouple que va ANTES del
+  port a LimboAI. Cuando se adopte LimboAI, estas keys son 1:1 las variables del
+  Blackboard nativo (mismos nombres, mismas secciones).
+
+source_code_hoy:
+  # De donde sale hoy cada dato (disperso en vars de instancia); el refactor lo centraliza.
+  - enemies/grounded_enemy.gd
+  - enemies/perception.gd
+  - enemies/ground_locomotion.gd
+  - enemies/enemy_base.gd
+
+# --- La abstraccion central del decouple ---
+intent_contract:
+  desc: >
+    La decision NUNCA llama locomotion.move_toward/roam/flee directo. Escribe un
+    intent; la locomocion lo ejecuta y decide internamente linea-recta-vs-path.
+    Este es el seam que permite enchufar navmesh despues sin tocar la decision.
+  Intent:
+    kind: {type: enum, values: [NONE, MOVE_TO, FLEE_FROM, SEARCH_AT, HOLD, FACE], desc: verbo de movimiento}
+    point: {type: Vector3, desc: destino o punto de referencia (segun kind)}
+    speed_profile: {type: enum, values: [chase, roam, search, flee], desc: que velocidad usa la locomocion}
+  ejecutado_por: GroundLocomotion  # lee intent cada physics frame y lo realiza
+
+sections:
+  perception:
+    written_by: Perception
+    read_by: [decision, GroundLocomotion]
+    keys:
+      target: {type: Node3D, desc: objetivo actual o null (lo elige AcquireTarget, ver leaf_tasks)}
+      can_see_target: {type: bool, desc: LOS + cono + memoria activa este frame}
+      last_known_position: {type: Vector3, desc: ultima posicion vista del target}
+      memory_until: {type: float, desc: World.now hasta cuando dura la memoria (por hostilidad)}
+      alerted_until: {type: float, desc: fin del beat ALERT (alert_duration)}
+
+  navigation:
+    written_by: decision
+    read_by: GroundLocomotion
+    keys:
+      intent: {type: Intent, desc: ver intent_contract; el unico canal decision->movimiento}
+      home_position: {type: Vector3, desc: spawn; centro de ROAM y GUARD}
+      stuck_timer: {type: float, written_by: GroundLocomotion, desc: acumulado empujando sin avanzar; dispara repath/cambio de estado}
+
+  combat:
+    written_by: [decision, attacks]
+    keys:
+      attacking: {type: bool, desc: alguna hoja de ataque activa (hoy _any_attacking)}
+      attack_cooldown_until: {type: float, desc: proximo instante en que puede volver a atacar}
+      incoming_attack_until: {type: float, desc: >
+        telegraph recibido del player (ver Integraciones/telegraph). World.now hasta
+        cuando dura la amenaza percibida. HOY lo escribe el receptor del telegraph;
+        el estado DEFEND que lo CONSUME esta pendiente (ver ai_states.yaml).}
+
+  coordination:
+    written_by: decision
+    read_by: [aliados cercanos, director de grupo futuro]
+    note: >
+      Semilla de CALL_HELP y ATTACK_GROUP. Hoy la unica coordinacion real es
+      _provoke_nearby (contagio pasivo por grupos + alert_radius, en enemy_base.gd).
+      Estas keys son el plano de la coordinacion futura, aun sin implementar.
+    keys:
+      alert_broadcast_until: {type: float, implemented: false, desc: CALL_HELP: ventana en que un aliado avisa a vecinos}
+      attack_token: {type: bool, implemented: false, desc: ATTACK_GROUP: permiso del director para atacar (token). Sin director todavia}
+
+anti_pattern_guard:
+  ref: game-ai-behavior-trees/sharp_edges.md#blackboard-pollution
+  regla: >
+    Toda key nace en una seccion. Nada de keys sueltas por string. Si una key no
+    encaja en perception/navigation/combat/coordination, primero se decide su
+    seccion, no se agrega al voleo.

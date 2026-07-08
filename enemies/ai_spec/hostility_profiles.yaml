@@ -1,0 +1,432 @@
+schema: egoist.hostility_profiles.v2
+updated: 2026-07-08
+purpose: >
+  Perfiles de hostilidad verificables contra la boveda y el codigo. Describen
+  intencion, target, memoria, huida, fallback sin target y estados vetados.
+  v2 agrega el mapeo a la arquitectura destino (un arbol compartido parametrizado).
+
+limbo_mapping:
+  principio: >
+    Los 4 perfiles NO son 4 arboles distintos: son UN arbol de combate compartido
+    (ver fsm_decision_tree.yaml#target_bt_shape) parametrizado por datos que cada
+    perfil escribe en el blackboard. La hostilidad cambia valores, no estructura.
+  parametros_por_perfil:
+    - memoria (default_memory_seconds) -> perception.memory_until
+    - flee_chance -> gate de FLEE
+    - no_target_state.desired -> fallback sin target (ACTIVITY/GUARD/ROAM)
+    - target_policy -> AcquireTarget (player fijo vs nearest con utility en ULTRA)
+    - hard_vetoes -> _state_legal_for_hostility (ULTRA veta FLEE/HIDE/GUARD/ATTACK_GROUP)
+  en_limbo: >
+    Un BTPlayer con el mismo .tree para todos; las diferencias entran como variables
+    de Blackboard seteadas por escena (o por un Resource de perfil). Evita duplicar
+    el arbol 4 veces.
+
+source_docs:
+  - obsidian/Gameplay/Enemigos/Hostilidad.md
+  - obsidian/Gameplay/Enemigos/Pasivo.md
+  - obsidian/Gameplay/Enemigos/Reactivo.md
+  - obsidian/Gameplay/Enemigos/Agresivo.md
+  - obsidian/Gameplay/Enemigos/Ultra Agresivo.md
+  - obsidian/Gameplay/IA/IA.md
+source_code:
+  - enemies/enemy_base.gd
+  - enemies/grounded_enemy.gd
+  - enemies/perception.gd
+
+enum:
+  owner: EnemyBase
+  name: Hostility
+  order:
+    - PASSIVE
+    - REACTIVE
+    - AGGRESSIVE
+    - ULTRA_AGGRESSIVE
+
+common_rules:
+  detection:
+    system: Perception
+    omniscient: false
+    checks:
+      - proximity_radius
+      - vision_range
+      - vision_half_angle
+      - line_of_sight_raycast
+    passive_exception: Perception._compute returns false while effective hostility is PASSIVE.
+    can_see_if:
+      proximity_case:
+        all:
+          - target exists
+          - can_chase_after_world_switch is true
+          - effective_hostility is not PASSIVE
+          - target within proximity_radius
+          - line_of_sight_raycast passes
+      cone_case:
+        all:
+          - target exists
+          - can_chase_after_world_switch is true
+          - effective_hostility is not PASSIVE
+          - target within vision_range
+          - target within vision_half_angle
+          - line_of_sight_raycast passes
+    cannot_see_if_any:
+      - owner missing
+      - target missing
+      - can_chase_after_world_switch is false
+      - effective_hostility is PASSIVE
+      - target outside proximity_radius and outside vision cone/range
+      - line_of_sight_raycast blocked by world
+    alert:
+      trigger: can_see_target changes from false to true
+      duration_export: alert_duration
+      default_duration_seconds: 0.6
+      state: ALERT
+    search_memory:
+      trigger: target was seen and then lost
+      stored_value: last_known_position
+      valid_until: World.now + memory_for_effective_hostility
+  flee:
+    threshold_export: low_health_threshold
+    threshold_default: 0.30
+    roll_policy: once_when_crossing_threshold
+    hide_policy: HIDE can only happen after successful FLEE unlocks _hide_unlocked.
+    roll_source: _on_damaged
+    requested_flag: _flee_requested
+    hide_flag: _hide_unlocked
+    never_retries_until_reset: true
+  fallback_order:
+    source: _fallback_state
+    order:
+      - desired_state
+      - ROAM
+      - GUARD
+      - IDLE
+  attack_selection:
+    source: _best_attack_state_for_range
+    max_range_source: _max_attack_range
+    priority:
+      - ATTACK_MELEE if MeleeAttack exists, has enough range, and ATTACK_MELEE is allowed
+      - ATTACK_RANGED if RangedAttack exists, has enough range, and ATTACK_RANGED is allowed
+      - ATTACK_MELEE as fallback desired state
+    active_attack_state:
+      source: _active_attack_state
+      ranged_if_active_attack_is: RangedAttack
+      otherwise: ATTACK_MELEE
+
+profiles:
+  PASSIVE:
+    godot_value: Hostility.PASSIVE
+    intent: No inicia combate por ver al jugador; solo reacciona si lo golpean.
+    default_memory_seconds: 10.0
+    flee_chance: 0.50
+    starts_combat_from_sight: false
+    target_policy:
+      normal: player_candidate_but_perception_rejects_while_effective_passive
+      on_attacked: forced_attacker
+      nearby_passive_contagion: true
+      acquire_target_details:
+        base_passive_and_current_aggressive: returns null unless forced_target exists
+        forced_target_priority: highest
+        normal_when_not_forced: player
+    effective_hostility:
+      when_provoked: AGGRESSIVE
+      expiration: passive_memory
+      permanent_if: passive_remembers_attackers
+      provoked_if:
+        all:
+          - base_hostility is PASSIVE
+          - World.now < _passive_provoked_until
+      calm_down_if:
+        all:
+          - base_hostility is PASSIVE
+          - passive_remembers_attackers is false
+          - World.now >= _passive_provoked_until
+    allowed_states_recommended:
+      - IDLE
+      - ROAM
+      - ACTIVITY
+      - ALERT
+      - CHASE
+      - SEARCH
+      - ATTACK_MELEE
+      - ATTACK_RANGED
+      - FLEE
+      - HIDE
+    legal_states_by_code: all_states
+    no_target_state:
+      desired: ACTIVITY
+      movement: stop_or_roam
+      fallback_if_activity_disallowed: ROAM_THEN_GUARD_THEN_IDLE
+    visible_target_state:
+      unprovoked: no_visible_target_possible_by_perception
+      provoked_outside_attack_range: CHASE
+      provoked_inside_attack_range:
+        - ATTACK_MELEE
+        - ATTACK_RANGED
+    lost_target_state:
+      if_memory_active: SEARCH
+      if_memory_expired: ACTIVITY
+    search_intent: Investigacion/curiosidad, no urgencia de combate.
+    flee_hide:
+      can_flee: true
+      flee_chance: 0.50
+      flee_state: FLEE
+      hide_after_flee_if_los_lost: HIDE
+    hard_vetoes: []
+    known_nuances:
+      - >
+        _provoke_nearby cambia hostility de vecinos pasivos a AGGRESSIVE, pero
+        no fija su _passive_provoked_until propio; pueden volver a PASSIVE casi
+        de inmediato salvo passive_remembers_attackers.
+
+  REACTIVE:
+    godot_value: Hostility.REACTIVE
+    intent: Defiende territorio usando deteccion normal de Perception.
+    default_memory_seconds: 20.0
+    flee_chance: 0.25
+    starts_combat_from_sight: true
+    target_policy:
+      normal: player
+      forced_target: allowed_if_passive_attack_flow_sets_it
+      infighting: false
+      acquire_target_details:
+        forced_target_priority: highest
+        normal_when_not_forced: player
+    effective_hostility:
+      when_provoked: REACTIVE
+      expiration: perception_memory
+    allowed_states_recommended:
+      - IDLE
+      - ALERT
+      - CHASE
+      - GUARD
+      - SEARCH
+      - ATTACK_MELEE
+      - ATTACK_RANGED
+      - FLEE
+      - HIDE
+    legal_states_by_code: all_states
+    no_target_state:
+      desired: GUARD
+      movement: stop
+      fallback_if_guard_disallowed: ROAM_THEN_IDLE
+    with_target:
+      outside_attack_range: CHASE
+      inside_attack_range:
+        - ATTACK_MELEE
+        - ATTACK_RANGED
+    visible_target_state:
+      outside_attack_range: CHASE
+      inside_attack_range:
+        - ATTACK_MELEE
+        - ATTACK_RANGED
+    lost_target_state:
+      if_memory_active: SEARCH
+      if_memory_expired: GUARD
+    search_intent: Investigar intruso que invadio zona.
+    flee_hide:
+      can_flee: true
+      flee_chance: 0.25
+      flee_state: FLEE
+      hide_after_flee_if_los_lost: HIDE
+    hard_vetoes: []
+    known_nuances:
+      - No existe radio de zona propio; usa cono/proximidad de Perception.
+
+  AGGRESSIVE:
+    godot_value: Hostility.AGGRESSIVE
+    intent: Busca y ataca al jugador proactivamente cuando lo detecta.
+    default_memory_seconds: 40.0
+    flee_chance: 0.05
+    starts_combat_from_sight: true
+    target_policy:
+      normal: player
+      infighting: false
+      acquire_target_details:
+        forced_target_priority: highest
+        normal_when_not_forced: player
+    effective_hostility:
+      when_provoked: AGGRESSIVE
+      expiration: perception_memory
+    allowed_states_recommended:
+      - IDLE
+      - ROAM
+      - ACTIVITY
+      - ALERT
+      - CHASE
+      - SEARCH
+      - ATTACK_MELEE
+      - ATTACK_RANGED
+      - FLEE
+      - HIDE
+    legal_states_by_code: all_states
+    no_target_state:
+      desired: ROAM
+      movement: roam
+      fallback_if_roam_disallowed: GUARD_THEN_IDLE
+    with_target:
+      outside_attack_range: CHASE
+      inside_attack_range:
+        - ATTACK_MELEE
+        - ATTACK_RANGED
+    visible_target_state:
+      outside_attack_range: CHASE
+      inside_attack_range:
+        - ATTACK_MELEE
+        - ATTACK_RANGED
+    lost_target_state:
+      if_memory_active: SEARCH
+      if_memory_expired: ROAM
+    search_intent: Recuperar al jugador perdido yendo a last_known_position.
+    flee_hide:
+      can_flee: true
+      flee_chance: 0.05
+      flee_state: FLEE
+      hide_after_flee_if_los_lost: HIDE
+    hard_vetoes: []
+
+  ULTRA_AGGRESSIVE:
+    godot_value: Hostility.ULTRA_AGGRESSIVE
+    intent: Berserker; ataca cualquier objetivo valido y puede cambiar a uno mas cercano.
+    default_memory_seconds: 60.0
+    flee_chance: 0.0
+    starts_combat_from_sight: true
+    target_policy:
+      normal: nearest_valid_target
+      candidates:
+        - player
+        - active_enemy_in_current_world
+      recalculation: every_tick
+      hysteresis: false
+      infighting: true
+    effective_hostility:
+      when_provoked: ULTRA_AGGRESSIVE
+      expiration: perception_memory
+    allowed_states_recommended:
+      - IDLE
+      - ROAM
+      - ACTIVITY
+      - ALERT
+      - CHASE
+      - SEARCH
+      - ATTACK_MELEE
+      - ATTACK_RANGED
+    legal_states_by_code:
+      allowed:
+        - IDLE
+        - ROAM
+        - ACTIVITY
+        - ALERT
+        - CHASE
+        - SEARCH
+        - ATTACK_MELEE
+        - ATTACK_RANGED
+        - EVADE
+        - DEFEND
+        - CALL_HELP
+      forbidden:
+        - FLEE
+        - HIDE
+        - GUARD
+        - ATTACK_GROUP
+      note: EVADE, DEFEND y CALL_HELP son legales por codigo pero no jugables porque no tienen productor/handler.
+    no_target_state:
+      desired: ROAM
+      movement: roam
+      fallback_if_roam_disallowed: IDLE
+    with_target:
+      outside_attack_range: CHASE
+      inside_attack_range:
+        - ATTACK_MELEE
+        - ATTACK_RANGED
+    visible_target_state:
+      outside_attack_range: CHASE
+      outside_attack_range_if_chase_disallowed: ROAM
+      inside_attack_range:
+        - ATTACK_MELEE
+        - ATTACK_RANGED
+    lost_target_state:
+      if_memory_active: SEARCH
+      if_memory_active_but_search_disallowed: ROAM
+      if_memory_expired: ROAM
+    search_intent: Perseguir al ultimo target conocido con memoria larga.
+    flee_hide:
+      can_flee: false
+      flee_chance: 0.0
+      flee_state: never
+      hide_after_flee_if_los_lost: never
+    hard_vetoes:
+      source: _state_legal_for_hostility
+      forbidden_states:
+        - FLEE
+        - HIDE
+        - GUARD
+        - ATTACK_GROUP
+    known_nuances:
+      - Puede hacer target flip-flop frame a frame si dos candidatos estan a distancia similar.
+      - _should_flee retorna false antes de mirar flee_chance.
+
+state_matrix:
+  PASSIVE:
+    IDLE: fallback legal.
+    ROAM: fallback legal; usado si ACTIVITY no queda como estado final.
+    ACTIVITY: estado deseado sin target cuando no esta provocado.
+    ALERT: solo posible cuando esta provocado y Perception ve target.
+    CHASE: solo posible cuando esta provocado, ve target y esta fuera de rango de ataque.
+    GUARD: legal por codigo, pero no es intencion normal de PASSIVE.
+    SEARCH: posible tras perder target provocado mientras dure passive_memory.
+    ATTACK_MELEE: posible cuando esta provocado, ve target y hay melee valido.
+    ATTACK_RANGED: posible cuando esta provocado, ve target y hay ranged valido.
+    ATTACK_GROUP: no implementado aunque legal por codigo.
+    EVADE: no implementado aunque legal por codigo.
+    DEFEND: no implementado aunque legal por codigo.
+    CALL_HELP: no implementado aunque legal por codigo.
+    FLEE: posible por tirada 0.50 al cruzar 30% de vida.
+    HIDE: posible solo tras FLEE exitoso y perdida de linea de vision.
+  REACTIVE:
+    IDLE: fallback legal.
+    ROAM: fallback legal si GUARD no esta permitido.
+    ACTIVITY: legal por codigo, pero no es intencion normal de REACTIVE.
+    ALERT: beat al detectar target.
+    CHASE: target visible fuera de rango.
+    GUARD: estado deseado sin target.
+    SEARCH: target perdido con memoria activa.
+    ATTACK_MELEE: target visible dentro de rango melee.
+    ATTACK_RANGED: target visible dentro de rango ranged.
+    ATTACK_GROUP: no implementado aunque legal por codigo.
+    EVADE: no implementado aunque legal por codigo.
+    DEFEND: no implementado aunque legal por codigo.
+    CALL_HELP: no implementado aunque legal por codigo.
+    FLEE: posible por tirada 0.25 al cruzar 30% de vida.
+    HIDE: posible solo tras FLEE exitoso y perdida de linea de vision.
+  AGGRESSIVE:
+    IDLE: fallback legal.
+    ROAM: estado deseado sin target.
+    ACTIVITY: legal por codigo, pero no es intencion normal de AGGRESSIVE.
+    ALERT: beat al detectar target.
+    CHASE: target visible fuera de rango.
+    GUARD: legal por codigo, pero no es intencion normal de AGGRESSIVE.
+    SEARCH: target perdido con memoria activa.
+    ATTACK_MELEE: target visible dentro de rango melee.
+    ATTACK_RANGED: target visible dentro de rango ranged.
+    ATTACK_GROUP: no implementado aunque legal por codigo.
+    EVADE: no implementado aunque legal por codigo.
+    DEFEND: no implementado aunque legal por codigo.
+    CALL_HELP: no implementado aunque legal por codigo.
+    FLEE: posible por tirada 0.05 al cruzar 30% de vida.
+    HIDE: posible solo tras FLEE exitoso y perdida de linea de vision.
+  ULTRA_AGGRESSIVE:
+    IDLE: fallback legal.
+    ROAM: estado deseado sin target; tambien fallback si CHASE/SEARCH no estan permitidos.
+    ACTIVITY: legal por codigo, pero no es intencion normal salvo idle conceptual dormir/comer.
+    ALERT: beat al detectar target valido.
+    CHASE: target visible fuera de rango si CHASE permitido.
+    GUARD: vetado por _state_legal_for_hostility.
+    SEARCH: target perdido con memoria activa si SEARCH permitido.
+    ATTACK_MELEE: target visible dentro de rango melee.
+    ATTACK_RANGED: target visible dentro de rango ranged.
+    ATTACK_GROUP: vetado por _state_legal_for_hostility y ademas no implementado.
+    EVADE: legal por codigo, pero no implementado.
+    DEFEND: legal por codigo, pero no implementado.
+    CALL_HELP: legal por codigo, pero no implementado.
+    FLEE: vetado; _should_flee retorna false.
+    HIDE: vetado; nunca se desbloquea porque no huye.

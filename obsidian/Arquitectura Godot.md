@@ -127,5 +127,6 @@ $GODOT="C:/Users/Tutupa/Downloads/Godot_v4.7-stable_win64.exe"
 ## Relacionado
 
 - [[Metodologia V2]]
+- [[Integraciones]]
 - [[Matriz Vault Unity Godot]]
 - [[Combate]]

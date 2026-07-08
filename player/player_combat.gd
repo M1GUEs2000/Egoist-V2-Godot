@@ -9,6 +9,14 @@ class_name PlayerCombat extends Node
 
 signal slots_changed(slot_x_weapon: WeaponBase, slot_y_weapon: WeaponBase)
 
+## Telegraph: se emite al ARRANCAR un ataque (en el press), antes de que la hoja barra.
+## Es el estimulo que un enemigo percibe para DEFEND/EVADE (ver enemies/ai_spec: la
+## condicion IncomingAttack lee combat.incoming_attack_until, que un receptor escribe con
+## esto). NO agrega delay al ataque: los swings son procedurales y la hoja tarda en llegar,
+## asi que emitir en el press ya da ventana de reaccion sin tocar el feel del player.
+## El estado enemigo que lo CONSUME (DEFEND) esta pendiente; aca vive el emisor.
+signal attack_telegraphed(origin: Vector3, direction: Vector3)
+
 var _body: Player
 var _last_attack_time := -999.0
 var _charging_weapon: WeaponBase  # arma del último press: recibe el glow de carga
@@ -80,6 +88,7 @@ func _input(event: InputEvent) -> void:
 func _on_press(weapon: WeaponBase, slot: World.Slot) -> void:
 	if weapon == null:
 		return
+	attack_telegraphed.emit(_body.global_position, _body.forward())
 	_body.fire_action_world_switch()
 	_last_attack_time = World.now()
 	_charging_weapon = weapon

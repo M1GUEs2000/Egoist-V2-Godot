@@ -1,0 +1,148 @@
+schema: egoist.ai_leaf_tasks.v1
+updated: 2026-07-08
+purpose: >
+  Catalogo de hojas reutilizables (BTAction / BTCondition). Son las unidades que
+  transfieren 1:1 a LimboAI: la misma hoja sirve a chase, patrol y flee porque
+  lee/escribe el blackboard, nunca referencia dura a otro nodo. Hoy viven como
+  metodos dentro de GroundedEnemy/GroundLocomotion; el refactor las extrae como
+  hojas de un solo proposito (sin cross-talk) ANTES del port a LimboAI.
+
+status: proposed
+implemented: partial
+note: >
+  La columna maps_to_hoy apunta al metodo actual que hace ese trabajo. "Extraer"
+  no significa crear la jerarquia BTNode todavia (Regla de 2): significa dejar
+  cada verbo como funcion limpia que lee/escribe blackboard. La jerarquia de
+  clases la trae LimboAI.
+
+source_code:
+  - enemies/grounded_enemy.gd
+  - enemies/ground_locomotion.gd
+  - enemies/perception.gd
+
+# --- Semantica de retorno (igual que un BT) ---
+status_values:
+  SUCCESS: termino su trabajo este frame
+  FAILURE: no pudo hacer su trabajo
+  RUNNING: necesita mas frames (una accion multi-frame; NUNCA reinicia la accion cada tick)
+
+conditions:
+  CanSeeTarget:
+    reads: [perception.can_see_target]
+    returns: SUCCESS si ve al target, si no FAILURE
+    maps_to_hoy: perception.can_see_target
+  HasTarget:
+    reads: [perception.target]
+    returns: SUCCESS si target != null
+    maps_to_hoy: "perception.target == null (invertido)"
+  IsSearching:
+    reads: [perception.memory_until, perception.can_see_target]
+    returns: SUCCESS si no ve pero la memoria sigue activa
+    maps_to_hoy: perception.is_searching
+  IsAlerted:
+    reads: [perception.alerted_until]
+    maps_to_hoy: perception.is_alerted
+  InAttackRange:
+    reads: [perception.target, combat.attack_cooldown_until]
+    param: max_attack_range
+    maps_to_hoy: perception.within(_max_attack_range)
+  IsLowHealth:
+    reads: [Health.current, Health.max_health]
+    param: low_health_threshold
+    maps_to_hoy: _on_damaged (cruce de umbral)
+  ShouldFlee:
+    reads: [combat.flee_requested]
+    maps_to_hoy: _should_flee
+  IncomingAttack:
+    reads: [combat.incoming_attack_until]
+    returns: SUCCESS si World.now < incoming_attack_until
+    consumido_por: DEFEND (PENDIENTE — la condicion se puede escribir hoy; el estado que la usa no)
+    maps_to_hoy: "no existe (telegraph nuevo; ver Integraciones)"
+
+actions:
+  # -- Locomocion: TODAS reciben su destino via blackboard.navigation.intent --
+  MoveToIntent:
+    layer: steer
+    reads: [navigation.intent, navigation.stuck_timer]
+    writes: [navigation.stuck_timer]
+    returns: RUNNING mientras se mueve, SUCCESS al llegar, FAILURE si stuck
+    maps_to_hoy: [GroundLocomotion.move_toward, roam, search_last_known, flee_from]
+    contrato: >
+      Es el UNICO ejecutor de movimiento. Decide internamente linea-recta (hoy) vs
+      seguir waypoints de NavigationAgent3D (cuando exista navmesh). La decision no
+      se entera de cual usa.
+  FaceTarget:
+    layer: steer
+    reads: [perception.target]
+    maps_to_hoy: GroundLocomotion.face_target / face_current_target
+  StopMoving:
+    layer: steer
+    maps_to_hoy: GroundLocomotion.stop
+  StartAttack:
+    layer: decide
+    reads: [perception.target, combat.attack_cooldown_until]
+    writes: [combat.attacking, combat.attack_cooldown_until]
+    param: preferred_state
+    maps_to_hoy: start_combo_attack / _best_attack_state_for_range
+  AcquireTarget:
+    layer: decide
+    writes: [perception.target]
+    maps_to_hoy: _acquire_target
+    scoring: target_selection   # ver abajo
+
+# --- Seleccion de target por utility (arregla el flip-flop de ULTRA) ---
+target_selection:
+  problema: >
+    Hoy _acquire_target elige el mas cercano CADA TICK sin histeresis. Con dos
+    candidatos a distancia similar el target oscila frame a frame (flip-flop). Ya
+    flagueado en boveda Ecosistema Vivo. Es el unico BUG real (el resto son
+    features no construidas).
+  solucion: utility_score
+  formula: >
+    score(candidato) = w_prox * cercania(dist)
+                     + w_commit * (candidato == target_actual ? 1 : 0)
+                     + w_vuln  * (candidato con vida baja ? 1 : 0)
+    elegir el de score maximo.
+  consideraciones:
+    proximidad: {peso: w_prox, curva: "1 - clamp(dist/vision_range, 0, 1)"}
+    compromiso: {peso: w_commit, desc: "bonus por ser el target actual = histeresis; degrada con gracia (uno MUCHO mas cercano/debil si roba foco)"}
+    vulnerabilidad: {peso: w_vuln, desc: "rematar al herido; opcional H2"}
+  minimo_para_h1: >
+    Con 1 solo ULTRA en escena, un score de 2 terminos (proximidad + compromiso)
+    mata el flip-flop y es trivial de debuggear. NO construir el framework de
+    consideraciones completo todavia (Regla de 2). Es la semilla de la capa utility
+    que ATTACK_GROUP reusara para asignar targets.
+  aplica_a: ULTRA_AGGRESSIVE  # los demas targetean al player fijo, sin scoring
+
+# --- Contrato de locomocion + stuck-check + enganche navmesh ---
+locomotion_contract:
+  ref: godot-navigation-pathfinding
+  hoy: linea recta (move_and_slide hacia intent.point), sin pathfinding
+  stuck_check:
+    status: proposed
+    idea: >
+      Timeout idiomatico Godot: acumular tiempo mientras el desplazamiento real por
+      frame (global_position delta) sea << velocidad esperada estando en intent
+      MOVE_TO. Al cruzar un umbral (~0.5s), navigation.stuck_timer dispara: en modo
+      linea-recta -> sidestep/cambio de estado; con navmesh -> repath.
+    por_que: >
+      Sin esto los enemigos muelen contra muros/plataformas del greybox para siempre
+      (pitfall "no stuck check" de game-ai). Es NO-NEGOCIABLE para H1 aunque navmesh
+      se difiera.
+  navmesh_hook:
+    status: pending
+    desc: >
+      Enganche disenado para que enchufar navmesh NO toque la decision. MoveToIntent
+      internamente:
+        - hoy: velocity = dir_a(intent.point) * speed; move_and_slide()
+        - manana: nav_agent.target_position = intent.point;
+                  next = nav_agent.get_next_path_position(); velocity = dir_a(next) * speed
+    godot_reglas:
+      - "NavigationAgent3D: setear target_position en timer (~0.2s) o por umbral de distancia, NO cada frame"
+      - "chequear is_navigation_finished() antes de get_next_path_position()"
+      - "call_deferred + await physics_frame antes del primer target_position (server no listo en _ready)"
+      - "is_target_reachable() para no perseguir imposibles (target sobre plataforma sin link)"
+      - "avoidance: velocity_computed callback + radius = collision radius (default 0 = se atraviesan)"
+    enemigo_de_suelo: >
+      Ground enemy NO cruza huecos entre plataformas salvo NavigationLink3D. Que se
+      quede en su plataforma es diseno valido, no bug.

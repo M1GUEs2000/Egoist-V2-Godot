@@ -36,6 +36,7 @@ La boveda se navega por nodos. Primero se lee este README, despues [[Arquitectur
 | Nodo | Que contiene |
 |---|---|
 | [[Arquitectura Godot]] | Estructura real del repo, mapa Unity V1 a Godot V2 y contratos tecnicos. |
+| [[Integraciones]] | Dependencias externas: Godot, Blender, LimboAI, Claude, Codex. |
 | [[Metodologia V2]] | Flujo para crear, modificar, borrar y clasificar sistemas E0-E4. |
 | [[Matriz Vault Unity Godot]] | Matriz de migracion por sistema: diseno viejo, referencia Unity y modulo Godot. |
 | [[Combate]] | Slots X/Y, espada, hitbox/hurtbox, meter, parry, input feel. |

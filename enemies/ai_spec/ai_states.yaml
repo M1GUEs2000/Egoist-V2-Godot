@@ -1,0 +1,228 @@
+schema: egoist.ai_states.v2
+updated: 2026-07-08
+purpose: >
+  Catalogo verificable del enum AIState usado por GroundedEnemy. Describe que
+  estados existen, cuales tienen logica real hoy, cuales son solo enum/flag
+  pendientes, en que CAPA de IA vive cada uno (decide/steer/coord) y a que hoja
+  LimboAI mapea. v2 agrega la arquitectura destino (LimboAI + decouple).
+
+source_docs:
+  - obsidian/Gameplay/IA/Comportamientos.md
+  - obsidian/Gameplay/IA/IA.md
+source_code:
+  - enemies/grounded_enemy.gd
+  - enemies/ground_locomotion.gd
+
+target_architecture:
+  decision_engine: LimboAI   # ver obsidian/Integraciones.md
+  forma: HSM top-level (modo) + Behavior Tree adentro del modo Alive
+  capas:
+    decide: elige QUE hacer (el arbol / selector)
+    steer: como moverse (GroundLocomotion, steering; incluye EVADE)
+    coord: coordinacion multi-agente (CALL_HELP, ATTACK_GROUP; via blackboard.coordination)
+  regla: >
+    Ningun estado de decision llama locomocion directo. Emite intent
+    (ver blackboard.yaml). Asi el port a LimboAI cambia solo el selector, no las hojas.
+
+enum:
+  owner: GroundedEnemy
+  name: AIState
+  flags_export: allowed_state_flags
+  order:
+    - IDLE
+    - ROAM
+    - ACTIVITY
+    - ALERT
+    - CHASE
+    - GUARD
+    - SEARCH
+    - ATTACK_MELEE
+    - ATTACK_RANGED
+    - ATTACK_GROUP
+    - EVADE
+    - DEFEND
+    - CALL_HELP
+    - FLEE
+    - HIDE
+
+states:
+  IDLE:
+    implemented: true
+    playable: true
+    layer: decide
+    category: fallback
+    summary: Quieto; fallback final si ningun otro estado legal esta disponible.
+    limbo_task: StopMoving (hoja)
+    produced_by: [_fallback_state]
+    handled_by: [_process_no_target]
+
+  ROAM:
+    implemented: true
+    playable: true
+    layer: steer
+    category: locomotion
+    summary: Patrulla alrededor del home_position con radio y tiempos aleatorios.
+    limbo_task: MoveToIntent(kind=MOVE_TO, speed=roam)
+    produced_by: [_process_no_target, _process_chase, _process_search, _fallback_state]
+    handled_by: [GroundLocomotion.roam]
+
+  ACTIVITY:
+    implemented: true
+    playable: true
+    layer: decide
+    category: idle_activity
+    summary: Actividad idle propia; hoy cae a stop o roam segun fallback y estado previo.
+    limbo_task: StopMoving / MoveToIntent
+    produced_by: [_process_no_target, _fallback_state]
+    handled_by: [_process_no_target]
+    nuance: No hay task de dormir/comer; la intencion vive en diseno.
+
+  ALERT:
+    implemented: true
+    playable: true
+    layer: decide
+    category: reaction
+    summary: Beat corto al pasar de no ver a ver target, antes de perseguir/atacar.
+    limbo_task: FaceTarget (durante alert_duration)
+    produced_by: [Perception.is_alerted, _update_fsm]
+    handled_by: [_update_fsm]
+    default_duration_seconds: 0.6
+
+  CHASE:
+    implemented: true
+    playable: true
+    layer: steer
+    category: locomotion
+    summary: Persigue al target.
+    limbo_task: MoveToIntent(kind=MOVE_TO, speed=chase)
+    produced_by: [_process_chase, _fallback_state]
+    handled_by: [GroundLocomotion.move_toward]
+
+  GUARD:
+    implemented: true
+    playable: true
+    layer: decide
+    category: idle_defense
+    summary: Se queda quieto en posicion; fallback principal de REACTIVE sin target.
+    limbo_task: StopMoving
+    produced_by: [_process_no_target, _fallback_state]
+    handled_by: [GroundLocomotion.stop]
+
+  SEARCH:
+    implemented: true
+    playable: true
+    layer: steer
+    category: memory
+    summary: Va a la ultima posicion conocida mientras dure la memoria de percepcion.
+    limbo_task: MoveToIntent(kind=SEARCH_AT, point=last_known_position)
+    produced_by: [Perception.is_searching, _process_search]
+    handled_by: [GroundLocomotion.search_last_known]
+
+  ATTACK_MELEE:
+    implemented: true
+    playable: true
+    layer: decide
+    category: attack
+    summary: Ataque cuerpo a cuerpo; selecciona MeleeAttack con rango suficiente.
+    limbo_task: StartAttack(preferred=MELEE)
+    produced_by: [_best_attack_state_for_range, _active_attack_state]
+    handled_by: [start_combo_attack, MeleeAttack.try_attack]
+
+  ATTACK_RANGED:
+    implemented: true
+    playable: true
+    layer: decide
+    category: attack
+    summary: Ataque a distancia; selecciona RangedAttack con rango suficiente.
+    limbo_task: StartAttack(preferred=RANGED)
+    produced_by: [_best_attack_state_for_range, _active_attack_state]
+    handled_by: [start_combo_attack, RangedAttack.try_attack]
+
+  ATTACK_GROUP:
+    implemented: false
+    playable: false
+    layer: coord
+    category: planned
+    summary: Ataque coordinado en grupo (tokens de ataque / director).
+    exists_as: [enum_value, allowed_state_flag]
+    missing:
+      - _process_attack_group
+      - director de grupo / attack_token en blackboard.coordination
+      - posicionamiento grupal en GroundLocomotion
+    diseno: >
+      NO es un estado por-enemigo: pide un director de equipo (autoload) que
+      reparte tokens (N atacan, el resto rodea). Reusa target_selection (utility)
+      de leaf_tasks. Es H3+.
+
+  EVADE:
+    implemented: false
+    playable: false
+    layer: steer
+    category: planned
+    summary: Reposicionamiento o esquiva lateral (strafe/dodge).
+    exists_as: [enum_value, allowed_state_flag]
+    missing:
+      - metodo de strafe/dodge en GroundLocomotion
+      - condicion productora (IncomingAttack / en rango y en cooldown)
+    diseno: >
+      NO es peer de CHASE a nivel decision: es un MODO DE MOVIMIENTO (capa steer).
+      Un steering behavior de strafe + una condicion que lo selecciona. El mas barato
+      de los 4. H2.
+
+  DEFEND:
+    implemented: false
+    playable: false
+    layer: decide
+    category: planned
+    summary: Postura defensiva reactiva ante ataque entrante.
+    exists_as: [enum_value, allowed_state_flag]
+    depends_on: telegraph (combat.incoming_attack_until)   # ya implementado el emisor; ver Integraciones
+    missing:
+      - _process_defend
+      - receptor del telegraph que escribe combat.incoming_attack_until
+      - postura/bloqueo (mas alla de MeleeAttack.try_parry)
+    diseno: >
+      Rama de alta prioridad en el selector (como FLEE). La condicion IncomingAttack
+      YA es escribible (el telegraph del player existe); falta el estado que la consume.
+      H2+.
+
+  CALL_HELP:
+    implemented: false
+    playable: false
+    layer: coord
+    category: planned
+    summary: Pide refuerzos / alerta aliados.
+    exists_as: [enum_value, allowed_state_flag]
+    seed: _provoke_nearby (contagio pasivo por grupos + alert_radius, enemy_base.gd)
+    missing:
+      - _process_call_help
+      - broadcast a blackboard.coordination.alert_broadcast_until de vecinos
+    diseno: >
+      Coordinacion LIGERA: generaliza _provoke_nearby via senal a grupo. Godot-native,
+      sin director ni BT. H2.
+
+  FLEE:
+    implemented: true
+    playable: true
+    layer: steer
+    category: survival
+    summary: Se aleja del target tras tirada unica al cruzar low_health_threshold.
+    limbo_task: MoveToIntent(kind=FLEE_FROM, point=target.pos, speed=flee)
+    produced_by: [_on_damaged, _should_flee, _process_flee]
+    handled_by: [GroundLocomotion.flee_from]
+
+  HIDE:
+    implemented: true
+    playable: true
+    layer: decide
+    category: survival
+    summary: Se esconde quieto tras FLEE exitoso cuando pierde linea de vision.
+    limbo_task: StopMoving
+    produced_by: [_process_flee, _process_no_target]
+    handled_by: [GroundLocomotion.stop]
+    prerequisite: _hide_unlocked
+
+hard_vetoes:
+  ULTRA_AGGRESSIVE:
+    source: _state_legal_for_hostility
+    forbidden_states: [FLEE, HIDE, GUARD, ATTACK_GROUP]
