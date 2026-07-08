@@ -35,6 +35,10 @@ var _combo_window_open := false
 var _combo_queued := false
 var _combo_queued_time := 0.0
 var _combo_kind := &""
+var _swing_tween: Tween
+var _launcher_id := 0
+var _launcher_height := 0.0
+var _launcher_hang_time := 0.0
 
 @onready var _pivot: Node3D = $Pivot
 @onready var _blade_hitbox: Hitbox = $Pivot/BladeHitbox
@@ -72,6 +76,12 @@ func tap(_slot: World.Slot) -> void:
 func hold(_slot: World.Slot, _level: int) -> void:
 	pass
 
+## Nivel de carga (1-based) para una duración de hold sostenida. Default: un solo
+## nivel (comportamiento actual de la Espada, que ignora _level). El Mazo lo
+## sobreescribe para sus 3 niveles de vueltas cargadas.
+func charge_level(_held_time: float) -> int:
+	return 1
+
 # ---- Motor genérico de cadenas de golpes (ex PlayAerialCombo, hoy también terrestre) ----
 
 ## Un tap mientras corre una cadena del mismo tipo: encola el siguiente golpe si la
@@ -91,19 +101,24 @@ func try_queue_combo(kind: StringName) -> bool:
 ## branch_threshold (dentro de la ventana) en encadenar activa la rama "espera".
 ## finish(wait_branch) corre al completar el finisher (si es válida). Arrancar una
 ## cadena invalida cualquier otra en curso (routine_id compartido).
+## wait_branch_extra_steps: si la rama "espera" se activa en branch_step, el total
+## de golpes de esta corrida pasa de steps a steps + wait_branch_extra_steps (0 =
+## la rama solo cambia coreografía, no cantidad — comportamiento de la Espada).
 func run_combo_chain(kind: StringName, steps: int, step_time: float, chain_window: float,
 		branch_step: int, branch_threshold: float,
-		begin_step: Callable, finish := Callable()) -> void:
+		begin_step: Callable, finish := Callable(), wait_branch_extra_steps := 0) -> void:
 	_combo_playing = true
 	_combo_kind = kind
 	_routine_id += 1
 	var id := _routine_id
 	var wait_branch := false
+	var total_steps := steps
 
-	for step in range(1, steps + 1):
+	var step := 1
+	while step <= total_steps:
 		_combo_queued = false
 		_combo_window_open = false
-		var finisher := step == steps
+		var finisher := step == total_steps
 		begin_step.call(step, finisher, wait_branch)
 		begin_damage_window(step_time)
 		ComboTracker.register_hit()
@@ -129,6 +144,9 @@ func run_combo_chain(kind: StringName, steps: int, step_time: float, chain_windo
 			break
 		if step == branch_step:
 			wait_branch = (_combo_queued_time - step_end) >= branch_threshold
+			if wait_branch:
+				total_steps += wait_branch_extra_steps
+		step += 1
 
 	_combo_playing = false
 	_combo_window_open = false
@@ -232,6 +250,84 @@ func _setup_blade_glow() -> void:
 func set_charge_glow(t: float) -> void:
 	if _blade_material != null:
 		_blade_material.emission_energy_multiplier = clampf(t, 0.0, 1.0) * charge_glow_max_energy
+
+# ---- Launcher genérico (cono/área que lanza antes de golpear, ex ConeLauncherHitbox) ----
+## Cablea un Hitbox como launcher: nunca se parria, lanza al objetivo ANTES del daño
+## (about_to_hit) así el golpe ya ve is_airborne = true, y alimenta meter/air-hit-stall
+## al conectar (landed → _on_hit). Cada arma llama esto en su setup() para su propio
+## hitbox de launcher.
+func setup_launcher_hitbox(hitbox: Hitbox, deals_damage: bool, stun_settings: StunSettings) -> void:
+	hitbox.source = _player
+	hitbox.damage = 1.0 if deals_damage else 0.0
+	hitbox.stun = stun_settings
+	hitbox.can_be_parried = false
+	hitbox.about_to_hit.connect(_on_launcher_about_to_hit)
+	hitbox.landed.connect(_on_hit)
+
+## Solo lanza lo lanzable (has_method): una pared o un pickup no salen volando.
+func _on_launcher_about_to_hit(hurtbox: Hurtbox) -> void:
+	var target: Node = hurtbox.owner_node
+	if target.has_method("launch"):
+		target.call("launch", _launcher_height, _launcher_hang_time)
+
+## Ventana de daño del launcher con id-guard: espera `delay` (deja arrancar el swing
+## visual), lanza al player y prende el hitbox `duration` segundos. Arrancar un nuevo
+## launcher invalida cualquier ventana anterior (mismo patrón que begin_damage_window).
+func run_launcher_window(hitbox: Hitbox, height: float, hang_time: float,
+		duration: float, delay := 0.05) -> void:
+	_launcher_id += 1
+	var id := _launcher_id
+	_launcher_height = height
+	_launcher_hang_time = hang_time
+	await wait_seconds(delay)
+	if id != _launcher_id:
+		return
+	_player.launch(height, hang_time)
+	hitbox.begin_swing()
+	ComboTracker.register_hit()
+	await wait_seconds(duration)
+	if id != _launcher_id:
+		return
+	hitbox.end_swing()
+
+# ---- Swings procedurales (tweens de quaternion sobre el Pivot, sin AnimationPlayer) ----
+## Genérico para cualquier arma con Pivot; la coreografía (qué ángulo, qué step) la
+## define cada arma (ver Sword/Mace), esto solo mueve el Pivot.
+
+## Swing horizontal (eje Y local): barrido de un lado al otro. Corte por defecto.
+func swing(angle: float) -> void:
+	_swing_axis(angle, Vector3.UP)
+
+## Swing vertical ascendente (eje X local): corte de abajo hacia arriba (uppercut del launcher).
+func swing_up(angle: float) -> void:
+	_swing_axis(angle, Vector3.RIGHT)
+
+func _swing_axis(angle: float, axis: Vector3) -> void:
+	var half := deg_to_rad(angle * 0.5)
+	_play_swing(Quaternion(axis, -half), Quaternion(axis, half))
+
+func _play_swing(from: Quaternion, to: Quaternion) -> void:
+	_kill_swing_tween()
+	_pivot.quaternion = from
+	_swing_tween = create_tween()
+	_swing_tween.tween_property(_pivot, "quaternion", to, tuning.swing_time)
+	_swing_tween.tween_callback(_reset_pivot)
+
+func _play_spin() -> void:
+	_kill_swing_tween()
+	_swing_tween = create_tween()
+	_swing_tween.tween_method(_set_spin_angle, 0.0, TAU, tuning.swing_time)
+	_swing_tween.tween_callback(_reset_pivot)
+
+func _set_spin_angle(angle: float) -> void:
+	_pivot.quaternion = Quaternion(Vector3.UP, angle)
+
+func _reset_pivot() -> void:
+	_pivot.quaternion = Quaternion.IDENTITY
+
+func _kill_swing_tween() -> void:
+	if _swing_tween != null and _swing_tween.is_valid():
+		_swing_tween.kill()
 
 # ---- Helpers ----
 

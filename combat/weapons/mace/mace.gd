@@ -1,3 +1,231 @@
-class_name Mace extends Sword
-## Maso de prueba: segunda arma seleccionable con visual propio.
-## Por ahora reutiliza la personalidad de Sword hasta definir combos especificos.
+class_name Mace extends WeaponBase
+## Mazo (bóveda: Armas/Mazo): combo X de 3 + rama espera (2 smashes extra) + cargado
+## de 3 niveles con sweet spot congelante; Y = launcher omnidireccional con sweet
+## spot de 2 golpes. Aéreo: X empuja / cae con AOE / cae+vuelta congelante, Y gira
+## empujando o congela con más hang time. Arma lenta, más daño y knockback que la
+## Espada. Coreografía sobre el motor genérico de WeaponBase (run_combo_chain,
+## swing/spin/run_launcher_window); acá vive solo la personalidad del Mazo.
+# ponytail: número mágico de golpes/niveles hardcodeado en la coreografía (no en un
+# enum) — si sale una 3ra arma con combo terrestre distinto, recién ahí generalizar.
+
+const STEP_COUNT := 3
+const WAIT_BRANCH_EXTRA_STEPS := 2  # rama espera: 3 smashes en vez de 1 (steps 3-4-5)
+
+var _charge_hit_id := 0
+var _launcher_second_hit_open := false
+var _air_smash_id := 0
+
+@onready var _launcher_hitbox: Hitbox = $LauncherHitbox
+
+func setup(player: Player) -> void:
+	super.setup(player)
+	setup_launcher_hitbox(_launcher_hitbox, _t().launcher_deals_damage, tuning.stun)
+
+func tap(slot: World.Slot) -> void:
+	if slot == World.Slot.X:
+		_tap_x()
+	else:
+		_tap_y()
+
+func hold(slot: World.Slot, level: int) -> void:
+	if slot == World.Slot.X:
+		_hold_x(level)
+	else:
+		_hold_y(level)
+
+## Niveles de carga del X (bóveda: "1 carga = 1 vuelta, 2 cargas = 2 vueltas, 3
+## cargas = 3 vueltas"). El primer nivel sale al cruzar hold_threshold (ya cargado,
+## nivel 1); cada charge_level_step extra suma un nivel, hasta max_charge_level.
+## Y reusa la misma escala: aguantar hasta el nivel máximo confirma su sweet spot aéreo.
+func charge_level(held_time: float) -> int:
+	var t := _t()
+	var hold_threshold := _player.tuning.input_hold_threshold if _player != null else 0.0
+	var extra := held_time - hold_threshold  # hold() ya garantiza held_time >= hold_threshold
+	var level := 1 + int(floor(maxf(0.0, extra) / t.charge_level_step))
+	return clampi(level, 1, t.max_charge_level)
+
+# ---- Personalidad X: combo de 3 (+2 en rama espera) + cargado (vueltas, 3 niveles) ----
+
+## Combo terrestre (bóveda): X X X → swing, swing, smash vertical AOE.
+## X X (espera) X X → swing, swing, tres smashes verticales AOE (steps 3-4-5).
+func _tap_x() -> void:
+	if _player.is_airborne():
+		_aerial_tap_x()
+		return
+	if try_queue_combo(&"ground"):
+		return
+	run_combo_chain(&"ground", STEP_COUNT, tuning.swing_time, _t().combo_window,
+			2, _t().ground_wait_branch_threshold, _begin_ground_step, Callable(),
+			WAIT_BRANCH_EXTRA_STEPS)
+
+func _begin_ground_step(step: int, _finisher: bool, _wait_branch: bool) -> void:
+	match step:
+		1:
+			var half := _t().combo_swing_angle
+			_play_swing(Quaternion(Vector3.UP, deg_to_rad(-half)), Quaternion(Vector3.UP, deg_to_rad(half)))
+		2:
+			var half := _t().combo_swing_angle
+			_play_swing(Quaternion(Vector3.UP, deg_to_rad(half)), Quaternion(Vector3.UP, deg_to_rad(-half)))
+		_:
+			_play_smash()
+	_player.attack_step(tuning.swing_time)
+	_player.hold_airborne_for_attack()
+	begin_damage_window(tuning.swing_time)
+
+func _play_smash() -> void:
+	var half := _t().smash_angle
+	_play_swing(Quaternion(Vector3.RIGHT, deg_to_rad(-half)), Quaternion(Vector3.RIGHT, deg_to_rad(half)))
+
+## X cargado: `level` vueltas completas (bóveda: 1/2/3 cargas = 1/2/3 vueltas). En
+## el aire cae con AOE en vez de girar (ver _aerial_charged_x).
+func _hold_x(level: int) -> void:
+	cancel_routines()
+	if _player.is_airborne():
+		_aerial_charged_x(level >= _t().max_charge_level)
+	else:
+		_run_charged_spins(level)
+
+## El golpe final de la secuencia de vueltas es el que hace daño/knockback real. Si
+## llegó al nivel máximo (sweet spot), las vueltas intermedias congelan en vez de
+## empujar — bóveda: "los enemigos que pega quedan congelados hasta la última vuelta".
+func _run_charged_spins(level: int) -> void:
+	var t := _t()
+	_charge_hit_id += 1
+	var id := _charge_hit_id
+	var sweet_spot := level >= t.max_charge_level
+	_player.hold_airborne_for_attack()
+	for spin in range(1, level + 1):
+		_play_spin()
+		var finisher := spin == level
+		_set_hitbox_stun(t.charged_freeze_stun if (sweet_spot and not finisher) else t.charged_final_stun)
+		_blade_hitbox.damage = t.charged_hit_damage if finisher else (0.0 if sweet_spot else 1.0)
+		begin_damage_window(t.charged_spin_time)
+		ComboTracker.register_hit()
+		await wait_seconds(t.charged_spin_time)
+		if id != _charge_hit_id:
+			return
+	_set_hitbox_stun(tuning.stun)
+	_blade_hitbox.damage = 1.0
+
+# ---- Personalidad Y: launcher omnidireccional + sweet spot de 2 golpes ----
+
+## Un tap normal, salvo que haya un launcher terrestre esperando confirmación (ver
+## _hold_y): ahí este tap ES el segundo golpe del sweet spot y dispara el launcher.
+func _tap_y() -> void:
+	if _launcher_second_hit_open:
+		_confirm_launcher_second_hit()
+		return
+	swing(_t().strike_angle)
+	_player.attack_step(tuning.swing_time)
+	_player.hold_airborne_for_attack()
+	begin_damage_window(tuning.swing_time)
+	ComboTracker.register_hit()
+
+## Launcher terrestre (área grande, omnidireccional) o Y cargado aéreo (giro que
+## empuja / congela) según el estado del player. `level` decide el sweet spot aéreo.
+func _hold_y(level: int) -> void:
+	if _player.is_airborne():
+		_aerial_hold_y(level >= _t().max_charge_level)
+		return
+	swing_up(_t().strike_angle)
+	begin_damage_window(tuning.swing_time)
+	ComboTracker.register_hit()
+	_open_launcher_second_hit_window()
+
+## Sweet spot (bóveda: "hace dos golpes para subirlos al aire"): un segundo tap Y
+## dentro de esta ventana confirma y lanza ya; si expira sin confirmar, lanza igual
+## con un solo golpe (degradado, mismo criterio que usan los cargados sin meter).
+func _open_launcher_second_hit_window() -> void:
+	_launcher_second_hit_open = true
+	await wait_seconds(_t().launcher_second_hit_window)
+	if not _launcher_second_hit_open:
+		return  # ya lo confirmó un segundo tap
+	_launcher_second_hit_open = false
+	run_launcher_window(_launcher_hitbox, _t().launcher_height, _t().launcher_hang_time,
+			_t().launcher_hitbox_duration)
+
+func _confirm_launcher_second_hit() -> void:
+	_launcher_second_hit_open = false
+	swing_up(_t().strike_angle)
+	begin_damage_window(tuning.swing_time)
+	ComboTracker.register_hit()
+	run_launcher_window(_launcher_hitbox, _t().launcher_height, _t().launcher_hang_time,
+			_t().launcher_hitbox_duration)
+
+# ---- Aéreo (moves puntuales, no son combo encadenado: ver Combate/Mazo) ----
+
+## X sin carga: golpe con empuje hacia adelante.
+func _aerial_tap_x() -> void:
+	swing(_t().combo_swing_angle)
+	_player.notify_aerial_attack(tuning.swing_time)
+	begin_damage_window(tuning.swing_time)
+	ComboTracker.register_hit()
+	await wait_seconds(tuning.swing_time)
+	for hurtbox in _window_hits:
+		_push_target(hurtbox, tuning.air_push)
+
+## X cargado: caída forzada con AOE ("ground pound"); sweet spot con vuelta final
+## que congela y mantiene al jugador (y a los golpeados) en el aire.
+func _aerial_charged_x(sweet_spot: bool) -> void:
+	var t := _t()
+	_air_smash_id += 1
+	var id := _air_smash_id
+	_player.notify_aerial_attack(tuning.swing_time)
+	_player.vertical_velocity = -absf(t.air_smash_fall_speed)
+	_set_hitbox_stun(tuning.stun)
+	_blade_hitbox.damage = t.charged_hit_damage
+	if _air_disc_hitbox != null:
+		_air_disc_hitbox.damage = t.charged_hit_damage
+	begin_damage_window(tuning.swing_time)
+	ComboTracker.register_hit()
+	await wait_seconds(tuning.swing_time)
+	if id != _air_smash_id:
+		return
+	if sweet_spot:
+		_play_spin()
+		_set_hitbox_stun(t.air_freeze_stun)
+		begin_damage_window(t.charged_spin_time)
+		ComboTracker.register_hit()
+		_player.notify_aerial_attack(t.air_freeze_extra_hang_time)
+		await wait_seconds(t.charged_spin_time)
+		if id != _air_smash_id:
+			return
+		_set_hitbox_stun(tuning.stun)
+	_blade_hitbox.damage = 1.0
+	if _air_disc_hitbox != null:
+		_air_disc_hitbox.damage = 1.0
+
+## Y cargado aéreo: vueltas que empujan a los lados; sweet spot congela y da más
+## tiempo airborne (bóveda: "a ti también te da más tiempo airborne").
+func _aerial_hold_y(sweet_spot: bool) -> void:
+	var t := _t()
+	_player.notify_aerial_attack(t.charged_spin_time)
+	_play_spin()
+	_set_hitbox_stun(t.air_freeze_stun if sweet_spot else tuning.stun)
+	begin_damage_window(t.charged_spin_time)
+	ComboTracker.register_hit()
+	await wait_seconds(t.charged_spin_time)
+	if sweet_spot:
+		_player.notify_aerial_attack(t.air_freeze_extra_hang_time)
+	else:
+		for hurtbox in _window_hits:
+			_push_target(hurtbox, tuning.air_push)
+	_set_hitbox_stun(tuning.stun)
+
+func _push_target(hurtbox: Hurtbox, settings: PushSettings) -> void:
+	var target: Node = hurtbox.owner_node
+	if target.has_method("push"):
+		target.call("push", _player.forward(), settings)
+
+## Sincroniza el stun de la hoja y el disco aéreo (ambos activos en el aire): así un
+## golpe congelante congela sin importar cuál de los dos conecta.
+func _set_hitbox_stun(s: StunSettings) -> void:
+	_blade_hitbox.stun = s
+	if _air_disc_hitbox != null:
+		_air_disc_hitbox.stun = s
+
+func _t() -> MaceTuning:
+	return tuning as MaceTuning
+
+func _default_tuning() -> WeaponTuning:
+	return MaceTuning.new()

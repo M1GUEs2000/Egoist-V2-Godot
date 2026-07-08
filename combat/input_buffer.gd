@@ -20,6 +20,11 @@ var _charge_then_release := false
 var _tap_action := Callable()
 var _hold_action := Callable()
 
+## Segundos crudos desde el press (sin saturar en hold_threshold). Lo usa el arma
+## para resolver niveles de carga más allá del primer umbral (ver Mazo).
+func held_duration() -> float:
+	return World.now() - _press_time
+
 ## 0→1 mientras carga, se queda en 1 tras disparar hold, vuelve a 0 al soltar.
 func charge_progress() -> float:
 	if _hold_fired:

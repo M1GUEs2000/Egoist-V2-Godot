@@ -8,11 +8,9 @@ class_name Sword extends WeaponBase
 
 const STEP_COUNT := 4
 
-var _launcher_id := 0
 var _charged_dash_id := 0
 var _aerial_charged_y_active := false
 var _aerial_charged_meet_y := 0.0
-var _swing_tween: Tween
 
 @onready var _launcher_hitbox: Hitbox = $LauncherHitbox
 @onready var _charged_dash_hitbox: Hitbox = $ChargedDashHitbox
@@ -20,12 +18,7 @@ var _swing_tween: Tween
 
 func setup(player: Player) -> void:
 	super.setup(player)
-	_launcher_hitbox.source = player
-	_launcher_hitbox.damage = 1.0 if _t().launcher_deals_damage else 0.0
-	_launcher_hitbox.stun = tuning.stun
-	_launcher_hitbox.can_be_parried = false  # el cono launcher nunca se parria (ex ConeLauncherHitbox)
-	_launcher_hitbox.about_to_hit.connect(_on_launcher_about_to_hit)
-	_launcher_hitbox.landed.connect(_on_launcher_hit)
+	setup_launcher_hitbox(_launcher_hitbox, _t().launcher_deals_damage, tuning.stun)
 
 	# Dash cargado: hitbox PROPIO de la espada (no comparte con el dash de movimiento del
 	# dodge). Su daño/stun/tamaño salen de SwordTuning; nunca se parria.
@@ -105,21 +98,8 @@ func _hold_y() -> void:
 		return
 	# Launcher terrestre (ex AttackLauncher: solo desde el suelo — ya garantizado acá).
 	swing_up(_t().strike_angle)
-	_run_launcher()
-
-func _run_launcher() -> void:
-	_launcher_id += 1
-	var id := _launcher_id
-	await wait_seconds(0.05)
-	if id != _launcher_id:
-		return
-	_player.launch(_t().launcher_height, _t().launcher_hang_time)
-	_launcher_hitbox.begin_swing()
-	ComboTracker.register_hit()
-	await wait_seconds(_t().launcher_hitbox_duration)
-	if id != _launcher_id:
-		return
-	_launcher_hitbox.end_swing()
+	run_launcher_window(_launcher_hitbox, _t().launcher_height, _t().launcher_hang_time,
+			_t().launcher_hitbox_duration)
 
 ## Y cargada en el aire: gasta 1 barra (como la X cargada). El jugador se auto-launcha
 ## (mismos valores que el launcher Y) y los golpeados spikean al suelo y rebotan hasta
@@ -152,17 +132,6 @@ func _on_aerial_charged_y_hit(hurtbox: Hurtbox, _died: bool) -> void:
 				func() -> float: return meet_y,
 				_t().launcher_hang_time)
 
-## Lanza al enemigo ANTES de que el Hitbox aplique el daño (v1: "lanza primero, así el golpe
-## ya ve is_airborne = true y usa el stun aéreo, no el de suelo" — ConeLauncherHitbox.TryHit).
-func _on_launcher_about_to_hit(hurtbox: Hurtbox) -> void:
-	# Solo lanza lo lanzable: una pared o un pickup no salen volando.
-	var target: Node = hurtbox.owner_node
-	if target.has_method("launch"):
-		target.call("launch", _t().launcher_height, _t().launcher_hang_time)
-
-func _on_launcher_hit(hurtbox: Hurtbox, died: bool) -> void:
-	_on_hit(hurtbox, died)  # meter / air-hit-stall, igual que la hoja
-
 # ---- Dash cargado: ventana de daño con hitbox propio de la espada ----
 
 ## Prende el hitbox del dash cargado mientras dura el dash (la espada mueve al player vía
@@ -181,15 +150,7 @@ func _run_charged_dash_window() -> void:
 func _on_charged_dash_hit(hurtbox: Hurtbox, died: bool) -> void:
 	register_weapon_hit(hurtbox, died)
 
-# ---- Swings visuales (procedurales, quaternions sobre el Pivot) ----
-
-## Swing horizontal (eje Y local): barrido de un lado al otro. Corte por defecto.
-func swing(angle: float) -> void:
-	_swing_axis(angle, Vector3.UP)
-
-## Swing vertical ascendente (eje X local): corte de abajo hacia arriba (uppercut del launcher).
-func swing_up(angle: float) -> void:
-	_swing_axis(angle, Vector3.RIGHT)
+# ---- Coreografía (swing/swing_up/_play_swing/_play_spin viven en WeaponBase) ----
 
 ## Combo terrestre: swing, swing, estocada, estocada (o vueltas en la rama espera).
 func _play_combo_step(step: int, spin: bool) -> void:
@@ -236,33 +197,6 @@ func _play_air_diagonal(side: float) -> void:
 ## Estocada: la hoja apunta al frente y vuelve. El avance real lo da attack_step del jugador.
 func _play_thrust() -> void:
 	_play_swing(Quaternion.IDENTITY, Quaternion(Vector3.RIGHT, deg_to_rad(80.0)))
-
-func _swing_axis(angle: float, axis: Vector3) -> void:
-	var half := deg_to_rad(angle * 0.5)
-	_play_swing(Quaternion(axis, -half), Quaternion(axis, half))
-
-func _play_swing(from: Quaternion, to: Quaternion) -> void:
-	_kill_swing_tween()
-	_pivot.quaternion = from
-	_swing_tween = create_tween()
-	_swing_tween.tween_property(_pivot, "quaternion", to, tuning.swing_time)
-	_swing_tween.tween_callback(_reset_pivot)
-
-func _play_spin() -> void:
-	_kill_swing_tween()
-	_swing_tween = create_tween()
-	_swing_tween.tween_method(_set_spin_angle, 0.0, TAU, tuning.swing_time)
-	_swing_tween.tween_callback(_reset_pivot)
-
-func _set_spin_angle(angle: float) -> void:
-	_pivot.quaternion = Quaternion(Vector3.UP, angle)
-
-func _reset_pivot() -> void:
-	_pivot.quaternion = Quaternion.IDENTITY
-
-func _kill_swing_tween() -> void:
-	if _swing_tween != null and _swing_tween.is_valid():
-		_swing_tween.kill()
 
 func _t() -> SwordTuning:
 	return tuning as SwordTuning

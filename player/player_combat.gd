@@ -93,7 +93,12 @@ func _on_press(weapon: WeaponBase, slot: World.Slot) -> void:
 	_last_attack_time = World.now()
 	_charging_weapon = weapon
 	weapon.quaternion = _rest_rotations[weapon]
-	buffer.press_then_charge(weapon.tap.bind(slot), weapon.hold.bind(slot, 1))
+	buffer.press_then_charge(weapon.tap.bind(slot), _fire_hold.bind(weapon, slot))
+
+## El nivel de carga se resuelve recién al disparar el hold (no al bindear en el
+## press), así el arma puede leer cuánto se sostuvo de verdad (ver Mazo.charge_level).
+func _fire_hold(weapon: WeaponBase, slot: World.Slot) -> void:
+	weapon.hold(slot, weapon.charge_level(buffer.held_duration()))
 
 ## Armas guardadas: rotan a la pose inactiva (hoja hacia abajo) al pasar el rato.
 func _process(delta: float) -> void:
