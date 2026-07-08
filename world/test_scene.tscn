@@ -277,14 +277,21 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5, 0, -2)
 [node name="BreakableWall" parent="." unique_id=931707207 instance=ExtResource("10_breakable_wall")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -4.5)
 
-[node name="LivingSpikeWall" parent="." unique_id=1147645952 instance=ExtResource("13_spike_wall")]
+[node name="DeadSpikeWall" parent="." unique_id=1147645952 instance=ExtResource("13_spike_wall")]
 transform = Transform3D(0.3365483, -0.8794717, -0.3365483, 0.15660828, 0.4046937, -0.9009425, 0.9285525, 0.25050426, 0.27393153, 11.759314, 0.47619557, 7.1672754)
+world = 1
 
-[node name="LivingSpikeWall2" parent="." unique_id=457786635 instance=ExtResource("13_spike_wall")]
+[node name="DeadSpikeWall2" parent="." unique_id=457786635 instance=ExtResource("13_spike_wall")]
 transform = Transform3D(1.0204163, -0.26526126, -0.94995564, -0.7300193, 3.1886072, -0.15015295, 3.1385067, 0.82791656, 0.27393147, 37.66935, 4.9999714, -118.726166)
+world = 1
 
-[node name="LivingSpikeWall3" parent="." unique_id=155930929 instance=ExtResource("13_spike_wall")]
+[node name="DeadSpikeWall3" parent="." unique_id=155930929 instance=ExtResource("13_spike_wall")]
 transform = Transform3D(1.0204163, -0.26526126, -0.94995564, -0.7300193, 3.1886072, -0.15015295, 3.1385067, 0.82791656, 0.27393147, 49.512863, 8.91449, -130.23918)
+world = 1
+
+[node name="LivingSpikeWall" parent="." instance=ExtResource("13_spike_wall")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8.5, 0, 5)
+world = 0
 
 [node name="GroundedEnemy" parent="." unique_id=295057239 instance=ExtResource("12_enemy")]
 transform = Transform3D(0.866025, 0, 0.5, 0, 1, 0, -0.5, 0, 0.866025, 8.785327, 0.1, -0.57565784)

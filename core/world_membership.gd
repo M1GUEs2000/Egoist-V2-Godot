@@ -32,6 +32,12 @@ func _ready() -> void:
 	_shift_left = shift_interval
 	_on_world_changed(WorldManager.current)
 
+## Re-evalúa la afiliación contra el mundo actual y vuelve a emitir `changed`. Lo llama
+## el dueño cuando setea `affiliation` por código: su `_ready` corre DESPUÉS del de este
+## módulo, así que sin esto el módulo se quedaría con la afiliación vieja (ver SpikeWall).
+func refresh() -> void:
+	_on_world_changed(WorldManager.current)
+
 func _process(delta: float) -> void:
 	if mode != Mode.TIMED or shift_interval <= 0.0:
 		return

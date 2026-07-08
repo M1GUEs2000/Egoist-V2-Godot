@@ -1,0 +1,75 @@
+---
+title: Colores de mundo
+tags:
+  - egoist
+  - gameplay
+  - traversal
+  - convencion
+status: active
+system_status: E2
+hito: H1
+---
+
+# Colores de mundo
+
+> [!important] Convencion del proyecto
+> **TOMATE = mundo vivo. MORADO = mundo muerto.**
+> Vale para todo el desarrollo (greybox). Cuando entre el arte definitivo se revisa, pero
+> hasta entonces cualquier pieza que exista en un solo mundo, o que cambie segun el mundo,
+> se pinta con estos dos colores y con ningun otro.
+
+## Donde vive
+
+Fuente unica de verdad: `core/world.gd`. Nadie hardcodea el color en un `.tscn` ni en su
+propio script.
+
+```gdscript
+const COLOR_LIVING          := Color(0.9, 0.1, 0.08)    # tomate
+const COLOR_LIVING_EMISSION := Color(0.7, 0.05, 0.03)
+const COLOR_DEAD            := Color(0.55, 0.15, 0.9)   # morado
+const COLOR_DEAD_EMISSION   := Color(0.35, 0.05, 0.8)
+
+World.world_color(kind)    -> Color   # albedo
+World.world_emission(kind) -> Color   # glow
+```
+
+Los valores salen de las dos piezas que fijaron la convencion de facto:
+`TomatoLaunchBlock` (vivo) y `PurpleDashBlock` (muerto).
+
+## Como aplicarla
+
+- Pieza de **un solo mundo**: se pinta con el color de ese mundo. El nombre del nodo y de
+  la clase deberian decir cual (`TomatoLaunchBlock`, `PurpleDashBlock`).
+- Pieza que **existe en los dos** (misma escena, distinto `WorldMembership.affiliation`):
+  un export raiz `world: World.Kind` y el material se genera por codigo desde
+  `World.world_color(world)`. Ver `SpikeWall._paint_world_colors()` como referencia.
+  Los materiales que queden en el `.tscn` son preview de editor, no la fuente.
+- Pieza **neutra** (existe siempre, `Mode.BOTH`): no usa ninguno de los dos. Que no
+  compita con la lectura de mundo.
+
+> [!warning] Trampa
+> Rojo "de peligro" y tomate "de vivo" son el mismo color a ojo. Los pinchos de
+> `SpikeWall` eran rojos en las dos versiones, lo que hacia leer una pared del mundo
+> muerto como si fuera del vivo. Hoy los pinchos toman el color del mundo. Si algo tiene
+> que gritar "peligro" sin decir "vivo", usar forma o emision, no rojo.
+
+## Estado
+
+| Pieza | Mundo | Pinta desde |
+|---|---|---|
+| `TomatoLaunchBlock` | Vivo | `.tscn` (fijo el color, pendiente migrar a `World`) |
+| `PurpleDashBlock` | Muerto | `.tscn` (fijo el color, pendiente migrar a `World`) |
+| `SpikeWall` | Ambos (`world`) | `World.world_color()` |
+
+## Pendiente
+
+- Migrar `TomatoLaunchBlock` y `PurpleDashBlock` a leer de `World` en vez de tener el
+  color en su `.tscn` (hoy los valores coinciden a mano).
+- Definir el color neutro de las piezas `Mode.BOTH`.
+- `WorldVisual` (E0) deberia derivar los dos Environments de estos mismos colores.
+
+## Relacionado
+
+- [[Bloques]]
+- [[Traversal]]
+- [[Afiliacion de Mundo]]
