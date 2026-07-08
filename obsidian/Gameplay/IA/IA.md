@@ -22,23 +22,10 @@ IA cubre percepcion, decision, movimiento enemigo y seleccion de ataque.
 
 El enum `AIState` de `GroundedEnemy` es un catalogo comun a todos los enemigos. Cada enemigo activa o desactiva estados con `allowed_state_flags`; si un estado no esta permitido, la FSM cae al fallback mas cercano. La intencion de cada estado cambia segun [[Hostilidad]]. *(2026-07-07)*
 
-| Estado | Funcion |
-|---|---|
-| IDLE | Quieto o fallback. |
-| ROAM | Patrulla/vaguea. |
-| ACTIVITY | Actividad idle propia (dormir, comer presas...). |
-| ALERT | Beat de reaccion. |
-| CHASE | Persigue target. |
-| GUARD | Defiende posicion/territorio. |
-| SEARCH | Va a ultima posicion conocida; investigacion, busqueda de intruso o recuperar target segun hostilidad. |
-| ATTACK_MELEE | Ataque cuerpo a cuerpo. |
-| ATTACK_RANGED | Ataque a distancia. |
-| ATTACK_GROUP | Ataque coordinado en grupo. |
-| EVADE | Se reposiciona/esquiva. |
-| DEFEND | Postura defensiva. |
-| CALL_HELP | Pide refuerzos. |
-| FLEE | Huye; tirada unica al cruzar 30% de vida. |
-| HIDE | Se esconde; solo puede venir despues de FLEE. |
+Catalogo completo, que hace cada uno en general y cuales tienen logica real implementada: [[Comportamientos]]. *(2026-07-08)*
+
+> [!warning]
+> `ATTACK_GROUP`, `EVADE`, `DEFEND` y `CALL_HELP` son solo enum/flag hoy — ningun `_process_*` los produce ni los maneja. Ver detalle y que falta en [[Comportamientos]]. *(2026-07-08)*
 
 ## Percepcion y memoria
 
@@ -76,10 +63,12 @@ La intencion por nivel (`PASSIVE`, `REACTIVE`, `AGGRESSIVE`, `ULTRA_AGGRESSIVE`)
 - Validar seleccion melee/ranged por distancia.
 - Probar en engine la FSM ampliada por hostilidad (los valores son de primer pase). *(pendiente de probar)*
 - Decidir si H1 necesita dodge/reposicionamiento enemigo o se difiere a H2.
+- Implementar (o borrar del enum si se descartan) `ATTACK_GROUP`, `EVADE`, `DEFEND` y `CALL_HELP` — hoy son catalogo sin comportamiento real. Ver [[Comportamientos]]. *(2026-07-08)*
 
 ## Relacionado
 
 - [[Enemigos]]
 - [[Hostilidad]]
+- [[Comportamientos]]
 - [[H1 - Vertical Slice]]
 

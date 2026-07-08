@@ -16,22 +16,15 @@ Estados mecanicos compartidos por cualquier enemigo.
 | Estado | Significado |
 |---|---|
 | `NORMAL` | Actua y recibe dano normal. |
-| `ARMORED` | No se lanza ni se parrea; la armadura tiene vida propia y sube el threshold de stun (`armor_stun_threshold`). *(2026-07-07)* |
-| `STUNNED` | IA congelada; entra solo si `stun_power` supera el threshold efectivo del enemigo, y la duracion la define quien ataca. |
+| `ARMORED` | No se lanza ni se parrea; la armadura tiene vida propia y sube el threshold de stun. Detalle en [[Stun]]. |
+| `STUNNED` | IA congelada; entra solo si el ataque supera el threshold efectivo del enemigo, y la duracion la define quien ataca. Detalle en [[Stun]]. |
 | `AIRBORNE` | En el aire por launcher, push, slam o bounce. |
 | Parry vulnerable | Ventana cian donde recibe dano multiplicado. |
 | Dead | Muere, puede disparar `WorldSwitchTrigger.ON_DEATH`. |
 
-## Armadura
+## Armadura y stun
 
-- `armored` define si inicia armado.
-- `armor_hits_to_break` define cuantos golpes aguanta.
-- El golpe que rompe armadura debe poder aplicar stun si corresponde.
-- Mientras esta armado, el enemigo usa `armor_stun_threshold` en vez de `stun_threshold`: la armadura es resistencia al stun, no inmunidad. *(2026-07-07)*
-
-## Resistencia al stun
-
-El criterio es universal (igual que el player, ver [[Combate]]): la fuente manda `StunSettings` con `power`; el receptor solo queda stunned si `power >= _effective_stun_threshold()`. La entrada normal es `receive_stun` / `try_apply_stun`; `apply_stun` queda como aplicacion directa que ignora resistencia. Los ataques enemigos con `StunSettings` tambien llaman `receive_stun` en su target (`MeleeAttack`). *(2026-07-07)*
+El sistema completo de umbral de stun, resistencia por armadura y su interaccion con el aire (juggle) vive en [[Stun]] — separado de esta nota porque tiene su propio criterio de entrada, independiente del resto de `combat_state`. *(2026-07-08)*
 
 ## Aereo
 
@@ -48,4 +41,5 @@ El criterio es universal (igual que el player, ver [[Combate]]): la fuente manda
 - [[Combate]]
 - [[Espada]]
 - [[Armored Enemy]]
+- [[Stun]]
 

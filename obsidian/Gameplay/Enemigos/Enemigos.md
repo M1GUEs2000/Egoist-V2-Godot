@@ -23,9 +23,10 @@ Los enemigos de Egoist no son solo unidades de combate. Son portadores de mascar
 |---|---|
 | [[Modelo de Enemigo]] | Arquitectura Godot: `EnemyBase`, `GroundedEnemy`, `Health`, `Hurtbox`, ataques. |
 | [[Mascaras y Cordura]] | Sane, Not so sane, Insane; relacion con lore y hostilidad. |
-| [[Hostilidad]] | Passive, Reactive, Aggressive, UltraAggressive. |
+| [[Hostilidad]] | Passive, Reactive, Aggressive, UltraAggressive — resumen; detalle por nivel en [[Pasivo]], [[Reactivo]], [[Agresivo]], [[Ultra Agresivo]]. |
 | [[Afiliacion de Mundo]] | Fixed, Both, Timed, Follows y OnDeath. |
 | [[Estados de Combate Enemigo]] | Normal, Armored, Stunned, Airborne, Parry vulnerable, muerte. |
+| [[Stun]] | Umbral de stun, resistencia por armadura y juggle en el aire. |
 | [[Ataques Enemigos]] | Melee, ranged, hibridos y seleccion por distancia. |
 | [[Ecosistema Vivo]] | Enemigos que se atacan entre si, aggro grupal, objetivos no jugador. |
 | [[Objetos Golpeables]] | Pickups, bloques, paredes y objetos con `Health` sin IA. |
