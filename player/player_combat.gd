@@ -20,6 +20,7 @@ signal attack_telegraphed(origin: Vector3, direction: Vector3)
 var _body: Player
 var _last_attack_time := -999.0
 var _charging_weapon: WeaponBase  # arma del último press: recibe el glow de carga
+var _active_weapon: WeaponBase  # arma visible actualmente
 var _rest_rotations := {}  # WeaponBase → Quaternion
 
 @onready var buffer: InputBuffer = $InputBuffer
@@ -93,6 +94,7 @@ func _on_press(weapon: WeaponBase, slot: World.Slot) -> void:
 	_last_attack_time = World.now()
 	_charging_weapon = weapon
 	weapon.quaternion = _rest_rotations[weapon]
+	_set_active_weapon(weapon)
 	buffer.press_then_charge(weapon.tap.bind(slot), _fire_hold.bind(weapon, slot))
 
 ## El nivel de carga se resuelve recién al disparar el hold (no al bindear en el
@@ -126,7 +128,17 @@ func _weapons() -> Array[WeaponBase]:
 			out.append(weapon)
 	return out
 
+func _set_active_weapon(weapon: WeaponBase) -> void:
+	if _active_weapon == weapon:
+		return
+	if _active_weapon != null:
+		_active_weapon.visible = false
+	_active_weapon = weapon
+	if weapon != null:
+		weapon.visible = true
+
 func _refresh_weapon_visibility() -> void:
+	# En setup, hacer invisible todas excepto las equipadas; luego _set_active_weapon las muestra.
 	var equipped := _weapons()
 	for weapon in available_weapons():
-		weapon.visible = weapon in equipped
+		weapon.visible = weapon in equipped and weapon == _active_weapon

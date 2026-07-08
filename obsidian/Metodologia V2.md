@@ -24,9 +24,9 @@ La verdad operativa vive en esta boveda y en `METODOLOGIA.md` del repo Godot. La
 
 ## Responsabilidades
 
-| Quien | Que hace |
-|---|---|
-| Codex | Codigo Godot, refactors, pruebas headless, smoke tests, notas tecnicas. |
+| Quien  | Que hace                                                                       |
+| ------ | ------------------------------------------------------------------------------ |
+| Codex  | Codigo Godot, refactors, pruebas headless, smoke tests, notas tecnicas.        |
 | Tutupa | Diseno, tuning en `.tres`, editor/playtest, Blender, aprobacion de feel E3/E4. |
 
 ## Flujo de cierre
