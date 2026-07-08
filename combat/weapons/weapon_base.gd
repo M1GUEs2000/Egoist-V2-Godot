@@ -107,10 +107,9 @@ func try_queue_combo(kind: StringName) -> bool:
 func run_combo_chain(kind: StringName, steps: int, step_time: float, chain_window: float,
 		branch_step: int, branch_threshold: float,
 		begin_step: Callable, finish := Callable(), wait_branch_extra_steps := 0) -> void:
+	var id := begin_routine()
 	_combo_playing = true
 	_combo_kind = kind
-	_routine_id += 1
-	var id := _routine_id
 	var wait_branch := false
 	var total_steps := steps
 
@@ -313,10 +312,14 @@ func _play_swing(from: Quaternion, to: Quaternion) -> void:
 	_swing_tween.tween_property(_pivot, "quaternion", to, tuning.swing_time)
 	_swing_tween.tween_callback(_reset_pivot)
 
-func _play_spin() -> void:
+## Vuelta completa. `duration` < 0 → dura lo que un swing normal; las vueltas del X
+## cargado del Mazo pasan su propio charged_spin_time (si no, el tween queda a medio
+## girar cuando arranca la vuelta siguiente).
+func _play_spin(duration := -1.0) -> void:
 	_kill_swing_tween()
+	var spin_time := duration if duration > 0.0 else tuning.swing_time
 	_swing_tween = create_tween()
-	_swing_tween.tween_method(_set_spin_angle, 0.0, TAU, tuning.swing_time)
+	_swing_tween.tween_method(_set_spin_angle, 0.0, TAU, spin_time)
 	_swing_tween.tween_callback(_reset_pivot)
 
 func _set_spin_angle(angle: float) -> void:
@@ -331,12 +334,34 @@ func _kill_swing_tween() -> void:
 
 # ---- Helpers ----
 
-## Invalida las rutinas en curso (combos): cada una chequea su id tras cada await.
-func cancel_routines() -> void:
+## Arranca una rutina cancelable: invalida cualquier otra en curso (combo, vueltas
+## cargadas, ventanas de sweet spot) y devuelve el id con el que hay que chequear tras
+## cada await (`is_routine_current`). TODA entrada de ataque debe pasar por acá: si una
+## rutina vieja sobrevive, sigue pisando el hitbox y el Pivot de la que arrancó recién.
+func begin_routine() -> int:
 	_routine_id += 1
 	_combo_playing = false
 	_combo_window_open = false
 	_combo_kind = &""
+	return _routine_id
+
+## False si otra rutina arrancó mientras esta esperaba: hay que retornar sin tocar nada
+## (el hitbox y el Pivot ya son de la rutina nueva).
+func is_routine_current(id: int) -> bool:
+	return id == _routine_id
+
+## Invalida las rutinas en curso (combos): cada una chequea su id tras cada await.
+func cancel_routines() -> void:
+	begin_routine()
+
+## Devuelve hoja y disco aéreo a su perfil de daño/stun base. Toda entrada de ataque la
+## llama antes de customizarlo: así una rutina cancelada a mitad (que dejó damage 0.0 o
+## el stun congelante puesto, ver Mazo) no contamina el golpe siguiente.
+func reset_hit_profile() -> void:
+	for hitbox: Hitbox in [_blade_hitbox, _air_disc_hitbox]:
+		if hitbox != null:
+			hitbox.damage = 1.0
+			hitbox.stun = tuning.stun
 
 func wait_seconds(seconds: float) -> void:
 	await get_tree().create_timer(maxf(0.01, seconds)).timeout

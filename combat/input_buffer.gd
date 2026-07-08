@@ -19,10 +19,20 @@ var _execute_on_release := false
 var _charge_then_release := false
 var _tap_action := Callable()
 var _hold_action := Callable()
+## Cuánto se sostuvo el press, medido en el instante en que se disparó el hold
+## (-1 = todavía apretado, sigue contando). Es una duración, nada que ver con el
+## "congelado" del Mazo (eso es un StunSettings, ver MaceTuning.charged_freeze_stun).
+var _held_at_fire := -1.0
 
-## Segundos crudos desde el press (sin saturar en hold_threshold). Lo usa el arma
-## para resolver niveles de carga más allá del primer umbral (ver Mazo).
+## Segundos crudos que se mantuvo el press (sin saturar en hold_threshold). Lo usa el
+## arma para resolver niveles de carga más allá del primer umbral (ver Mazo).
+## Deja de contar al disparar el hold: si ese hold quedó bufferizado (soltar mid-swing,
+## regla 2), el arma lee lo que el jugador SOSTUVO de verdad y no los hasta buffer_time
+## extra que el buffer tardó en soltarlo — si no, soltar al ras de un umbral de carga
+## regalaba un nivel según qué tan ocupado estuviera el player.
 func held_duration() -> float:
+	if _held_at_fire >= 0.0:
+		return _held_at_fire
 	return World.now() - _press_time
 
 ## 0→1 mientras carga, se queda en 1 tras disparar hold, vuelve a 0 al soltar.
@@ -36,6 +46,7 @@ func charge_progress() -> float:
 ## Llamar en el pressed de la acción de input.
 func press(tap_action: Callable, hold_action: Callable) -> void:
 	_press_time = World.now()
+	_held_at_fire = -1.0
 	_hold_fired = false
 	_execute_on_release = false
 	_charge_then_release = false
@@ -47,6 +58,7 @@ func press(tap_action: Callable, hold_action: Callable) -> void:
 ## Nada al press; al soltar decide tap o hold según cuánto se mantuvo.
 func press_on_release(tap_action: Callable, hold_action: Callable) -> void:
 	_press_time = World.now()
+	_held_at_fire = -1.0
 	_hold_fired = false
 	_execute_on_release = true
 	_charge_then_release = false
@@ -57,6 +69,7 @@ func press_on_release(tap_action: Callable, hold_action: Callable) -> void:
 ## al soltar dispara el hold (cargado). El tap ya ocurrió, no se repite.
 func press_then_charge(tap_action: Callable, hold_action: Callable) -> void:
 	_press_time = World.now()
+	_held_at_fire = -1.0
 	_hold_fired = false
 	_execute_on_release = false
 	_charge_then_release = true
@@ -66,10 +79,12 @@ func press_then_charge(tap_action: Callable, hold_action: Callable) -> void:
 
 ## Llamar en el released de la acción de input.
 func release() -> void:
+	var held := World.now() - _press_time
 	if _execute_on_release:
-		var charged := World.now() - _press_time >= hold_threshold
-		_try_execute(_hold_action if charged else _tap_action)
-	elif _charge_then_release and World.now() - _press_time >= hold_threshold:
+		_held_at_fire = held
+		_try_execute(_hold_action if held >= hold_threshold else _tap_action)
+	elif _charge_then_release and held >= hold_threshold:
+		_held_at_fire = held
 		_try_execute(_hold_action)  # tap ya salió en press; al soltar tras cargar, el cargado
 
 	_hold_action = Callable()
@@ -91,6 +106,7 @@ func _process(_delta: float) -> void:
 	if not _execute_on_release and not _charge_then_release and not _hold_fired \
 			and _hold_action.is_valid() and World.now() - _press_time >= hold_threshold:
 		_hold_fired = true
+		_held_at_fire = World.now() - _press_time
 		_buffered = Callable()  # cancela el tap bufferizado si no ejecutó aún
 		_try_execute(_hold_action)
 

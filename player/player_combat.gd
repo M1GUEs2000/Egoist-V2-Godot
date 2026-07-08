@@ -137,8 +137,11 @@ func _set_active_weapon(weapon: WeaponBase) -> void:
 	if weapon != null:
 		weapon.visible = true
 
+## Solo se ve el arma activa (la del último ataque). Al arrancar —o si la activa dejó
+## de estar equipada por un cambio de slot— cae a la del slot X: si no, el jugador
+## quedaría con las manos vacías hasta el primer ataque.
 func _refresh_weapon_visibility() -> void:
-	# En setup, hacer invisible todas excepto las equipadas; luego _set_active_weapon las muestra.
-	var equipped := _weapons()
+	if _active_weapon not in _weapons():
+		_active_weapon = slot_x
 	for weapon in available_weapons():
-		weapon.visible = weapon in equipped and weapon == _active_weapon
+		weapon.visible = weapon == _active_weapon

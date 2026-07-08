@@ -11,9 +11,10 @@ class_name Mace extends WeaponBase
 const STEP_COUNT := 3
 const WAIT_BRANCH_EXTRA_STEPS := 2  # rama espera: 3 smashes en vez de 1 (steps 3-4-5)
 
-var _charge_hit_id := 0
-var _launcher_second_hit_open := false
-var _air_smash_id := 0
+## Rutina dueña de la ventana de sweet spot del launcher (0 = ninguna abierta). Es el
+## id de rutina, no un bool: así cualquier otro ataque la invalida al arrancar y el
+## launcher degradado no se dispara solo en medio del combo siguiente.
+var _launcher_window_id := 0
 
 @onready var _launcher_hitbox: Hitbox = $LauncherHitbox
 
@@ -54,6 +55,7 @@ func _tap_x() -> void:
 		return
 	if try_queue_combo(&"ground"):
 		return
+	reset_hit_profile()
 	run_combo_chain(&"ground", STEP_COUNT, tuning.swing_time, _t().combo_window,
 			2, _t().ground_wait_branch_threshold, _begin_ground_step, Callable(),
 			WAIT_BRANCH_EXTRA_STEPS)
@@ -79,7 +81,6 @@ func _play_smash() -> void:
 ## X cargado: `level` vueltas completas (bóveda: 1/2/3 cargas = 1/2/3 vueltas). En
 ## el aire cae con AOE en vez de girar (ver _aerial_charged_x).
 func _hold_x(level: int) -> void:
-	cancel_routines()
 	if _player.is_airborne():
 		_aerial_charged_x(level >= _t().max_charge_level)
 	else:
@@ -88,33 +89,36 @@ func _hold_x(level: int) -> void:
 ## El golpe final de la secuencia de vueltas es el que hace daño/knockback real. Si
 ## llegó al nivel máximo (sweet spot), las vueltas intermedias congelan en vez de
 ## empujar — bóveda: "los enemigos que pega quedan congelados hasta la última vuelta".
+## No restaura el hitbox al salir: si otra rutina la invalidó, ella ya es la dueña; el
+## perfil lo resetea la entrada del ataque siguiente (reset_hit_profile).
 func _run_charged_spins(level: int) -> void:
 	var t := _t()
-	_charge_hit_id += 1
-	var id := _charge_hit_id
+	var id := begin_routine()
+	reset_hit_profile()
 	var sweet_spot := level >= t.max_charge_level
 	_player.hold_airborne_for_attack()
 	for spin in range(1, level + 1):
-		_play_spin()
+		_play_spin(t.charged_spin_time)
 		var finisher := spin == level
 		_set_hitbox_stun(t.charged_freeze_stun if (sweet_spot and not finisher) else t.charged_final_stun)
 		_blade_hitbox.damage = t.charged_hit_damage if finisher else (0.0 if sweet_spot else 1.0)
 		begin_damage_window(t.charged_spin_time)
 		ComboTracker.register_hit()
 		await wait_seconds(t.charged_spin_time)
-		if id != _charge_hit_id:
+		if not is_routine_current(id):
 			return
-	_set_hitbox_stun(tuning.stun)
-	_blade_hitbox.damage = 1.0
+	reset_hit_profile()
 
 # ---- Personalidad Y: launcher omnidireccional + sweet spot de 2 golpes ----
 
 ## Un tap normal, salvo que haya un launcher terrestre esperando confirmación (ver
 ## _hold_y): ahí este tap ES el segundo golpe del sweet spot y dispara el launcher.
 func _tap_y() -> void:
-	if _launcher_second_hit_open:
+	if _launcher_window_is_open():
 		_confirm_launcher_second_hit()
 		return
+	begin_routine()
+	reset_hit_profile()
 	swing(_t().strike_angle)
 	_player.attack_step(tuning.swing_time)
 	_player.hold_airborne_for_attack()
@@ -127,28 +131,37 @@ func _hold_y(level: int) -> void:
 	if _player.is_airborne():
 		_aerial_hold_y(level >= _t().max_charge_level)
 		return
+	var id := begin_routine()
+	reset_hit_profile()
 	swing_up(_t().strike_angle)
 	begin_damage_window(tuning.swing_time)
 	ComboTracker.register_hit()
-	_open_launcher_second_hit_window()
+	_open_launcher_second_hit_window(id)
 
 ## Sweet spot (bóveda: "hace dos golpes para subirlos al aire"): un segundo tap Y
 ## dentro de esta ventana confirma y lanza ya; si expira sin confirmar, lanza igual
 ## con un solo golpe (degradado, mismo criterio que usan los cargados sin meter).
-func _open_launcher_second_hit_window() -> void:
-	_launcher_second_hit_open = true
+## Si otro ataque arrancó mientras tanto, la ventana muere con su rutina: nada de
+## lanzar al jugador medio segundo después, en medio del combo que la interrumpió.
+func _open_launcher_second_hit_window(id: int) -> void:
+	_launcher_window_id = id
 	await wait_seconds(_t().launcher_second_hit_window)
-	if not _launcher_second_hit_open:
-		return  # ya lo confirmó un segundo tap
-	_launcher_second_hit_open = false
-	run_launcher_window(_launcher_hitbox, _t().launcher_height, _t().launcher_hang_time,
-			_t().launcher_hitbox_duration)
+	if _launcher_window_id != id or not is_routine_current(id):
+		return  # ya lo confirmó un segundo tap, u otro ataque invalidó la rutina
+	_launcher_window_id = 0
+	_run_launcher()
+
+func _launcher_window_is_open() -> bool:
+	return _launcher_window_id != 0 and is_routine_current(_launcher_window_id)
 
 func _confirm_launcher_second_hit() -> void:
-	_launcher_second_hit_open = false
+	_launcher_window_id = 0
 	swing_up(_t().strike_angle)
 	begin_damage_window(tuning.swing_time)
 	ComboTracker.register_hit()
+	_run_launcher()
+
+func _run_launcher() -> void:
 	run_launcher_window(_launcher_hitbox, _t().launcher_height, _t().launcher_hang_time,
 			_t().launcher_hitbox_duration)
 
@@ -156,65 +169,72 @@ func _confirm_launcher_second_hit() -> void:
 
 ## X sin carga: golpe con empuje hacia adelante.
 func _aerial_tap_x() -> void:
+	var id := begin_routine()
+	reset_hit_profile()
 	swing(_t().combo_swing_angle)
 	_player.notify_aerial_attack(tuning.swing_time)
 	begin_damage_window(tuning.swing_time)
 	ComboTracker.register_hit()
 	await wait_seconds(tuning.swing_time)
-	for hurtbox in _window_hits:
-		_push_target(hurtbox, tuning.air_push)
+	if not is_routine_current(id):
+		return  # otro ataque ya repobló _window_hits: sus golpeados no son nuestros
+	_push_window_hits()
 
 ## X cargado: caída forzada con AOE ("ground pound"); sweet spot con vuelta final
 ## que congela y mantiene al jugador (y a los golpeados) en el aire.
 func _aerial_charged_x(sweet_spot: bool) -> void:
 	var t := _t()
-	_air_smash_id += 1
-	var id := _air_smash_id
+	var id := begin_routine()
+	reset_hit_profile()
 	_player.notify_aerial_attack(tuning.swing_time)
 	_player.vertical_velocity = -absf(t.air_smash_fall_speed)
-	_set_hitbox_stun(tuning.stun)
-	_blade_hitbox.damage = t.charged_hit_damage
-	if _air_disc_hitbox != null:
-		_air_disc_hitbox.damage = t.charged_hit_damage
+	_set_hitbox_damage(t.charged_hit_damage)
 	begin_damage_window(tuning.swing_time)
 	ComboTracker.register_hit()
 	await wait_seconds(tuning.swing_time)
-	if id != _air_smash_id:
+	if not is_routine_current(id):
 		return
 	if sweet_spot:
-		_play_spin()
+		_play_spin(t.charged_spin_time)
 		_set_hitbox_stun(t.air_freeze_stun)
 		begin_damage_window(t.charged_spin_time)
 		ComboTracker.register_hit()
 		_player.notify_aerial_attack(t.air_freeze_extra_hang_time)
 		await wait_seconds(t.charged_spin_time)
-		if id != _air_smash_id:
+		if not is_routine_current(id):
 			return
-		_set_hitbox_stun(tuning.stun)
-	_blade_hitbox.damage = 1.0
-	if _air_disc_hitbox != null:
-		_air_disc_hitbox.damage = 1.0
+	reset_hit_profile()
 
 ## Y cargado aéreo: vueltas que empujan a los lados; sweet spot congela y da más
 ## tiempo airborne (bóveda: "a ti también te da más tiempo airborne").
 func _aerial_hold_y(sweet_spot: bool) -> void:
 	var t := _t()
+	var id := begin_routine()
+	reset_hit_profile()
 	_player.notify_aerial_attack(t.charged_spin_time)
-	_play_spin()
+	_play_spin(t.charged_spin_time)
 	_set_hitbox_stun(t.air_freeze_stun if sweet_spot else tuning.stun)
 	begin_damage_window(t.charged_spin_time)
 	ComboTracker.register_hit()
 	await wait_seconds(t.charged_spin_time)
+	if not is_routine_current(id):
+		return
 	if sweet_spot:
 		_player.notify_aerial_attack(t.air_freeze_extra_hang_time)
 	else:
-		for hurtbox in _window_hits:
+		_push_window_hits()
+	reset_hit_profile()
+
+## Empuja a los golpeados de la ventana recién cerrada. Copia la lista (el push puede
+## disparar reacciones que abran otra ventana) y saltea lo que ya murió y se liberó.
+func _push_window_hits() -> void:
+	for hurtbox in _window_hits.duplicate():
+		if is_instance_valid(hurtbox):
 			_push_target(hurtbox, tuning.air_push)
-	_set_hitbox_stun(tuning.stun)
 
 func _push_target(hurtbox: Hurtbox, settings: PushSettings) -> void:
 	var target: Node = hurtbox.owner_node
-	if target.has_method("push"):
+	if is_instance_valid(target) and target.has_method("push"):
 		target.call("push", _player.forward(), settings)
 
 ## Sincroniza el stun de la hoja y el disco aéreo (ambos activos en el aire): así un
@@ -223,6 +243,11 @@ func _set_hitbox_stun(s: StunSettings) -> void:
 	_blade_hitbox.stun = s
 	if _air_disc_hitbox != null:
 		_air_disc_hitbox.stun = s
+
+func _set_hitbox_damage(damage: float) -> void:
+	_blade_hitbox.damage = damage
+	if _air_disc_hitbox != null:
+		_air_disc_hitbox.damage = damage
 
 func _t() -> MaceTuning:
 	return tuning as MaceTuning
