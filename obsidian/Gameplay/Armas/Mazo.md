@@ -6,6 +6,7 @@ tags:
   - egoist
   - gameplay
   - arma
+  - combate
 status: active
 system_status: E0
 hito: H2

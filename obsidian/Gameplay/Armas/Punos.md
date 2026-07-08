@@ -6,6 +6,7 @@ tags:
   - egoist
   - gameplay
   - arma
+  - combate
 status: planned
 hito: H2
 ---

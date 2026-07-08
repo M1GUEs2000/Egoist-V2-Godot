@@ -4,6 +4,7 @@ tags:
   - egoist
   - gameplay
   - sistema
+  - combate
 status: planned
 system_status: E0
 hito: H1

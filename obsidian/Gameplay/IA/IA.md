@@ -4,6 +4,7 @@ tags:
   - egoist
   - gameplay
   - sistema
+  - ia
 status: active
 system_status: E2
 hito: H1
