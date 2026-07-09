@@ -94,7 +94,9 @@ func _normal_away_from(world_position: Vector3) -> Vector3:
 	return normal if normal.dot(to_player) >= 0.0 else -normal
 
 func _on_membership_changed(active: bool) -> void:
-	_trigger.monitoring = active
-	_trigger.monitorable = active
+	# WorldMembership puede refrescarse en medio de señales/flush de física (por ejemplo,
+	# un hit que cambia de mundo). Godot bloquea cambiar Area3D.monitorable en ese punto.
+	_trigger.set_deferred("monitoring", active)
+	_trigger.set_deferred("monitorable", active)
 	for shape in _trigger.find_children("*", "CollisionShape3D"):
 		(shape as CollisionShape3D).set_deferred("disabled", not active)
