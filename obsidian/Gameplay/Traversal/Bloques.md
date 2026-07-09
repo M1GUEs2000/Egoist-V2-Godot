@@ -15,10 +15,26 @@ Objetos golpeables de traversal.
 
 | Bloque | Script | Funcion |
 |---|---|---|
-| Tomato | `TomatoLaunchBlock` | Bump horizontal/vertical y restaurar habilidades. Mundo vivo. |
-| Purple dash | `PurpleDashBlock` | Fuerza dash en direccion del jugador. Mundo muerto. |
+| Traversal block | `TraversalBlock` | Bloque componible: launch/bump, dash, meter, maldicion y/o world switch por exports. |
 | Breakable wall | `BreakOnDeath` + `Health` | Desaparece al romperse. |
 | Spike wall | `SpikeWall` | Stun PUSH + rebote, restaura doble salto y airdash. Existe en los dos mundos. |
+
+## Traversal block
+
+`world/blocks/traversal_block.tscn` reemplaza los prefabs separados de Tomato, Purple dash, Action curse y World switch. Cada instancia activa caracteristicas con exports; puede tener una o varias a la vez.
+
+| Caracteristica | Efecto | Color |
+|---|---|---|
+| Launch / bump | Suma momentum horizontal, aplica bump vertical, restaura doble salto y airdash. | Rojo tomate |
+| Dash | Fuerza dash hacia donde mira el jugador. | Verde |
+| Meter | Suma barras de meter al jugador. | Celeste |
+| Maldicion | Al romperse, la proxima accion cambia de mundo. | Amarillo |
+| World switch | Cambia de mundo al golpearlo. | Color del mundo destino |
+
+- El glow se divide en partes iguales segun la cantidad de caracteristicas visibles: mitades, tercios o cuartos. `world switch` no tiene color fijo; visto desde vivo muestra morado porque manda al muerto, visto desde muerto muestra tomate/naranja porque manda al vivo.
+- El glow por proximidad vive en `TraversalBlockTuning`: 10% lejos, 60% cerca, con radio tuneable. Los colores viven en `World`, no en la escena.
+- `hits_to_break = 0` significa indestructible. Valores mayores usan `Health` + `BreakOnDeath` para romperse tras esa cantidad de golpes.
+- El launch ahora alimenta el modelo de [[Momentum y Bump]]: encadenar bloques compone exceso hasta `momentum_max_speed`, y el exceso se drena por superficie en vez de morir de golpe al aterrizar.
 
 ## Spike wall
 
@@ -38,10 +54,9 @@ Pared de pinchos reusable (`world/blocks/spike_wall.tscn`). **Una sola escena pa
 
 - Prefabs H1.
 - Tuning de impulsos por zona.
-- Decidir si purple dash se consume.
+- Probar jugando si cada combinacion de caracteristicas se lee claro con el glow dividido.
 
 ## Relacionado
 
 - [[Traversal]]
 - [[Playa]]
-

@@ -13,6 +13,13 @@ airborne = 1.2
 [sub_resource type="Resource" id="Resource_macepush"]
 script = ExtResource("3_push")
 horizontal_speed = 18.0
+up_speed = 8.0
+gravity = -40.0
+
+[sub_resource type="Resource" id="Resource_macefinalpush"]
+script = ExtResource("3_push")
+horizontal_speed = 22.0
+up_speed = 10.0
 gravity = -40.0
 
 [sub_resource type="Resource" id="Resource_macestun"]
@@ -31,7 +38,10 @@ airborne = 1.4
 script = ExtResource("1_tuning")
 charged_freeze_stun = SubResource("Resource_macefreeze")
 charged_final_stun = SubResource("Resource_macestun")
+charged_final_push = SubResource("Resource_macefinalpush")
 air_freeze_stun = SubResource("Resource_maceairfreeze")
 swing_time = 0.42
 stun = SubResource("Resource_macestun")
-air_push = SubResource("Resource_macepush")
+push = SubResource("Resource_macepush")
+push_at = 0.5
+air_stall_scale = 1.8

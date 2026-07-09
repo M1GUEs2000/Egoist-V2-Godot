@@ -6,7 +6,7 @@ tags:
   - sistema
   - traversal
 status: active
-system_status: E2
+system_status: E1
 hito: H1
 ---
 
@@ -18,6 +18,7 @@ Movimiento de pared implementado como modulo componible `PlayerWallSlide` (nodo 
 
 - Engancharse requiere: estar en el aire + input hacia la pared (`wall_slide_input_dot`) + momentum suficiente contra ella (`wall_slide_min_push_speed`). La pared se detecta con las colisiones de `CharacterBody3D` tras `move_and_slide`, filtrando `World.LAYER_WORLD`.
 - Al pegarse hay una fase breve casi sin caida (`wall_slide_stick_time`, `wall_slide_stick_fall_speed`); despues cae controlado (`wall_slide_gravity_scale`, `wall_slide_max_fall_speed`). El momentum lateral con el que se llega decae con `wall_slide_momentum_decay`: la bajada es un arco que termina cayendo vertical.
+- Ademas, el exceso global `bump_velocity` drena segun `momentum_bleed_wall` mientras el jugador esta apoyado en pared. Esto convive con `wall_slide_momentum_decay`; si se siente demasiado frenado, el primer knob a tocar es `momentum_bleed_wall`.
 - Mientras eslidea se aplica una presion constante contra la pared (`wall_slide_press_speed`) que sostiene el contacto fisico.
 - El personaje brilla verde mientras esta pegado (override de emision en el mesh; `glow_color` / `glow_energy` en el nodo `WallSlide`). Sin bloom aun, igual que el glow de la espada.
 - Se cancela al tocar suelo, dashear, ser lanzado, recibir bump o entrar en stun.
@@ -33,6 +34,8 @@ Movimiento de pared implementado como modulo componible `PlayerWallSlide` (nodo 
 ## Verificacion
 
 Chequeo de regresion headless: `world/wall_slide_probe.tscn` (cae pegado a una pared con input sostenido y cuenta transiciones del estado de slide).
+
+Estado E1 desde el cambio de momentum por superficie: falta validarlo jugando y retunear pared si hace falta.
 
 ## Relacionado
 

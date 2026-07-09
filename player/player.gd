@@ -15,12 +15,12 @@ var bump_velocity := Vector3.ZERO
 
 var _can_double_jump := true
 var _dodge_queued := false  # dodge pedido tarde en un golpe: sale al terminarlo
-var _grounded_grace_until := 0.0
 
 @onready var locomotion: PlayerLocomotion = $Locomotion
 @onready var dash: PlayerDash = $Dash
 @onready var launcher: PlayerLauncher = $Launcher
 @onready var wall_slide: PlayerWallSlide = $WallSlide
+@onready var enemy_bounce: PlayerEnemyBounce = $EnemyBounce
 @onready var stun: PlayerStun = $Stun
 @onready var meter: PlayerMeter = $Meter
 @onready var health: Health = $Health
@@ -41,6 +41,7 @@ func _ready() -> void:
 	locomotion.setup(self, get_viewport().get_camera_3d())
 	launcher.setup(self)
 	wall_slide.setup(self)
+	enemy_bounce.setup(self)
 	dash.setup(self, locomotion, launcher.register_air_hit_stall, launcher.cancel)
 	combat.setup(self)
 
@@ -75,6 +76,7 @@ func _physics_process(delta: float) -> void:
 
 	if launcher.is_launched:
 		wall_slide.cancel()
+		enemy_bounce.cancel()
 		launcher.tick_launch(delta)  # el launcher controla el movimiento
 		return
 
@@ -85,13 +87,14 @@ func _physics_process(delta: float) -> void:
 
 	if dash.is_dashing:
 		wall_slide.cancel()
+		enemy_bounce.cancel()
 		dash.tick(delta)
-		_decay_bump(delta)
+		_bleed_momentum(delta)
 		return
 
 	var input_dir := locomotion.camera_relative(locomotion.read_move_input())
 	var horizontal := locomotion.tick(delta) + locomotion.lunge_velocity()
-	if wall_slide.blocks_move_input():
+	if wall_slide.blocks_move_input() or enemy_bounce.blocks_move_input():
 		horizontal = Vector3.ZERO
 
 	vertical_velocity += tuning.gravity * launcher.gravity_scale() * delta
@@ -100,10 +103,9 @@ func _physics_process(delta: float) -> void:
 	velocity = horizontal_with_momentum + Vector3(0.0, vertical_velocity, 0.0)
 	move_and_slide()
 	wall_slide.update_after_move(horizontal + bump_velocity, input_dir)
+	enemy_bounce.update_after_move(horizontal + bump_velocity)
 
 	if is_on_floor():
-		if air_state != AirState.GROUNDED:
-			_grounded_grace_until = World.now() + tuning.landing_momentum_grace
 		vertical_velocity = -1.0
 		air_state = AirState.GROUNDED
 		dash.restore_airdash()
@@ -113,7 +115,7 @@ func _physics_process(delta: float) -> void:
 	else:
 		air_state = AirState.AIRBORNE
 
-	_decay_bump(delta)
+	_bleed_momentum(delta)
 
 func _on_jump() -> void:
 	_dodge_queued = false  # saltar descarta un dodge bufferizado pendiente
@@ -124,6 +126,8 @@ func _on_jump() -> void:
 	elif wall_slide.try_wall_jump(locomotion.camera_relative(locomotion.read_move_input())):
 		# Contra una pared el salto SIEMPRE es rebote hacia afuera (aunque el slide se
 		# haya cortado este frame): no consume ni recarga el doble salto.
+		air_state = AirState.AIRBORNE
+	elif enemy_bounce.try_bounce(locomotion.camera_relative(locomotion.read_move_input())):
 		air_state = AirState.AIRBORNE
 	elif _can_double_jump:
 		_can_double_jump = false
@@ -178,6 +182,7 @@ func apply_stun(duration: float = -1.0, mode := PlayerStun.Mode.STILL,
 	_dodge_queued = false
 	locomotion.cancel_lunge()
 	wall_slide.cancel()
+	enemy_bounce.cancel()
 	launcher.cancel()
 	dash.cancel()
 	if combat != null:
@@ -186,7 +191,7 @@ func apply_stun(duration: float = -1.0, mode := PlayerStun.Mode.STILL,
 		PlayerStun.Mode.PUSH:
 			push_direction.y = 0.0
 			if push_direction.length_squared() > 0.0001:
-				bump_velocity = push_direction.normalized() * horizontal_speed
+				set_momentum(push_direction.normalized() * horizontal_speed)
 			else:
 				bump_velocity = Vector3.ZERO
 			vertical_velocity = vertical_speed
@@ -200,8 +205,8 @@ func apply_stun(duration: float = -1.0, mode := PlayerStun.Mode.STILL,
 func fire_action_world_switch() -> void:
 	action_world_switch.fire_action()
 
-func register_air_hit_stall() -> void:
-	launcher.register_air_hit_stall()
+func register_air_hit_stall(scale := 1.0) -> void:
+	launcher.register_air_hit_stall(scale)
 
 func notify_aerial_attack(duration: float) -> void:
 	launcher.notify_aerial_attack(duration)
@@ -219,29 +224,41 @@ func air_hop(speed: float) -> void:
 	vertical_velocity = maxf(vertical_velocity, speed)
 	air_state = AirState.AIRBORNE
 
+func add_momentum(v: Vector3) -> void:
+	bump_velocity = (bump_velocity + v).limit_length(tuning.momentum_max_speed)
+
+func set_momentum(v: Vector3) -> void:
+	bump_velocity = v.limit_length(tuning.momentum_max_speed)
+
 func bump(dir: Vector3, h_speed: float, v_speed: float) -> void:
 	_dodge_queued = false
 	wall_slide.cancel()
+	enemy_bounce.cancel()
 	launcher.cancel()
 	dash.cancel()
-	bump_velocity = Vector3(dir.x, 0.0, dir.z).normalized() * h_speed
+	var horizontal := Vector3(dir.x, 0.0, dir.z)
+	if horizontal.length_squared() > 0.0001:
+		add_momentum(horizontal.normalized() * h_speed)
 	vertical_velocity = v_speed
 	air_state = AirState.AIRBORNE
 
 func force_dash(dir: Vector3, distance: float, duration: float, boost_bump_momentum := false) -> void:
 	_dodge_queued = false
 	wall_slide.cancel()
+	enemy_bounce.cancel()
 	dash.force_dash(dir, distance, duration, boost_bump_momentum)
 
 func launch(height: float, hang_time: float, rise_time: float = World.LAUNCH_RISE_TIME) -> void:
 	_dodge_queued = false
 	wall_slide.cancel()
+	enemy_bounce.cancel()
 	stun.cancel()
 	dash.cancel()
 	launcher.start_launch(height, hang_time, rise_time)
 
 func _tick_stunned(delta: float) -> void:
 	wall_slide.cancel()
+	enemy_bounce.cancel()
 	vertical_velocity += tuning.gravity * tuning.stun_gravity_scale * delta
 	velocity = bump_velocity + Vector3(0.0, vertical_velocity, 0.0)
 	move_and_slide()
@@ -251,18 +268,32 @@ func _tick_stunned(delta: float) -> void:
 	else:
 		air_state = AirState.AIRBORNE
 	if stun.mode == PlayerStun.Mode.PUSH:
-		_decay_bump(delta, tuning.stun_bump_decay)
+		_bleed_momentum(delta, tuning.stun_bump_decay)
 	else:
 		bump_velocity = Vector3.ZERO
 
-func _decay_bump(delta: float, override_decay := -1.0) -> void:
+## Drena el exceso de velocidad a rate constante, escalado por la superficie actual.
+func _bleed_momentum(delta: float, override_rate := -1.0) -> void:
 	if bump_velocity.length_squared() < 0.01:
 		bump_velocity = Vector3.ZERO
 		return
-	var decay := tuning.bump_decay if override_decay < 0.0 else override_decay
+	var rate := override_rate
+	var surface_scale := 1.0
+	if override_rate < 0.0:
+		rate = tuning.move_speed / maxf(0.001, tuning.momentum_bleed_seconds_per_unit)
+		surface_scale = _bleed_scale()
+	_bleed_momentum_for_scale(delta, rate, surface_scale)
+
+## En que esta apoyado el jugador ahora. El orden importa: el suelo gana sobre la pared.
+func _bleed_scale() -> float:
 	if is_on_floor():
-		decay = 0.0 if World.now() < _grounded_grace_until else tuning.grounded_bump_decay
-	bump_velocity = bump_velocity.move_toward(Vector3.ZERO, decay * delta)
+		return tuning.momentum_bleed_ground
+	if wall_slide.is_sliding:
+		return tuning.momentum_bleed_wall
+	return tuning.momentum_bleed_air
+
+func _bleed_momentum_for_scale(delta: float, rate: float, surface_scale: float) -> void:
+	bump_velocity = bump_velocity.move_toward(Vector3.ZERO, rate * surface_scale * delta)
 
 func _effective_stun_threshold() -> float:
 	if is_armored():

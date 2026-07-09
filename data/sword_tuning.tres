@@ -20,5 +20,5 @@ charged_dash_damage = 5.0
 launcher_height = 5.0
 swing_time = 0.3
 stun = SubResource("Resource_swordstun")
-air_push = SubResource("Resource_swordpush")
+push = SubResource("Resource_swordpush")
 air_wait_spin_hop = 5.0

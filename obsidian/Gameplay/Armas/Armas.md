@@ -38,7 +38,7 @@ hito: H1
 ## Notas
 
 - El orden de desbloqueo por area vive en [[Areas]].
-- La implementacion Godot cubre [[Espada]]; [[Mazo]] existe solo como placeholder que hereda de `Sword` para probar el loadout X/Y, sin combos propios. *(2026-07-07)*
+- La implementacion Godot cubre [[Espada]]; [[Mazo]] esta en desarrollo activo con combos propios sobre `WeaponBase` (E2), pendiente de playtest. *(2026-07-09)*
 - No agregar armas nuevas al backlog activo sin moverlas primero a [[Roadmap Futuro]].
 
 ## Relacionado

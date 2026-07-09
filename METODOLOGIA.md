@@ -158,15 +158,15 @@ Escala E0–E4 (ver *Ciclo de vida*). Se actualiza en el mismo commit que cambia
 | Sistema | Módulos | Estado | Qué falta |
 |---|---|---|---|
 | Mundos duales | `WorldManager` · `WorldMembership` · `WorldSwitchTrigger` | **E2** | Iterar tiempos (TIMED) y validar feel del switch |
-| Player — movimiento | `Player` · `PlayerLocomotion` · `PlayerDash` · `PlayerLauncher` | **E2** | Iterar valores de `player_tuning.tres` jugando |
+| Player — movimiento | `Player` · `PlayerLocomotion` · `PlayerDash` · `PlayerLauncher` · `PlayerWallSlide` · `PlayerEnemyBounce` | **E1** | Validar jugando drenaje de momentum y rebote en enemigos; retunear pared/dash/gracia si hace falta |
 | Player — meter | `PlayerMeter` | **E2** | Iterar costes/ganancias; mejoras (5 barras, esquive perfecto) son diseño futuro |
 | Player — vida | `Health` · `PlayerHealth` | **E2** | Definir qué pasa tras morir (hoy solo estado global) |
 | Combate base | `Hitbox` · `Hurtbox` · `InputBuffer` · `StunSettings` | **E2** | Iterar ventanas de feel (`input_buffer_time` / `hold_threshold`) |
 | Espada | `WeaponBase` · `Sword` · `SwordTuning` | **E2** | Iterar combos/ángulos/ventanas jugando; clash mid-swing pendiente (ponytail) |
-| Mazo | `WeaponBase` · `Mace` · `MaceTuning` | **E0** | Combos completos escritos (ver bóveda Armas/Mazo) pero sin correr verificación headless ni probarse jugando todavía — clasificar a E1 recién tras el `--import`/`--quit-after 2` limpio |
+| Mazo | `WeaponBase` · `Mace` · `MaceTuning` | **E2** | En desarrollo activo; combos completos y knobs en `mace_tuning.tres`, alineado con el motor de la Espada. Falta probarse jugando (E2→E3 lo decide Tutupa) |
 | Enemigo de suelo | `EnemyBase` · `GroundedEnemy` · `Perception` · `GroundLocomotion` · ataques | **E2** | Iterar rangos/cooldowns por escena (excepción tuning) |
-| Bloques traversal | `TomatoLaunchBlock` · `PurpleDashBlock` · `BreakOnDeath` | **E2** | Iterar impulsos jugando |
-| Pickups de mundo | `ActionCursePickup` · `ActionWorldSwitchModifier` | **E2** | Validar la mecánica jugando |
+| Bloques traversal | `TraversalBlock` · `BreakOnDeath` · `SpikeWall` | **E2** | Probar combinaciones de features, glow por proximidad e impulsos jugando |
+| Pickups de mundo | `TraversalBlock` · `ActionWorldSwitchModifier` | **E2** | Validar maldicion de accion y pickups combinados jugando |
 | HUD | `HUD` | **E1** | Es placeholder funcional (labels/barras); rediseño visual pendiente |
 | Cámara | `CameraRig` | **E2** | Iterar pitch/yaw/distance/damping jugando |
 | Lock-on | `LockOn` | **E0** | Stub — batch 6 |

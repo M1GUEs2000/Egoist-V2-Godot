@@ -21,7 +21,7 @@ Combate del jugador: slots X/Y, espada, hitboxes, parry, meter, combo aereo e in
 | Golpeables | `Health`, `Hurtbox`, `Hitbox` |
 | Input | `InputBuffer` |
 | Combo global | `ComboTracker` |
-| Armas | `WeaponBase`, `Sword`, `Mace` (combos alineados con Espada, E0 pend. playtest, ver [[Mazo]]) |
+| Armas | `WeaponBase`, `Sword`, `Mace` (combos alineados con Espada, E2 pend. playtest, ver [[Mazo]]) |
 | Tuning | `WeaponTuning`, `SwordTuning`, `StunSettings`, `PushSettings`, `PlayerTuning` |
 | Meter | `PlayerMeter` |
 | Loadout | `ActionLoadoutMenu` (overlay en HUD) |
@@ -36,7 +36,9 @@ Combate del jugador: slots X/Y, espada, hitboxes, parry, meter, combo aereo e in
 - El golpe aereo flota solo si conecta; si falla, cae mas fuerte.
 - El finisher aereo usa verbos opcionales `slam`, `push` y `slam_bounce`.
 - El combo aereo `X espera X X`: la primera vuelta eleva un poco al jugador (`Player.air_hop`, tuneable con `air_wait_spin_hop`). El air-hit-stall preserva subidas (no corta velocidad vertical positiva), asi el hop sobrevive al stall. *(2026-07-06)*
-- El empuje del finisher aereo (rama espera) usa un `PushSettings` inyectable por arma: velocidad horizontal, altura y cierre del arco. Cada arma lleva el suyo (`WeaponTuning.air_push`). *(2026-07-06)*
+- El push es un verbo generico que cualquier ataque puede armar con `WeaponBase.arm_push`: a `push_at` del swing empuja lo ya golpeado, y lo que conecte despues se empuja al instante. Usa `WeaponTuning.push` y sirve en tierra o aire. *(2026-07-09)*
+- Los enemigos tambien son superficies de traversal: el player puede rebotar desde su colision con `PlayerEnemyBounce`; si `enemy_bounce_push` existe, el enemigo recibe `push()` como reaccion opcional.
+- Cada arma escala cuanto sostiene en el aire un golpe conectado con `air_stall_scale`; el Player calcula el stall base y el arma multiplica el resultado. *(2026-07-09)*
 - La hoja brilla al cargar un ataque (glow ambar proporcional a `InputBuffer.charge_progress`, tuneable con `charge_glow_color` / `charge_glow_max_energy`). Sin bloom aun: falta un `WorldEnvironment` con glow para el halo. *(2026-07-06)*
 
 ## Loadout X/Y

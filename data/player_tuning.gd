@@ -48,15 +48,39 @@ class_name PlayerTuning extends Resource
 ## Tiempo en que el rebote manda: bloquea el input de movimiento y el re-agarre de pared.
 @export var wall_slide_wall_jump_lock_time := 0.2
 
+@export_group("Enemy bounce")
+## Impulso vertical del rebote sobre enemigos (m/s). Encadenar enemigos no aumenta esta altura.
+@export var enemy_bounce_up_speed := 7.2
+## Impulso horizontal perpendicular al enemigo (m/s).
+@export var enemy_bounce_away_speed := 4.8
+## Componente lateral del rebote cuando el input traia direccion (m/s).
+@export var enemy_bounce_along_speed := 2.0
+## Fraccion de la velocidad horizontal de llegada que se redirige hacia la salida del rebote.
+@export_range(0.0, 1.0) var enemy_bounce_momentum_keep := 0.0
+## Ventana tras el ultimo contacto en que el salto todavia rebota (segundos).
+@export var enemy_bounce_grace := 0.1
+## Bloqueo para rebotar del mismo enemigo otra vez; otros enemigos siempre se permiten.
+@export var enemy_bounce_cooldown := 0.25
+## Tiempo en que el rebote lateral manda: bloquea el input de movimiento un instante. El stomp no lo usa.
+@export var enemy_bounce_lock_time := 0.2
+## Reaccion opcional del enemigo al rebote. Null = sin reaccion.
+@export var enemy_bounce_push: PushSettings
+
 @export_group("Motor")
 ## Gravedad, en m/s² (negativa hacia abajo).
 @export var gravity := -20.0
-## Frenado del momentum de bump en el aire (m/s²).
-@export var bump_decay := 8.0
-## Frenado del bump en el suelo, pasada la gracia de aterrizaje (m/s²).
-@export var grounded_bump_decay := 12.0
-## Segundos tras aterrizar en que el bump NO decae: conserva el momentum al tocar suelo.
-@export var landing_momentum_grace := 0.18
+@export_group("Momentum")
+## Segundos que tarda en drenarse un exceso equivalente a UNA move_speed, apoyado en el suelo.
+## El drenaje es lineal: el doble de exceso tarda el doble de tiempo.
+@export var momentum_bleed_seconds_per_unit := 3.0
+## Techo del exceso acumulable (m/s). Encadenar rebotes compone: sin techo, diverge.
+@export var momentum_max_speed := 18.0
+## Multiplicador del drenaje apoyado en el suelo. Es la referencia: dejarlo en 1.0.
+@export_range(0.0, 1.0) var momentum_bleed_ground := 1.0
+## Multiplicador del drenaje pegado a una pared. 0.5 = la pared te frena la mitad que el suelo.
+@export_range(0.0, 1.0) var momentum_bleed_wall := 0.5
+## Multiplicador del drenaje en el aire. 0.1 = el aire te frena una decima parte que el suelo.
+@export_range(0.0, 1.0) var momentum_bleed_air := 0.1
 
 @export_group("Stun")
 ## Duración del stun si la fuente no manda una propia, en segundos.

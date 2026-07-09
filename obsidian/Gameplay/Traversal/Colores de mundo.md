@@ -17,6 +17,10 @@ hito: H1
 > Vale para todo el desarrollo (greybox). Cuando entre el arte definitivo se revisa, pero
 > hasta entonces cualquier pieza que exista en un solo mundo, o que cambie segun el mundo,
 > se pinta con estos dos colores y con ningun otro.
+>
+> En bloques de world switch, el color comunica el **mundo destino**, no la pertenencia
+> del bloque: morado manda al muerto; tomate/naranja manda al vivo. La convencion se
+> mantiene, solo se aplica al destino.
 
 ## Donde vive
 
@@ -28,24 +32,31 @@ const COLOR_LIVING          := Color(0.9, 0.1, 0.08)    # tomate
 const COLOR_LIVING_EMISSION := Color(0.7, 0.05, 0.03)
 const COLOR_DEAD            := Color(0.55, 0.15, 0.9)   # morado
 const COLOR_DEAD_EMISSION   := Color(0.35, 0.05, 0.8)
+const COLOR_TRAVERSAL_DASH  := Color(0.1, 0.85, 0.25)   # verde
+const COLOR_TRAVERSAL_METER := Color(0.15, 0.85, 1.0)   # celeste
+const COLOR_TRAVERSAL_CURSE := Color(1.0, 0.85, 0.1)    # amarillo
 
 World.world_color(kind)    -> Color   # albedo
 World.world_emission(kind) -> Color   # glow
 ```
 
-Los valores salen de las dos piezas que fijaron la convencion de facto:
-`TomatoLaunchBlock` (vivo) y `PurpleDashBlock` (muerto).
+Los valores mundo salen de las dos piezas que fijaron la convencion de facto:
+Tomate/vivo y morado/muerto. Los colores no-mundo del `TraversalBlock` tambien viven en
+`World` para no hardcodearlos en escenas.
 
 ## Como aplicarla
 
 - Pieza de **un solo mundo**: se pinta con el color de ese mundo. El nombre del nodo y de
-  la clase deberian decir cual (`TomatoLaunchBlock`, `PurpleDashBlock`).
+  la configuracion deberian decir cual mundo representa.
 - Pieza que **existe en los dos** (misma escena, distinto `WorldMembership.affiliation`):
   un export raiz `world: World.Kind` y el material se genera por codigo desde
   `World.world_color(world)`. Ver `SpikeWall._paint_world_colors()` como referencia.
   Los materiales que queden en el `.tscn` son preview de editor, no la fuente.
 - Pieza **neutra** (existe siempre, `Mode.BOTH`): no usa ninguno de los dos. Que no
   compita con la lectura de mundo.
+- Pieza de **world switch**: usa el color del mundo destino (`World.opposite_world` del
+  mundo actual). Un bloque morado te manda al muerto; el mismo bloque, visto desde el
+  muerto, se repinta tomate/naranja para indicar que manda al vivo.
 
 > [!warning] Trampa
 > Rojo "de peligro" y tomate "de vivo" son el mismo color a ojo. Los pinchos de
@@ -57,14 +68,11 @@ Los valores salen de las dos piezas que fijaron la convencion de facto:
 
 | Pieza | Mundo | Pinta desde |
 |---|---|---|
-| `TomatoLaunchBlock` | Vivo | `.tscn` (fijo el color, pendiente migrar a `World`) |
-| `PurpleDashBlock` | Muerto | `.tscn` (fijo el color, pendiente migrar a `World`) |
+| `TraversalBlock` | Neutro / destino | `World` + `TraversalBlockTuning` |
 | `SpikeWall` | Ambos (`world`) | `World.world_color()` |
 
 ## Pendiente
 
-- Migrar `TomatoLaunchBlock` y `PurpleDashBlock` a leer de `World` en vez de tener el
-  color en su `.tscn` (hoy los valores coinciden a mano).
 - Definir el color neutro de las piezas `Mode.BOTH`.
 - `WorldVisual` (E0) deberia derivar los dos Environments de estos mismos colores.
 

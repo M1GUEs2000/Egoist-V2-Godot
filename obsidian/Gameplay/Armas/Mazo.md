@@ -8,7 +8,7 @@ tags:
   - arma
   - combate
 status: active
-system_status: E0
+system_status: E2
 hito: H2
 ---
 
@@ -22,8 +22,8 @@ Arma de mas dano. Controla masas. Tiene bastante knockback. Tumba a los enemigos
 |---|---|
 | X X X | Swing horizontal, swing horizontal, smash vertical con AOE. |
 | X X espera X X | Swing horizontal, swing horizontal, tres smash verticales. Todos con AOE. |
-| X cargado (3 niveles) | Das vueltas y golpeas. 1 carga = 1 vuelta, 2 cargas = 2 vueltas, 3 cargas = 3 vueltas. |
-| X cargado sweet spot | Los enemigos que pega quedan congelados hasta la ultima vuelta. |
+| X cargado (3 niveles) | Das vueltas y golpeas. 1 carga = 1 vuelta, 2 cargas = 2 vueltas, 3 cargas = 3 vueltas. Gasta 1 barra por nivel; si no alcanza el meter, degrada al nivel maximo pagable. |
+| X cargado sweet spot | Los enemigos que pega quedan congelados hasta la ultima vuelta, que siempre los manda a volar. |
 | Y cargado | Launcher omnidireccional. Area grande. |
 | Y cargado sweet spot | Hace dos golpes para subirlos al aire. |
 
@@ -39,16 +39,15 @@ Arma de mas dano. Controla masas. Tiene bastante knockback. Tumba a los enemigos
 
 ## Estado Godot
 
-*(2026-07-09)* Combos codificados y **alineados con el motor de la [[Espada]]** tras
-corregir dos bugs (commit `514a4b2`); NO está aprobado, sigue `system_status: E0`
-hasta playtest de Tutupa. Adelantado respecto al plan original (que los dejaba para
-después de cerrar H1 con la Espada) a pedido explícito.
+*(2026-07-09)* En desarrollo activo. Combos codificados y **alineados con el motor de
+la [[Espada]]** tras corregir dos bugs (commit `514a4b2`); promovido a `system_status: E2`
+(knobs en `mace_tuning.tres`, direccion de diseño clara). Adelantado respecto al plan
+original (que los dejaba para después de cerrar H1 con la Espada) a pedido explícito.
 
 > [!warning] Pendiente de playtest
 > La tabla de combos de arriba describe la **intención** de diseño, no un
-> comportamiento validado jugando. El código ya corre `--import` sin errores y quedó
-> alineado con la Espada, pero el feel real (ventanas, daños, sweet spots) no se ha
-> probado. No tratar como "completo aprobado".
+> comportamiento validado jugando. El feel real (ventanas, daños, sweet spots) todavia
+> no se probó — el salto E2→E3 solo lo decide Tutupa jugando (ver `METODOLOGIA.md`).
 
 **Correcciones 2026-07-08/09 (alineación con el motor de la Espada):**
 
@@ -65,21 +64,28 @@ después de cerrar H1 con la Espada) a pedido explícito.
 
 - `combat/weapons/mace/mace.gd` define `Mace extends WeaponBase` (ya no hereda de
   `Sword`): coreografía propia sobre el motor genérico de `WeaponBase`.
-- Terrestre X: combo de 3 (swing, swing, smash AOE) vía `run_combo_chain` con el
+- Tap X/Y terrestre: combo de 3 (swing, swing, smash AOE) vía `run_combo_chain` con el
   parámetro nuevo `wait_branch_extra_steps` — la rama espera agrega 2 smashes más
-  (5 golpes totales) en vez de solo cambiar coreografía como la Espada.
+  (5 golpes totales) en vez de solo cambiar coreografía como la Espada. Si la ventana
+  del launcher Y cargado está abierta, el tap confirma primero el segundo golpe del
+  sweet spot antes de arrancar la cadena normal. *(2026-07-09)*
 - Terrestre X cargado: 3 niveles de carga (1/2/3 vueltas), resueltos por
   `Mace.charge_level()` a partir de `InputBuffer.held_duration()` (plomería nueva,
-  también en `WeaponBase`/`PlayerCombat`, sin afectar a la Espada). Sweet spot
-  (nivel máximo): las vueltas intermedias congelan (`StunSettings` largo) en vez de
-  empujar; el golpe final hace el daño real.
+  también en `WeaponBase`/`PlayerCombat`, sin afectar a la Espada). Gasta 1 barra de
+  meter por vuelta real: si cargas a nivel 3 pero solo hay 2 barras, corre nivel 2; si
+  no hay barra, cae al tap normal. Sweet spot (nivel máximo real): las vueltas
+  intermedias congelan (`StunSettings` largo) en vez de empujar; el golpe final hace
+  el daño real y siempre arma un `charged_final_push` propio, mas fuerte que el `push`
+  base del arma. *(2026-07-09)*
 - Terrestre Y: launcher omnidireccional (área más grande que el cono de la Espada).
   Sweet spot: un segundo tap Y dentro de una ventana corta confirma "dos golpes" y
   lanza antes; si no, lanza igual con un solo golpe.
-- Aéreo: X sin carga empuja hacia adelante (`push`); X cargado cae con AOE
-  (ground pound), sweet spot agrega una vuelta final que congela; Y cargado gira
-  empujando a los lados, sweet spot congela y extiende el tiempo airborne del
-  jugador (`PlayerLauncher.notify_aerial_attack`).
+- Aéreo: tap X/Y sin carga arma `push` hacia adelante a mitad del swing (`push_at = 0.5`);
+  X cargado cae con AOE (ground pound) y gasta 1 barra fija; sweet spot agrega una
+  vuelta final que congela; Y cargado sin sweet spot arma `push`, sweet spot congela y
+  extiende el tiempo airborne del jugador (`PlayerLauncher.notify_aerial_attack`).
+- `air_stall_scale = 1.8`: el Mazo sostiene mas al jugador por golpe conectado porque
+  tiene menos impactos y cada uno pesa mas. *(2026-07-09)*
 - "Congelar" no es un verbo nuevo: reusa el sistema de stun existente
   (`StunSettings` con power/duración altos, mode STILL) — ver [[Combate]].
 - Refactor compartido con la Espada (sin cambiar su comportamiento): las primitivas
@@ -97,8 +103,6 @@ después de cerrar H1 con la Espada) a pedido explícito.
 
 ## Pendiente
 
-- Correr verificación headless (`--import`, `--quit-after 2`, `smoke_test`) — no se
-  pudo correr en esta sesión (sin Godot instalado en esta máquina).
 - Probar jugando cada fila de la tabla contra un `HitDummy`/enemigo.
 - Confirmar que el combate de la Espada en el otro slot no regresionó (se tocaron
   `weapon_base.gd`, `input_buffer.gd` y `player_combat.gd`, compartidos por ambas).
@@ -108,4 +112,3 @@ después de cerrar H1 con la Espada) a pedido explícito.
 
 - [[Armas]]
 - [[Combate]]
-

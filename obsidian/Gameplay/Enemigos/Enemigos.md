@@ -41,6 +41,7 @@ Los enemigos de Egoist no son solo unidades de combate. Son portadores de mascar
 - Todos los enemigos reales componen `Health`, `Hurtbox` y `WorldMembership`.
 - La vida del enemigo se configura en `Health.max_health`.
 - Las armas golpean via `Hurtbox`; los verbos opcionales (`launch`, `slam`, `push`, `try_parry`) se llaman con duck typing.
+- Un enemigo tambien puede ser terreno de traversal: `PlayerEnemyBounce` permite rebotar manualmente desde su colision fisica. Es una decision de diseno, no un accidente de la fisica.
 - Un enemigo puede existir en un mundo, ambos mundos, seguir el mundo actual o alternar por tiempo.
 - `UltraAggressive` puede atacar a otros enemigos; el mundo no existe solo para servir al jugador.
 - Los objetos golpeables no son enemigos: comparten `Health`/`Hurtbox`, pero no IA ni lock-on.
@@ -69,4 +70,3 @@ Los enemigos de Egoist no son solo unidades de combate. Son portadores de mascar
 - [[Combate]]
 - [[Traversal]]
 - [[Historia]]
-
