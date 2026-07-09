@@ -3,7 +3,7 @@ name: arranque
 description: >
   Arranca una sesion de trabajo en Egoist V2 Godot leyendo el CLAUDE.md y la
   METODOLOGIA.md del repo, y la boveda de Obsidian
-  (D:/Proyectos/Egoist/Egoist-V2-Godot-main/obsidian). Lee el README y la
+  (C:/Users/Tutupa/Documents/Proyectos/Egoist/Godot/egoist-v-2/obsidian). Lee el README y la
   Arquitectura Godot para tener el mapa general, y si el usuario pidio un nodo
   especifico tambien lo lee antes de empezar. Usar cuando el usuario diga
   "arranque", "arranca la sesion", "empecemos con Egoist", "leamos la boveda",
@@ -18,8 +18,8 @@ solo lee la brujula del repo, la boveda y reporta un resumen para arrancar la
 sesion informado.
 
 Rutas base:
-- Repo: `D:/Proyectos/Egoist/Egoist-V2-Godot-main/`
-- Boveda: `D:/Proyectos/Egoist/Egoist-V2-Godot-main/obsidian/`
+- Repo: `C:/Users/Tutupa/Documents/Proyectos/Egoist/Godot/egoist-v-2/`
+- Boveda: `C:/Users/Tutupa/Documents/Proyectos/Egoist/Godot/egoist-v-2/obsidian/`
 
 ---
 

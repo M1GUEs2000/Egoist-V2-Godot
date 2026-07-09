@@ -23,7 +23,7 @@ y asistentes. Si se agrega o quita una dependencia externa, se actualiza aca. *(
 
 | Nombre | Que es | Uso en Egoist | Estado |
 |---|---|---|---|
-| LimboAI | Behavior Trees + HSM para Godot 4 (GDExtension drop-in, MIT) | Motor de decision de la IA de enemigos (reemplaza la FSM escrita a mano). Ver detalle abajo. | **Decidido, no instalado aun** |
+| LimboAI | Behavior Trees + HSM para Godot 4 (GDExtension drop-in, MIT) | Motor de decision de la IA de enemigos (reemplaza la FSM escrita a mano). Ver detalle abajo. | **Instalado v1.1.1** — `addons/limboai/` |
 
 ## Asistentes de desarrollo
 
@@ -53,10 +53,8 @@ y asistentes. Si se agrega o quita una dependencia externa, se actualiza aca. *(
   DESPUES del refactor de decouple (que la decision emita intent y la locomocion lo ejecute),
   para no meter spaghetti en un BTAction gigante.
 
-> [!warning] Pendiente
-> LimboAI todavia NO esta instalado ni el codigo portado. Lo que existe hoy en codigo es
-> el **spec** (`enemies/ai_spec/`) y el **emisor del telegraph** (`PlayerCombat.attack_telegraphed`).
-> El resto (blackboard real, port a LimboAI, navmesh) es pendiente. Ver [[IA]].
+> [!tip] Instalado
+> LimboAI v1.1.1 esta instalado en `addons/limboai/` (GDExtension, se carga automaticamente). El codigo todavia no esta portado al BT. Ver pendientes en [[IA]].
 
 ## Relacionado
 
