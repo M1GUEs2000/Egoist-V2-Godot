@@ -16,14 +16,16 @@ class_name WeaponTuning extends Resource
 @export var air_wait_branch_threshold := 0.3
 ## Spike: velocidad hacia abajo en el finisher aéreo de la rama base.
 @export var air_spike_down_speed := 30.0
-## Arco del empujón (velocidad + altura + cierre), inyectable por arma. Lo usa cualquier
-## ataque que arme un push, en tierra o en el aire.
-@export var push: PushSettings
 ## La 1ra vuelta de la rama espera eleva un poco al jugador.
 @export var air_wait_spin_hop := 4.0
+## Cuánto sostiene en el aire un golpe de esta arma (multiplica el air-hit-stall del
+## Player). >1 = arma de pocos golpes pesados; 1.0 = base (Espada).
+@export var air_stall_scale := 1.0
 
 @export_group("Push")
-## Fracción del swing a la que se cobra el push (0.5 = a mitad del golpe).
+## Arco del empujón (velocidad + altura + cierre), inyectable por arma. Lo usa cualquier
+## ataque que arme un push, en tierra o en el aire — no solo el finisher aéreo.
+@export var push: PushSettings
+## Fracción del swing a la que se cobra el push (0.5 = a mitad del golpe). Bajarlo adelanta
+## el impacto y deja los frames finales como recovery cancelable.
 @export_range(0.0, 1.0, 0.05) var push_at := 1.0
-## Cuánto sostiene en el aire un golpe de esta arma. >1 = pocos golpes pesados.
-@export var air_stall_scale := 1.0

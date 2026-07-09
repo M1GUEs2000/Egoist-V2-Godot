@@ -86,6 +86,9 @@ func _hold_x() -> void:
 # ---- Personalidad Y: launcher / cargada aérea ----
 
 func _hold_y() -> void:
+	# Entrada de ataque: invalida la rutina en curso y desarma su push. Sin esto, el push que
+	# arma el finisher de la rama espera sobrevive y el launcher empuja en vez de lanzar.
+	cancel_routines()
 	# En el aire: Y cargada aérea (auto-launch + spike/rebote), no el launcher terrestre.
 	if _player.is_airborne():
 		_aerial_charged_y()

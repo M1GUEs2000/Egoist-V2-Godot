@@ -44,9 +44,9 @@ class_name MaceTuning extends WeaponTuning
 @export var launcher_second_hit_window := 0.5
 
 @export_group("Aéreo")
-## Golpe X sin carga y Y cargado aéreo reusan `push` (heredado de WeaponTuning,
-## mismo campo que usa el finisher aéreo de la Espada) con más alcance/altura acá:
-## arma de más knockback.
+# El tap X sin carga y el Y cargado sin sweet spot arman el `push` heredado de WeaponTuning
+# (mismo campo que usa el finisher aéreo de la Espada), con más alcance y altura acá: arma
+# de más knockback. El golpe final del X cargado usa su propio charged_final_push.
 ## Caída forzada del X cargado aéreo (ground pound).
 @export var air_smash_fall_speed := 22.0
 ## Sweet spot aéreo (X cargado con vuelta final / Y cargado): congela a los golpeados

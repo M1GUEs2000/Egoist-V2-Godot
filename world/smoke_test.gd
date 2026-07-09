@@ -129,6 +129,14 @@ func _ready() -> void:
 	await get_tree().create_timer(sword.tuning.air_step_time + 0.03).timeout
 	assert(sword_probe.pushes == 1)
 
+	# _hold_y es entrada de ataque: desarma el push que dejó armado el combo anterior. Sin
+	# esto el launcher empujaría a sus víctimas en vez de lanzarlas (el push mata el hang).
+	player.air_state = Player.AirState.GROUNDED
+	sword._hold_y()
+	var leak_probe := _make_push_probe()
+	sword._on_hit(_make_hurtbox(leak_probe), false)
+	assert(leak_probe.pushes == 0)
+
 	# LockOn (batch 6): adquiere el enemigo más cercano dentro de rango/ángulo, ignora el lejano
 	var enemy_near := EnemyBase.new()
 	add_child(enemy_near)
@@ -166,8 +174,8 @@ func _make_push_probe() -> PushProbe:
 	add_child(probe)
 	return probe
 
-func _make_hurtbox(owner: Node) -> Hurtbox:
+func _make_hurtbox(target: Node) -> Hurtbox:
 	var hurtbox := Hurtbox.new()
-	owner.add_child(hurtbox)
-	hurtbox.owner_node = owner
+	target.add_child(hurtbox)
+	hurtbox.owner_node = target
 	return hurtbox
