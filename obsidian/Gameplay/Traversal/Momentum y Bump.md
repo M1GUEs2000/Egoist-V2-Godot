@@ -40,6 +40,7 @@ El drenaje solo come el exceso. Como `bump_velocity` se suma encima del movimien
 - `TraversalBlock` con feature Launch: suma bump horizontal/vertical y restauracion de habilidades.
 - `SpikeWall`: stun `PUSH` + rebote, restaura doble salto y airdash.
 - Wall jump: reemplaza el exceso por el impulso de pared.
+- Rebote en enemigos: reemplaza el exceso por la salida del rebote y opcionalmente redirige parte de la velocidad de llegada.
 - Dash con boost de momentum: reemplaza el exceso en la direccion del dash y queda limitado por `momentum_max_speed`.
 
 ## Interacciones conocidas

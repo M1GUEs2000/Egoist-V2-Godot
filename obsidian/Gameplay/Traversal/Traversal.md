@@ -25,6 +25,7 @@ Esta nota es el indice del sistema. El detalle vive en una subnota por modulo o 
 | Launcher / aire | `PlayerLauncher` | E2 | [[Launcher y Aire]] |
 | Momentum por bump | `Player.bump()` | E1 | [[Momentum y Bump]] |
 | Wall slide / wall jump | `PlayerWallSlide` | E1 | [[Wall Slide y Wall Jump]] |
+| Rebote en enemigos | `PlayerEnemyBounce` | E1 | [[Rebote en Enemigos]] |
 | World switch | `WorldManager`, `WorldMembership`, `WorldSwitchTrigger`, `ActionWorldSwitchModifier` | E2 | [[World Switch]] |
 | Bloques traversal | `TraversalBlock`, `BreakOnDeath`, `SpikeWall` | E2 | [[Bloques]] |
 | Cadenas | `PlayerSwing` | E0 | [[Cadenas]] |

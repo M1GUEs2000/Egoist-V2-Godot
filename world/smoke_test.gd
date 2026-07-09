@@ -6,9 +6,21 @@ extends Node3D
 class PushProbe extends Node3D:
 	var pushes := 0
 	var last_settings: PushSettings
+	var last_direction := Vector3.ZERO
 
-	func push(_direction: Vector3, settings: PushSettings) -> void:
+	func push(direction: Vector3, settings: PushSettings) -> void:
 		pushes += 1
+		last_direction = direction
+		last_settings = settings
+
+class EnemyBounceProbe extends StaticBody3D:
+	var pushes := 0
+	var last_settings: PushSettings
+	var last_direction := Vector3.ZERO
+
+	func push(direction: Vector3, settings: PushSettings) -> void:
+		pushes += 1
+		last_direction = direction
 		last_settings = settings
 
 func _ready() -> void:
@@ -130,7 +142,74 @@ func _ready() -> void:
 	momentum_player.bump_velocity = Vector3.RIGHT * 6.0
 	momentum_player._bleed_momentum(1.0, momentum_player.tuning.stun_bump_decay)
 	assert(is_equal_approx(momentum_player.bump_velocity.length(), 2.5))
-	momentum_player.free()  # nunca entró al árbol: sin esto queda huérfano y ensucia stderr al salir
+	momentum_player.free()  # nunca entro al arbol: sin esto queda huerfano y ensucia stderr al salir
+
+	# EnemyBounce: gracia, stomp, doble salto intacto, cooldown por enemigo y techo global.
+	player.launcher.cancel()
+	player.dash.cancel()
+	player.air_state = Player.AirState.AIRBORNE
+	player.tuning.enemy_bounce_up_speed = 7.2
+	player.tuning.enemy_bounce_away_speed = 4.8
+	player.tuning.enemy_bounce_along_speed = 2.0
+	player.tuning.enemy_bounce_grace = 0.1
+	player.tuning.enemy_bounce_cooldown = 0.25
+	player.tuning.enemy_bounce_momentum_keep = 0.0
+	player.tuning.enemy_bounce_push = null
+	var bounce_enemy_a := _make_enemy_bounce_probe(World.LAYER_ENEMY)
+	assert(player.enemy_bounce._remember_contact_if_enemy(bounce_enemy_a, Vector3.RIGHT, 6.0))
+	assert(player.enemy_bounce.try_bounce(Vector3.FORWARD))
+	assert(player.vertical_velocity == player.tuning.enemy_bounce_up_speed)
+	assert(is_equal_approx(player.bump_velocity.length(), player.tuning.enemy_bounce_away_speed))
+
+	var stale_enemy := _make_enemy_bounce_probe(World.LAYER_ENEMY)
+	player.enemy_bounce._remember_contact_if_enemy(stale_enemy, Vector3.RIGHT, 6.0)
+	player.enemy_bounce._last_contact_time = World.now() - player.tuning.enemy_bounce_grace * 2.0
+	assert(not player.enemy_bounce.try_bounce(Vector3.FORWARD))
+
+	player.enemy_bounce._remember_contact_if_enemy(bounce_enemy_a, Vector3.RIGHT, 6.0)
+	assert(not player.enemy_bounce.try_bounce(Vector3.FORWARD))
+	var bounce_enemy_b := _make_enemy_bounce_probe(World.LAYER_ENEMY)
+	player.enemy_bounce._remember_contact_if_enemy(bounce_enemy_b, Vector3.RIGHT, 6.0)
+	assert(player.enemy_bounce.try_bounce(Vector3.FORWARD))
+
+	player._can_double_jump = true
+	var bounce_enemy_c := _make_enemy_bounce_probe(World.LAYER_ENEMY)
+	player.enemy_bounce._remember_contact_if_enemy(bounce_enemy_c, Vector3.RIGHT, 6.0)
+	assert(player.enemy_bounce.try_bounce(Vector3.FORWARD))
+	assert(player._can_double_jump)
+	player._can_double_jump = false
+	var bounce_enemy_d := _make_enemy_bounce_probe(World.LAYER_ENEMY)
+	player.enemy_bounce._remember_contact_if_enemy(bounce_enemy_d, Vector3.RIGHT, 6.0)
+	assert(player.enemy_bounce.try_bounce(Vector3.FORWARD))
+	assert(not player._can_double_jump)
+
+	player.enemy_bounce.cancel()
+	var inactive_enemy := _make_enemy_bounce_probe(0)
+	assert(not player.enemy_bounce._remember_contact_if_enemy(inactive_enemy, Vector3.RIGHT, 6.0))
+	assert(not player.enemy_bounce.try_bounce(Vector3.FORWARD))
+
+	player.tuning.enemy_bounce_momentum_keep = 1.0
+	player.tuning.momentum_max_speed = 18.0
+	var bounce_enemy_e := _make_enemy_bounce_probe(World.LAYER_ENEMY)
+	player.enemy_bounce._remember_contact_if_enemy(bounce_enemy_e, Vector3.RIGHT, 100.0)
+	assert(player.enemy_bounce.try_bounce(Vector3.FORWARD))
+	assert(player.bump_velocity.length() <= player.tuning.momentum_max_speed)
+
+	player.tuning.enemy_bounce_push = PushSettings.new()
+	var bounce_enemy_f := _make_enemy_bounce_probe(World.LAYER_ENEMY)
+	player.enemy_bounce._remember_contact_if_enemy(bounce_enemy_f, Vector3.RIGHT, 6.0)
+	assert(player.enemy_bounce.try_bounce(Vector3.FORWARD))
+	assert(bounce_enemy_f.pushes == 1)
+	assert(bounce_enemy_f.last_direction == Vector3.LEFT)
+	assert(bounce_enemy_f.last_settings == player.tuning.enemy_bounce_push)
+
+	var stomp_enemy := _make_enemy_bounce_probe(World.LAYER_ENEMY)
+	player.bump_velocity = Vector3.RIGHT * 4.0
+	player.enemy_bounce._remember_contact_if_enemy(stomp_enemy, Vector3.UP, 6.0)
+	assert(player.enemy_bounce.try_bounce(Vector3.FORWARD))
+	assert(player.bump_velocity == Vector3.ZERO)
+	assert(player.vertical_velocity == player.tuning.enemy_bounce_up_speed)
+	assert(stomp_enemy.pushes == 0)
 
 	# WeaponBase.arm_push: empuja hits acumulados, hits tardíos, y se desarma al cancelar
 	var push_settings := PushSettings.new()
@@ -218,6 +297,12 @@ func _make_test_weapon(player: Player, push_settings: PushSettings) -> WeaponBas
 
 func _make_push_probe() -> PushProbe:
 	var probe := PushProbe.new()
+	add_child(probe)
+	return probe
+
+func _make_enemy_bounce_probe(layer: int) -> EnemyBounceProbe:
+	var probe := EnemyBounceProbe.new()
+	probe.collision_layer = layer
 	add_child(probe)
 	return probe
 

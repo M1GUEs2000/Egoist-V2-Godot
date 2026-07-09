@@ -1,4 +1,4 @@
-[gd_scene load_steps=24 format=3 uid="uid://bf1ikbdvqburt"]
+[gd_scene load_steps=25 format=3 uid="uid://bf1ikbdvqburt"]
 
 [ext_resource type="Script" uid="uid://dtdjcbbq5svxk" path="res://player/player.gd" id="1_player"]
 [ext_resource type="Script" uid="uid://b5vox4rloqjr0" path="res://player/player_locomotion.gd" id="2_loco"]
@@ -19,6 +19,7 @@
 [ext_resource type="Script" path="res://player/player_stun.gd" id="17_stun"]
 [ext_resource type="Script" path="res://player/lock_on.gd" id="18_lock_on"]
 [ext_resource type="Script" path="res://visual/landing_indicator.gd" id="19_landing"]
+[ext_resource type="Script" path="res://player/player_enemy_bounce.gd" id="20_enemy_bounce"]
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_body"]
 radius = 0.4
@@ -84,6 +85,9 @@ script = ExtResource("4_launcher")
 
 [node name="WallSlide" type="Node" parent="."]
 script = ExtResource("16_wall_slide")
+
+[node name="EnemyBounce" type="Node" parent="."]
+script = ExtResource("20_enemy_bounce")
 
 [node name="Stun" type="Node" parent="."]
 script = ExtResource("17_stun")

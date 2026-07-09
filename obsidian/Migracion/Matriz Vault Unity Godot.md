@@ -15,7 +15,7 @@ Esta tabla resume como se migra la verdad vieja a Godot V2.
 | Sistema | Vault vieja | Unity V1 | Godot V2 | Estado | Decision |
 |---|---|---|---|---|---|
 | Mundos duales | [[Traversal]] | `WorldManager`, `WorldMembership`, `WorldSwitchTrigger` | `WorldManager`, `WorldMembership`, `WorldSwitchTrigger` | E2 | Switch por triggers, no dodge gratis. |
-| Player movimiento | [[Traversal]] | `PlayerController`, `PlayerMotor`, `PlayerLocomotion`, `PlayerDash`, `PlayerLauncher` | `Player`, `PlayerLocomotion`, `PlayerDash`, `PlayerLauncher`, `PlayerWallSlide` | E1 | `CharacterBody3D` reemplaza `CharacterController`; momentum por superficie pendiente de validar jugando. |
+| Player movimiento | [[Traversal]] | `PlayerController`, `PlayerMotor`, `PlayerLocomotion`, `PlayerDash`, `PlayerLauncher` | `Player`, `PlayerLocomotion`, `PlayerDash`, `PlayerLauncher`, `PlayerWallSlide`, `PlayerEnemyBounce` | E1 | `CharacterBody3D` reemplaza `CharacterController`; momentum y rebote en enemigos pendientes de validar jugando. |
 | Player meter | [[Combate]] | `PlayerMeter`, `MeterHUD` | `PlayerMeter`, HUD escucha senales | E2 | Base implementada; mejoras a 5 barras son futuro. |
 | Combate base | [[Combate]] | `Health`, `IHittable`, `WeaponTraceHitbox`, `AirDiscHitbox` | `Health`, `Hurtbox`, `Hitbox`, `WeaponBase` | E2 | Grupos y duck typing reemplazan interfaces. |
 | Espada | [[Armas]] / [[Combate]] | `SwordWeapon`, behaviours X/Y | `Sword`, `SwordTuning` | E2 | Procedural hasta H3. |

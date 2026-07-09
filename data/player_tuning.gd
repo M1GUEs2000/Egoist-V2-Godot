@@ -48,6 +48,24 @@ class_name PlayerTuning extends Resource
 ## Tiempo en que el rebote manda: bloquea el input de movimiento y el re-agarre de pared.
 @export var wall_slide_wall_jump_lock_time := 0.2
 
+@export_group("Enemy bounce")
+## Impulso vertical del rebote sobre enemigos (m/s). Encadenar enemigos no aumenta esta altura.
+@export var enemy_bounce_up_speed := 7.2
+## Impulso horizontal perpendicular al enemigo (m/s).
+@export var enemy_bounce_away_speed := 4.8
+## Componente lateral del rebote cuando el input traia direccion (m/s).
+@export var enemy_bounce_along_speed := 2.0
+## Fraccion de la velocidad horizontal de llegada que se redirige hacia la salida del rebote.
+@export_range(0.0, 1.0) var enemy_bounce_momentum_keep := 0.0
+## Ventana tras el ultimo contacto en que el salto todavia rebota (segundos).
+@export var enemy_bounce_grace := 0.1
+## Bloqueo para rebotar del mismo enemigo otra vez; otros enemigos siempre se permiten.
+@export var enemy_bounce_cooldown := 0.25
+## Tiempo en que el rebote manda: bloquea el input de movimiento un instante.
+@export var enemy_bounce_lock_time := 0.2
+## Reaccion opcional del enemigo al rebote. Null = sin reaccion.
+@export var enemy_bounce_push: PushSettings
+
 @export_group("Motor")
 ## Gravedad, en m/s² (negativa hacia abajo).
 @export var gravity := -20.0

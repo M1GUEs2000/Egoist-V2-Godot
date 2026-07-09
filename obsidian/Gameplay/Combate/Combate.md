@@ -37,6 +37,7 @@ Combate del jugador: slots X/Y, espada, hitboxes, parry, meter, combo aereo e in
 - El finisher aereo usa verbos opcionales `slam`, `push` y `slam_bounce`.
 - El combo aereo `X espera X X`: la primera vuelta eleva un poco al jugador (`Player.air_hop`, tuneable con `air_wait_spin_hop`). El air-hit-stall preserva subidas (no corta velocidad vertical positiva), asi el hop sobrevive al stall. *(2026-07-06)*
 - El push es un verbo generico que cualquier ataque puede armar con `WeaponBase.arm_push`: a `push_at` del swing empuja lo ya golpeado, y lo que conecte despues se empuja al instante. Usa `WeaponTuning.push` y sirve en tierra o aire. *(2026-07-09)*
+- Los enemigos tambien son superficies de traversal: el player puede rebotar desde su colision con `PlayerEnemyBounce`; si `enemy_bounce_push` existe, el enemigo recibe `push()` como reaccion opcional.
 - Cada arma escala cuanto sostiene en el aire un golpe conectado con `air_stall_scale`; el Player calcula el stall base y el arma multiplica el resultado. *(2026-07-09)*
 - La hoja brilla al cargar un ataque (glow ambar proporcional a `InputBuffer.charge_progress`, tuneable con `charge_glow_color` / `charge_glow_max_energy`). Sin bloom aun: falta un `WorldEnvironment` con glow para el halo. *(2026-07-06)*
 

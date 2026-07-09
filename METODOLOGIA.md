@@ -158,7 +158,7 @@ Escala E0–E4 (ver *Ciclo de vida*). Se actualiza en el mismo commit que cambia
 | Sistema | Módulos | Estado | Qué falta |
 |---|---|---|---|
 | Mundos duales | `WorldManager` · `WorldMembership` · `WorldSwitchTrigger` | **E2** | Iterar tiempos (TIMED) y validar feel del switch |
-| Player — movimiento | `Player` · `PlayerLocomotion` · `PlayerDash` · `PlayerLauncher` · `PlayerWallSlide` | **E1** | Validar jugando el drenaje de momentum por superficie y retunear pared/dash si hace falta |
+| Player — movimiento | `Player` · `PlayerLocomotion` · `PlayerDash` · `PlayerLauncher` · `PlayerWallSlide` · `PlayerEnemyBounce` | **E1** | Validar jugando drenaje de momentum y rebote en enemigos; retunear pared/dash/gracia si hace falta |
 | Player — meter | `PlayerMeter` | **E2** | Iterar costes/ganancias; mejoras (5 barras, esquive perfecto) son diseño futuro |
 | Player — vida | `Health` · `PlayerHealth` | **E2** | Definir qué pasa tras morir (hoy solo estado global) |
 | Combate base | `Hitbox` · `Hurtbox` · `InputBuffer` · `StunSettings` | **E2** | Iterar ventanas de feel (`input_buffer_time` / `hold_threshold`) |

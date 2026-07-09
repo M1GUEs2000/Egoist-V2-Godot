@@ -34,7 +34,7 @@ autoload/   WorldManager, GameManager, ComboTracker
 core/       World, WorldMembership, WorldSwitchTrigger, ActionWorldSwitchModifier
 combat/     Health, Hurtbox, Hitbox, InputBuffer, weapons/
 data/       PlayerTuning, SwordTuning, WeaponTuning, StunSettings, PushSettings, GameTuning
-player/     Player glue + Locomotion, Dash, Launcher, Meter, Combat, LockOn, Swing, WallSlide, Stun
+player/     Player glue + Locomotion, Dash, Launcher, Meter, Combat, LockOn, Swing, WallSlide, EnemyBounce, Stun
 enemies/    EnemyBase, GroundedEnemy, Perception, GroundLocomotion, attacks/
 ui/         HUD, ActionLoadoutMenu
 visual/     CameraRig, CameraOcclusionFade, WorldVisual, LandingIndicator
@@ -74,7 +74,7 @@ obsidian/
 | Nodo | Carpeta | Subnotas registradas |
 |---|---|---|
 | [[Combate]] | `Gameplay/Combate/` | [[Meter]], [[Input Feel]], [[Lock On]] |
-| [[Traversal]] | `Gameplay/Traversal/` | [[Movimiento Base]], [[Dash y Airdash]], [[Launcher y Aire]], [[Momentum y Bump]], [[Wall Slide y Wall Jump]], [[World Switch]], [[Bloques]], [[Cadenas]], [[Occlusion Fade de Camara]], [[Landing Indicator]], [[Colores de mundo]] |
+| [[Traversal]] | `Gameplay/Traversal/` | [[Movimiento Base]], [[Dash y Airdash]], [[Launcher y Aire]], [[Momentum y Bump]], [[Wall Slide y Wall Jump]], [[Rebote en Enemigos]], [[World Switch]], [[Bloques]], [[Cadenas]], [[Occlusion Fade de Camara]], [[Landing Indicator]], [[Colores de mundo]] |
 | [[Enemigos]] | `Gameplay/Enemigos/` | [[Modelo de Enemigo]], [[Mascaras y Cordura]], [[Hostilidad]], [[Afiliacion de Mundo]], [[Estados de Combate Enemigo]], [[Ataques Enemigos]], [[Ecosistema Vivo]], [[Objetos Golpeables]], [[Roster Enemigos]], [[Melee Living]], [[Ranged Dead]], [[Armored Enemy]], [[Jefes]] |
 | [[IA]] | `Gameplay/IA/` | Indice de FSM, percepcion, locomocion y ataques. |
 | [[Armas]] | `Gameplay/Armas/` | [[Espada]], [[Mazo]], [[Dagas]], [[Punos]] |
