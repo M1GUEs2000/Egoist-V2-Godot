@@ -39,9 +39,29 @@ Arma de mas dano. Controla masas. Tiene bastante knockback. Tumba a los enemigos
 
 ## Estado Godot
 
-*(2026-07-08)* Combos completos implementados, adelantados respecto al plan original
-(que los dejaba para después de cerrar H1 con [[Espada]]) a pedido explícito.
-Pendiente de verificación headless y de jugar — ver `system_status: E0` arriba.
+*(2026-07-09)* Combos codificados y **alineados con el motor de la [[Espada]]** tras
+corregir dos bugs (commit `514a4b2`); NO está aprobado, sigue `system_status: E0`
+hasta playtest de Tutupa. Adelantado respecto al plan original (que los dejaba para
+después de cerrar H1 con la Espada) a pedido explícito.
+
+> [!warning] Pendiente de playtest
+> La tabla de combos de arriba describe la **intención** de diseño, no un
+> comportamiento validado jugando. El código ya corre `--import` sin errores y quedó
+> alineado con la Espada, pero el feel real (ventanas, daños, sweet spots) no se ha
+> probado. No tratar como "completo aprobado".
+
+**Correcciones 2026-07-08/09 (alineación con el motor de la Espada):**
+
+- `_begin_ground_step()` llamaba `begin_damage_window()` + `ComboTracker.register_hit()`
+  a mano, duplicando lo que `WeaponBase.run_combo_chain()` ya hace tras `begin_step`.
+  Eso limpiaba `_window_hits` entre las dos llamadas y rompía el registro de golpes.
+  Fix: quitar ambas líneas. La Espada es la referencia: su `_begin_ground_step()` solo
+  pone coreografía + movement/air-hold.
+- `_hold_x()` no cancelaba el combo tap del press antes del cargado, así que el tap
+  seguía vivo unos frames encimado con el cargado. Fix: `cancel_routines()` al inicio,
+  idéntico a `Sword._hold_x()`. Aplica a tierra y aire.
+- Verificado que `Sword._hold_x()` sigue cancelando (dash cargado intacto) y que
+  `Sword._begin_ground_step()` no regresionó por los cambios compartidos.
 
 - `combat/weapons/mace/mace.gd` define `Mace extends WeaponBase` (ya no hereda de
   `Sword`): coreografía propia sobre el motor genérico de `WeaponBase`.
