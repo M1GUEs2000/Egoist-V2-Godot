@@ -61,7 +61,7 @@ class_name PlayerTuning extends Resource
 @export var enemy_bounce_grace := 0.1
 ## Bloqueo para rebotar del mismo enemigo otra vez; otros enemigos siempre se permiten.
 @export var enemy_bounce_cooldown := 0.25
-## Tiempo en que el rebote manda: bloquea el input de movimiento un instante.
+## Tiempo en que el rebote lateral manda: bloquea el input de movimiento un instante. El stomp no lo usa.
 @export var enemy_bounce_lock_time := 0.2
 ## Reaccion opcional del enemigo al rebote. Null = sin reaccion.
 @export var enemy_bounce_push: PushSettings

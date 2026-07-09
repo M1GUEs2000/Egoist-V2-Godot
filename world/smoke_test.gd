@@ -155,18 +155,29 @@ func _ready() -> void:
 	player.tuning.enemy_bounce_cooldown = 0.25
 	player.tuning.enemy_bounce_momentum_keep = 0.0
 	player.tuning.enemy_bounce_push = null
+	# Sin input: la salida es la normal pura, escalada por away_speed.
 	var bounce_enemy_a := _make_enemy_bounce_probe(World.LAYER_ENEMY)
 	assert(player.enemy_bounce._remember_contact_if_enemy(bounce_enemy_a, Vector3.RIGHT, 6.0))
-	assert(player.enemy_bounce.try_bounce(Vector3.FORWARD))
+	assert(player.enemy_bounce.try_bounce(Vector3.ZERO))
 	assert(player.vertical_velocity == player.tuning.enemy_bounce_up_speed)
-	assert(is_equal_approx(player.bump_velocity.length(), player.tuning.enemy_bounce_away_speed))
+	assert(player.bump_velocity.is_equal_approx(Vector3.RIGHT * player.tuning.enemy_bounce_away_speed))
+	# El rebote lateral manda: bloquea el input de movimiento mientras dura el lock.
+	assert(player.enemy_bounce.blocks_move_input())
+
+	# Con input lateral: se suma along_speed perpendicular a la normal.
+	var along_enemy := _make_enemy_bounce_probe(World.LAYER_ENEMY)
+	player.enemy_bounce._remember_contact_if_enemy(along_enemy, Vector3.RIGHT, 6.0)
+	assert(player.enemy_bounce.try_bounce(Vector3.FORWARD))
+	assert(player.bump_velocity.is_equal_approx(Vector3(
+			player.tuning.enemy_bounce_away_speed, 0.0, -player.tuning.enemy_bounce_along_speed)))
 
 	var stale_enemy := _make_enemy_bounce_probe(World.LAYER_ENEMY)
 	player.enemy_bounce._remember_contact_if_enemy(stale_enemy, Vector3.RIGHT, 6.0)
 	player.enemy_bounce._last_contact_time = World.now() - player.tuning.enemy_bounce_grace * 2.0
 	assert(not player.enemy_bounce.try_bounce(Vector3.FORWARD))
 
-	player.enemy_bounce._remember_contact_if_enemy(bounce_enemy_a, Vector3.RIGHT, 6.0)
+	# Cooldown: el ultimo enemigo rebotado (along_enemy) esta bloqueado; otro no.
+	player.enemy_bounce._remember_contact_if_enemy(along_enemy, Vector3.RIGHT, 6.0)
 	assert(not player.enemy_bounce.try_bounce(Vector3.FORWARD))
 	var bounce_enemy_b := _make_enemy_bounce_probe(World.LAYER_ENEMY)
 	player.enemy_bounce._remember_contact_if_enemy(bounce_enemy_b, Vector3.RIGHT, 6.0)
@@ -203,6 +214,9 @@ func _ready() -> void:
 	assert(bounce_enemy_f.last_direction == Vector3.LEFT)
 	assert(bounce_enemy_f.last_settings == player.tuning.enemy_bounce_push)
 
+	# Stomp: solo vertical, sin reaccion del enemigo y sin bloquear el input (no hay
+	# impulso horizontal que proteger). El cancel() limpia el lock del rebote anterior.
+	player.enemy_bounce.cancel()
 	var stomp_enemy := _make_enemy_bounce_probe(World.LAYER_ENEMY)
 	player.bump_velocity = Vector3.RIGHT * 4.0
 	player.enemy_bounce._remember_contact_if_enemy(stomp_enemy, Vector3.UP, 6.0)
@@ -210,6 +224,7 @@ func _ready() -> void:
 	assert(player.bump_velocity == Vector3.ZERO)
 	assert(player.vertical_velocity == player.tuning.enemy_bounce_up_speed)
 	assert(stomp_enemy.pushes == 0)
+	assert(not player.enemy_bounce.blocks_move_input())
 
 	# WeaponBase.arm_push: empuja hits acumulados, hits tardíos, y se desarma al cancelar
 	var push_settings := PushSettings.new()

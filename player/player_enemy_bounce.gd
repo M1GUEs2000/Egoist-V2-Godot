@@ -7,7 +7,9 @@ var _last_enemy: Node
 var _last_normal := Vector3.ZERO
 var _contact_speed := 0.0
 var _last_contact_time := -999.0
-var _last_bounced_enemy: Node
+# El enemigo rebotado se recuerda por instance_id, no por referencia: muere y se libera
+# (EnemyBase._die) mientras el cooldown sigue corriendo.
+var _last_bounced_id := 0
 var _last_bounce_time := -999.0
 var _move_lock_until := -999.0
 
@@ -33,21 +35,22 @@ func try_bounce(input_dir: Vector3) -> bool:
 		return false
 	if not is_instance_valid(_last_enemy):
 		return false
-	if _last_enemy == _last_bounced_enemy \
+	if _last_enemy.get_instance_id() == _last_bounced_id \
 			and World.now() - _last_bounce_time < _body.tuning.enemy_bounce_cooldown:
 		return false
 
 	var t := _body.tuning
 	var flat := Vector3(_last_normal.x, 0.0, _last_normal.z)
-	_move_lock_until = World.now() + t.enemy_bounce_lock_time
 	_mark_bounced()
 
+	# Stomp: no hay impulso horizontal que proteger, asi que tampoco se bloquea el input.
 	if flat.length_squared() < 0.0001:
 		_body.set_momentum(Vector3.ZERO)
 		_body.vertical_velocity = t.enemy_bounce_up_speed
 		_body.air_state = Player.AirState.AIRBORNE
 		return true
 
+	_move_lock_until = World.now() + t.enemy_bounce_lock_time
 	flat = flat.normalized()
 	var tangent := input_dir
 	tangent.y = 0.0
@@ -86,7 +89,7 @@ func _remember_contact_if_enemy(collider: Node, normal: Vector3, contact_speed: 
 	return true
 
 func _mark_bounced() -> void:
-	_last_bounced_enemy = _last_enemy
+	_last_bounced_id = _last_enemy.get_instance_id()
 	_last_bounce_time = World.now()
 
 ## `away` es la normal aplanada y normalizada: la direccion en la que sale el jugador.
