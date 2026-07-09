@@ -72,7 +72,9 @@ func _begin_ground_step(step: int, _finisher: bool, _wait_branch: bool) -> void:
 			_play_smash()
 	_player.attack_step(tuning.swing_time)
 	_player.hold_airborne_for_attack()
-	begin_damage_window(tuning.swing_time)
+	# NO begin_damage_window aqui: run_combo_chain ya lo llama despues de begin_step.
+	# Ver Sword._begin_ground_step como referencia. Llamarlo aqui duplicaba la ventana
+	# e inmediatamente limpiaba _window_hits antes de que el motor arrancara la real.
 
 func _play_smash() -> void:
 	var half := _t().smash_angle
@@ -80,7 +82,10 @@ func _play_smash() -> void:
 
 ## X cargado: `level` vueltas completas (bóveda: 1/2/3 cargas = 1/2/3 vueltas). En
 ## el aire cae con AOE en vez de girar (ver _aerial_charged_x).
+## Move de compromiso (igual que Sword._hold_x): cancela el combo tap que arrancó
+## en el press antes de ejecutar el cargado, sea en tierra o en el aire.
 func _hold_x(level: int) -> void:
+	cancel_routines()  # interrumpe el tap combo del press antes de ejecutar el cargado
 	if _player.is_airborne():
 		_aerial_charged_x(level >= _t().max_charge_level)
 	else:
