@@ -31,6 +31,8 @@ class_name MaceTuning extends WeaponTuning
 @export var charged_freeze_stun: StunSettings
 ## Golpe final del X cargado: el daño/knockback real.
 @export var charged_final_stun: StunSettings
+## Golpe final del X cargado: además del daño real, siempre manda a volar con arco propio.
+@export var charged_final_push: PushSettings
 
 @export_group("Y — launcher omnidireccional")
 @export var launcher_height := 4.5
@@ -42,7 +44,7 @@ class_name MaceTuning extends WeaponTuning
 @export var launcher_second_hit_window := 0.5
 
 @export_group("Aéreo")
-## Golpe X sin carga y Y cargado aéreo reusan `air_push` (heredado de WeaponTuning,
+## Golpe X sin carga y Y cargado aéreo reusan `push` (heredado de WeaponTuning,
 ## mismo campo que usa el finisher aéreo de la Espada) con más alcance/altura acá:
 ## arma de más knockback.
 ## Caída forzada del X cargado aéreo (ground pound).

@@ -27,6 +27,8 @@ var kill_count := 0
 var _player: Player
 ## Golpeados de la ventana de daño en curso (el finisher aéreo los spikea/empuja).
 var _window_hits: Array[Hurtbox] = []
+## PushSettings de la ventana en curso una vez cumplido su delay (null = sin armar).
+var _armed_push: PushSettings
 var _shared_dedup: Array[Hurtbox] = []
 var _window_id := 0
 var _routine_id := 0
@@ -181,17 +183,19 @@ func play_aerial_combo() -> void:
 
 func _begin_air_step(step: int, finisher: bool, wait_branch: bool) -> void:
 	play_air_step(step, finisher, wait_branch)
+	if finisher and wait_branch:
+		arm_push(tuning.push, tuning.air_step_time * tuning.push_at)
 	# No flota sí o sí: solo marca "atacando en el aire" → si NO conecta, caés con
 	# más fuerza. El float lo dispara el hitbox al conectar (landed → air-hit-stall).
 	_player.notify_aerial_attack(tuning.air_step_time)
 
 ## Solo lo lanzable reacciona (has_method): una pared golpeada se ignora.
 func _finish_air_combo(wait_branch: bool) -> void:
+	if wait_branch:
+		return  # el push ya lo armó _begin_air_step
 	for hurtbox in _window_hits.duplicate():
 		var target: Node = hurtbox.owner_node
-		if wait_branch and target.has_method("push"):
-			target.call("push", _player.forward(), tuning.air_push)
-		elif not wait_branch and target.has_method("slam"):
+		if target.has_method("slam"):
 			target.call("slam", tuning.air_spike_down_speed)
 
 # ---- Ventana de daño ----
@@ -212,12 +216,36 @@ func begin_damage_window(duration: float) -> void:
 	if _air_disc_hitbox != null:
 		_air_disc_hitbox.end_swing()
 
+## Arma el push de esta ventana. Tras `delay` segundos empuja a todo lo golpeado hasta
+## ese momento y queda armado: lo que conecte después se empuja en el instante del hit.
+func arm_push(settings: PushSettings, delay: float) -> void:
+	if settings == null:
+		return
+	var id := _routine_id
+	await wait_seconds(delay)
+	if not is_routine_current(id):
+		return
+	_armed_push = settings
+	_push_window_hits(settings)
+
+## Empuja a los golpeados de la ventana en curso.
+func _push_window_hits(settings: PushSettings) -> void:
+	for hurtbox in _window_hits.duplicate():
+		if is_instance_valid(hurtbox):
+			_push_target(hurtbox, settings)
+
+## Solo lo empujable reacciona (has_method): una pared golpeada se ignora.
+func _push_target(hurtbox: Hurtbox, settings: PushSettings) -> void:
+	var target: Node = hurtbox.owner_node
+	if is_instance_valid(target) and target.has_method("push"):
+		target.call("push", _player.forward(), settings)
+
 ## Reacción común a cualquier golpe conectado del arma (hoja, disco, launcher, dash
 ## cargado): air-hit-stall + meter + progresión de kills.
 func register_weapon_hit(hurtbox: Hurtbox, died: bool) -> void:
 	# Conectar en el aire contra algo que lo dispara ralentiza la caída del jugador.
 	if hurtbox.triggers_air_hit_stall:
-		_player.register_air_hit_stall()
+		_player.register_air_hit_stall(tuning.air_stall_scale)
 	var meter := _player.meter
 	if meter != null:
 		meter.gain_on_hit()
@@ -227,6 +255,8 @@ func register_weapon_hit(hurtbox: Hurtbox, died: bool) -> void:
 
 func _on_hit(hurtbox: Hurtbox, died: bool) -> void:
 	_window_hits.append(hurtbox)
+	if _armed_push != null:
+		_push_target(hurtbox, _armed_push)
 	register_weapon_hit(hurtbox, died)
 
 # ---- Progresión ----
@@ -358,6 +388,7 @@ func _kill_swing_tween() -> void:
 ## rutina vieja sobrevive, sigue pisando el hitbox y el Pivot de la que arrancó recién.
 func begin_routine() -> int:
 	_routine_id += 1
+	_armed_push = null
 	_combo_playing = false
 	_combo_window_open = false
 	_combo_kind = &""

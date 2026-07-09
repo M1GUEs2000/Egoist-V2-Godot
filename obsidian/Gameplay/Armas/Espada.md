@@ -21,7 +21,7 @@ Arma base / equilibrada. Velocidad media. Sirve para mantener el flujo del comba
 | Input | Descripcion |
 |---|---|
 | X X X X | Swing horizontal, swing horizontal, estocada, estocada. |
-| X X espera X X | Izquierda a derecha, derecha a izquierda, vuelta completa, vuelta completa. |
+| X X espera X X | Izquierda a derecha, derecha a izquierda, vuelta completa, vuelta completa. El ultimo golpe empuja. |
 | X cargado | Dash hacia adelante que golpea todo. Rompe armadura. |
 | X cargado sweet spot | Todo lo que toca el dash explota despues. |
 | Y cargado | Launcher. Area pequena/media. |
@@ -32,7 +32,7 @@ Arma base / equilibrada. Velocidad media. Sirve para mantener el flujo del comba
 | Input | Descripcion |
 |---|---|
 | X X X | Diagonal, diagonal, hacia abajo. |
-| X espera X X | Diagonal, doble vuelta con empuje hacia adelante. La primera vuelta te eleva un poco; el empuje final es un arco tuneable (`air_push`: velocidad + altura + cierre). *(2026-07-06)* |
+| X espera X X | Diagonal, doble vuelta con empuje hacia adelante. La primera vuelta te eleva un poco; el empuje final es un arco tuneable (`push`: velocidad + altura + cierre). *(2026-07-09)* |
 | X cargado | Mismo dash que en el piso, pero en el aire. |
 | X cargado sweet spot | Igual que el terrestre. Las explosiones te mantienen en el aire a ti y a los enemigos. |
 | Y cargado | Golpe hacia abajo que hace rebotar al enemigo. Implementado 2026-07-02: gasta 1 barra; te auto-lanza hacia arriba y spikea/rebota al enemigo hasta tu altura. Pendiente de probar. |
@@ -42,7 +42,7 @@ Arma base / equilibrada. Velocidad media. Sirve para mantener el flujo del comba
 
 - Implementada como arma procedural hasta H3.
 - Tap X/Y usa la misma cadena de combo terrestre/aérea; solo el cargado bifurca por slot. *(2026-07-09)*
-- `SwordTuning` controla ventanas, angulos, dash cargado, launcher y el `air_push` (arco del empuje aereo). *(2026-07-06)*
+- `SwordTuning` controla ventanas, angulos, dash cargado, launcher y el `push` (arco del empuje armado por `arm_push`). *(2026-07-09)*
 - Habilidad especial de X cargado existe parcialmente por ventana de kill.
 - La hoja brilla al cargar un ataque (glow de carga, ver [[Combate]]). *(2026-07-06)*
 

@@ -119,6 +119,8 @@ func _run_charged_spins(level: int) -> void:
 		var finisher := spin == level
 		_set_hitbox_stun(t.charged_freeze_stun if (sweet_spot and not finisher) else t.charged_final_stun)
 		_blade_hitbox.damage = t.charged_hit_damage if finisher else (0.0 if sweet_spot else 1.0)
+		if finisher:
+			arm_push(t.charged_final_push, t.charged_spin_time * tuning.push_at)
 		begin_damage_window(t.charged_spin_time)
 		ComboTracker.register_hit()
 		await wait_seconds(t.charged_spin_time)
@@ -172,16 +174,13 @@ func _run_launcher() -> void:
 
 ## Tap aéreo sin carga: golpe con empuje hacia adelante.
 func _aerial_tap() -> void:
-	var id := begin_routine()
+	begin_routine()
 	reset_hit_profile()
 	swing(_t().combo_swing_angle)
+	arm_push(tuning.push, tuning.swing_time * tuning.push_at)
 	_player.notify_aerial_attack(tuning.swing_time)
 	begin_damage_window(tuning.swing_time)
 	ComboTracker.register_hit()
-	await wait_seconds(tuning.swing_time)
-	if not is_routine_current(id):
-		return  # otro ataque ya repobló _window_hits: sus golpeados no son nuestros
-	_push_window_hits()
 
 ## X cargado: caída forzada con AOE ("ground pound"); sweet spot con vuelta final
 ## que congela y mantiene al jugador (y a los golpeados) en el aire.
@@ -217,6 +216,8 @@ func _aerial_hold_y(sweet_spot: bool) -> void:
 	_player.notify_aerial_attack(t.charged_spin_time)
 	_play_spin(t.charged_spin_time)
 	_set_hitbox_stun(t.air_freeze_stun if sweet_spot else tuning.stun)
+	if not sweet_spot:
+		arm_push(tuning.push, t.charged_spin_time * tuning.push_at)
 	begin_damage_window(t.charged_spin_time)
 	ComboTracker.register_hit()
 	await wait_seconds(t.charged_spin_time)
@@ -224,21 +225,7 @@ func _aerial_hold_y(sweet_spot: bool) -> void:
 		return
 	if sweet_spot:
 		_player.notify_aerial_attack(t.air_freeze_extra_hang_time)
-	else:
-		_push_window_hits()
 	reset_hit_profile()
-
-## Empuja a los golpeados de la ventana recién cerrada. Copia la lista (el push puede
-## disparar reacciones que abran otra ventana) y saltea lo que ya murió y se liberó.
-func _push_window_hits() -> void:
-	for hurtbox in _window_hits.duplicate():
-		if is_instance_valid(hurtbox):
-			_push_target(hurtbox, tuning.air_push)
-
-func _push_target(hurtbox: Hurtbox, settings: PushSettings) -> void:
-	var target: Node = hurtbox.owner_node
-	if is_instance_valid(target) and target.has_method("push"):
-		target.call("push", _player.forward(), settings)
 
 ## Sincroniza el stun de la hoja y el disco aéreo (ambos activos en el aire): así un
 ## golpe congelante congela sin importar cuál de los dos conecta.

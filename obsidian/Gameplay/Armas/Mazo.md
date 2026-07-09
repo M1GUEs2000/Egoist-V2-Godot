@@ -23,7 +23,7 @@ Arma de mas dano. Controla masas. Tiene bastante knockback. Tumba a los enemigos
 | X X X | Swing horizontal, swing horizontal, smash vertical con AOE. |
 | X X espera X X | Swing horizontal, swing horizontal, tres smash verticales. Todos con AOE. |
 | X cargado (3 niveles) | Das vueltas y golpeas. 1 carga = 1 vuelta, 2 cargas = 2 vueltas, 3 cargas = 3 vueltas. Gasta 1 barra por nivel; si no alcanza el meter, degrada al nivel maximo pagable. |
-| X cargado sweet spot | Los enemigos que pega quedan congelados hasta la ultima vuelta. |
+| X cargado sweet spot | Los enemigos que pega quedan congelados hasta la ultima vuelta, que siempre los manda a volar. |
 | Y cargado | Launcher omnidireccional. Area grande. |
 | Y cargado sweet spot | Hace dos golpes para subirlos al aire. |
 
@@ -75,14 +75,17 @@ original (que los dejaba para después de cerrar H1 con la Espada) a pedido expl
   meter por vuelta real: si cargas a nivel 3 pero solo hay 2 barras, corre nivel 2; si
   no hay barra, cae al tap normal. Sweet spot (nivel máximo real): las vueltas
   intermedias congelan (`StunSettings` largo) en vez de empujar; el golpe final hace
-  el daño real. *(2026-07-09)*
+  el daño real y siempre arma un `charged_final_push` propio, mas fuerte que el `push`
+  base del arma. *(2026-07-09)*
 - Terrestre Y: launcher omnidireccional (área más grande que el cono de la Espada).
   Sweet spot: un segundo tap Y dentro de una ventana corta confirma "dos golpes" y
   lanza antes; si no, lanza igual con un solo golpe.
-- Aéreo: tap X/Y sin carga empuja hacia adelante (`push`); X cargado cae con AOE
-  (ground pound) y gasta 1 barra fija; sweet spot agrega una vuelta final que congela;
-  Y cargado gira empujando a los lados, sweet spot congela y extiende el tiempo
-  airborne del jugador (`PlayerLauncher.notify_aerial_attack`).
+- Aéreo: tap X/Y sin carga arma `push` hacia adelante a mitad del swing (`push_at = 0.5`);
+  X cargado cae con AOE (ground pound) y gasta 1 barra fija; sweet spot agrega una
+  vuelta final que congela; Y cargado sin sweet spot arma `push`, sweet spot congela y
+  extiende el tiempo airborne del jugador (`PlayerLauncher.notify_aerial_attack`).
+- `air_stall_scale = 1.8`: el Mazo sostiene mas al jugador por golpe conectado porque
+  tiene menos impactos y cada uno pesa mas. *(2026-07-09)*
 - "Congelar" no es un verbo nuevo: reusa el sistema de stun existente
   (`StunSettings` con power/duración altos, mode STILL) — ver [[Combate]].
 - Refactor compartido con la Espada (sin cambiar su comportamiento): las primitivas

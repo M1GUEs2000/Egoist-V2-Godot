@@ -8,9 +8,22 @@ class_name WeaponTuning extends Resource
 @export var stun: StunSettings
 
 @export_group("Combo aéreo")
-@export var air_step_time := 0.12          # duración de cada golpe aéreo
-@export var air_combo_window := 0.45       # ventana para encadenar el siguiente tap
-@export var air_wait_branch_threshold := 0.3  # esperar esto tras el 1er golpe cambia de rama
-@export var air_spike_down_speed := 30.0   # spike: velocidad hacia abajo en el finisher (rama base)
-@export var air_push: PushSettings         # arco del empujon (rama espera): velocidad + arco, inyectable por arma
-@export var air_wait_spin_hop := 4.0       # la 1ra vuelta de la rama espera eleva un poco al jugador
+## Duración de cada golpe aéreo.
+@export var air_step_time := 0.12
+## Ventana para encadenar el siguiente tap aéreo.
+@export var air_combo_window := 0.45
+## Esperar esto tras el 1er golpe cambia de rama.
+@export var air_wait_branch_threshold := 0.3
+## Spike: velocidad hacia abajo en el finisher aéreo de la rama base.
+@export var air_spike_down_speed := 30.0
+## Arco del empujón (velocidad + altura + cierre), inyectable por arma. Lo usa cualquier
+## ataque que arme un push, en tierra o en el aire.
+@export var push: PushSettings
+## La 1ra vuelta de la rama espera eleva un poco al jugador.
+@export var air_wait_spin_hop := 4.0
+
+@export_group("Push")
+## Fracción del swing a la que se cobra el push (0.5 = a mitad del golpe).
+@export_range(0.0, 1.0, 0.05) var push_at := 1.0
+## Cuánto sostiene en el aire un golpe de esta arma. >1 = pocos golpes pesados.
+@export var air_stall_scale := 1.0

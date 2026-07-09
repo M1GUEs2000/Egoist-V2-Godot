@@ -3,6 +3,14 @@ extends Node3D
 ##   $GODOT --headless --path . res://world/smoke_test.tscn
 ## Falla con assert si algo se rompe; imprime SMOKE OK si todo bien.
 
+class PushProbe extends Node3D:
+	var pushes := 0
+	var last_settings: PushSettings
+
+	func push(_direction: Vector3, settings: PushSettings) -> void:
+		pushes += 1
+		last_settings = settings
+
 func _ready() -> void:
 	# WorldManager: switch + señal
 	var fired: Array = []
@@ -77,6 +85,50 @@ func _ready() -> void:
 	await get_tree().physics_frame
 	assert(player.global_position.y > y_before)  # el launcher sube
 
+	# WeaponBase.arm_push: empuja hits acumulados, hits tardíos, y se desarma al cancelar
+	var push_settings := PushSettings.new()
+	push_settings.horizontal_speed = 7.0
+	var weapon := _make_test_weapon(player, push_settings)
+	var probe_a := _make_push_probe()
+	var hurtbox_a := _make_hurtbox(probe_a)
+	weapon.begin_routine()
+	weapon._on_hit(hurtbox_a, false)
+	weapon.arm_push(push_settings, 0.0)
+	await get_tree().create_timer(0.03).timeout
+	assert(probe_a.pushes == 1)
+	assert(probe_a.last_settings == push_settings)
+
+	var probe_b := _make_push_probe()
+	var hurtbox_b := _make_hurtbox(probe_b)
+	weapon.begin_routine()
+	weapon.arm_push(push_settings, 0.0)
+	await get_tree().create_timer(0.03).timeout
+	assert(probe_b.pushes == 0)
+	weapon._on_hit(hurtbox_b, false)
+	assert(probe_b.pushes == 1)
+
+	var probe_c := _make_push_probe()
+	var hurtbox_c := _make_hurtbox(probe_c)
+	weapon.begin_routine()
+	weapon._on_hit(hurtbox_c, false)
+	weapon.arm_push(push_settings, 0.05)
+	weapon.begin_routine()
+	await get_tree().create_timer(0.08).timeout
+	assert(probe_c.pushes == 0)
+
+	# No-regresión: la Espada con push_at default 1.0 sigue empujando el finisher aéreo espera
+	var sword := (load("res://combat/weapons/sword/sword.tscn") as PackedScene).instantiate() as Sword
+	add_child(sword)
+	sword.setup(player)
+	player.air_state = Player.AirState.AIRBORNE
+	var sword_probe := _make_push_probe()
+	var sword_hurtbox := _make_hurtbox(sword_probe)
+	sword.begin_routine()
+	sword._begin_air_step(sword.air_steps(), true, true)
+	sword._on_hit(sword_hurtbox, false)
+	await get_tree().create_timer(sword.tuning.air_step_time + 0.03).timeout
+	assert(sword_probe.pushes == 1)
+
 	# LockOn (batch 6): adquiere el enemigo más cercano dentro de rango/ángulo, ignora el lejano
 	var enemy_near := EnemyBase.new()
 	add_child(enemy_near)
@@ -92,3 +144,30 @@ func _ready() -> void:
 
 	print("SMOKE OK")
 	get_tree().quit()
+
+func _make_test_weapon(player: Player, push_settings: PushSettings) -> WeaponBase:
+	var tuning := WeaponTuning.new()
+	tuning.push = push_settings
+	tuning.stun = StunSettings.new()
+	var weapon := WeaponBase.new()
+	weapon.tuning = tuning
+	var pivot := Node3D.new()
+	pivot.name = "Pivot"
+	weapon.add_child(pivot)
+	var blade := Hitbox.new()
+	blade.name = "BladeHitbox"
+	pivot.add_child(blade)
+	add_child(weapon)
+	weapon.setup(player)
+	return weapon
+
+func _make_push_probe() -> PushProbe:
+	var probe := PushProbe.new()
+	add_child(probe)
+	return probe
+
+func _make_hurtbox(owner: Node) -> Hurtbox:
+	var hurtbox := Hurtbox.new()
+	owner.add_child(hurtbox)
+	hurtbox.owner_node = owner
+	return hurtbox

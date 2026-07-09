@@ -56,8 +56,10 @@ func _tap_combo() -> void:
 	run_combo_chain(&"ground", STEP_COUNT, tuning.swing_time, _t().combo_window,
 			2, _t().ground_wait_branch_threshold, _begin_ground_step)
 
-func _begin_ground_step(step: int, _finisher: bool, spin: bool) -> void:
-	_play_combo_step(step, spin)
+func _begin_ground_step(step: int, finisher: bool, wait_branch: bool) -> void:
+	_play_combo_step(step, wait_branch)
+	if finisher and wait_branch:
+		arm_push(tuning.push, tuning.swing_time * tuning.push_at)
 	_player.attack_step(tuning.swing_time)  # avanza hacia el lockeado / al frente
 	_player.hold_airborne_for_attack()
 

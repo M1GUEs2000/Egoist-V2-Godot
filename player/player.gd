@@ -200,8 +200,8 @@ func apply_stun(duration: float = -1.0, mode := PlayerStun.Mode.STILL,
 func fire_action_world_switch() -> void:
 	action_world_switch.fire_action()
 
-func register_air_hit_stall() -> void:
-	launcher.register_air_hit_stall()
+func register_air_hit_stall(scale := 1.0) -> void:
+	launcher.register_air_hit_stall(scale)
 
 func notify_aerial_attack(duration: float) -> void:
 	launcher.notify_aerial_attack(duration)

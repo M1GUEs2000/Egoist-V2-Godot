@@ -61,7 +61,7 @@ func notify_aerial_attack(duration: float) -> void:
 		return
 	_aerial_attack_until = maxf(_aerial_attack_until, World.now() + duration)
 
-func register_air_hit_stall() -> void:
+func register_air_hit_stall(scale := 1.0) -> void:
 	if _body.is_on_floor():
 		return
 	var t := _body.tuning
@@ -69,7 +69,7 @@ func register_air_hit_stall() -> void:
 		_stall_count = 0
 	_stall_count += 1
 	_last_stall_time = World.now()
-	var duration := minf(t.air_stall_base + t.air_stall_per_hit * (_stall_count - 1), t.air_stall_max)
+	var duration := minf(t.air_stall_base + t.air_stall_per_hit * (_stall_count - 1), t.air_stall_max) * scale
 	_air_stall_until = maxf(_air_stall_until, World.now() + duration)
 	# Congela la caída (velocity negativa → 0) pero preserva una subida (ej. el hop del
 	# primer spin de la rama espera): así el air-hit no mata el impulso vertical.
