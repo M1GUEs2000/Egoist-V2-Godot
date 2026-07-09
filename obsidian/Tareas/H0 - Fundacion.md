@@ -25,6 +25,12 @@ World switch funciona por triggers, enemigos/objetos respetan mundo, HUD respond
 - [ ] Validar headless en la maquina actual.
 - [ ] Implementar `WorldVisual` para cerrar feedback visual del switch.
 
+## H0 urgente - Feel del prototipo
+
+- [ ] Arreglar el momentum del jugador: ahora se desliza por todos lados y el control se siente mal.
+- [ ] Hacer que los bloques brillen o den feedback visual claro cuando el jugador se acerca.
+- [ ] Mejorar el feel general del prototipo antes de seguir agregando contenido.
+
 ## Relacionado
 
 - [[Arquitectura Godot]]
