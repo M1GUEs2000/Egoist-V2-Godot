@@ -92,13 +92,14 @@ func charge_level(_held_time: float) -> int:
 
 # ---- Motor genérico de cadenas de golpes (ex PlayAerialCombo, hoy también terrestre) ----
 
-## Un tap mientras corre una cadena del mismo tipo: encola el siguiente golpe si la
-## ventana está abierta (si no, mid-swing, se ignora). Devuelve true si el tap fue
-## consumido; false si no hay cadena de este tipo corriendo y hay que arrancar una.
+## Un tap mientras corre una cadena del mismo tipo encola el siguiente golpe aunque llegue
+## durante el swing actual. Esto da el feel de la Espada: puedes clickear rapidísimo y el
+## combo espera a que termine el golpe actual antes de avanzar. Si el tap llega durante la
+## ventana, `_combo_queued_time` permite distinguir rama rápida vs rama espera.
 func try_queue_combo(kind: StringName) -> bool:
 	if not _combo_playing or _combo_kind != kind:
 		return false
-	if _combo_window_open:
+	if not _combo_queued:
 		_combo_queued = true
 		_combo_queued_time = World.now()
 	return true
