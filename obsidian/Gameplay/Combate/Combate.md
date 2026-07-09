@@ -21,7 +21,7 @@ Combate del jugador: slots X/Y, espada, hitboxes, parry, meter, combo aereo e in
 | Golpeables | `Health`, `Hurtbox`, `Hitbox` |
 | Input | `InputBuffer` |
 | Combo global | `ComboTracker` |
-| Armas | `WeaponBase`, `Sword`, `Mace` (combos alineados con Espada, E0 pend. playtest, ver [[Mazo]]) |
+| Armas | `WeaponBase`, `Sword`, `Mace` (combos alineados con Espada, E2 pend. playtest, ver [[Mazo]]) |
 | Tuning | `WeaponTuning`, `SwordTuning`, `StunSettings`, `PushSettings`, `PlayerTuning` |
 | Meter | `PlayerMeter` |
 | Loadout | `ActionLoadoutMenu` (overlay en HUD) |

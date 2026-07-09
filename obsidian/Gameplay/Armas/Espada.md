@@ -41,6 +41,7 @@ Arma base / equilibrada. Velocidad media. Sirve para mantener el flujo del comba
 ## Estado Godot
 
 - Implementada como arma procedural hasta H3.
+- Tap X/Y usa la misma cadena de combo terrestre/aérea; solo el cargado bifurca por slot. *(2026-07-09)*
 - `SwordTuning` controla ventanas, angulos, dash cargado, launcher y el `air_push` (arco del empuje aereo). *(2026-07-06)*
 - Habilidad especial de X cargado existe parcialmente por ventana de kill.
 - La hoja brilla al cargar un ataque (glow de carga, ver [[Combate]]). *(2026-07-06)*
@@ -56,4 +57,3 @@ Arma base / equilibrada. Velocidad media. Sirve para mantener el flujo del comba
 
 - [[Armas]]
 - [[Combate]]
-
