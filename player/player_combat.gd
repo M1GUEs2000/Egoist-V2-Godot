@@ -93,7 +93,8 @@ func _on_press(weapon: WeaponBase, slot: World.Slot) -> void:
 	_body.fire_action_world_switch()
 	_last_attack_time = World.now()
 	_charging_weapon = weapon
-	weapon.quaternion = _rest_rotations[weapon]
+	if weapon.should_reset_pose_on_press():
+		weapon.quaternion = _rest_rotations[weapon]
 	_set_active_weapon(weapon)
 	buffer.press_then_charge(weapon.tap.bind(slot), _fire_hold.bind(weapon, slot))
 

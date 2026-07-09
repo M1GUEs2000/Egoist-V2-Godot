@@ -43,7 +43,7 @@ var _launcher_hang_time := 0.0
 @onready var _pivot: Node3D = $Pivot
 @onready var _blade_hitbox: Hitbox = $Pivot/BladeHitbox
 @onready var _air_disc_hitbox: Hitbox = get_node_or_null("AirDiscHitbox")
-@onready var _blade_mesh: MeshInstance3D = get_node_or_null("Pivot/BladeMesh") as MeshInstance3D
+@onready var _blade_mesh: MeshInstance3D = _find_charge_glow_mesh()
 
 var _blade_material: StandardMaterial3D
 
@@ -75,6 +75,14 @@ func tap(_slot: World.Slot) -> void:
 
 func hold(_slot: World.Slot, _level: int) -> void:
 	pass
+
+## PlayerCombat llama esto antes de resetear la pose del arma en un press.
+## Si hay una cadena activa, ese press puede ser solo un input encolado para el próximo
+## golpe: resetear la rotación acá hace que armas pesadas como el Mazo parezcan reiniciar
+## el swing con cada click. La Espada ya se sentía bien por timing, pero el contrato correcto
+## es no tocar la pose mientras el runner de combo sigue vivo.
+func should_reset_pose_on_press() -> bool:
+	return not _combo_playing
 
 ## Nivel de carga (1-based) para una duración de hold sostenida. Default: un solo
 ## nivel (comportamiento actual de la Espada, que ignora _level). El Mazo lo
@@ -232,6 +240,16 @@ func on_kill() -> void:
 
 ## Prepara un material propio en la hoja con emission apagada (energy 0), listo para el
 ## glow de carga. Duplica el material base para no pisar otras instancias del arma.
+func _find_charge_glow_mesh() -> MeshInstance3D:
+	var preferred := get_node_or_null("Pivot/BladeMesh") as MeshInstance3D
+	if preferred != null:
+		return preferred
+	# El Mazo no tiene BladeMesh: su parte visible/cargable es la cabeza.
+	preferred = get_node_or_null("Pivot/HeadMesh") as MeshInstance3D
+	if preferred != null:
+		return preferred
+	return get_node_or_null("Pivot/HandleMesh") as MeshInstance3D
+
 func _setup_blade_glow() -> void:
 	if _blade_mesh == null:
 		return
