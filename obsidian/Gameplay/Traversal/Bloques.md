@@ -25,7 +25,7 @@ Objetos golpeables de traversal.
 
 | Caracteristica | Efecto | Color |
 |---|---|---|
-| Launch / bump | Bump horizontal/vertical, restaura doble salto y airdash. | Rojo tomate |
+| Launch / bump | Suma momentum horizontal, aplica bump vertical, restaura doble salto y airdash. | Rojo tomate |
 | Dash | Fuerza dash hacia donde mira el jugador. | Verde |
 | Meter | Suma barras de meter al jugador. | Celeste |
 | Maldicion | Al romperse, la proxima accion cambia de mundo. | Amarillo |
@@ -34,6 +34,7 @@ Objetos golpeables de traversal.
 - El glow se divide en partes iguales segun la cantidad de caracteristicas visibles: mitades, tercios o cuartos. `world switch` no tiene color fijo; visto desde vivo muestra morado porque manda al muerto, visto desde muerto muestra tomate/naranja porque manda al vivo.
 - El glow por proximidad vive en `TraversalBlockTuning`: 10% lejos, 60% cerca, con radio tuneable. Los colores viven en `World`, no en la escena.
 - `hits_to_break = 0` significa indestructible. Valores mayores usan `Health` + `BreakOnDeath` para romperse tras esa cantidad de golpes.
+- El launch ahora alimenta el modelo de [[Momentum y Bump]]: encadenar bloques compone exceso hasta `momentum_max_speed`, y el exceso se drena por superficie en vez de morir de golpe al aterrizar.
 
 ## Spike wall
 

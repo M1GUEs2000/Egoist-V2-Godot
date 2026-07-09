@@ -101,7 +101,7 @@ func try_wall_jump(input_dir: Vector3) -> bool:
 		tangent = tangent.normalized() * _body.tuning.wall_slide_wall_jump_along_speed
 	else:
 		tangent = Vector3.ZERO
-	_body.bump_velocity = normal * _body.tuning.wall_slide_wall_jump_away_speed + tangent
+	_body.set_momentum(normal * _body.tuning.wall_slide_wall_jump_away_speed + tangent)
 	_body.vertical_velocity = _body.tuning.wall_slide_wall_jump_up_speed
 	_ignore_until = World.now() + _body.tuning.wall_slide_wall_jump_lock_time
 	_move_lock_until = World.now() + _body.tuning.wall_slide_wall_jump_lock_time

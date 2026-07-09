@@ -119,7 +119,7 @@ func _boost_bump_momentum() -> void:
 		horizontal.length() * t.dash_bump_momentum_multiplier
 			+ dash_speed * t.dash_bump_dash_speed_multiplier
 	)
-	_body.bump_velocity = _dash_dir * boosted
+	_body.set_momentum(_dash_dir * boosted)
 
 func _on_dash_hit(hurtbox: Hurtbox, _died: bool) -> void:
 	if hurtbox.triggers_air_hit_stall:

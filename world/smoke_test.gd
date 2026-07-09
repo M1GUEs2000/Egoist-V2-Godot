@@ -85,6 +85,52 @@ func _ready() -> void:
 	await get_tree().physics_frame
 	assert(player.global_position.y > y_before)  # el launcher sube
 
+	# Momentum: el exceso drena linealmente; 2x total tarda T, 3x total tarda 2T.
+	var momentum_player := Player.new()
+	momentum_player.tuning = PlayerTuning.new()
+	momentum_player.tuning.move_speed = 6.0
+	momentum_player.tuning.momentum_bleed_seconds_per_unit = 3.0
+	momentum_player.tuning.momentum_bleed_ground = 1.0
+	momentum_player.tuning.momentum_bleed_wall = 0.5
+	momentum_player.tuning.momentum_bleed_air = 0.1
+	momentum_player.tuning.momentum_max_speed = 18.0
+	var ground_rate := momentum_player.tuning.move_speed \
+			/ momentum_player.tuning.momentum_bleed_seconds_per_unit
+	momentum_player.bump_velocity = Vector3.RIGHT * 6.0
+	momentum_player._bleed_momentum_for_scale(3.0, ground_rate, momentum_player.tuning.momentum_bleed_ground)
+	assert(momentum_player.bump_velocity == Vector3.ZERO)
+	momentum_player.bump_velocity = Vector3.RIGHT * 12.0
+	momentum_player._bleed_momentum_for_scale(3.0, ground_rate, momentum_player.tuning.momentum_bleed_ground)
+	assert(is_equal_approx(momentum_player.bump_velocity.length(), 6.0))
+	momentum_player._bleed_momentum_for_scale(3.0, ground_rate, momentum_player.tuning.momentum_bleed_ground)
+	assert(momentum_player.bump_velocity == Vector3.ZERO)
+
+	momentum_player.bump_velocity = Vector3.RIGHT * 6.0
+	momentum_player._bleed_momentum_for_scale(1.0, ground_rate, momentum_player.tuning.momentum_bleed_air)
+	assert(is_equal_approx(momentum_player.bump_velocity.length(), 5.8))
+	momentum_player.bump_velocity = Vector3.RIGHT * 6.0
+	momentum_player._bleed_momentum_for_scale(1.0, ground_rate, momentum_player.tuning.momentum_bleed_wall)
+	assert(is_equal_approx(momentum_player.bump_velocity.length(), 5.0))
+
+	momentum_player.bump_velocity = Vector3.RIGHT * 6.0
+	momentum_player._bleed_momentum_for_scale(1.5, ground_rate, momentum_player.tuning.momentum_bleed_ground)
+	momentum_player._bleed_momentum_for_scale(1.5, ground_rate, momentum_player.tuning.momentum_bleed_air)
+	assert(is_equal_approx(momentum_player.bump_velocity.length(), 2.7))
+	momentum_player._bleed_momentum_for_scale(1.35, ground_rate, momentum_player.tuning.momentum_bleed_ground)
+	assert(momentum_player.bump_velocity == Vector3.ZERO)
+
+	momentum_player.bump_velocity = Vector3.RIGHT * 0.1
+	momentum_player._bleed_momentum_for_scale(1.0, ground_rate, momentum_player.tuning.momentum_bleed_ground)
+	assert(momentum_player.bump_velocity == Vector3.ZERO)
+
+	for _i in range(4):
+		momentum_player.add_momentum(Vector3.RIGHT * 10.0)
+	assert(is_equal_approx(momentum_player.bump_velocity.length(), momentum_player.tuning.momentum_max_speed))
+
+	momentum_player.bump_velocity = Vector3.RIGHT * 6.0
+	momentum_player._bleed_momentum(1.0, momentum_player.tuning.stun_bump_decay)
+	assert(is_equal_approx(momentum_player.bump_velocity.length(), 2.5))
+
 	# WeaponBase.arm_push: empuja hits acumulados, hits tardíos, y se desarma al cancelar
 	var push_settings := PushSettings.new()
 	push_settings.horizontal_speed = 7.0

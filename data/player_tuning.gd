@@ -51,12 +51,18 @@ class_name PlayerTuning extends Resource
 @export_group("Motor")
 ## Gravedad, en m/s² (negativa hacia abajo).
 @export var gravity := -20.0
-## Frenado del momentum de bump en el aire (m/s²).
-@export var bump_decay := 8.0
-## Frenado del bump en el suelo, pasada la gracia de aterrizaje (m/s²).
-@export var grounded_bump_decay := 12.0
-## Segundos tras aterrizar en que el bump NO decae: conserva el momentum al tocar suelo.
-@export var landing_momentum_grace := 0.18
+@export_group("Momentum")
+## Segundos que tarda en drenarse un exceso equivalente a UNA move_speed, apoyado en el suelo.
+## El drenaje es lineal: el doble de exceso tarda el doble de tiempo.
+@export var momentum_bleed_seconds_per_unit := 3.0
+## Techo del exceso acumulable (m/s). Encadenar rebotes compone: sin techo, diverge.
+@export var momentum_max_speed := 18.0
+## Multiplicador del drenaje apoyado en el suelo. Es la referencia: dejarlo en 1.0.
+@export_range(0.0, 1.0) var momentum_bleed_ground := 1.0
+## Multiplicador del drenaje pegado a una pared. 0.5 = la pared te frena la mitad que el suelo.
+@export_range(0.0, 1.0) var momentum_bleed_wall := 0.5
+## Multiplicador del drenaje en el aire. 0.1 = el aire te frena una decima parte que el suelo.
+@export_range(0.0, 1.0) var momentum_bleed_air := 0.1
 
 @export_group("Stun")
 ## Duración del stun si la fuente no manda una propia, en segundos.
