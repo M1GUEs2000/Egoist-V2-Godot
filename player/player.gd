@@ -266,11 +266,11 @@ func _bleed_momentum(delta: float, override_rate := -1.0) -> void:
 		bump_velocity = Vector3.ZERO
 		return
 	var rate := override_rate
-	var scale := 1.0
+	var surface_scale := 1.0
 	if override_rate < 0.0:
 		rate = tuning.move_speed / maxf(0.001, tuning.momentum_bleed_seconds_per_unit)
-		scale = _bleed_scale()
-	_bleed_momentum_for_scale(delta, rate, scale)
+		surface_scale = _bleed_scale()
+	_bleed_momentum_for_scale(delta, rate, surface_scale)
 
 ## En que esta apoyado el jugador ahora. El orden importa: el suelo gana sobre la pared.
 func _bleed_scale() -> float:
@@ -280,8 +280,8 @@ func _bleed_scale() -> float:
 		return tuning.momentum_bleed_wall
 	return tuning.momentum_bleed_air
 
-func _bleed_momentum_for_scale(delta: float, rate: float, scale: float) -> void:
-	bump_velocity = bump_velocity.move_toward(Vector3.ZERO, rate * scale * delta)
+func _bleed_momentum_for_scale(delta: float, rate: float, surface_scale: float) -> void:
+	bump_velocity = bump_velocity.move_toward(Vector3.ZERO, rate * surface_scale * delta)
 
 func _effective_stun_threshold() -> float:
 	if is_armored():

@@ -130,6 +130,7 @@ func _ready() -> void:
 	momentum_player.bump_velocity = Vector3.RIGHT * 6.0
 	momentum_player._bleed_momentum(1.0, momentum_player.tuning.stun_bump_decay)
 	assert(is_equal_approx(momentum_player.bump_velocity.length(), 2.5))
+	momentum_player.free()  # nunca entró al árbol: sin esto queda huérfano y ensucia stderr al salir
 
 	# WeaponBase.arm_push: empuja hits acumulados, hits tardíos, y se desarma al cancelar
 	var push_settings := PushSettings.new()

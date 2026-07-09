@@ -23,8 +23,8 @@ Esta nota es el indice del sistema. El detalle vive en una subnota por modulo o 
 | Movimiento base | `Player`, `PlayerLocomotion` | E2 | [[Movimiento Base]] |
 | Dash / airdash | `PlayerDash` | E2 | [[Dash y Airdash]] |
 | Launcher / aire | `PlayerLauncher` | E2 | [[Launcher y Aire]] |
-| Momentum por bump | `Player.bump()` | E2 | [[Momentum y Bump]] |
-| Wall slide / wall jump | `PlayerWallSlide` | E2 | [[Wall Slide y Wall Jump]] |
+| Momentum por bump | `Player.bump()` | E1 | [[Momentum y Bump]] |
+| Wall slide / wall jump | `PlayerWallSlide` | E1 | [[Wall Slide y Wall Jump]] |
 | World switch | `WorldManager`, `WorldMembership`, `WorldSwitchTrigger`, `ActionWorldSwitchModifier` | E2 | [[World Switch]] |
 | Bloques traversal | `TraversalBlock`, `BreakOnDeath`, `SpikeWall` | E2 | [[Bloques]] |
 | Cadenas | `PlayerSwing` | E0 | [[Cadenas]] |
