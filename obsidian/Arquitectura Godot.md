@@ -25,6 +25,7 @@ Godot V2 es la version activa. Unity V1 solo se usa como referencia de comportam
 | Entrada | `[input]` en `project.godot` |
 | Camara | `CameraRig`, pitch 30, yaw 45, distance 18 |
 | Datos tuneables | `Resource` + `.tres` en `data/` |
+| Integracion IA | LimboAI v1.1.1 instalado en `addons/limboai/`; port pendiente desde FSM actual |
 
 ## Estructura real
 
@@ -111,7 +112,7 @@ obsidian/
 | `ILaunchable`, `IParryable` | `has_method("launch")`, `has_method("try_parry")` |
 | `ScriptableObject` | `Resource` `.tres` |
 | `TestSceneBuilder.cs` | Escenas `.tscn` editadas directo |
-| Unity Behavior Tree | FSM simple en `GroundedEnemy` |
+| Unity Behavior Tree | FSM actual en `GroundedEnemy`; destino H1/H2: LimboAI BT + HSM con blackboard |
 | Unity Input System | `project.godot` input map |
 | URP Shader Graph | Materiales/Shader Godot H3 |
 

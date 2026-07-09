@@ -82,7 +82,8 @@ La intencion por nivel (`PASSIVE`, `REACTIVE`, `AGGRESSIVE`, `ULTRA_AGGRESSIVE`)
 - Validar seleccion melee/ranged por distancia.
 - Probar en engine la FSM ampliada por hostilidad (los valores son de primer pase). *(pendiente de probar)*
 - **Refactor de decouple**: mover el estado a `blackboard.yaml`, que la decision emita intent y `GroundLocomotion` lo ejecute. Es el paso previo al port de LimboAI (sin esto el port arrastra spaghetti). *(2026-07-08)*
-- **Instalar y portar a [[Integraciones|LimboAI]]** el arbol de combate segun `enemies/ai_spec/fsm_decision_tree.yaml`. *(2026-07-08)*
+- **Portar a [[Integraciones|LimboAI]]** el arbol de combate segun `enemies/ai_spec/fsm_decision_tree.yaml`. El addon ya esta instalado en `addons/limboai/`; falta convertir el selector actual en BT/HSM sin romper el decouple. *(2026-07-09)*
+- **Validar LimboAI en Godot editor/headless** tras import: confirmar que `addons/limboai/bin/limboai.gdextension` carga sin errores en Windows y que no hay DLL temporal abierta antes de commitear. *(2026-07-09)*
 - **Target scoring por utility** (proximidad + compromiso) para arreglar el flip-flop de target de [[Ultra Agresivo]]. Ver `leaf_tasks.yaml#target_selection`. *(2026-07-08)*
 - **Stuck-check** en `GroundLocomotion` (no-negociable): sin esto los enemigos muelen contra muros del greybox. *(2026-07-08)*
 - Implementar (o borrar del enum si se descartan) `ATTACK_GROUP` (coord/director, H3+), `EVADE` (steer, H2), `DEFEND` (decide + receptor del telegraph, H2), `CALL_HELP` (coord ligera, H2). Ver [[Comportamientos]]. *(2026-07-08)*

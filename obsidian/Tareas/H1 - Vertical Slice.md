@@ -22,6 +22,8 @@ Demostrar que pelear con Espada, moverse en 3D isometrico y cambiar de mundo se 
 - [ ] Probar y tunear `player_tuning.tres`.
 - [ ] Probar y tunear `sword_tuning.tres`.
 - [ ] Probar en engine la IA por hostilidad (FSM, percepcion, FLEE/HIDE): sin revisar aun.
+- [ ] Validar carga de LimboAI v1.1.1 en Godot/headless y ausencia de errores de GDExtension.
+- [ ] Portar selector actual de IA a LimboAI BT/HSM despues del refactor de decouple.
 - [ ] Probar el stun universal (player y enemigos) y la spike wall: sin revisar aun.
 - [ ] Tunear el occlusion fade de camara (funciona; falta ajustar feel/valores).
 - [ ] Probar el loadout X/Y y el Maso placeholder en juego.

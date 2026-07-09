@@ -11,6 +11,7 @@ status: active
 
 | Deuda | Cuando pagar |
 |---|---|
+| Port LimboAI desde FSM actual | Despues del refactor de decouple: decision emite intent, locomocion ejecuta. |
 | `LockOn` stub | H1. |
 | `PlayerSwing` stub | H1. |
 | `WorldVisual` stub | H1. |
