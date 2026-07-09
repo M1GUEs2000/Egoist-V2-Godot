@@ -16,13 +16,14 @@ No es backlog activo. Sirve para no perder direccion.
 ## H2 - Sistemas completos
 
 - Loadout y cambio de armas por slot.
-- [[Mazo]], [[Dagas]] y [[Punos]] jugables.
+- [[Mazo]], [[Dagas]] jugables.
 - Mejora de armas y quests de asesinato.
 - NPCs, dialogo simple y robo de mascara como verbo.
 - Save flags.
 - Jefe Playa.
 - Pausa y mapa basico.
 - Congelamiento de mecanicas.
+- Nuevo enemigo que si lanzas a sus aliados al vacio/fuera de la paltaforma este les agarra con cuerdas a que no se caigan y les trae de nuevo a la plataforma, puede ser aereo o terrestre
 
 ## H3 - Arte vertical
 

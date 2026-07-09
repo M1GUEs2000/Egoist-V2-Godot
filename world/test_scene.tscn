@@ -19,7 +19,7 @@
 size = Vector3(160, 1, 160)
 
 [sub_resource type="BoxMesh" id="BoxMesh_floor"]
-size = Vector3(160, 1, 160)
+size = Vector3(142.73975, 1, 160)
 
 [sub_resource type="StandardMaterial3D" id="Mat_floor"]
 albedo_color = Color(0.35, 0.38, 0.33, 1)
@@ -45,11 +45,21 @@ albedo_color = Color(0.85, 0.55, 0.25, 1)
 [sub_resource type="StandardMaterial3D" id="Mat_dead"]
 albedo_color = Color(0.5, 0.3, 0.75, 1)
 
+[sub_resource type="SphereMesh" id="SphereMesh_m478f"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_4mqvc"]
+albedo_color = Color(1.7483106, 1.4229317, 0.8874123, 1)
+
+[sub_resource type="TorusMesh" id="TorusMesh_m478f"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_1quki"]
+albedo_color = Color(0.9109096, 1.3740265, 0.6341689, 1)
+
 [node name="TestScene" type="Node3D" unique_id=1118309263]
 script = ExtResource("1_scene")
 
 [node name="Floor" type="StaticBody3D" parent="." unique_id=516349101]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.5, 0)
+transform = Transform3D(0.49, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.5, 0)
 collision_mask = 0
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="Floor" unique_id=2050847527]
@@ -57,7 +67,7 @@ transform = Transform3D(1.9913211, 0, 0, 0, 1, 0, 0, 0, 2.1957383, -0.3340454, 0
 shape = SubResource("BoxShape3D_floor")
 
 [node name="Mesh" type="MeshInstance3D" parent="Floor" unique_id=1587441873]
-transform = Transform3D(2.4824436, 0, 0, 0, 1, 0, 0, 0, 2.1928375, -0.008419991, 0, -0.023262262)
+transform = Transform3D(2.4824436, 0, 0, 0, 1, 0, 0, 0, 2.1928375, -21.432224, 0, -0.023262262)
 mesh = SubResource("BoxMesh_floor")
 surface_material_override/0 = SubResource("Mat_floor")
 
@@ -91,6 +101,45 @@ collision_mask = 0
 shape = SubResource("BoxShape3D_block")
 
 [node name="Mesh" type="MeshInstance3D" parent="Wall5" unique_id=273509746]
+mesh = SubResource("BoxMesh_block")
+surface_material_override/0 = SubResource("Mat_block")
+
+[node name="Wall6" type="StaticBody3D" parent="." unique_id=556390217]
+transform = Transform3D(-9.76436, 0, 2.7256458, 0, 14.875, 0, -1.7160282, 0, -15.509179, 125.99812, -9.198442, -26.30973)
+collision_mask = 0
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Wall6" unique_id=1983494216]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 1.4901161e-08, 0, 1, 1.3950691, 0, -2.8728538)
+shape = SubResource("BoxShape3D_block")
+
+[node name="Mesh" type="MeshInstance3D" parent="Wall6" unique_id=1471576428]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 1.4901161e-08, 0, 1, 1.3950691, 0, -2.8728538)
+mesh = SubResource("BoxMesh_block")
+surface_material_override/0 = SubResource("Mat_block")
+
+[node name="Wall7" type="StaticBody3D" parent="." unique_id=36312712]
+transform = Transform3D(-9.76436, 0, 2.7256458, 0, 14.875, 0, -1.7160282, 0, -15.509179, 138.21803, -23.086601, -54.387367)
+collision_mask = 0
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Wall7" unique_id=478180192]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 1.4901161e-08, 0, 1, 1.3950691, 0, -2.8728542)
+shape = SubResource("BoxShape3D_block")
+
+[node name="Mesh" type="MeshInstance3D" parent="Wall7" unique_id=1644940004]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 1.4901161e-08, 0, 1, 1.3950691, 0, -2.8728542)
+mesh = SubResource("BoxMesh_block")
+surface_material_override/0 = SubResource("Mat_block")
+
+[node name="Wall8" type="StaticBody3D" parent="." unique_id=2094142809]
+transform = Transform3D(-9.76436, 0, 2.7256458, 0, 14.875, 0, -1.7160282, 0, -15.509179, 138.21803, -56.152134, -27.559456)
+collision_mask = 0
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Wall8" unique_id=1460721091]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 1.4901161e-08, 0, 1, 1.3950701, 0, -2.8728538)
+shape = SubResource("BoxShape3D_block")
+
+[node name="Mesh" type="MeshInstance3D" parent="Wall8" unique_id=1842203849]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 1.4901161e-08, 0, 1, 1.3950701, 0, -2.8728538)
 mesh = SubResource("BoxMesh_block")
 surface_material_override/0 = SubResource("Mat_block")
 
@@ -134,18 +183,11 @@ script = ExtResource("4_membership")
 transform = Transform3D(-0.083176576, 0.9995755, 0, -2.8537881, -0.029133651, 0, 0, 0, 3.245, 58.61159, 12.01684, -142.18532)
 collision_mask = 0
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="LivingPlatform2" unique_id=2085656677]
-shape = SubResource("BoxShape3D_platform")
-
-[node name="Mesh" type="MeshInstance3D" parent="LivingPlatform2" unique_id=2056184603]
-mesh = SubResource("BoxMesh_platform")
-surface_material_override/0 = SubResource("Mat_living")
-
 [node name="WorldMembership" type="Node" parent="LivingPlatform2" unique_id=550924452]
 script = ExtResource("4_membership")
 
 [node name="LivingPlatform3" type="StaticBody3D" parent="." unique_id=1896626281]
-transform = Transform3D(2.8537881, 0.029133609, 0, -0.08317645, 0.9995755, 0, 0, 0, 3.2450004, 43.58126, 8.330076, -151.92519)
+transform = Transform3D(4.5980473, 0.029133607, 0, -0.13401459, 0.99957556, 0, 0, 0, 5.005, 42.299328, -1.6487484, -151.4067)
 collision_mask = 0
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="LivingPlatform3" unique_id=1239432844]
@@ -235,6 +277,29 @@ surface_material_override/0 = SubResource("Mat_dead")
 script = ExtResource("4_membership")
 affiliation = 1
 
+[node name="DeadPlatform7" type="StaticBody3D" parent="." unique_id=415911114]
+transform = Transform3D(-0.07225325, 0.9999191, 5.191128e-10, -2.83977, -0.0063603213, -1.9918585, -4.918627, -0.011016401, 1.1499999, 52.51333, 11.416581, -132.83694)
+collision_mask = 0
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="DeadPlatform7" unique_id=1749269711]
+shape = SubResource("BoxShape3D_platform")
+
+[node name="Mesh" type="MeshInstance3D" parent="DeadPlatform7" unique_id=196414948]
+mesh = SubResource("BoxMesh_platform")
+surface_material_override/0 = SubResource("Mat_dead")
+
+[node name="WorldMembership" type="Node" parent="DeadPlatform7" unique_id=1436662320]
+script = ExtResource("4_membership")
+affiliation = 1
+
+[node name="DeadPlatform6" type="StaticBody3D" parent="." unique_id=177118078]
+transform = Transform3D(-0.07225325, 0.9999191, 5.191128e-10, -2.83977, -0.0063603213, -1.9918585, -4.918627, -0.011016401, 1.1499999, 58.780273, 11.416579, -137.89444)
+collision_mask = 0
+
+[node name="WorldMembership" type="Node" parent="DeadPlatform6" unique_id=1113514208]
+script = ExtResource("4_membership")
+affiliation = 1
+
 [node name="Player" parent="." unique_id=30112187 instance=ExtResource("2_player")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.1, 0)
 
@@ -245,10 +310,49 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -2)
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.5, 0, -2)
 
 [node name="WorldSwitchPickup3" parent="." unique_id=702454515 instance=ExtResource("6_world_pickup")]
-transform = Transform3D(1.985, 0, 0, 0, 1.985, 0, 0, 0, 1.985, 32.109108, 5.2242594, -67.89563)
+transform = Transform3D(1.44, 0, 0, 0, 1.44, 0, 0, 0, 1.44, 32.109108, 5.2242594, -67.89563)
 
-[node name="WorldSwitchPickup4" parent="." unique_id=629555927 instance=ExtResource("6_world_pickup")]
-transform = Transform3D(1.985, 0, 0, 0, 1.985, 0, 0, 0, 1.985, 30.435627, 3.121974, -115.24054)
+[node name="MeshInstance3D" type="MeshInstance3D" parent="WorldSwitchPickup3" unique_id=817894695]
+transform = Transform3D(0.68, 0, 0, 0, 2.07, 0, 0, 0, 0.65, 0, 0.5395632, 0)
+mesh = SubResource("SphereMesh_m478f")
+surface_material_override/0 = SubResource("StandardMaterial3D_4mqvc")
+
+[node name="MeshInstance3D2" type="MeshInstance3D" parent="WorldSwitchPickup3" unique_id=137041505]
+transform = Transform3D(0.995, 0, 0, 0, 0.67, 0, 0, 0, 0.995, 0, 0.5855794, 0)
+mesh = SubResource("TorusMesh_m478f")
+surface_material_override/0 = SubResource("StandardMaterial3D_1quki")
+
+[node name="WorldSwitchPickup7" parent="." unique_id=1479752669 instance=ExtResource("6_world_pickup")]
+transform = Transform3D(1.44, 0, 0, 0, 1.44, 0, 0, 0, 1.44, 30.344038, 3.6775527, -115.27537)
+
+[node name="TomatoLaunchBlock3" parent="WorldSwitchPickup7" unique_id=1101835095 instance=ExtResource("8_tomato")]
+transform = Transform3D(1.0520833, 0, 0, 0, 1.0520833, 0, 0, 0, 1.0520833, 0.026035309, -0.12389779, -0.0068359375)
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="WorldSwitchPickup7" unique_id=703394020]
+transform = Transform3D(0.68, 0, 0, 0, 2.07, 0, 0, 0, 0.65, 0, 0.5395632, 0)
+mesh = SubResource("SphereMesh_m478f")
+surface_material_override/0 = SubResource("StandardMaterial3D_4mqvc")
+
+[node name="MeshInstance3D2" type="MeshInstance3D" parent="WorldSwitchPickup7" unique_id=50967010]
+transform = Transform3D(0.995, 0, 0, 0, 0.67, 0, 0, 0, 0.995, 0, 0.5855794, 0)
+mesh = SubResource("TorusMesh_m478f")
+surface_material_override/0 = SubResource("StandardMaterial3D_1quki")
+
+[node name="WorldSwitchPickup8" parent="." unique_id=642666915 instance=ExtResource("6_world_pickup")]
+transform = Transform3D(1.44, 0, 0, 0, 1.44, 0, 0, 0, 1.44, 44.153244, 9.43561, -123.5448)
+
+[node name="TomatoLaunchBlock3" parent="WorldSwitchPickup8" unique_id=81033571 instance=ExtResource("8_tomato")]
+transform = Transform3D(1.0520833, 0, 0, 0, 1.0520833, 0, 0, 0, 1.0520833, 0.026035309, -0.12389779, -0.0068359375)
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="WorldSwitchPickup8" unique_id=1342175720]
+transform = Transform3D(0.68, 0, 0, 0, 2.07, 0, 0, 0, 0.65, 0, 0.5395632, 0)
+mesh = SubResource("SphereMesh_m478f")
+surface_material_override/0 = SubResource("StandardMaterial3D_4mqvc")
+
+[node name="MeshInstance3D2" type="MeshInstance3D" parent="WorldSwitchPickup8" unique_id=1346304331]
+transform = Transform3D(0.995, 0, 0, 0, 0.67, 0, 0, 0, 0.995, 0, 0.5855794, 0)
+mesh = SubResource("TorusMesh_m478f")
+surface_material_override/0 = SubResource("StandardMaterial3D_1quki")
 
 [node name="WorldSwitchPickup2" parent="." unique_id=1683625526 instance=ExtResource("6_world_pickup")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -13.48407, 0, -0.33649635)
@@ -262,14 +366,13 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5, 0, -2)
 [node name="TomatoLaunchBlock2" parent="." unique_id=766683590 instance=ExtResource("8_tomato")]
 transform = Transform3D(1.515, 0, 0, 0, 1.515, 0, 0, 0, 1.515, 26.43664, 3.003882, -53.31631)
 
-[node name="TomatoLaunchBlock3" parent="." unique_id=1101835095 instance=ExtResource("8_tomato")]
-transform = Transform3D(1.515, 0, 0, 0, 1.515, 0, 0, 0, 1.515, 30.314518, 3.2818866, -115.20406)
+[node name="MeshInstance3D" type="MeshInstance3D" parent="TomatoLaunchBlock2" unique_id=1529309098]
+transform = Transform3D(0.68, 0, 0, 0, 2.07, 0, 0, 0, 0.65, 0, 0.6447462, 0)
+mesh = SubResource("SphereMesh_m478f")
+surface_material_override/0 = SubResource("StandardMaterial3D_4mqvc")
 
-[node name="TomatoLaunchBlock4" parent="." unique_id=949987424 instance=ExtResource("8_tomato")]
-transform = Transform3D(1.515, 0, 0, 0, 1.515, 0, 0, 0, 1.515, 42.515503, 9.5673275, -123.413025)
-
-[node name="WorldSwitchPickup5" parent="." unique_id=1479752669 instance=ExtResource("6_world_pickup")]
-transform = Transform3D(1.985, 0, 0, 0, 1.985, 0, 0, 0, 1.985, 42.636612, 9.407414, -123.4495)
+[node name="WorldSwitchPickup6" parent="." unique_id=11228806 instance=ExtResource("6_world_pickup")]
+transform = Transform3D(1.985, 0, 0, 0, 1.985, 0, 0, 0, 1.985, 45.188736, 9.407413, -146.4349)
 
 [node name="PurpleDashBlock" parent="." unique_id=1246866083 instance=ExtResource("9_purple")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5, 0, -2)
@@ -286,12 +389,17 @@ transform = Transform3D(1.0204163, -0.26526126, -0.94995564, -0.7300193, 3.18860
 world = 1
 
 [node name="DeadSpikeWall3" parent="." unique_id=155930929 instance=ExtResource("13_spike_wall")]
-transform = Transform3D(1.0204163, -0.26526126, -0.94995564, -0.7300193, 3.1886072, -0.15015295, 3.1385067, 0.82791656, 0.27393147, 49.512863, 8.91449, -130.23918)
+transform = Transform3D(1.0204163, -0.26526126, -0.94995564, -0.7300193, 3.1886072, -0.15015295, 3.1385067, 0.82791656, 0.27393147, 58.848053, 8.91449, -109.74133)
 world = 1
 
-[node name="LivingSpikeWall" parent="." instance=ExtResource("13_spike_wall")]
+[node name="LivingSpikeWall" parent="." unique_id=311447472 instance=ExtResource("13_spike_wall")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8.5, 0, 5)
-world = 0
+
+[node name="LivingSpikeWall2" parent="." unique_id=108488881 instance=ExtResource("13_spike_wall")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8.5, 0, 5)
+
+[node name="LivingSpikeWall3" parent="." unique_id=1050733178 instance=ExtResource("13_spike_wall")]
+transform = Transform3D(0.7112188, 0, -1.4902995, 0, 2.7046368, 0, 3.4735, 0, 0.30514723, 50.680473, 7.354654, -129.94629)
 
 [node name="GroundedEnemy" parent="." unique_id=295057239 instance=ExtResource("12_enemy")]
 transform = Transform3D(0.866025, 0, 0.5, 0, 1, 0, -0.5, 0, 0.866025, 8.785327, 0.1, -0.57565784)
@@ -341,7 +449,6 @@ normal_color = Color(0.55, 0.1, 0.85, 1)
 
 [node name="CameraRig" type="Node3D" parent="." unique_id=845519878]
 script = ExtResource("3_camrig")
-target = NodePath("../Player")
 pitch = 40.0
 
 [node name="Camera3D" type="Camera3D" parent="CameraRig" unique_id=1307362112]

@@ -27,6 +27,17 @@ Roster por hito y area. H1 usa placeholders claros; arte final entra H3.
 - Enemigos voladores.
 - Animales como enemigos.
 - Insane que atacan todo.
+- **Enemigo "Rescatista" / cuerda** (idea 2026-07-09): si el jugador tira a un
+  enemigo al vacio, este NPC le lanza una cuerda, lo agarra y lo trepa de vuelta
+  a la plataforma. Contra-mecanica a los knockback/launcher del jugador (Mazo
+  tumba masas, launchers al vacio). Preguntas de diseno pendientes:
+  - Alcance/tiempo de reaccion de la cuerda (no debe salvar siempre; ventana).
+  - Si el jugador puede cortar la cuerda o interrumpir el rescate golpeando al
+    rescatista o al que cae.
+  - Si rescata a cualquiera o solo a aliados de su mundo/cordura.
+  - Que pasa si lanzan al rescatista mismo al vacio.
+  - Reusa el sistema de launch/fall del player o uno propio para el enemigo caido.
+  - Ver [[Ataques Enemigos]] y [[Estados de Combate Enemigo]] para el estado nuevo.
 
 ## Por areas desde la boveda vieja
 
