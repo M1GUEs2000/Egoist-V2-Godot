@@ -26,6 +26,9 @@ func meter() -> float:
 func fraction() -> float:
 	return _meter / float(bars())
 
+func affordable_bars() -> int:
+	return int(floor(_meter / _body.tuning.meter_charged_cost))
+
 func gain_on_hit() -> void:
 	_add(_body.tuning.meter_gain_on_hit)
 
@@ -45,13 +48,15 @@ func spend_dash() -> bool:
 	_add(-_body.tuning.meter_dash_cost)
 	return enough
 
-## Cargado (sweet spot): pide 1 barra completa. Si la hay, la gasta y abre la ventana
-## de kill especial. Si no, false → el arma cae a su ataque sin dash.
-func spend_charged() -> bool:
-	if _meter < _body.tuning.meter_charged_cost:
+## Cargado: pide barras completas. Si hay suficientes, las gasta. La ventana de kill
+## especial queda activa por defecto para la Espada; otras armas pueden desactivarla.
+func spend_charged(bars_to_spend: int = 1, opens_kill_window: bool = true) -> bool:
+	var cost := _body.tuning.meter_charged_cost * float(bars_to_spend)
+	if bars_to_spend <= 0 or _meter < cost:
 		return false
-	_add(-_body.tuning.meter_charged_cost)
-	_charged_kill_expiry = World.now() + _body.tuning.meter_charged_kill_window
+	_add(-cost)
+	if opens_kill_window:
+		_charged_kill_expiry = World.now() + _body.tuning.meter_charged_kill_window
 	return true
 
 func _add(bars_delta: float) -> void:

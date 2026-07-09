@@ -1,6 +1,6 @@
 class_name Sword extends WeaponBase
-## Espada (bóveda: Armas/Espada): combo X de 4 + rama espera + sweet spot;
-## Y = launcher / Y cargada aérea. X cargado = dash ofensivo (gasta 1 barra).
+## Espada (bóveda: Armas/Espada): tap = combo de 4 + rama espera + sweet spot;
+## Y cargado = launcher / Y cargada aérea. X cargado = dash ofensivo (gasta 1 barra).
 ## Swings 100% procedurales (tweens de quaternion sobre el Pivot), SIN AnimationPlayer.
 ## Los combos corren sobre el motor genérico de WeaponBase (run_combo_chain);
 ## acá vive solo la coreografía. Ángulos y ventanas se tunean en SwordTuning.
@@ -33,11 +33,8 @@ func setup(player: Player) -> void:
 		if hitbox != null:
 			hitbox.landed.connect(_on_aerial_charged_y_hit)
 
-func tap(slot: World.Slot) -> void:
-	if slot == World.Slot.X:
-		_tap_x()
-	else:
-		_tap_y()
+func tap(_slot: World.Slot) -> void:
+	_tap_combo()
 
 func hold(slot: World.Slot, _level: int) -> void:
 	if slot == World.Slot.X:
@@ -45,11 +42,11 @@ func hold(slot: World.Slot, _level: int) -> void:
 	else:
 		_hold_y()
 
-# ---- Personalidad X: combo de 4 + cargado (dash sweet spot) ----
+# ---- Tap: combo de 4 compartido por X/Y ----
 
-## Combo terrestre (bóveda Armas): X X X X → swing, swing, estocada, estocada.
-## X X (espera) X X → los golpes 3-4 pasan a vueltas completas.
-func _tap_x() -> void:
+## Combo terrestre (bóveda Armas): tap tap tap tap → swing, swing, estocada, estocada.
+## tap tap (espera) tap tap → los golpes 3-4 pasan a vueltas completas.
+func _tap_combo() -> void:
 	# En el aire: combo aéreo (motor genérico en WeaponBase), no el terrestre.
 	if _player.is_airborne():
 		play_aerial_combo()
@@ -63,6 +60,8 @@ func _begin_ground_step(step: int, _finisher: bool, spin: bool) -> void:
 	_play_combo_step(step, spin)
 	_player.attack_step(tuning.swing_time)  # avanza hacia el lockeado / al frente
 	_player.hold_airborne_for_attack()
+
+# ---- Personalidad X: cargado (dash sweet spot) ----
 
 ## X cargado: dash ofensivo (sweet spot). Gasta 1 barra; el daño lo pone el hitbox PROPIO
 ## de la espada (no el del dash de movimiento) → un kill en la ventana del cargado devuelve
@@ -82,14 +81,7 @@ func _hold_x() -> void:
 		begin_damage_window(tuning.swing_time)
 	ComboTracker.register_hit()
 
-# ---- Personalidad Y: golpe simple + launcher / cargada aérea ----
-
-func _tap_y() -> void:
-	swing(_t().strike_angle)
-	_player.attack_step(tuning.swing_time)  # encara y avanza hacia el enemigo lockeado
-	_player.hold_airborne_for_attack()
-	begin_damage_window(tuning.swing_time)
-	ComboTracker.register_hit()
+# ---- Personalidad Y: launcher / cargada aérea ----
 
 func _hold_y() -> void:
 	# En el aire: Y cargada aérea (auto-launch + spike/rebote), no el launcher terrestre.
@@ -106,8 +98,8 @@ func _hold_y() -> void:
 ## la altura del jugador leída al aterrizar. Sin barra → golpe Y normal.
 func _aerial_charged_y() -> void:
 	if not _player.meter.spend_charged():
-		# ponytail: sin barra no hay move de compromiso — cae a un golpe Y aéreo normal.
-		_tap_y()
+		# ponytail: sin barra no hay move de compromiso — cae al tap aéreo normal.
+		_tap_combo()
 		return
 	_run_aerial_charged_y()
 
