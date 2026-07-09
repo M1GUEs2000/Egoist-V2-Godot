@@ -18,12 +18,17 @@ const LAUNCH_RISE_TIME := 0.15
 ## TOMATE = vivo, MORADO = muerto. Regla del proyecto: toda pieza que exista en los dos
 ## mundos se tiñe desde acá y NO hardcodea el color en su .tscn — el día que cambie la
 ## paleta, cambia en un solo lugar. Ver bóveda Gameplay/Traversal.
-## Los valores salen de las piezas que fijaron la convención: TomatoLaunchBlock (vivo)
-## y PurpleDashBlock (muerto).
+## Los valores salen de las piezas que fijaron la convención: tomate/vivo y morado/muerto.
 const COLOR_LIVING := Color(0.9, 0.1, 0.08)
 const COLOR_LIVING_EMISSION := Color(0.7, 0.05, 0.03)
 const COLOR_DEAD := Color(0.55, 0.15, 0.9)
 const COLOR_DEAD_EMISSION := Color(0.35, 0.05, 0.8)
+const COLOR_TRAVERSAL_DASH := Color(0.1, 0.85, 0.25)
+const COLOR_TRAVERSAL_DASH_EMISSION := Color(0.05, 0.65, 0.14)
+const COLOR_TRAVERSAL_METER := Color(0.15, 0.85, 1.0)
+const COLOR_TRAVERSAL_METER_EMISSION := Color(0.05, 0.55, 0.85)
+const COLOR_TRAVERSAL_CURSE := Color(1.0, 0.85, 0.1)
+const COLOR_TRAVERSAL_CURSE_EMISSION := Color(1.0, 0.65, 0.05)
 
 ## Color base de una pieza segun el mundo al que pertenece.
 static func world_color(kind: Kind) -> Color:
@@ -32,6 +37,9 @@ static func world_color(kind: Kind) -> Color:
 ## Color de emision (glow) para el mismo mundo.
 static func world_emission(kind: Kind) -> Color:
 	return COLOR_LIVING_EMISSION if kind == Kind.LIVING else COLOR_DEAD_EMISSION
+
+static func opposite_world(kind: Kind) -> Kind:
+	return Kind.DEAD if kind == Kind.LIVING else Kind.LIVING
 
 ## Reloj del juego en segundos (equivale a Time.time de Unity).
 static func now() -> float:

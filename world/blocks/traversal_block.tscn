@@ -1,0 +1,42 @@
+[gd_scene load_steps=8 format=3]
+
+[ext_resource type="Script" path="res://world/blocks/traversal_block.gd" id="1_block"]
+[ext_resource type="Resource" path="res://data/traversal_block_tuning.tres" id="2_tuning"]
+[ext_resource type="Script" path="res://combat/health.gd" id="3_health"]
+[ext_resource type="Script" path="res://combat/break_on_death.gd" id="4_break"]
+[ext_resource type="Script" path="res://combat/hurtbox.gd" id="5_hurtbox"]
+
+[sub_resource type="BoxMesh" id="BoxMesh_body"]
+size = Vector3(1, 1, 1)
+
+[sub_resource type="StandardMaterial3D" id="Mat_body"]
+albedo_color = Color(0.06, 0.06, 0.065, 1)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_hurtbox"]
+size = Vector3(1.1, 1.1, 1.1)
+
+[node name="TraversalBlock" type="Node3D"]
+script = ExtResource("1_block")
+tuning = ExtResource("2_tuning")
+
+[node name="Mesh" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.55, 0)
+mesh = SubResource("BoxMesh_body")
+surface_material_override/0 = SubResource("Mat_body")
+
+[node name="GlowSegments" type="Node3D" parent="."]
+
+[node name="Health" type="Node" parent="."]
+script = ExtResource("3_health")
+max_health = 999999.0
+
+[node name="BreakOnDeath" type="Node" parent="."]
+script = ExtResource("4_break")
+free_owner = false
+
+[node name="Hurtbox" type="Area3D" parent="."]
+script = ExtResource("5_hurtbox")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Hurtbox"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.55, 0)
+shape = SubResource("BoxShape3D_hurtbox")

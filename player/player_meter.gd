@@ -32,6 +32,9 @@ func affordable_bars() -> int:
 func gain_on_hit() -> void:
 	_add(_body.tuning.meter_gain_on_hit)
 
+func gain_bars(amount: float) -> void:
+	_add(amount)
+
 ## Al matar: si venimos de un cargado (ventana abierta), recuperás 1 barra completa
 ## (habilidad especial de la Espada). Si no, la ganancia normal de kill.
 func gain_on_kill() -> void:

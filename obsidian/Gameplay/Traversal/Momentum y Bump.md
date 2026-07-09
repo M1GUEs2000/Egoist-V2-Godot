@@ -27,7 +27,7 @@ Impulsos externos aplicados al jugador para traversal, bloques o golpes.
 
 ## Casos actuales
 
-- `TomatoLaunchBlock`: bump horizontal/vertical y restauracion de habilidades.
+- `TraversalBlock` con feature Launch: bump horizontal/vertical y restauracion de habilidades.
 - `SpikeWall`: stun `PUSH` + rebote, restaura doble salto y airdash.
 
 ## Relacionado

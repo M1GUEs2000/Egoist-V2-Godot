@@ -26,7 +26,7 @@ Esta nota es el indice del sistema. El detalle vive en una subnota por modulo o 
 | Momentum por bump | `Player.bump()` | E2 | [[Momentum y Bump]] |
 | Wall slide / wall jump | `PlayerWallSlide` | E2 | [[Wall Slide y Wall Jump]] |
 | World switch | `WorldManager`, `WorldMembership`, `WorldSwitchTrigger`, `ActionWorldSwitchModifier` | E2 | [[World Switch]] |
-| Bloques traversal | `TomatoLaunchBlock`, `PurpleDashBlock`, `BreakOnDeath`, `SpikeWall` | E2 / E1 | [[Bloques]] |
+| Bloques traversal | `TraversalBlock`, `BreakOnDeath`, `SpikeWall` | E2 | [[Bloques]] |
 | Cadenas | `PlayerSwing` | E0 | [[Cadenas]] |
 | Occlusion fade de camara | `CameraOcclusionFade` | E2 | [[Occlusion Fade de Camara]] |
 | Landing indicator | `LandingIndicator` | E2 | [[Landing Indicator]] |

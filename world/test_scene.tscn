@@ -5,10 +5,7 @@
 [ext_resource type="Script" uid="uid://bm6520nqu8q3f" path="res://visual/camera_rig.gd" id="3_camrig"]
 [ext_resource type="Script" uid="uid://cr2mf5ypgksws" path="res://core/world_membership.gd" id="4_membership"]
 [ext_resource type="PackedScene" path="res://combat/dummies/hit_dummy.tscn" id="5_dummy"]
-[ext_resource type="PackedScene" uid="uid://dj0cj7pnkvkpx" path="res://world/pickups/world_switch_pickup.tscn" id="6_world_pickup"]
-[ext_resource type="PackedScene" path="res://world/pickups/action_curse_pickup.tscn" id="7_curse_pickup"]
-[ext_resource type="PackedScene" uid="uid://dw17osydx6bwd" path="res://world/blocks/tomato_launch_block.tscn" id="8_tomato"]
-[ext_resource type="PackedScene" path="res://world/blocks/purple_dash_block.tscn" id="9_purple"]
+[ext_resource type="PackedScene" path="res://world/blocks/traversal_block.tscn" id="6_traversal"]
 [ext_resource type="PackedScene" path="res://world/blocks/breakable_wall.tscn" id="10_breakable_wall"]
 [ext_resource type="PackedScene" path="res://ui/hud.tscn" id="11_hud"]
 [ext_resource type="PackedScene" uid="uid://cfhiggial63t4" path="res://enemies/grounded_enemy.tscn" id="12_enemy"]
@@ -241,38 +238,55 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.1, 0)
 [node name="HitDummy" parent="." unique_id=331039128 instance=ExtResource("5_dummy")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -2)
 
-[node name="WorldSwitchPickup" parent="." unique_id=990787185 instance=ExtResource("6_world_pickup")]
+[node name="WorldSwitchPickup" parent="." unique_id=990787185 instance=ExtResource("6_traversal")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.5, 0, -2)
+enable_world_switch = true
+hits_to_break = 50
 
-[node name="WorldSwitchPickup3" parent="." unique_id=702454515 instance=ExtResource("6_world_pickup")]
+[node name="WorldSwitchPickup3" parent="." unique_id=702454515 instance=ExtResource("6_traversal")]
 transform = Transform3D(1.985, 0, 0, 0, 1.985, 0, 0, 0, 1.985, 32.109108, 5.2242594, -67.89563)
+enable_world_switch = true
+hits_to_break = 50
 
-[node name="WorldSwitchPickup4" parent="." unique_id=629555927 instance=ExtResource("6_world_pickup")]
+[node name="WorldSwitchPickup4" parent="." unique_id=629555927 instance=ExtResource("6_traversal")]
 transform = Transform3D(1.985, 0, 0, 0, 1.985, 0, 0, 0, 1.985, 30.435627, 3.121974, -115.24054)
+enable_world_switch = true
+hits_to_break = 50
 
-[node name="WorldSwitchPickup2" parent="." unique_id=1683625526 instance=ExtResource("6_world_pickup")]
+[node name="WorldSwitchPickup2" parent="." unique_id=1683625526 instance=ExtResource("6_traversal")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -13.48407, 0, -0.33649635)
+enable_world_switch = true
+hits_to_break = 50
 
-[node name="ActionCursePickup" parent="." unique_id=327532963 instance=ExtResource("7_curse_pickup")]
+[node name="ActionCurseBlock" parent="." unique_id=327532963 instance=ExtResource("6_traversal")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.5, 0, -2)
+enable_action_curse = true
+hits_to_break = 1
 
-[node name="TomatoLaunchBlock" parent="." unique_id=715488028 instance=ExtResource("8_tomato")]
+[node name="LaunchBlock" parent="." unique_id=715488028 instance=ExtResource("6_traversal")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5, 0, -2)
+enable_launch = true
 
-[node name="TomatoLaunchBlock2" parent="." unique_id=766683590 instance=ExtResource("8_tomato")]
+[node name="LaunchBlock2" parent="." unique_id=766683590 instance=ExtResource("6_traversal")]
 transform = Transform3D(1.515, 0, 0, 0, 1.515, 0, 0, 0, 1.515, 26.43664, 3.003882, -53.31631)
+enable_launch = true
 
-[node name="TomatoLaunchBlock3" parent="." unique_id=1101835095 instance=ExtResource("8_tomato")]
+[node name="LaunchBlock3" parent="." unique_id=1101835095 instance=ExtResource("6_traversal")]
 transform = Transform3D(1.515, 0, 0, 0, 1.515, 0, 0, 0, 1.515, 30.314518, 3.2818866, -115.20406)
+enable_launch = true
 
-[node name="TomatoLaunchBlock4" parent="." unique_id=949987424 instance=ExtResource("8_tomato")]
+[node name="LaunchBlock4" parent="." unique_id=949987424 instance=ExtResource("6_traversal")]
 transform = Transform3D(1.515, 0, 0, 0, 1.515, 0, 0, 0, 1.515, 42.515503, 9.5673275, -123.413025)
+enable_launch = true
 
-[node name="WorldSwitchPickup5" parent="." unique_id=1479752669 instance=ExtResource("6_world_pickup")]
+[node name="WorldSwitchPickup5" parent="." unique_id=1479752669 instance=ExtResource("6_traversal")]
 transform = Transform3D(1.985, 0, 0, 0, 1.985, 0, 0, 0, 1.985, 42.636612, 9.407414, -123.4495)
+enable_world_switch = true
+hits_to_break = 50
 
-[node name="PurpleDashBlock" parent="." unique_id=1246866083 instance=ExtResource("9_purple")]
+[node name="DashBlock" parent="." unique_id=1246866083 instance=ExtResource("6_traversal")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5, 0, -2)
+enable_dash = true
 
 [node name="BreakableWall" parent="." unique_id=931707207 instance=ExtResource("10_breakable_wall")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -4.5)

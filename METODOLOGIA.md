@@ -165,8 +165,8 @@ Escala E0–E4 (ver *Ciclo de vida*). Se actualiza en el mismo commit que cambia
 | Espada | `WeaponBase` · `Sword` · `SwordTuning` | **E2** | Iterar combos/ángulos/ventanas jugando; clash mid-swing pendiente (ponytail) |
 | Mazo | `WeaponBase` · `Mace` · `MaceTuning` | **E2** | En desarrollo activo; combos completos y knobs en `mace_tuning.tres`, alineado con el motor de la Espada. Falta probarse jugando (E2→E3 lo decide Tutupa) |
 | Enemigo de suelo | `EnemyBase` · `GroundedEnemy` · `Perception` · `GroundLocomotion` · ataques | **E2** | Iterar rangos/cooldowns por escena (excepción tuning) |
-| Bloques traversal | `TomatoLaunchBlock` · `PurpleDashBlock` · `BreakOnDeath` | **E2** | Iterar impulsos jugando |
-| Pickups de mundo | `ActionCursePickup` · `ActionWorldSwitchModifier` | **E2** | Validar la mecánica jugando |
+| Bloques traversal | `TraversalBlock` · `BreakOnDeath` · `SpikeWall` | **E2** | Probar combinaciones de features, glow por proximidad e impulsos jugando |
+| Pickups de mundo | `TraversalBlock` · `ActionWorldSwitchModifier` | **E2** | Validar maldicion de accion y pickups combinados jugando |
 | HUD | `HUD` | **E1** | Es placeholder funcional (labels/barras); rediseño visual pendiente |
 | Cámara | `CameraRig` | **E2** | Iterar pitch/yaw/distance/damping jugando |
 | Lock-on | `LockOn` | **E0** | Stub — batch 6 |

@@ -26,7 +26,7 @@ Switch por triggers ganados, no dodge gratis.
 
 ## Triggers
 
-- Pickup verde OnHit.
+- `TraversalBlock` con world switch OnHit: brilla con el color del mundo destino.
 - Enemigo/objeto OnDeath.
 - Maldicion amarilla + proxima accion.
 - Boton/HUD o especiales futuros.
@@ -35,4 +35,3 @@ Switch por triggers ganados, no dodge gratis.
 
 - [[Traversal]]
 - [[Decisiones Congeladas]]
-
