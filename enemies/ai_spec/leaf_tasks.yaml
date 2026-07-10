@@ -7,13 +7,12 @@ purpose: >
   metodos dentro de GroundedEnemy/GroundLocomotion; el refactor las extrae como
   hojas de un solo proposito (sin cross-talk) ANTES del port a LimboAI.
 
-status: proposed
+status: implemented_partial
 implemented: partial
 note: >
-  La columna maps_to_hoy apunta al metodo actual que hace ese trabajo. "Extraer"
-  no significa crear la jerarquia BTNode todavia (Regla de 2): significa dejar
-  cada verbo como funcion limpia que lee/escribe blackboard. La jerarquia de
-  clases la trae LimboAI.
+  Las hojas H1 existen como scripts `BTAction` / `BTCondition` en `enemies/ai/tasks`.
+  El agente expone metodos publicos `limbo_*` y la FSM usa el mismo blackboard/intents.
+  Falta validacion runtime en Godot antes de retirar el fallback FSM.
 
 source_code:
   - enemies/grounded_enemy.gd

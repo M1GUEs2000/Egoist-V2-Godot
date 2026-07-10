@@ -14,15 +14,42 @@ var _suspended: Callable
 var _spawn_position := Vector3.ZERO
 var _roam_target := Vector3.ZERO
 var _roam_timer := 0.0
+var _last_position := Vector3.ZERO
 
 func setup(body: CharacterBody3D, suspended: Callable) -> void:
 	_body = body
 	_suspended = suspended
 	_spawn_position = body.global_position
 	_roam_target = _spawn_position
+	_last_position = _spawn_position
+
+func home_position() -> Vector3:
+	return _spawn_position
 
 func run_jump_physics(_delta: float) -> void:
 	pass
+
+func execute_intent(blackboard: EnemyAIBlackboard, delta: float) -> void:
+	if blackboard == null:
+		return
+	match blackboard.navigation_intent_kind:
+		EnemyAIBlackboard.IntentKind.MOVE_TO:
+			if blackboard.navigation_speed_profile == EnemyAIBlackboard.SpeedProfile.ROAM:
+				roam(delta)
+			else:
+				move_toward(blackboard.navigation_intent_point, delta)
+		EnemyAIBlackboard.IntentKind.SEARCH_AT:
+			search_last_known(blackboard.navigation_intent_point, delta)
+		EnemyAIBlackboard.IntentKind.FLEE_FROM:
+			flee_from(blackboard.navigation_intent_point, delta)
+		EnemyAIBlackboard.IntentKind.HOLD:
+			stop(delta)
+		EnemyAIBlackboard.IntentKind.FACE:
+			face_target(blackboard.navigation_intent_point)
+			stop(delta)
+		_:
+			stop(delta)
+	_update_stuck_timer(blackboard, delta)
 
 func move_toward(world_pos: Vector3, delta: float) -> void:
 	if _is_suspended() or _body == null:
@@ -109,3 +136,18 @@ func _approach(value: float, target: float, amount: float) -> float:
 	if value < target:
 		return minf(value + amount, target)
 	return maxf(value - amount, target)
+
+func _update_stuck_timer(blackboard: EnemyAIBlackboard, delta: float) -> void:
+	if _body == null:
+		return
+	var moved := _body.global_position.distance_to(_last_position)
+	_last_position = _body.global_position
+	var moving_intent := blackboard.navigation_intent_kind in [
+		EnemyAIBlackboard.IntentKind.MOVE_TO,
+		EnemyAIBlackboard.IntentKind.SEARCH_AT,
+		EnemyAIBlackboard.IntentKind.FLEE_FROM,
+	]
+	if moving_intent and moved < 0.01:
+		blackboard.navigation_stuck_timer += delta
+	else:
+		blackboard.navigation_stuck_timer = 0.0

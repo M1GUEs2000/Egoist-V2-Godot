@@ -7,12 +7,12 @@ purpose: >
   spaghetti dentro de un BTAction gigante (anti-patron God Node).
   Seccionado a proposito para no volverse un basurero de keys.
 
-status: proposed
-implemented: false
+status: implemented_partial
+implemented: partial
 note: >
-  AUN NO existe en codigo. Es el plano del refactor de decouple que va ANTES del
-  port a LimboAI. Cuando se adopte LimboAI, estas keys son 1:1 las variables del
-  Blackboard nativo (mismos nombres, mismas secciones).
+  Existe en codigo como EnemyAIBlackboard. El port usa un blackboard tipado propio para
+  mantener la FSM y Limbo sobre el mismo contrato sin depender todavia del editor. Cuando
+  se valide en Godot, estas keys pueden migrarse/replicarse al Blackboard nativo de LimboAI.
 
 source_code_hoy:
   # De donde sale hoy cada dato (disperso en vars de instancia); el refactor lo centraliza.

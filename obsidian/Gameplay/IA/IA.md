@@ -19,6 +19,13 @@ IA cubre percepcion, decision, movimiento enemigo y seleccion de ataque.
 > [!important]
 > No se porta Unity Behavior Tree. Hoy `GroundedEnemy` corre una FSM (priority-selector escrito a mano). **Decision tomada (2026-07-08): se adopta [[Integraciones|LimboAI]] (BT + HSM) desde el inicio, no "migrar despues"** — al ser GDExtension drop-in (no fork del engine), el costo de integracion que antes lo desaconsejaba ya no existe, y el roster futuro + coordinacion de grupo la piden. La FSM actual ya ES un priority-selector, asi que el port es cambiar el selector, no reescribir.
 
+> [!info] Port code-only (2026-07-10)
+> `GroundedEnemy` tiene backend dual `FSM / LIMBO`. El default sigue en FSM hasta
+> validacion en Godot. El port a LimboAI esta armado en codigo con `BTPlayer` manual,
+> `EnemyAIBlackboard`, `EnemyLimboTreeBuilder` y hojas `BTAction` / `BTCondition` en
+> `enemies/ai/tasks/`. Sin Godot local, queda pendiente validar import, carga del
+> GDExtension y comportamiento en `test_scene`.
+
 ## Arquitectura destino y spec
 
 El plano construible vive **en el codigo**, en `enemies/ai_spec/*.yaml` (no en la boveda: la boveda documenta, el codigo es la fuente). *(2026-07-08)*
@@ -81,8 +88,8 @@ La intencion por nivel (`PASSIVE`, `REACTIVE`, `AGGRESSIVE`, `ULTRA_AGGRESSIVE`)
 - Tuning por escena de rangos, cooldowns, vision y homing.
 - Validar seleccion melee/ranged por distancia.
 - Probar en engine la FSM ampliada por hostilidad (los valores son de primer pase). *(pendiente de probar)*
-- **Refactor de decouple**: mover el estado a `blackboard.yaml`, que la decision emita intent y `GroundLocomotion` lo ejecute. Es el paso previo al port de LimboAI (sin esto el port arrastra spaghetti). *(2026-07-08)*
-- **Portar a [[Integraciones|LimboAI]]** el arbol de combate segun `enemies/ai_spec/fsm_decision_tree.yaml`. El addon ya esta instalado en `addons/limboai/`; falta convertir el selector actual en BT/HSM sin romper el decouple. *(2026-07-09)*
+- **Validar backend LimboAI en Godot**: import, carga de `BTPlayer`, tareas custom y equivalencia de comportamiento contra FSM en `test_scene`. *(2026-07-10)*
+- **Retirar fallback FSM** solo despues de validacion runtime jugando/headless. *(2026-07-10)*
 - **Validar LimboAI en Godot editor/headless** tras import: confirmar que `addons/limboai/bin/limboai.gdextension` carga sin errores en Windows y que no hay DLL temporal abierta antes de commitear. *(2026-07-09)*
 - **Target scoring por utility** (proximidad + compromiso) para arreglar el flip-flop de target de [[Ultra Agresivo]]. Ver `leaf_tasks.yaml#target_selection`. *(2026-07-08)*
 - **Stuck-check** en `GroundLocomotion` (no-negociable): sin esto los enemigos muelen contra muros del greybox. *(2026-07-08)*
@@ -98,4 +105,3 @@ La intencion por nivel (`PASSIVE`, `REACTIVE`, `AGGRESSIVE`, `ULTRA_AGGRESSIVE`)
 - [[Hostilidad]]
 - [[Comportamientos]]
 - [[H1 - Vertical Slice]]
-

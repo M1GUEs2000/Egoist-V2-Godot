@@ -16,7 +16,7 @@ source_code:
 
 runtime:
   owner: GroundedEnemy
-  enabled_by: use_simple_fsm
+  enabled_by: ai_backend
   tick_method: _physics_process
   decision_method: _update_fsm
   base_tick_gate:
@@ -57,12 +57,10 @@ decision_tree:
 # --- Frontera decision / ejecucion (el decouple) ---
 decision_execution_boundary:
   principio: >
-    Las ramas con emits_intent:true HOY llaman locomotion.* directo. El refactor
-    hace que en su lugar escriban blackboard.navigation.intent; MoveToIntent (hoja
-    steer) lo ejecuta. Las ramas emits_intent:false son pura decision/ataque y no
-    cambian.
-  hoy_llama_directo: [GroundLocomotion.move_toward, roam, search_last_known, flee_from, stop]
-  destino: escribir Intent; GroundLocomotion.execute_intent() lo realiza
+    Las ramas con emits_intent:true escriben blackboard.navigation.intent; MoveToIntent
+    (hoja steer) lo ejecuta. Las ramas emits_intent:false son pura decision/ataque.
+  antes_llamaba_directo: [GroundLocomotion.move_toward, roam, search_last_known, flee_from, stop]
+  destino: implementado en EnemyAIBlackboard + GroundLocomotion.execute_intent()
 
 # --- Forma destino: Behavior Tree de LimboAI ---
 target_bt_shape:
@@ -76,6 +74,7 @@ target_bt_shape:
     alive_runs: combat_behavior_tree
   combat_behavior_tree:
     desc: El priority_selector de 7 ramas mapea 1:1 a un Selector de LimboAI.
+    status: code_only_pending_runtime_validation
     root: Selector
     children:
       - "Sequence[ IsAttacking?, FaceTarget, KeepAttackState ]"

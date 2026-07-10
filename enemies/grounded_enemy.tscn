@@ -175,6 +175,10 @@ script = ExtResource("5_perception")
 [node name="GroundLocomotion" type="Node" parent="." unique_id=1424312942]
 script = ExtResource("6_locomotion")
 
+[node name="BTPlayer" type="BTPlayer" parent="."]
+active = false
+update_mode = 2
+
 [node name="MeleeAttack" type="Node3D" parent="." unique_id=2066280899]
 script = ExtResource("7_melee")
 

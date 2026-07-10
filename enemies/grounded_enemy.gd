@@ -19,6 +19,8 @@ enum AIState {
 	HIDE,
 }
 
+enum AIBackend { FSM, LIMBO }
+
 const ALL_STATE_FLAGS := (
 	(1 << AIState.IDLE)
 	| (1 << AIState.ROAM)
@@ -38,6 +40,7 @@ const ALL_STATE_FLAGS := (
 )
 
 @export var use_simple_fsm := true
+@export_enum("FSM", "LIMBO") var ai_backend := AIBackend.FSM
 @export var chase_delay_after_world_switch := 1.0
 @export_flags("IDLE", "ROAM", "ACTIVITY", "ALERT", "CHASE", "GUARD", "SEARCH", "ATTACK_MELEE", "ATTACK_RANGED", "ATTACK_GROUP", "EVADE", "DEFEND", "CALL_HELP", "FLEE", "HIDE") var allowed_state_flags := ALL_STATE_FLAGS
 @export var passive_remembers_attackers := false
@@ -47,6 +50,7 @@ const ALL_STATE_FLAGS := (
 @export_range(0.0, 1.0) var aggressive_flee_chance := 0.05
 
 var ai_state := AIState.IDLE
+var blackboard := EnemyAIBlackboard.new()
 
 var _player: Player
 var _attacks: Array[Node] = []
@@ -57,9 +61,11 @@ var _passive_provoked_until := -999.0
 var _low_health_checked := false
 var _flee_requested := false
 var _hide_unlocked := false
+var _limbo_ready := false
 
 @onready var perception: Perception = get_node_or_null("Perception") as Perception
 @onready var locomotion: GroundLocomotion = get_node_or_null("GroundLocomotion") as GroundLocomotion
+@onready var _bt_player: Node = get_node_or_null("BTPlayer")
 
 func _ready() -> void:
 	super._ready()
@@ -72,6 +78,7 @@ func _ready() -> void:
 	if health != null and not health.damaged.is_connected(_on_damaged):
 		health.damaged.connect(_on_damaged)
 	_collect_attacks()
+	_setup_limbo_backend()
 
 func _physics_process(delta: float) -> void:
 	if not tick_base(delta):
@@ -82,6 +89,10 @@ func _physics_process(delta: float) -> void:
 	_update_passive_memory()
 	var effective_hostility := _effective_hostility()
 	perception.tick(_acquire_target(), effective_hostility, World.now() >= _can_chase_at)
+	_sync_blackboard()
+	if ai_backend == AIBackend.LIMBO:
+		if _tick_limbo(delta):
+			return
 	if not use_simple_fsm:
 		return
 	_update_fsm(delta, effective_hostility)
@@ -106,7 +117,91 @@ func face_current_target() -> void:
 
 func search_last_known(delta: float) -> void:
 	if perception != null and locomotion != null:
-		locomotion.search_last_known(perception.last_known_position, delta)
+		blackboard.search_at(perception.last_known_position)
+		locomotion.execute_intent(blackboard, delta)
+
+func execute_ai_intent(delta: float) -> void:
+	if locomotion != null:
+		locomotion.execute_intent(blackboard, delta)
+
+func limbo_has_target() -> bool:
+	return blackboard.perception_target != null
+
+func limbo_can_see_target() -> bool:
+	return blackboard.perception_can_see_target
+
+func limbo_is_searching() -> bool:
+	return blackboard.perception_is_searching
+
+func limbo_is_alerted() -> bool:
+	return blackboard.perception_is_alerted
+
+func limbo_is_attacking() -> bool:
+	return _any_attacking()
+
+func limbo_keep_attack_state() -> bool:
+	if not _any_attacking():
+		return false
+	_change_state(_active_attack_state())
+	face_current_target()
+	return true
+
+func limbo_should_flee() -> bool:
+	return _should_flee(blackboard.perception_target, _effective_hostility())
+
+func limbo_can_hide() -> bool:
+	return _state_allowed(AIState.HIDE) and _hide_unlocked and not blackboard.perception_can_see_target
+
+func limbo_face_target() -> bool:
+	var target := blackboard.perception_target
+	if target == null:
+		return false
+	blackboard.face(target.global_position)
+	execute_ai_intent(get_physics_process_delta_time())
+	return true
+
+func limbo_stop_moving(delta: float) -> bool:
+	_change_state(_fallback_state(AIState.HIDE))
+	blackboard.hold()
+	execute_ai_intent(delta)
+	return true
+
+func limbo_flee_from_target(delta: float) -> bool:
+	var target := blackboard.perception_target
+	if target == null:
+		return false
+	_change_state(_fallback_state(AIState.FLEE))
+	blackboard.flee_from(target.global_position)
+	execute_ai_intent(delta)
+	return true
+
+func limbo_no_target_by_hostility(delta: float) -> bool:
+	_process_no_target(delta, _effective_hostility())
+	return true
+
+func limbo_in_attack_range() -> bool:
+	var attack_range := _max_attack_range()
+	return attack_range > 0.0 and perception != null and perception.within(attack_range)
+
+func limbo_start_attack() -> bool:
+	var target := blackboard.perception_target
+	if target == null:
+		return false
+	var attack_state := _best_attack_state_for_range(_flat_distance_to(target.global_position))
+	_change_state(_fallback_state(attack_state))
+	start_combo_attack(ai_state)
+	return true
+
+func limbo_chase_target(delta: float) -> bool:
+	var target := blackboard.perception_target
+	if target == null:
+		return false
+	_process_chase(delta, target, _effective_hostility())
+	return true
+
+func limbo_search_last_known(delta: float) -> bool:
+	_process_search(delta, _effective_hostility())
+	return true
 
 func on_world_changed() -> void:
 	if membership != null and membership.mode == WorldMembership.Mode.FOLLOWS:
@@ -126,6 +221,7 @@ func _on_passive_attacked(from: Node) -> void:
 	hostility = Hostility.AGGRESSIVE
 
 func _update_fsm(delta: float, effective_hostility: int) -> void:
+	blackboard.clear_intent()
 	var target := perception.target
 	var attack_range := _max_attack_range()
 	if _any_attacking():
@@ -239,33 +335,40 @@ func _should_flee(target: Node3D, effective_hostility: int) -> bool:
 func _process_flee(delta: float, target: Node3D) -> void:
 	if _state_allowed(AIState.HIDE) and _hide_unlocked and not perception.can_see_target:
 		_change_state(AIState.HIDE)
-		locomotion.stop(delta)
+		blackboard.hold()
+		execute_ai_intent(delta)
 		return
 	_change_state(AIState.FLEE)
-	locomotion.flee_from(target.global_position, delta)
+	blackboard.flee_from(target.global_position)
+	execute_ai_intent(delta)
 
 func _process_no_target(delta: float, effective_hostility: int) -> void:
 	if _flee_requested and _hide_unlocked and _state_allowed(AIState.HIDE) \
 			and _state_legal_for_hostility(AIState.HIDE):
 		_change_state(AIState.HIDE)
-		locomotion.stop(delta)
+		blackboard.hold()
+		execute_ai_intent(delta)
 		return
 	match effective_hostility:
 		Hostility.ULTRA_AGGRESSIVE:
 			_change_state(_fallback_state(AIState.ROAM))
-			locomotion.roam(delta)
+			blackboard.roam()
+			execute_ai_intent(delta)
 		Hostility.REACTIVE:
 			_change_state(_fallback_state(AIState.GUARD))
-			locomotion.stop(delta)
+			blackboard.hold()
+			execute_ai_intent(delta)
 		Hostility.AGGRESSIVE:
 			_change_state(_fallback_state(AIState.ROAM))
-			locomotion.roam(delta)
+			blackboard.roam()
+			execute_ai_intent(delta)
 		_:
 			_change_state(_fallback_state(AIState.ACTIVITY))
 			if ai_state == AIState.ACTIVITY or ai_state == AIState.IDLE:
-				locomotion.stop(delta)
+				blackboard.hold()
 			else:
-				locomotion.roam(delta)
+				blackboard.roam()
+			execute_ai_intent(delta)
 
 func _process_chase(delta: float, target: Node3D, effective_hostility: int) -> void:
 	if effective_hostility == Hostility.PASSIVE and not _is_passive_provoked():
@@ -273,13 +376,15 @@ func _process_chase(delta: float, target: Node3D, effective_hostility: int) -> v
 		return
 	if effective_hostility == Hostility.ULTRA_AGGRESSIVE and not _state_allowed(AIState.CHASE):
 		_change_state(_fallback_state(AIState.ROAM))
-		locomotion.roam(delta)
+		blackboard.roam()
+		execute_ai_intent(delta)
 		return
 	_change_state(_fallback_state(AIState.CHASE))
 	if ai_state == AIState.CHASE:
-		locomotion.move_toward(target.global_position, delta)
+		blackboard.move_to(target.global_position, EnemyAIBlackboard.SpeedProfile.CHASE)
 	else:
-		locomotion.roam(delta)
+		blackboard.roam()
+	execute_ai_intent(delta)
 
 func _process_search(delta: float, effective_hostility: int) -> void:
 	if effective_hostility == Hostility.ULTRA_AGGRESSIVE and not _state_allowed(AIState.SEARCH):
@@ -290,6 +395,33 @@ func _process_search(delta: float, effective_hostility: int) -> void:
 		search_last_known(delta)
 	else:
 		_process_no_target(delta, effective_hostility)
+
+func _sync_blackboard() -> void:
+	blackboard.navigation_home_position = locomotion.home_position() if locomotion != null else global_position
+	blackboard.sync_perception(perception)
+	blackboard.combat_attacking = _any_attacking()
+
+func _setup_limbo_backend() -> void:
+	if _bt_player == null or not ClassDB.class_exists("BehaviorTree"):
+		_limbo_ready = false
+		return
+	var tree := EnemyLimboTreeBuilder.build_combat_tree()
+	if tree == null:
+		_limbo_ready = false
+		return
+	_bt_player.set("agent_node", NodePath(".."))
+	_bt_player.set("behavior_tree", tree)
+	_bt_player.set("update_mode", 2)  # BTPlayer.UpdateMode.MANUAL
+	_bt_player.set("active", true)
+	_bt_player.call("restart")
+	_limbo_ready = true
+
+func _tick_limbo(delta: float) -> bool:
+	if not _limbo_ready or _bt_player == null:
+		return false
+	blackboard.clear_intent()
+	_bt_player.call("update", delta)
+	return true
 
 func _best_attack_state_for_range(distance: float) -> int:
 	var melee := _select_attack(distance, AIState.ATTACK_MELEE)
