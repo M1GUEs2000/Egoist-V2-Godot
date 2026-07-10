@@ -31,6 +31,12 @@ Switch por triggers ganados, no dodge gratis.
 - Maldicion amarilla + proxima accion.
 - Boton/HUD o especiales futuros.
 
+## Pendiente
+
+- **Scanner de cambio de mundo** *(idea, no comprometida — Tutupa la define el 2026-07-10)*. Sin
+  diseño todavia: no hay modulo, ni trigger, ni tuneables. Cuando se defina, vive en este nodo
+  (es parte del world switch) y su lado de movimiento en [[Traversal]].
+
 ## Relacionado
 
 - [[Traversal]]
