@@ -42,7 +42,7 @@ Combate del jugador: slots X/Y, espada, hitboxes, parry, meter, combo aereo e in
 - El push es un verbo generico que cualquier ataque puede armar con `WeaponBase.arm_push`: a `push_at` del swing empuja lo ya golpeado, y lo que conecte despues se empuja al instante. Usa `WeaponTuning.push` y sirve en tierra o aire. *(2026-07-09)*
 - Los enemigos tambien son superficies de traversal: el player puede rebotar desde su colision con `PlayerEnemyBounce`; si `enemy_bounce_push` existe, el enemigo recibe `push()` como reaccion opcional.
 - Cada arma escala cuanto sostiene en el aire un golpe conectado con `air_stall_scale`; el Player calcula el stall base y el arma multiplica el resultado. *(2026-07-09)*
-- La hoja brilla al cargar un ataque (glow ambar proporcional a `InputBuffer.charge_progress`, tuneable con `charge_glow_color` / `charge_glow_max_energy`). Sin bloom aun: falta un `WorldEnvironment` con glow para el halo. *(2026-07-06)*
+- La hoja brilla al cargar un ataque (glow ambar proporcional a `InputBuffer.charge_progress`, tuneable con `charge_glow_color` / `charge_glow_max_energy`). El halo ya existe: `test_scene` tiene un `WorldEnvironment` con glow (HDR threshold 1.0, tonemap Filmic); falta tunear el bloom jugando. *(2026-07-10)*
 
 ## Mano orbital
 
@@ -116,7 +116,6 @@ Todos los momentos de gravedad del player (launcher float/fall, air stall, whiff
 - Completar reset aereo por kill.
 - Decidir knockback de golpes normales.
 - Rehacer HUD de combate para armas, meter, combo y cooldowns.
-- Implementar lock-on como parte del feel de combate.
 
 ## Go/no-go
 

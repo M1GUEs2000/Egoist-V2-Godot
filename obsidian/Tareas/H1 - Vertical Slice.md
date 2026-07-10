@@ -27,10 +27,20 @@ Demostrar que pelear con Espada, moverse en 3D isometrico y cambiar de mundo se 
 - [ ] Probar el stun universal (player y enemigos) y la spike wall: sin revisar aun.
 - [ ] Tunear el occlusion fade de camara (funciona; falta ajustar feel/valores).
 - [ ] Probar el loadout X/Y y el Maso placeholder en juego.
-- [ ] Implementar `LockOn`.
+- [ ] Diseñar e implementar scanner de cambio de mundo.
+- [ ] Implementar AOE aereo del [[Mazo]] que lance a todos los enemigos del area.
+- [ ] Cambiar el hitbox del AOE aereo del [[Mazo]] a cilindro.
+- [ ] Rediseñar el combo aereo del [[Mazo]].
+- [ ] Hacer que el dash del bloque verde haga daño.
+- [ ] Hacer que el rebote en enemigos stunee sin dañar.
+- [ ] Verificar que el combo entre dos armas no deje daño fantasma por `cancel_routines()` por arma.
+- [ ] Decidir precedencia entre rebote en enemigos y slam del [[Mazo]] cuando compiten por el mismo contacto.
+- [x] Agregar `WorldEnvironment` con glow. *(en `test_scene`; falta tunear bloom jugando)*
+- [x] Añadir particulas de polvo al correr para jugador y enemigos, tuneables por recurso/export. *(player: `RunDust` + `PlayerTuning.run_dust_min_speed`; enemigos: `RunDust` + export `run_dust_min_speed`)*
+- [x] Añadir particulas de polvo al deslizarse por pared, tuneables por recurso/export. *(`WallSlideDust`, en sync con el glow)*
+- [x] Añadir particulas brillantes para el dash, tuneables por recurso/export. *(`DashParticles`, color desde `World.COLOR_TRAVERSAL_DASH`)*
 - [ ] Implementar `PlayerSwing`.
 - [ ] Implementar `WorldVisual`.
-- [ ] Implementar `LandingIndicator`.
 - [ ] Rehacer HUD H1.
 - [ ] Crear prefabs/escenas de player, melee, ranged, armored, bloques y pickups.
 - [ ] Greybox del primer tramo de Playa.
@@ -48,4 +58,3 @@ Demostrar que pelear con Espada, moverse en 3D isometrico y cambiar de mundo se 
 - [[Combate]]
 - [[Traversal]]
 - [[Areas]]
-

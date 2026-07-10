@@ -16,10 +16,12 @@ var _wall_tangent_velocity := Vector3.ZERO
 var _mesh: MeshInstance3D
 var _glow_material: StandardMaterial3D
 var _glow_active := false
+var _dust: GPUParticles3D
 
 func setup(body: Player) -> void:
 	_body = body
 	_mesh = body.get_node_or_null("Mesh") as MeshInstance3D
+	_dust = body.get_node_or_null("WallSlideDust") as GPUParticles3D
 
 func apply_slide_velocity(horizontal_velocity: Vector3, input_dir: Vector3, delta: float) -> Vector3:
 	if _body == null or not is_sliding:
@@ -76,6 +78,7 @@ func update_after_move(horizontal_velocity: Vector3, input_dir: Vector3) -> void
 	if not was_sliding:
 		_stick_until = World.now() + _body.tuning.wall_slide_stick_time
 		_set_glow(true)
+		_set_dust(true)
 
 	_wall_tangent_velocity = horizontal_velocity.slide(wall_normal)
 	_wall_tangent_velocity.y = 0.0
@@ -118,6 +121,7 @@ func cancel() -> void:
 	wall_normal = Vector3.ZERO
 	_wall_tangent_velocity = Vector3.ZERO
 	_set_glow(false)
+	_set_dust(false)
 
 func _set_glow(active: bool) -> void:
 	if _mesh == null or active == _glow_active:
@@ -132,6 +136,10 @@ func _set_glow(active: bool) -> void:
 		_mesh.set_surface_override_material(0, _glow_material)
 	else:
 		_mesh.set_surface_override_material(0, null)
+
+func _set_dust(active: bool) -> void:
+	if _dust != null and _dust.emitting != active:
+		_dust.emitting = active
 
 func _find_wall_normal() -> Vector3:
 	for index in range(_body.get_slide_collision_count()):

@@ -174,6 +174,11 @@ class_name PlayerTuning extends Resource
 ## Velocidad de giro al cambiar el arma entre pose activa y de descanso (grados/s).
 @export var weapon_pose_rotate_speed := 720.0
 
+@export_group("Dust FX")
+## Velocidad horizontal mínima (m/s) a partir de la cual el jugador levanta polvo al correr.
+## Solo aplica en el suelo; el look del polvo vive en el ParticleProcessMaterial del emisor RunDust.
+@export var run_dust_min_speed := 1.5
+
 @export_group("Air hit stall")
 ## Duración base del stall (freno de caída) al conectar un golpe en el aire, en segundos.
 @export var air_stall_base := 0.08

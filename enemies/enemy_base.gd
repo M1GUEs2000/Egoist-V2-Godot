@@ -48,6 +48,9 @@ enum AirState { GROUNDED, AIRBORNE }
 ## Cuanto se adelantan las chispas desde el eje del enemigo hacia su atacante, en metros:
 ## nacen en la superficie golpeada, no en el centro del cuerpo.
 @export var hit_sparks_offset := 0.45
+## Velocidad horizontal minima (m/s) a partir de la cual el enemigo levanta polvo al moverse.
+## Solo en el suelo, activo y sin stun. El look del polvo vive en el emisor RunDust de la escena.
+@export var run_dust_min_speed := 1.0
 
 var air_state := AirState.GROUNDED
 var combat_state := CombatState.NORMAL
@@ -73,6 +76,7 @@ var _squash_tween: Tween
 @onready var visual: Node3D = get_node_or_null("Visual") as Node3D
 @onready var stun_light: OmniLight3D = get_node_or_null("StunLight") as OmniLight3D
 @onready var hit_sparks: GPUParticles3D = get_node_or_null("HitSparks") as GPUParticles3D
+@onready var run_dust: GPUParticles3D = get_node_or_null("RunDust") as GPUParticles3D
 
 func _ready() -> void:
 	add_to_group("enemy")
@@ -123,12 +127,18 @@ func tick_base(delta: float) -> bool:
 		return false
 	_update_combat_state()
 	if is_airborne():
+		_set_run_dust(false)
 		_update_airborne(delta)
 		return false
 	if is_stunned():
+		_set_run_dust(false)
 		_tick_stun_knockback(delta)
 		move_and_slide()
 		return false
+	# Polvo al correr: activo en el mundo, en el suelo y por encima del umbral. La velocidad es
+	# la del move_and_slide del frame anterior (la locomocion corre despues de tick_base).
+	_set_run_dust(_is_active and is_on_floor()
+			and Vector2(velocity.x, velocity.z).length() >= run_dust_min_speed)
 	return _is_active
 
 func take_hit_from_enemy(hits: float = 1.0, hit_direction: Vector3 = Vector3.ZERO, stun: StunSettings = null) -> bool:
@@ -457,8 +467,13 @@ func _stun_tilt_quaternion() -> Quaternion:
 		return Quaternion.IDENTITY
 	return Quaternion(axis.normalized(), deg_to_rad(stun_tilt_angle))
 
+func _set_run_dust(active: bool) -> void:
+	if run_dust != null and run_dust.emitting != active:
+		run_dust.emitting = active
+
 func _die() -> void:
 	_dead = true
+	_set_run_dust(false)
 	remove_from_group("enemy")  # los vivos ya no lo ven (targeting/provocación)
 	collision_layer = 0
 	collision_mask = 0

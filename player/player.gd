@@ -28,6 +28,7 @@ var _dodge_queued := false  # dodge pedido tarde en un golpe: sale al terminarlo
 @onready var combat: PlayerCombat = $Combat
 @onready var action_world_switch: ActionWorldSwitchModifier = $ActionWorldSwitchModifier
 @onready var lock_on: LockOn = $LockOn
+@onready var _run_dust: GPUParticles3D = get_node_or_null("RunDust") as GPUParticles3D
 
 func _ready() -> void:
 	add_to_group("player")  # la cámara y los enemigos me encuentran por grupo
@@ -71,10 +72,12 @@ func _unhandled_input(event: InputEvent) -> void:
 func _physics_process(delta: float) -> void:
 	stun.tick()
 	if is_stunned():
+		_set_run_dust(false)
 		_tick_stunned(delta)
 		return
 
 	if launcher.is_launched:
+		_set_run_dust(false)
 		wall_slide.cancel()
 		enemy_bounce.cancel()
 		launcher.tick_launch(delta)  # el launcher controla el movimiento
@@ -86,6 +89,7 @@ func _physics_process(delta: float) -> void:
 		dash.dodge()
 
 	if dash.is_dashing:
+		_set_run_dust(false)
 		wall_slide.cancel()
 		enemy_bounce.cancel()
 		dash.tick(delta)
@@ -114,6 +118,10 @@ func _physics_process(delta: float) -> void:
 		wall_slide.cancel()
 	else:
 		air_state = AirState.AIRBORNE
+
+	# Polvo al correr: solo en el suelo y por encima del umbral de velocidad horizontal.
+	var planar_speed := Vector2(velocity.x, velocity.z).length()
+	_set_run_dust(is_on_floor() and planar_speed >= tuning.run_dust_min_speed)
 
 	_bleed_momentum(delta)
 
@@ -298,6 +306,10 @@ func _bleed_scale() -> float:
 
 func _bleed_momentum_for_scale(delta: float, rate: float, surface_scale: float) -> void:
 	bump_velocity = bump_velocity.move_toward(Vector3.ZERO, rate * surface_scale * delta)
+
+func _set_run_dust(active: bool) -> void:
+	if _run_dust != null and _run_dust.emitting != active:
+		_run_dust.emitting = active
 
 func _effective_stun_threshold() -> float:
 	if is_armored():

@@ -55,7 +55,7 @@ Tanto el retroceso como la inclinacion del stun leen esta direccion. *(2026-07-0
 
 `HitSparks` (`GPUParticles3D` one-shot) escupe chispas rojas incandescentes en **todo golpe recibido**, stunee o no. Nacen en la superficie que mira al atacante — `hit_sparks_height` sobre los pies y `hit_sparks_offset` adelantadas hacia el — no en el centro del cuerpo. *(2026-07-09)*
 
-El emisor es `top_level`: las particulas viven en el mundo, asi que el squash, la inclinacion y el giro del enemigo no las deforman ni se las llevan. Sin `WorldEnvironment` con glow no hay halo, pero la emision alta ya las quema (misma deuda que el glow de carga, ver [[Combate]]).
+El emisor es `top_level`: las particulas viven en el mundo, asi que el squash, la inclinacion y el giro del enemigo no las deforman ni se las llevan. El halo ya funciona: `test_scene` tiene un `WorldEnvironment` con glow (ver [[Combate]]); la emision alta de las chispas lo aprovecha. Falta tunear el bloom jugando.
 
 ## Reaccion visual
 

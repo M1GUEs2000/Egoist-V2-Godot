@@ -74,10 +74,20 @@ World.world_emission(kind) -> Color   # glow
 | `TraversalBlock` | Neutro / destino | `World` + `TraversalBlockTuning` |
 | `SpikeWall` | Ambos (`world`) | `World.world_color()` |
 
+## WorldEnvironment con glow
+
+`test_scene` ya tiene un `WorldEnvironment` (Environment inline, glow HDR threshold 1.0, tonemap
+Filmic, fondo oscuro). Es el bloom que hace que TODA la emision alta se lea como halo: glow de
+carga de la espada, `HitSparks`, glow verde del wall slide, emision de los bloques y las
+particulas brillantes del dash. Es distinto de `WorldVisual` (E0), que sera el sistema de DOS
+Environments por mundo con lerp — sigue pendiente. Las particulas del dash pintan su color desde
+`World.COLOR_TRAVERSAL_DASH` en codigo, nunca hardcodean el verde en el `.tscn`.
+
 ## Pendiente
 
 - Definir el color neutro de las piezas `Mode.BOTH`.
-- `WorldVisual` (E0) deberia derivar los dos Environments de estos mismos colores.
+- `WorldVisual` (E0) deberia derivar los dos Environments de estos mismos colores, partiendo del
+  `WorldEnvironment` unico que ya existe.
 
 ## Relacionado
 

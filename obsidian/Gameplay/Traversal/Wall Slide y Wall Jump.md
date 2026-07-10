@@ -20,7 +20,8 @@ Movimiento de pared implementado como modulo componible `PlayerWallSlide` (nodo 
 - Al pegarse hay una fase breve casi sin caida (`wall_slide_stick_time`, `wall_slide_stick_fall_speed`); despues cae controlado (`wall_slide_gravity_scale`, `wall_slide_max_fall_speed`). El momentum lateral con el que se llega decae con `wall_slide_momentum_decay`: la bajada es un arco que termina cayendo vertical.
 - Ademas, el exceso global `bump_velocity` drena segun `momentum_bleed_wall` mientras el jugador esta apoyado en pared. Esto convive con `wall_slide_momentum_decay`; si se siente demasiado frenado, el primer knob a tocar es `momentum_bleed_wall`.
 - Mientras eslidea se aplica una presion constante contra la pared (`wall_slide_press_speed`) que sostiene el contacto fisico.
-- El personaje brilla verde mientras esta pegado (override de emision en el mesh; `glow_color` / `glow_energy` en el nodo `WallSlide`). Sin bloom aun, igual que el glow de la espada.
+- El personaje brilla verde mientras esta pegado (override de emision en el mesh; `glow_color` / `glow_energy` en el nodo `WallSlide`). El bloom ya existe (`WorldEnvironment` con glow en `test_scene`, ver [[Combate]]).
+- Ademas levanta polvo mientras eslidea: emisor `WallSlideDust` (`GPUParticles3D`) hijo del player, que `PlayerWallSlide` prende/apaga en sync con el glow (arranca en `update_after_move`, corta en `cancel`). Look tuneable en el `ParticleProcessMaterial` del emisor. *(2026-07-10)*
 - Se cancela al tocar suelo, dashear, ser lanzado, recibir bump o entrar en stun.
 - API: `apply_slide_velocity`, `update_after_move`, `try_wall_jump`, `cancel`, `blocks_move_input`.
 

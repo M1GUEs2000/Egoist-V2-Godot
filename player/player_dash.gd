@@ -20,6 +20,7 @@ var _active_duration := 0.01
 
 @onready var _hitbox: Hitbox = $DashHitbox
 @onready var _hitbox_shape: CollisionShape3D = $DashHitbox/CollisionShape3D
+@onready var _particles: GPUParticles3D = get_node_or_null("DashParticles") as GPUParticles3D
 
 func setup(body: Player, loco: PlayerLocomotion, register_air_hit_stall: Callable,
 		cancel_controlled_movement: Callable) -> void:
@@ -37,6 +38,22 @@ func setup(body: Player, loco: PlayerLocomotion, register_air_hit_stall: Callabl
 	_hitbox.can_be_parried = false  # el dash nunca se parria (solo la espada)
 	(_hitbox_shape.shape as SphereShape3D).radius = t.dash_hit_radius
 	_hitbox.landed.connect(_on_dash_hit)
+	_tint_particles_from_world()
+
+## El color del dash vive en World (COLOR_TRAVERSAL_DASH), no en el .tscn: el material del
+## emisor trae solo un preview de editor y acá se pinta desde la fuente única (ver Colores de mundo).
+func _tint_particles_from_world() -> void:
+	if _particles == null:
+		return
+	var mesh := _particles.draw_pass_1 as PrimitiveMesh
+	if mesh == null:
+		return
+	var mat := mesh.material as StandardMaterial3D
+	if mat == null:
+		return
+	mat.albedo_color = World.COLOR_TRAVERSAL_DASH
+	if mat.emission_enabled:
+		mat.emission = World.COLOR_TRAVERSAL_DASH_EMISSION
 
 func restore_airdash() -> void:
 	_can_airdash = true
@@ -105,11 +122,17 @@ func _start_dash(dir: Vector3, distance: float, duration: float, boost_bump_mome
 		_body.collision_mask &= ~World.LAYER_ENEMY  # solo el dash ofensivo atraviesa enemigos
 	if deal_damage:
 		_hitbox.begin_swing()
+	_set_particles(true)
 
 func _end_dash() -> void:
 	is_dashing = false
 	_hitbox.end_swing()
 	_body.collision_mask |= World.LAYER_ENEMY
+	_set_particles(false)
+
+func _set_particles(active: bool) -> void:
+	if _particles != null and _particles.emitting != active:
+		_particles.emitting = active
 
 func _boost_bump_momentum() -> void:
 	var horizontal := Vector3(_body.bump_velocity.x, 0.0, _body.bump_velocity.z)
