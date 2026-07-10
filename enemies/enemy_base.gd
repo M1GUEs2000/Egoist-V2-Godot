@@ -29,6 +29,9 @@ enum AirState { GROUNDED, AIRBORNE }
 ## Escala a la que se encoge el enemigo en el instante del golpe (1.0 = sin squash).
 ## Vuelve a 1.0 a lo largo del stun; cada golpe reinicia el rebote.
 @export var stun_squash_scale := 0.8
+## Poses discretas del rebote de squash, incluyendo la inicial y la normal. El crecimiento
+## salta entre ellas en vez de interpolar: es la animacion "a frames cortados". 2 = pop seco.
+@export_range(2, 12, 1) var stun_squash_steps := 3
 ## Energia de emision del material durante stun. Sin bloom, solo enciende la superficie.
 @export var stun_emission_energy := 1.8
 ## Energia de la luz amarilla durante stun.
@@ -379,21 +382,30 @@ func _play_stun_reaction(duration: float) -> void:
 		return
 	if _stun_tween != null:
 		_stun_tween.kill()
-	visual.scale = Vector3.ONE * stun_squash_scale
+	_set_squash_progress(0.0)
 	_stun_tween = create_tween()
 	_stun_tween.set_parallel(true)
 	_stun_tween.tween_property(visual, "rotation", _stun_tilt_rotation(), stun_tilt_time)
-	_stun_tween.tween_property(visual, "scale", Vector3.ONE, maxf(0.01, duration))
+	_stun_tween.tween_method(_set_squash_progress, 0.0, 1.0, maxf(0.01, duration))
+
+## El rebote no interpola: cuantiza el progreso en `stun_squash_steps` poses y salta entre
+## ellas. Da la lectura de una animacion a frames cortados en vez de un crecimiento fluido.
+func _set_squash_progress(progress: float) -> void:
+	if visual == null:
+		return
+	var steps := maxi(2, stun_squash_steps)
+	var index := clampi(int(progress * steps), 0, steps - 1)
+	var stepped := float(index) / float(steps - 1)
+	visual.scale = Vector3.ONE * lerpf(stun_squash_scale, 1.0, stepped)
 
 func _reset_stun_reaction() -> void:
 	if visual == null:
 		return
 	if _stun_tween != null:
 		_stun_tween.kill()
+	visual.scale = Vector3.ONE
 	_stun_tween = create_tween()
-	_stun_tween.set_parallel(true)
 	_stun_tween.tween_property(visual, "rotation", Vector3.ZERO, stun_tilt_time)
-	_stun_tween.tween_property(visual, "scale", Vector3.ONE, stun_tilt_time)
 
 func _stun_tilt_rotation() -> Vector3:
 	var direction := Vector3(_last_hit_direction.x, 0.0, _last_hit_direction.z)

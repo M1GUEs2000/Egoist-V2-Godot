@@ -60,13 +60,15 @@ Mientras `combat_state == STUNNED`, `EnemyBase` activa cuatro capas de feedback:
 - Inclinacion del pivote `Visual` hacia atras, pivoteando desde los pies: el origen del enemigo esta a ras del piso, asi que `Visual` rota sobre el eje horizontal perpendicular al golpe. Tween de ida y vuelta.
 - Squash: en el instante del golpe el enemigo se encoge a `stun_squash_scale` y rebota hasta su escala normal a lo largo del stun. Escala el pivote `Visual`, asi que se hunde contra el piso. Cada golpe reinicia el rebote, y un combo se lee como una sucesion de impactos.
 
+El rebote del squash **no interpola**: cuantiza el progreso en `stun_squash_steps` poses y salta entre ellas, para leerse como una animacion a frames cortados y no como un crecimiento fluido.
+
 El retroceso desplaza al enemigo alejandolo del atacante, reemplaza cualquier push previo y decae durante el stun.
 
 El squash y la inclinacion solo afectan al pivote `Visual`: la capsula de colision y la `Hurtbox` no cambian de tamaño.
 
 El mesh del arma (`MeleeAttack/Weapon`) no se pinta con el estado del enemigo: queda fuera del pivote `Visual` a proposito para no mezclar el feedback de stun con posibles telegraphs/colores propios del ataque.
 
-Los valores son exports por escena en `EnemyBase`, siguiendo la excepcion actual de enemigos: `stun_knockback_speed`, `stun_knockback_decay`, `stun_tilt_angle`, `stun_tilt_time`, `stun_squash_scale`, `stun_emission_energy`, `stun_light_energy` y `stun_light_range`. *(2026-07-09, pendiente de tunear jugando)*
+Los valores son exports por escena en `EnemyBase`, siguiendo la excepcion actual de enemigos: `stun_knockback_speed`, `stun_knockback_decay`, `stun_tilt_angle`, `stun_tilt_time`, `stun_squash_scale`, `stun_squash_steps`, `stun_emission_energy`, `stun_light_energy` y `stun_light_range`. *(2026-07-09, pendiente de tunear jugando)*
 
 ## Duraciones actuales de fuentes del jugador
 

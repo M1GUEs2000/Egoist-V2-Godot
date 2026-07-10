@@ -124,8 +124,11 @@ obsidian/
 $GODOT="C:/Users/Tutupa/Downloads/Godot_v4.7-stable_win64.exe"
 & $GODOT --headless --path . --import
 & $GODOT --headless --path . --quit-after 2
-& $GODOT --headless --path . res://world/smoke_test.tscn --quit-after 2
+& $GODOT --headless --path . res://world/smoke_test.tscn
 ```
+
+> [!warning]
+> El smoke test corre **sin** `--quit-after`: tarda mas de 2 frames y ese flag lo mata a mitad de camino, con exit 0 y sin haber probado nada. Solo vale si imprime `SMOKE OK`.
 
 ## Relacionado
 

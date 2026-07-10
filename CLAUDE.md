@@ -65,8 +65,11 @@ Si tocaste logica core:
 
 ```powershell
 $GODOT="C:/Users/Tutupa/Downloads/Godot_v4.7-stable_win64.exe/Godot_v4.7-stable_win64_console.exe"
-& $GODOT --headless --path . res://world/smoke_test.tscn --quit-after 2
+& $GODOT --headless --path . res://world/smoke_test.tscn
 ```
+
+El smoke test corre **sin** `--quit-after`: el test tarda mas de 2 frames y ese flag lo
+mata a mitad de camino, con exit 0 y sin haber probado nada. Solo vale si imprime `SMOKE OK`.
 
 Para probar jugando:
 
