@@ -1,4 +1,4 @@
-[gd_scene load_steps=10 format=3]
+[gd_scene load_steps=11 format=3]
 
 [ext_resource type="Script" path="res://combat/weapons/mace/mace.gd" id="1_mace"]
 [ext_resource type="Resource" path="res://data/mace_tuning.tres" id="2_tuning"]
@@ -26,7 +26,10 @@ albedo_color = Color(0.35, 0.36, 0.38, 1)
 radius = 1.6
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_launcher"]
-size = Vector3(2.2, 1.8, 2.2)
+size = Vector3(3.2, 2, 3.2)
+
+[sub_resource type="SphereShape3D" id="SphereShape3D_air_slam"]
+radius = 2.2
 
 [node name="Maso" type="Node3D"]
 script = ExtResource("1_mace")
@@ -67,3 +70,9 @@ script = ExtResource("3_hitbox")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="LauncherHitbox"]
 shape = SubResource("BoxShape3D_launcher")
+
+[node name="AirSlamHitbox" type="Area3D" parent="."]
+script = ExtResource("3_hitbox")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="AirSlamHitbox"]
+shape = SubResource("SphereShape3D_air_slam")

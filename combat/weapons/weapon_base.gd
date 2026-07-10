@@ -332,10 +332,10 @@ func _on_launcher_about_to_hit(hurtbox: Hurtbox) -> void:
 		target.call("launch", _launcher_height, _launcher_hang_time)
 
 ## Ventana de daño del launcher con id-guard: espera `delay` (deja arrancar el swing
-## visual), lanza al player y prende el hitbox `duration` segundos. Arrancar un nuevo
+## visual), opcionalmente lanza al player y prende el hitbox `duration` segundos. Arrancar un nuevo
 ## launcher invalida cualquier ventana anterior (mismo patrón que begin_damage_window).
 func run_launcher_window(hitbox: Hitbox, height: float, hang_time: float,
-		duration: float, delay := 0.05) -> void:
+		duration: float, delay := 0.05, launches_player := true) -> void:
 	_launcher_id += 1
 	var id := _launcher_id
 	_launcher_height = height
@@ -343,7 +343,8 @@ func run_launcher_window(hitbox: Hitbox, height: float, hang_time: float,
 	await wait_seconds(delay)
 	if id != _launcher_id:
 		return
-	_player.launch(height, hang_time)
+	if launches_player:
+		_player.launch(height, hang_time)
 	hitbox.begin_swing()
 	ComboTracker.register_hit()
 	await wait_seconds(duration)

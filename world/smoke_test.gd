@@ -291,6 +291,30 @@ func _ready() -> void:
 	assert(is_equal_approx(mace_tuning.stun.airborne, 0.9))
 	assert(is_equal_approx(mace_tuning.charged_freeze_stun.grounded, 1.4))
 	assert(is_equal_approx(mace_tuning.air_freeze_stun.grounded, 1.2))
+	assert(mace_tuning.ground_y_dash_distance > 0.0)
+	assert(mace_tuning.ground_y_launcher_size.length() > 0.0)
+	assert(mace_tuning.air_y_aoe_radius > 0.0)
+
+	var mace := (load("res://combat/weapons/mace/mace.tscn") as PackedScene).instantiate() as Mace
+	add_child(mace)
+	mace.setup(player)
+	player.launcher.cancel()
+	mace.run_launcher_window(mace._launcher_hitbox, 2.0, 0.1, 0.01, 0.01, false)
+	await get_tree().create_timer(0.04).timeout
+	assert(not player.launcher.is_launched)
+
+	player.meter.gain_bars(2.0)
+	var meter_before_y := player.meter.meter()
+	player.air_state = Player.AirState.AIRBORNE
+	player._can_double_jump = true
+	mace._hold_y()
+	await get_tree().physics_frame
+	assert(is_equal_approx(player.meter.meter(), meter_before_y))
+	assert(player._can_double_jump)
+	assert(player.vertical_velocity < 0.0)
+	assert(player.bump_velocity.length() > 0.0)
+	mace.cancel_routines()
+	await get_tree().physics_frame
 
 	var stunned_enemy := (load("res://enemies/grounded_enemy.tscn") as PackedScene).instantiate() as EnemyBase
 	add_child(stunned_enemy)

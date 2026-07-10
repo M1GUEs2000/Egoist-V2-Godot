@@ -24,8 +24,7 @@ Arma de mas dano. Controla masas. Tiene bastante knockback. Tumba a los enemigos
 | X X espera X X | Swing horizontal, swing horizontal, tres smash verticales. Todos con AOE. |
 | X cargado (3 niveles) | Das vueltas y golpeas. 1 carga = 1 vuelta, 2 cargas = 2 vueltas, 3 cargas = 3 vueltas. Gasta 1 barra por nivel; si no alcanza el meter, degrada al nivel maximo pagable. |
 | X cargado sweet spot | Los enemigos que pega quedan congelados hasta la ultima vuelta, que siempre los manda a volar. |
-| Y cargado | Launcher omnidireccional. Area grande. |
-| Y cargado sweet spot | Hace dos golpes para subirlos al aire. |
+| Y cargado | Paso corto hacia adelante; al terminar, launcher de area grande que eleva enemigos pero no al jugador. No tiene niveles ni sweet spot por ahora. |
 
 ## Aereo
 
@@ -34,8 +33,7 @@ Arma de mas dano. Controla masas. Tiene bastante knockback. Tumba a los enemigos
 | X | Ataque con knockback hacia adelante. |
 | X cargado | Caes con un ataque AOE. |
 | X cargado sweet spot | Caes con un ataque y al final das una vuelta. Los mantiene en el aire. |
-| Y cargado | Das vueltas y botas todo hacia los lados. |
-| Y cargado sweet spot | Los mantiene en el aire como congelados. A ti tambien te da mas tiempo airborne. |
+| Y cargado | Caida diagonal con angulo tuneable; al impactar enemigo o suelo dispara un AOE launcher en la zona de impacto y frena la caida si conecta. No tiene niveles ni sweet spot por ahora. |
 
 ## Estado Godot
 
@@ -53,9 +51,7 @@ Arma de mas dano. Controla masas. Tiene bastante knockback. Tumba a los enemigos
   en [[Combate]]); el palo va rigido, apuntando hacia afuera. *(2026-07-09)*
 - Tap X/Y terrestre: combo de 3 (swing, swing, smash AOE) vía `run_combo_chain` con el
   parámetro nuevo `wait_branch_extra_steps` — la rama espera agrega 2 smashes más
-  (5 golpes totales) en vez de solo cambiar coreografía como la Espada. Si la ventana
-  del launcher Y cargado está abierta, el tap confirma primero el segundo golpe del
-  sweet spot antes de arrancar la cadena normal. *(2026-07-09)*
+  (5 golpes totales) en vez de solo cambiar coreografía como la Espada. *(2026-07-09)*
 - Terrestre X cargado: 3 niveles de carga (1/2/3 vueltas), resueltos por
   `Mace.charge_level()` a partir de `InputBuffer.held_duration()` (plomería nueva,
   también en `WeaponBase`/`PlayerCombat`, sin afectar a la Espada). Gasta 1 barra de
@@ -64,13 +60,16 @@ Arma de mas dano. Controla masas. Tiene bastante knockback. Tumba a los enemigos
   intermedias congelan (`StunSettings` largo) en vez de empujar; el golpe final hace
   el daño real y siempre arma un `charged_final_push` propio, mas fuerte que el `push`
   base del arma. *(2026-07-09)*
-- Terrestre Y: launcher omnidireccional (área más grande que el cono de la Espada).
-  Sweet spot: un segundo tap Y dentro de una ventana corta confirma "dos golpes" y
-  lanza antes; si no, lanza igual con un solo golpe.
+- Terrestre Y cargado: paso corto hacia adelante (`ground_y_dash_distance` /
+  `ground_y_dash_duration`) y luego launcher de area grande. El launcher lanza enemigos
+  pero no lanza al jugador: el salto para perseguirlos es manual. No gasta meter por
+  ahora y no tiene niveles ni sweet spot. *(2026-07-09)*
 - Aéreo: tap X/Y sin carga arma `push` hacia adelante a mitad del swing (`push_at = 0.5`);
   X cargado cae con AOE (ground pound) y gasta 1 barra fija; sweet spot agrega una
-  vuelta final que congela; Y cargado sin sweet spot arma `push`, sweet spot congela y
-  extiende el tiempo airborne del jugador (`PlayerLauncher.notify_aerial_attack`).
+  vuelta final que congela. Y cargado cae en diagonal (`air_y_fall_angle` /
+  `air_y_fall_speed`) y dispara `AirSlamHitbox` al impactar enemigo o suelo; ese AOE
+  relanza enemigos sin consumir el doble salto del jugador. No gasta meter por ahora y
+  no tiene niveles ni sweet spot. *(2026-07-09)*
 - `air_stall_scale = 1.8`: el Mazo sostiene mas al jugador por golpe conectado porque
   tiene menos impactos y cada uno pesa mas. *(2026-07-09)*
 - "Congelar" no es un verbo nuevo: reusa el sistema de stun existente
@@ -79,7 +78,8 @@ Arma de mas dano. Controla masas. Tiene bastante knockback. Tumba a los enemigos
   patrón de launcher (`run_launcher_window`) viven en `weapon_base.gd`, compartidas con
   la Espada. Cada arma pone solo su coreografía.
 - `mace.tscn`: visual de palo con bola, sin `ChargedDashHitbox` (el Mazo no usa dash
-  cargado). `AirDiscHitbox`/`LauncherHitbox` son grandes ("área grande"/"omnidireccional").
+  cargado ofensivo tipo Espada). `LauncherHitbox` es el area terrestre del Y cargado;
+  `AirSlamHitbox` es el AOE del Y aereo; `AirDiscHitbox` sigue siendo el disco para golpes aereos normales.
 - Los ángulos/tiempos/daños de `data/mace_tuning.tres` son un primer pase sin jugar.
 - Instanciado como hijo del player en `player.tscn`; `PlayerCombat` solo muestra las
   armas asignadas a slots.
