@@ -91,6 +91,9 @@ func _start_dash(dir: Vector3, distance: float, duration: float, boost_bump_mome
 		cancel_controlled: bool, deal_damage: bool, pass_through_enemies: bool) -> void:
 	if cancel_controlled:
 		_cancel_controlled_movement.call()
+	# El dash borra la caída acumulada: sin esto, Player.vertical_velocity sobrevive al dash
+	# y al salir seguís cayendo a la velocidad que traías antes de entrar.
+	_body.vertical_velocity = 0.0
 	_dash_dir = dir
 	_active_distance = maxf(0.01, distance)
 	_active_duration = maxf(0.01, duration)
