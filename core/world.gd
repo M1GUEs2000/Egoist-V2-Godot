@@ -15,14 +15,19 @@ const LAYER_HURTBOX := 8
 const LAUNCH_RISE_TIME := 0.15
 
 # ---- Convención de color de los mundos (greybox, hasta que haya arte) ----
-## TOMATE = vivo, MORADO = muerto. Regla del proyecto: toda pieza que exista en los dos
+## NARANJA = vivo, MORADO = muerto. Regla del proyecto: toda pieza que exista en los dos
 ## mundos se tiñe desde acá y NO hardcodea el color en su .tscn — el día que cambie la
 ## paleta, cambia en un solo lugar. Ver bóveda Gameplay/Traversal.
-## Los valores salen de las piezas que fijaron la convención: tomate/vivo y morado/muerto.
-const COLOR_LIVING := Color(0.9, 0.1, 0.08)
-const COLOR_LIVING_EMISSION := Color(0.7, 0.05, 0.03)
+## Los colores de MUNDO y los de FEATURE de traversal son independientes: una feature nunca
+## reusa un color de mundo, o choca con el bloque de world switch que apunta a ese mundo.
+const COLOR_LIVING := Color(1.0, 0.55, 0.05)
+const COLOR_LIVING_EMISSION := Color(0.9, 0.4, 0.03)
 const COLOR_DEAD := Color(0.55, 0.15, 0.9)
 const COLOR_DEAD_EMISSION := Color(0.35, 0.05, 0.8)
+## Launch/bump tiene color PROPIO (rojo), NO el del mundo vivo. Si usara COLOR_LIVING
+## chocaría con el bloque de world switch al vivo (que ya usa el color del mundo destino).
+const COLOR_TRAVERSAL_LAUNCH := Color(0.9, 0.1, 0.08)
+const COLOR_TRAVERSAL_LAUNCH_EMISSION := Color(0.7, 0.05, 0.03)
 const COLOR_TRAVERSAL_DASH := Color(0.1, 0.85, 0.25)
 const COLOR_TRAVERSAL_DASH_EMISSION := Color(0.05, 0.65, 0.14)
 const COLOR_TRAVERSAL_METER := Color(0.15, 0.85, 1.0)

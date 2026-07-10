@@ -27,7 +27,7 @@ Esta nota es el indice del sistema. El detalle vive en una subnota por modulo o 
 | Wall slide / wall jump | `PlayerWallSlide` | E1 | [[Wall Slide y Wall Jump]] |
 | Rebote en enemigos | `PlayerEnemyBounce` | E1 | [[Rebote en Enemigos]] |
 | World switch | `WorldManager`, `WorldMembership`, `WorldSwitchTrigger`, `ActionWorldSwitchModifier` | E2 | [[World Switch]] |
-| Bloques traversal | `TraversalBlock`, `BreakOnDeath`, `SpikeWall` | E2 | [[Bloques]] |
+| Bloques traversal | `TraversalBlock`, `BreakOnDeath`, `SpikeWall` | E3 | [[Bloques]] |
 | Cadenas | `PlayerSwing` | E0 | [[Cadenas]] |
 | Occlusion fade de camara | `CameraOcclusionFade` | E2 | [[Occlusion Fade de Camara]] |
 | Landing indicator | `LandingIndicator` | E2 | [[Landing Indicator]] |
@@ -39,9 +39,8 @@ Esta nota es el indice del sistema. El detalle vive en una subnota por modulo o 
 > Dodge no cambia mundo automaticamente. Dodge puede disparar switch solo si una maldicion/bonus lo modifico.
 
 > [!important]
-> **Tomate = mundo vivo. Morado = mundo muerto.** Convencion de todo el desarrollo. Los
-> colores viven en `World.world_color()` / `World.world_emission()`, nunca hardcodeados en
-> un `.tscn`. Ver [[Colores de mundo]].
+> Ninguna pieza hardcodea color en su `.tscn`: todo se tiñe desde `World`. La convencion de
+> mundo y de feature vive en [[Colores de mundo]], que es su unica fuente de verdad.
 
 - El feel de traversal se valida jugando; headless solo confirma que no este roto.
 - Los valores de movimiento viven en tuning (`PlayerTuning` o exports del nodo cuando corresponda), no como constantes nuevas de paso.

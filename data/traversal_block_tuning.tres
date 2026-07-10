@@ -1,6 +1,11 @@
-[gd_resource type="Resource" script_class="TraversalBlockTuning" format=3]
+[gd_resource type="Resource" script_class="TraversalBlockTuning" format=3 uid="uid://dx62a8crs57t2"]
 
-[ext_resource type="Script" path="res://data/traversal_block_tuning.gd" id="1_tuning"]
+[ext_resource type="Script" uid="uid://bldln6ethnu4a" path="res://data/traversal_block_tuning.gd" id="1_tuning"]
 
 [resource]
 script = ExtResource("1_tuning")
+proximity_radius = 20.0
+glow_min_energy = 0.5
+glow_max_energy = 1.95
+light_range = 12.905
+light_energy_max = 4.6

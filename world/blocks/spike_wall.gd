@@ -1,7 +1,7 @@
 class_name SpikeWall extends StaticBody3D
 ## Pared de pinchos: al tocarla stunea, rebota perpendicularmente y restaura recursos aereos.
 ## La misma escena sirve para los dos mundos: `world` decide en cuál aparece y de qué color
-## se pinta (tomate = vivo, morado = muerto — la convención vive en World.world_color).
+## se pinta (naranja = vivo, morado = muerto — la convención vive en World.world_color).
 ## Se instancia una vez por mundo en test_scene; no hay dos .tscn.
 
 ## En qué mundo existe esta pared. Manda sobre el `affiliation` del WorldMembership hijo:

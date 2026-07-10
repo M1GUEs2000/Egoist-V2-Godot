@@ -31,6 +31,7 @@ const INDESTRUCTIBLE_HEALTH := 999999.0
 
 var _last_dash_hit_time := -999.0
 var _segment_materials: Array[StandardMaterial3D] = []
+var _light: OmniLight3D
 
 @onready var _health: Health = $Health
 @onready var _hurtbox: Hurtbox = $Hurtbox
@@ -44,8 +45,17 @@ func _ready() -> void:
 	_hurtbox.hit.connect(_on_hit)
 	_health.died.connect(_on_died)
 	WorldManager.world_changed.connect(_on_world_changed)
+	_setup_light()
 	_rebuild_glow_segments()
 	_update_glow()
+
+## Luz real (no solo emision del material) para que el bloque ilumine el entorno.
+## El color y el encendido se ajustan en _repaint_segments y _update_glow.
+func _setup_light() -> void:
+	_light = OmniLight3D.new()
+	_light.position = Vector3(0.0, 0.55, 0.0)  # centro del cuerpo del bloque
+	_light.shadow_enabled = false
+	add_child(_light)
 
 func _process(_delta: float) -> void:
 	_update_glow()
@@ -112,9 +122,13 @@ func _rebuild_glow_segments() -> void:
 	for i in range(count):
 		var segment := MeshInstance3D.new()
 		var mesh := BoxMesh.new()
-		mesh.size = Vector3(1.02 / float(count), 0.08, 1.02)
+		# Cada segmento cubre TODO el alto/fondo del bloque y una fraccion del ancho, para
+		# que se prenda el bloque entero (no solo una franja arriba). 1.02 = un pelin mas
+		# grande que el cuerpo (1x1) para envolverlo sin z-fighting.
+		mesh.size = Vector3(1.02 / float(count), 1.02, 1.02)
 		segment.mesh = mesh
-		segment.position = Vector3(-0.51 + (float(i) + 0.5) / float(count), 1.08, 0.0)
+		# Tileado a lo ancho en x; y=0.55 = centro del cuerpo del bloque (Mesh del .tscn).
+		segment.position = Vector3(-0.51 + (float(i) + 0.5) * 1.02 / float(count), 0.55, 0.0)
 		var material := StandardMaterial3D.new()
 		material.emission_enabled = true
 		segment.set_surface_override_material(0, material)
@@ -127,8 +141,28 @@ func _repaint_segments() -> void:
 	var emissions := _feature_emissions()
 	for i in range(mini(_segment_materials.size(), colors.size())):
 		var material := _segment_materials[i]
-		material.albedo_color = colors[i]
+		# Albedo apagado: de lejos el segmento se ve tenue (se distingue el color, pero
+		# está "apagado"). El encendido lo lleva la emisión, que sube por proximidad en
+		# _update_glow. Si el albedo llevara el color pleno, el sol lo iluminaría al 100%
+		# siempre y el "prende al acercarse" no se notaría.
+		material.albedo_color = colors[i].darkened(0.8)
 		material.emission = emissions[i]
+	_repaint_light(colors)
+
+## Tiñe la luz con el promedio de los colores de las features (una sola luz por bloque,
+## aunque tenga varias features). Sin features no hay luz.
+func _repaint_light(colors: Array[Color]) -> void:
+	if _light == null:
+		return
+	if colors.is_empty():
+		_light.visible = false
+		return
+	_light.visible = true
+	var blended := Color(0.0, 0.0, 0.0)
+	for color in colors:
+		blended += color
+	_light.light_color = blended / float(colors.size())
+	_light.omni_range = tuning.light_range
 
 func _update_glow() -> void:
 	var player := get_tree().get_first_node_in_group("player") as Node3D
@@ -139,11 +173,14 @@ func _update_glow() -> void:
 	var energy := lerpf(tuning.glow_min_energy, tuning.glow_max_energy, proximity)
 	for material in _segment_materials:
 		material.emission_energy_multiplier = energy
+	# La luz real sigue la misma proximidad: apagada de lejos, prende al acercarse.
+	if _light != null:
+		_light.light_energy = lerpf(0.0, tuning.light_energy_max, proximity)
 
 func _feature_colors() -> Array[Color]:
 	var colors: Array[Color] = []
 	if enable_launch:
-		colors.append(World.COLOR_LIVING)
+		colors.append(World.COLOR_TRAVERSAL_LAUNCH)
 	if enable_dash:
 		colors.append(World.COLOR_TRAVERSAL_DASH)
 	if enable_meter:
@@ -157,7 +194,7 @@ func _feature_colors() -> Array[Color]:
 func _feature_emissions() -> Array[Color]:
 	var colors: Array[Color] = []
 	if enable_launch:
-		colors.append(World.COLOR_LIVING_EMISSION)
+		colors.append(World.COLOR_TRAVERSAL_LAUNCH_EMISSION)
 	if enable_dash:
 		colors.append(World.COLOR_TRAVERSAL_DASH_EMISSION)
 	if enable_meter:

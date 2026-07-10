@@ -42,16 +42,6 @@ albedo_color = Color(0.85, 0.55, 0.25, 1)
 [sub_resource type="StandardMaterial3D" id="Mat_dead"]
 albedo_color = Color(0.5, 0.3, 0.75, 1)
 
-[sub_resource type="SphereMesh" id="SphereMesh_m478f"]
-
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_4mqvc"]
-albedo_color = Color(1.7483106, 1.4229317, 0.8874123, 1)
-
-[sub_resource type="TorusMesh" id="TorusMesh_m478f"]
-
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_1quki"]
-albedo_color = Color(0.9109096, 1.3740265, 0.6341689, 1)
-
 [node name="TestScene" type="Node3D" unique_id=1118309263]
 script = ExtResource("1_scene")
 
@@ -314,7 +304,8 @@ enable_world_switch = true
 hits_to_break = 50
 
 [node name="WorldSwitchPickup4" parent="." unique_id=629555927 instance=ExtResource("6_traversal")]
-transform = Transform3D(1.985, 0, 0, 0, 1.985, 0, 0, 0, 1.985, 30.435627, 3.121974, -115.24054)
+transform = Transform3D(1.985, 0, 0, 0, 1.985, 0, 0, 0, 1.985, 31.328125, 3.121974, -115.24054)
+enable_launch = true
 enable_world_switch = true
 hits_to_break = 50
 
@@ -333,19 +324,13 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5, 0, -2)
 enable_launch = true
 
 [node name="LaunchBlock2" parent="." unique_id=766683590 instance=ExtResource("6_traversal")]
-transform = Transform3D(1.515, 0, 0, 0, 1.515, 0, 0, 0, 1.515, 26.43664, 3.003882, -53.31631)
-enable_launch = true
-
-[node name="LaunchBlock3" parent="." unique_id=1101835095 instance=ExtResource("6_traversal")]
-transform = Transform3D(1.515, 0, 0, 0, 1.515, 0, 0, 0, 1.515, 30.314518, 3.2818866, -115.20406)
-enable_launch = true
-
-[node name="LaunchBlock4" parent="." unique_id=949987424 instance=ExtResource("6_traversal")]
-transform = Transform3D(1.515, 0, 0, 0, 1.515, 0, 0, 0, 1.515, 42.515503, 9.5673275, -123.413025)
+transform = Transform3D(1.515, 0, 0, 0, 1.515, 0, 0, 0, 1.515, 28.239777, 3.003882, -53.2716)
 enable_launch = true
 
 [node name="WorldSwitchPickup5" parent="." unique_id=1479752669 instance=ExtResource("6_traversal")]
-transform = Transform3D(1.985, 0, 0, 0, 1.985, 0, 0, 0, 1.985, 42.636612, 9.407414, -123.4495)
+transform = Transform3D(1.985, 0, 0, 0, 1.985, 0, 0, 0, 1.985, 44.143764, 9.407414, -123.4495)
+enable_launch = true
+enable_meter = true
 enable_world_switch = true
 hits_to_break = 50
 
