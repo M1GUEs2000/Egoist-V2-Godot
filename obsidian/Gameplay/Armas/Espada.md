@@ -20,7 +20,7 @@ Arma base / equilibrada. Velocidad media. Sirve para mantener el flujo del comba
 
 | Input | Descripcion |
 |---|---|
-| X X X X | Swing horizontal, swing horizontal, estocada, estocada. |
+| X X X X | Swing horizontal, swing horizontal, estocada, estocada. La estocada extiende el brazo al frente (`thrust_reach`) y vuelve. |
 | X X espera X X | Izquierda a derecha, derecha a izquierda, vuelta completa, vuelta completa. El ultimo golpe empuja. |
 | X cargado | Dash hacia adelante que golpea todo. Rompe armadura. |
 | X cargado sweet spot | Todo lo que toca el dash explota despues. |
@@ -41,10 +41,23 @@ Arma base / equilibrada. Velocidad media. Sirve para mantener el flujo del comba
 ## Estado Godot
 
 - Implementada como arma procedural hasta H3.
+- Los swings mueven la mano alrededor del jugador (ver Mano orbital en [[Combate]]); la hoja va rigida, apuntando hacia afuera. *(2026-07-09)*
 - Tap X/Y usa la misma cadena de combo terrestre/aérea; solo el cargado bifurca por slot. *(2026-07-09)*
 - `SwordTuning` controla ventanas, angulos, dash cargado, launcher y el `push` (arco del empuje armado por `arm_push`). *(2026-07-09)*
 - Habilidad especial de X cargado existe parcialmente por ventana de kill.
 - La hoja brilla al cargar un ataque (glow de carga, ver [[Combate]]). *(2026-07-06)*
+
+### Tuneables de coreografia
+
+| Knob | Que mueve |
+|---|---|
+| `thrust_reach` | Metros que el brazo extiende sobre `hand_radius` en el pico de la estocada. |
+| `air_diagonal_yaw` | Diagonal aerea: cuanto cruza la mano por delante del jugador. |
+| `air_diagonal_pitch` | Diagonal aerea: cuanto baja la mano al cruzar. Igualarlo al yaw da una diagonal a 45°. |
+| `combo_swing_angle` | Arco de los swings 1-2 del combo terrestre. |
+| `strike_angle` | Arco del golpe Y basico, launcher y cargada aerea. |
+| `air_finisher_angle` | Arco del hachazo vertical del finisher aereo. |
+| `charged_fallback_angle` | Swing degradado del X cargado sin barra. |
 
 ## Pendiente H1
 

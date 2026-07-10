@@ -5,6 +5,7 @@
 
 [sub_resource type="Resource" id="Resource_dashstun"]
 script = ExtResource("2_stun")
+grounded = 0.35
 
 [resource]
 script = ExtResource("1_tuning")
@@ -15,6 +16,7 @@ wall_slide_max_fall_speed = 20.0
 wall_slide_momentum_decay = 8.0
 wall_slide_wall_jump_up_speed = 19.0
 wall_slide_wall_jump_away_speed = 17.0
+enemy_bounce_up_speed = 11.21
 enemy_bounce_away_speed = 15.0
 gravity = -40.0
 momentum_bleed_seconds_per_unit = 0.4
@@ -34,6 +36,8 @@ meter_start_bars = 5.0
 lock_half_angle = 25.0
 lock_require_weapons_out = false
 lock_reticle_height = 0.425
+weapons_out_duration = 10.0
+inactive_weapon_angle = -80.0
 air_stall_base = 10.0
 air_stall_per_hit = 0.01
 air_stall_float_gravity = 0.1

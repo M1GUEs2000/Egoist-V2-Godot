@@ -1,7 +1,7 @@
 class_name Sword extends WeaponBase
 ## Espada (bóveda: Armas/Espada): tap = combo de 4 + rama espera + sweet spot;
 ## Y cargado = launcher / Y cargada aérea. X cargado = dash ofensivo (gasta 1 barra).
-## Swings 100% procedurales (tweens de quaternion sobre el Pivot), SIN AnimationPlayer.
+## Swings 100% procedurales (tweens de quaternion sobre la Hand), SIN AnimationPlayer.
 ## Los combos corren sobre el motor genérico de WeaponBase (run_combo_chain);
 ## acá vive solo la coreografía. Ángulos y ventanas se tunean en SwordTuning.
 # ponytail: personalidades X/Y como funcs aquí; extraer strategy cuando exista la 2ª arma.
@@ -184,16 +184,19 @@ func play_air_step(step: int, finisher: bool, wait_branch: bool) -> void:
 	else:
 		_play_air_diagonal(1.0)  # arriba-der → abajo-izq
 
-## Diagonal descendente: combina giro horizontal (Y) con inclinación vertical (X).
+## Diagonal descendente: la mano cruza al frente (giro en Y) mientras baja (inclinación en X).
 func _play_air_diagonal(side: float) -> void:
+	var yaw := _t().air_diagonal_yaw
+	var pitch := _t().air_diagonal_pitch
 	_play_swing(
-		Quaternion(Vector3.UP, deg_to_rad(-55.0 * side)) * Quaternion(Vector3.RIGHT, deg_to_rad(-45.0)),
-		Quaternion(Vector3.UP, deg_to_rad(55.0 * side)) * Quaternion(Vector3.RIGHT, deg_to_rad(45.0))
+		Quaternion(Vector3.UP, deg_to_rad(-yaw * side)) * Quaternion(Vector3.RIGHT, deg_to_rad(-pitch)),
+		Quaternion(Vector3.UP, deg_to_rad(yaw * side)) * Quaternion(Vector3.RIGHT, deg_to_rad(pitch))
 	)
 
-## Estocada: la hoja apunta al frente y vuelve. El avance real lo da attack_step del jugador.
+## Estocada: la mano se lanza al frente extendiendo el brazo y vuelve. El avance real del
+## cuerpo lo da attack_step del jugador.
 func _play_thrust() -> void:
-	_play_swing(Quaternion.IDENTITY, Quaternion(Vector3.RIGHT, deg_to_rad(80.0)))
+	thrust(_t().thrust_reach)
 
 func _t() -> SwordTuning:
 	return tuning as SwordTuning

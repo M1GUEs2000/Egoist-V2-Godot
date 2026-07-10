@@ -4,21 +4,32 @@
 [ext_resource type="Script" uid="uid://w0b3i18w442a" path="res://data/stun_settings.gd" id="2_stun"]
 [ext_resource type="Script" uid="uid://cprdodv3kypq1" path="res://data/push_settings.gd" id="3_push"]
 
+[sub_resource type="Resource" id="Resource_810ig"]
+script = ExtResource("2_stun")
+grounded = 0.35
+metadata/_custom_type_script = "uid://w0b3i18w442a"
+
 [sub_resource type="Resource" id="Resource_swordpush"]
 script = ExtResource("3_push")
-horizontal_speed = 15.0
-up_speed = 11.0
-gravity = -40.0
+horizontal_speed = 17.0
+gravity = -30.0
 
 [sub_resource type="Resource" id="Resource_swordstun"]
 script = ExtResource("2_stun")
+grounded = 0.35
 
 [resource]
 script = ExtResource("1_tuning")
+ground_wait_branch_threshold = 0.2
 charged_dash_distance = 10.0
 charged_dash_damage = 5.0
+charged_dash_stun = SubResource("Resource_810ig")
+aerial_charged_down_speed = 40.0
+aerial_charged_player_height = 5.0
+aerial_charged_meet_height = 4.8
 launcher_height = 5.0
-swing_time = 0.3
+swing_time = 0.25
 stun = SubResource("Resource_swordstun")
+hand_radius = 1.0
 air_wait_spin_hop = 5.0
 push = SubResource("Resource_swordpush")

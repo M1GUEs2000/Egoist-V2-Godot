@@ -278,6 +278,51 @@ func _ready() -> void:
 	sword._on_hit(_make_hurtbox(leak_probe), false)
 	assert(leak_probe.pushes == 0)
 
+	# Enemy stun: las fuentes de golpe reducen solo grounded; airborne conserva el juggle.
+	var sword_tuning := load("res://data/sword_tuning.tres") as SwordTuning
+	assert(is_equal_approx(sword_tuning.stun.grounded, 0.35))
+	assert(is_equal_approx(sword_tuning.stun.airborne, 1.0))
+	assert(is_equal_approx(sword_tuning.charged_dash_stun.grounded, 0.35))
+	assert(is_equal_approx(sword_tuning.charged_dash_stun.airborne, 1.0))
+	assert(is_equal_approx(player.tuning.dash_stun.grounded, 0.35))
+	assert(is_equal_approx(player.tuning.dash_stun.airborne, 1.0))
+	var mace_tuning := load("res://data/mace_tuning.tres") as MaceTuning
+	assert(is_equal_approx(mace_tuning.stun.grounded, 0.35))
+	assert(is_equal_approx(mace_tuning.stun.airborne, 0.9))
+	assert(is_equal_approx(mace_tuning.charged_freeze_stun.grounded, 1.4))
+	assert(is_equal_approx(mace_tuning.air_freeze_stun.grounded, 1.2))
+
+	var stunned_enemy := (load("res://enemies/grounded_enemy.tscn") as PackedScene).instantiate() as EnemyBase
+	add_child(stunned_enemy)
+	await get_tree().process_frame
+	stunned_enemy._last_hit_direction = Vector3.RIGHT
+	stunned_enemy.apply_stun(0.5)
+	assert(stunned_enemy.is_stunned())
+	assert(is_equal_approx(stunned_enemy.velocity.x, stunned_enemy.stun_knockback_speed))
+	assert(stunned_enemy.stun_light != null and stunned_enemy.stun_light.visible)
+	var stunned_mesh := stunned_enemy.visual.get_node("Mesh") as MeshInstance3D
+	var stunned_material := stunned_mesh.get_surface_override_material(0) as StandardMaterial3D
+	assert(stunned_material.emission_enabled)
+	stunned_enemy._stunned_until = World.now() - 0.1
+	stunned_enemy.tick_base(0.1)
+	assert(not stunned_enemy.is_stunned())
+	assert(not stunned_enemy.stun_light.visible)
+	assert(stunned_enemy.visual.rotation.is_equal_approx(Vector3.ZERO))
+
+	var airborne_enemy := (load("res://enemies/grounded_enemy.tscn") as PackedScene).instantiate() as EnemyBase
+	add_child(airborne_enemy)
+	await get_tree().process_frame
+	airborne_enemy.air_state = EnemyBase.AirState.AIRBORNE
+	airborne_enemy._last_hit_direction = Vector3.RIGHT
+	airborne_enemy.velocity = Vector3.FORWARD * 12.0
+	airborne_enemy.apply_stun(0.5)
+	assert(airborne_enemy._airborne_until >= airborne_enemy._stunned_until)
+	var airborne_x_before := airborne_enemy.velocity.x
+	airborne_enemy.tick_base(0.1)
+	assert(absf(airborne_enemy.velocity.x) < absf(airborne_x_before))
+	stunned_enemy.queue_free()
+	airborne_enemy.queue_free()
+
 	# LockOn (batch 6): adquiere el enemigo más cercano dentro de rango/ángulo, ignora el lejano
 	var enemy_near := EnemyBase.new()
 	add_child(enemy_near)
@@ -287,6 +332,8 @@ func _ready() -> void:
 	enemy_far.global_position = Vector3(0.0, 0.0, -(3.0 + player.tuning.lock_max_range * 2.0))  # fuera de rango
 	await get_tree().process_frame
 	assert(player.lock_on.acquire_target(Vector3.FORWARD) == enemy_near)
+	player.tuning.lock_require_weapons_out = true
+	player.combat._last_attack_time = World.now() - player.tuning.weapons_out_duration * 2.0
 	assert(not player.lock_on.has_visible_target())  # sin ataques recientes, sin reticle
 	enemy_near.queue_free()
 	enemy_far.queue_free()
@@ -300,9 +347,14 @@ func _make_test_weapon(player: Player, push_settings: PushSettings) -> WeaponBas
 	tuning.stun = StunSettings.new()
 	var weapon := WeaponBase.new()
 	weapon.tuning = tuning
+	# Misma jerarquía que sword.tscn/mace.tscn: la mano orbita al player y el pivot
+	# solo aleja la hoja un radio (ver la convención en WeaponBase).
+	var hand := Node3D.new()
+	hand.name = "Hand"
+	weapon.add_child(hand)
 	var pivot := Node3D.new()
 	pivot.name = "Pivot"
-	weapon.add_child(pivot)
+	hand.add_child(pivot)
 	var blade := Hitbox.new()
 	blade.name = "BladeHitbox"
 	pivot.add_child(blade)

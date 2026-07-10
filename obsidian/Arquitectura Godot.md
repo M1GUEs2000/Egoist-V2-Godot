@@ -75,7 +75,7 @@ obsidian/
 |---|---|---|
 | [[Combate]] | `Gameplay/Combate/` | [[Meter]], [[Input Feel]], [[Lock On]] |
 | [[Traversal]] | `Gameplay/Traversal/` | [[Movimiento Base]], [[Dash y Airdash]], [[Launcher y Aire]], [[Momentum y Bump]], [[Wall Slide y Wall Jump]], [[Rebote en Enemigos]], [[World Switch]], [[Bloques]], [[Cadenas]], [[Occlusion Fade de Camara]], [[Landing Indicator]], [[Colores de mundo]] |
-| [[Enemigos]] | `Gameplay/Enemigos/` | [[Modelo de Enemigo]], [[Mascaras y Cordura]], [[Hostilidad]], [[Afiliacion de Mundo]], [[Estados de Combate Enemigo]], [[Ataques Enemigos]], [[Ecosistema Vivo]], [[Objetos Golpeables]], [[Roster Enemigos]], [[Melee Living]], [[Ranged Dead]], [[Armored Enemy]], [[Jefes]] |
+| [[Enemigos]] | `Gameplay/Enemigos/` | [[Modelo de Enemigo]], [[Mascaras y Cordura]], [[Hostilidad]], [[Afiliacion de Mundo]], [[Estados de Combate Enemigo]], [[Stun]], [[Ataques Enemigos]], [[Ecosistema Vivo]], [[Objetos Golpeables]], [[Roster Enemigos]], [[Melee Living]], [[Ranged Dead]], [[Armored Enemy]], [[Jefes]] |
 | [[IA]] | `Gameplay/IA/` | Indice de FSM, percepcion, locomocion y ataques. |
 | [[Armas]] | `Gameplay/Armas/` | [[Espada]], [[Mazo]], [[Dagas]], [[Punos]] |
 | [[Areas]] | `Gameplay/Areas/` | [[Playa]], [[Castillo]], [[Averno]], [[Final]] |
@@ -98,6 +98,8 @@ obsidian/
 | Eventos | Senales tipadas |
 | Contratos opcionales | `has_method()` + grupos |
 | Golpeables | `Hitbox`/`Hurtbox`, grupo `hurtbox`, no interfaces C# |
+| Swing de arma | Nodo `Hand` que orbita al player + `Pivot` rigido que sostiene la hoja (ver [[Combate]]) |
+| Direccion de un golpe recibido | Se calcula desde el ATACANTE, nunca desde la hitbox (ver [[Stun]]) |
 | UI | `CanvasLayer`/Control que escucha senales |
 | Tuneables legibles | Todo `@export` de tuning lleva comentario `##` encima (tooltip en el inspector: que hace, unidades, efecto) |
 
@@ -122,8 +124,11 @@ obsidian/
 $GODOT="C:/Users/Tutupa/Downloads/Godot_v4.7-stable_win64.exe"
 & $GODOT --headless --path . --import
 & $GODOT --headless --path . --quit-after 2
-& $GODOT --headless --path . res://world/smoke_test.tscn --quit-after 2
+& $GODOT --headless --path . res://world/smoke_test.tscn
 ```
+
+> [!warning]
+> El smoke test corre **sin** `--quit-after`: tarda mas de 2 frames y ese flag lo mata a mitad de camino, con exit 0 y sin haber probado nada. Solo vale si imprime `SMOKE OK`.
 
 ## Relacionado
 

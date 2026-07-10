@@ -16,8 +16,18 @@ class_name SwordTuning extends WeaponTuning
 @export var combo_swing_angle := 70.0
 ## Medio arco del hachazo vertical del finisher aéreo.
 @export var air_finisher_angle := 95.0
+## Diagonal aérea: medio arco horizontal, cuánto cruza la mano por delante del jugador.
+@export var air_diagonal_yaw := 55.0
+## Diagonal aérea: medio arco vertical, cuánto baja la mano mientras cruza. Igualarlo al
+## yaw da una diagonal a 45°; subirlo la pica más, bajarlo la aplana hacia horizontal.
+@export var air_diagonal_pitch := 45.0
 ## Swing degradado del X cargado cuando no hay barra para el dash.
 @export var charged_fallback_angle := 130.0
+
+@export_group("Estocada")
+## Metros que el brazo extiende por encima de hand_radius en el pico de la estocada.
+## La mano sale hasta ahí y vuelve; la hoja no rota, avanza porque la mano se aleja.
+@export var thrust_reach := 1.0
 
 @export_group("X cargado (dash sweet spot)")
 @export var charged_dash_distance := 5.0

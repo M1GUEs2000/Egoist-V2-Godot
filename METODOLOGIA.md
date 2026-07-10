@@ -162,9 +162,9 @@ Escala E0–E4 (ver *Ciclo de vida*). Se actualiza en el mismo commit que cambia
 | Player — meter | `PlayerMeter` | **E2** | Iterar costes/ganancias; mejoras (5 barras, esquive perfecto) son diseño futuro |
 | Player — vida | `Health` · `PlayerHealth` | **E2** | Definir qué pasa tras morir (hoy solo estado global) |
 | Combate base | `Hitbox` · `Hurtbox` · `InputBuffer` · `StunSettings` | **E2** | Iterar ventanas de feel (`input_buffer_time` / `hold_threshold`) |
-| Espada | `WeaponBase` · `Sword` · `SwordTuning` | **E2** | Iterar combos/ángulos/ventanas jugando; clash mid-swing pendiente (ponytail) |
-| Mazo | `WeaponBase` · `Mace` · `MaceTuning` | **E2** | En desarrollo activo; combos completos y knobs en `mace_tuning.tres`, alineado con el motor de la Espada. Falta probarse jugando (E2→E3 lo decide Tutupa) |
-| Enemigo de suelo | `EnemyBase` · `GroundedEnemy` · `Perception` · `GroundLocomotion` · ataques | **E2** | Iterar rangos/cooldowns por escena (excepción tuning) |
+| Espada | `WeaponBase` · `Sword` · `SwordTuning` | **E2** | Iterar combos/ángulos/ventanas jugando; tunear la mano orbital (`hand_radius`, `thrust_reach`); clash mid-swing pendiente (ponytail) |
+| Mazo | `WeaponBase` · `Mace` · `MaceTuning` | **E2** | Combos completos y knobs en `mace_tuning.tres`, sobre el mismo motor que la Espada. Falta probarse jugando (E2→E3 lo decide Tutupa) |
+| Enemigo de suelo | `EnemyBase` · `GroundedEnemy` · `Perception` · `GroundLocomotion` · ataques | **E2** | Iterar rangos/cooldowns por escena (excepción tuning); tunear la reacción de stun (retroceso, inclinación, luz) |
 | Bloques traversal | `TraversalBlock` · `BreakOnDeath` · `SpikeWall` | **E2** | Probar combinaciones de features, glow por proximidad e impulsos jugando |
 | Pickups de mundo | `TraversalBlock` · `ActionWorldSwitchModifier` | **E2** | Validar maldicion de accion y pickups combinados jugando |
 | HUD | `HUD` | **E1** | Es placeholder funcional (labels/barras); rediseño visual pendiente |
