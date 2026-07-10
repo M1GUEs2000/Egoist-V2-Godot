@@ -74,7 +74,7 @@ La intencion por nivel (`PASSIVE`, `REACTIVE`, `AGGRESSIVE`, `ULTRA_AGGRESSIVE`)
 
 ## Escena de prueba
 
-`test_scene` es un greybox amplio (piso, muros y plataformas de prueba) con grupos por hostilidad: 4 pasivos en circulo, 2 reactivos mas lejos, 2 agresivos todavia mas lejos y 1 ultra agresivo en el mundo muerto (con `FLEE`, `HIDE`, `GUARD` y `ATTACK_GROUP` desactivados via `allowed_state_flags`). *(2026-07-07)*
+`test_scene` es un greybox amplio (piso, muros y plataformas de prueba) con grupos por hostilidad: 4 pasivos en circulo, 2 reactivos mas lejos, 2 agresivos todavia mas lejos y 1 ultra agresivo (con `FLEE`, `HIDE`, `GUARD` y `ATTACK_GROUP` desactivados via `allowed_state_flags`). Todos, incluido el ultra agresivo, heredan afiliacion Dead: `grounded_enemy.tscn` trae `WorldMembership.affiliation = DEAD` por defecto y ninguna instancia en `test_scene` la overridea — ver [[Afiliacion de Mundo]]. *(2026-07-07, corregido 2026-07-09)*
 
 ## Pendiente H1
 

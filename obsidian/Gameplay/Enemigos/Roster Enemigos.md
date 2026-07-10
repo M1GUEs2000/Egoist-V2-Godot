@@ -16,7 +16,7 @@ Roster por hito y area. H1 usa placeholders claros; arte final entra H3.
 
 | Tipo | Mundo/cordura | Estado |
 |---|---|---|
-| [[Melee Living]] | Living, Sane | Comportamiento base existe; falta prefab/tuning. |
+| [[Melee Living]] | Living, Sane | Comportamiento base existe; falta prefab/tuning. Hoy todas las instancias en `test_scene` son Dead por el default de `grounded_enemy.tscn` — ningun enemigo esta seteado a Living. |
 | [[Ranged Dead]] | Dead, Sane/Not so sane | Mecanica existe; falta prefab/tuning. |
 | [[Armored Enemy]] | Living o Dead | Estado existe; falta lectura y tuning. |
 

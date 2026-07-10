@@ -22,10 +22,10 @@ Esta tabla resume como se migra la verdad vieja a Godot V2.
 | Enemigo de suelo | [[Enemigos]] | `EnemyBase`, `GroundedEnemy` | `EnemyBase`, `GroundedEnemy` | E2 | Un enemigo base componible. |
 | IA | [[IA]] | Unity Behavior Tree | FSM enum + `match` | E2 | No portar BT salvo necesidad real. |
 | HUD | [[Combate]] | HUD Unity descartable | `HUD` | E1 | Placeholder; rehacer H1. |
-| Lock-on | [[Combate]] | `LockOnTargeting` | `LockOn` stub | E0 | Implementar en H1. |
+| Lock-on | [[Combate]] | `LockOnTargeting` | `LockOn` | E2 | Implementado: adquisicion por direccion, reticle, integracion con locomocion. |
 | Cadenas | [[Traversal]] | `PlayerSwing`, `ChainSwingHandle` | `PlayerSwing` stub | E0 | Implementar en H1. |
 | Visual mundos | [[Areas]] / [[Traversal]] | `WorldVisualController` | `WorldVisual` stub | E0 | Implementar 2 ambientes + lerp. |
-| Indicador aterrizaje | [[Traversal]] | `LandingIndicator` | `LandingIndicator` stub | E0 | Implementar en H1. |
+| Indicador aterrizaje | [[Traversal]] | `LandingIndicator` | `LandingIndicator` | E2 | Implementado: raycast, orientacion por normal. |
 | Animacion | [[Animacion]] | Animator Humanoid/Mixamo | Retarget Godot pendiente | E0 | Placeholder primero, animacion real H3. |
 | Arte Blender | [[Blender Pipeline]] | FBX/URP | GLB/FBX + materiales Godot | Pendiente | No arte final antes de H3. |
 
