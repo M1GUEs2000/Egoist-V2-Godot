@@ -56,6 +56,9 @@ Pared de pinchos reusable (`world/blocks/spike_wall.tscn`). **Una sola escena pa
   `Player.force_dash`, que es solo movimiento — el dodge normal si daña, via `dash_deals_damage`.
   El daño de un dash forzado lo pone un hitbox propio; ver como lo resuelve el X cargado de la
   [[Espada]] con su `ChargedDashHitbox`.
+- **El color negro queda reservado para un efecto oculto** *(idea, no comprometida — el efecto
+  todavia no esta definido)*. No existe como caracteristica del `TraversalBlock`; el negro que se
+  ve hoy es el cuerpo de la spike wall, que no es un bloque de traversal.
 - Prefabs H1.
 - Tuning de impulsos por zona.
 - Probar la spike wall jugando.
