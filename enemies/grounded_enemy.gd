@@ -74,7 +74,7 @@ func _ready() -> void:
 	if perception != null:
 		perception.setup(self)
 	if locomotion != null:
-		locomotion.setup(self, func() -> bool: return is_airborne() or is_stunned())
+		locomotion.setup(self, func() -> bool: return is_airborne() or is_stunned() or is_ragdolling())
 	if health != null and not health.damaged.is_connected(_on_damaged):
 		health.damaged.connect(_on_damaged)
 	_collect_attacks()

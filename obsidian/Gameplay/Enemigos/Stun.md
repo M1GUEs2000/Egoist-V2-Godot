@@ -42,6 +42,21 @@ El criterio es universal (igual que el player, ver [[Combate]]): la fuente manda
 > [!important]
 > Un golpe que aplica stun mientras el enemigo esta `AIRBORNE` (por `launch` o `push`) cancela el impulso previo, aplica un retroceso corto propio del stun y extiende `_airborne_until` hasta que termine el stun (`maxf(_airborne_until, _stunned_until)`) — queda suspendido en el aire, no cae hasta que el stun expira. `airborne_max_time` sigue siendo solo el tope de seguridad de caida, no compite con esta extension.
 
+## Acostado y ragdoll de aterrizaje
+
+> [!important]
+> Un enemigo **empujado** (`push`) o **stuneado en el aire** cae **acostado** (pose horizontal). Es solo la pose: la trayectoria previa no cambia — el hang del stun aereo y el arco del push siguen intactos. El rigid body NO existe en el aire. *(2026-07-10)*
+
+- La pose acostada reusa el mismo eje que la inclinacion del stun (se aleja del atacante), pero al angulo pleno `lie_angle` (90 por default) y **girando sobre la MITAD del modelo** (centro de la capsula), no desde los pies — el cuerpo se tumba sobre su centro. La inclinacion corta del stun en tierra sigue pivotando desde los pies. En el piso (ragdoll) el pivote ya no importa: manda la fisica.
+- **Esfera de proximidad (`GroundSense`)**: un `Area3D` esferico (mask `LAYER_WORLD`) siente el suelo un pelo antes que los pies. Cuando un cuerpo acostado la toca (tras haber salido del rango una vez), arranca el ragdoll **justo antes** del contacto real, para que se vea natural. Los pushes bajos que nunca salen del rango caen por `is_on_floor()`.
+- **Ragdoll de cuerpo unico**: al aterrizar acostado, el `CharacterBody3D` apaga su colision y su `Visual`, y un `RigidBody3D` (`Ragdoll`, `top_level`, mask `LAYER_WORLD`) toma la posta con la velocidad heredada + un giro (`ragdoll_spin`) para rodar. El cuerpo (Hurtbox/luz) sigue al ragdoll en el plano.
+- **Se para**: tras `ragdoll_getup_delay` (0.5 s, el "se para en X") el ragdoll se congela, el cuerpo se reubica donde rodo y se endereza con un tween de `ragdoll_stand_time`.
+- Durante el ragdoll el enemigo no re-stunea ni recibe launch/push (la fisica manda), pero el **daño igual entra** por `Hurtbox.receive_hit → Health`.
+- Tuning (exports por escena, excepcion de enemigos): `lie_angle`, `ragdoll_getup_delay`, `ragdoll_stand_time`, `ragdoll_gravity_scale`, `ragdoll_spin`, mas el radio/altura de la esfera `GroundSense` en la escena. *(2026-07-10, pendiente de tunear jugando)*
+
+> [!note] Diferidos a H3
+> El ragdoll es de **cuerpo unico** (la capsula rueda), no por huesos — el ragdoll por `PhysicalBone` espera al rig de H3 ("cero arte final antes de H3"). La reubicacion al pararse usa la **altura de despegue** (greybox plano); en H3, raycast al piso real para terreno con desnivel.
+
 ## Direccion del golpe
 
 `_last_hit_direction` es la direccion que **aleja al enemigo de su atacante**, no la de la hitbox que lo toco. La calcula `_remember_hit_direction()` desde la posicion de quien golpea; la direccion de la hitbox (`hitbox → hurtbox`) solo entra como fallback cuando no hay atacante posicionable.

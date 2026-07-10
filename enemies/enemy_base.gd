@@ -52,6 +52,25 @@ enum AirState { GROUNDED, AIRBORNE }
 ## Solo en el suelo, activo y sin stun. El look del polvo vive en el emisor RunDust de la escena.
 @export var run_dust_min_speed := 1.0
 
+# --- Acostado + ragdoll de aterrizaje ---
+# Un enemigo empujado (push) o stuneado EN EL AIRE cae ACOSTADO (pose horizontal), siguiendo su
+# trayectoria scripteada normal (arco del push o hang del stun). El rigid body NO existe en el
+# aire: solo al tocar el piso. Una esfera de proximidad (GroundSense) detecta el suelo justo
+# antes del contacto real y ahi arranca el ragdoll (RigidBody capsula) para que se vea natural.
+# Tras rodar `ragdoll_getup_delay` segundos el cuerpo se para. Greybox: ragdoll de cuerpo unico
+# (la capsula rueda), no por huesos — el ragdoll por PhysicalBone es upgrade de H3.
+## Angulo de la pose acostada durante el vuelo, en grados. 90 = horizontal pleno.
+@export var lie_angle := 90.0
+## Segundos que el cuerpo rueda como RigidBody en el piso antes de pararse. Es el "se para en X".
+@export var ragdoll_getup_delay := 0.5
+## Segundos del tween de pararse (de acostado a vertical) al terminar el ragdoll.
+@export var ragdoll_stand_time := 0.25
+## Escala de gravedad del RigidBody del ragdoll. La gravedad global de fisica es mas suave que la
+## del juego; subir esto acerca el peso de la caida al feel del resto.
+@export var ragdoll_gravity_scale := 3.0
+## Giro inicial del ragdoll al aterrizar, en rad/s: da el volteo del cuerpo al rodar.
+@export var ragdoll_spin := 6.0
+
 var air_state := AirState.GROUNDED
 var combat_state := CombatState.NORMAL
 
@@ -69,6 +88,10 @@ var _launch_id := 0
 var _air_gravity := 0.0  # gravedad del vuelo actual; el push la override con su propio arco
 var _stun_tween: Tween
 var _squash_tween: Tween
+var _lying := false          # cae acostado (push o stun aereo); la pose horizontal esta activa
+var _ragdolling := false     # el RigidBody tomo la posta en el piso; el CharacterBody espera
+var _left_ground_once := false  # dejo el rango de GroundSense una vez: recien ahi vale re-tocar
+var _ragdoll_until := -999.0
 
 @onready var health: Health = get_node_or_null("Health") as Health
 @onready var membership: WorldMembership = get_node_or_null("WorldMembership") as WorldMembership
@@ -77,6 +100,9 @@ var _squash_tween: Tween
 @onready var stun_light: OmniLight3D = get_node_or_null("StunLight") as OmniLight3D
 @onready var hit_sparks: GPUParticles3D = get_node_or_null("HitSparks") as GPUParticles3D
 @onready var run_dust: GPUParticles3D = get_node_or_null("RunDust") as GPUParticles3D
+@onready var ground_sense: Area3D = get_node_or_null("GroundSense") as Area3D
+@onready var ragdoll_body: RigidBody3D = get_node_or_null("Ragdoll") as RigidBody3D
+@onready var _body_shape: CollisionShape3D = get_node_or_null("CollisionShape3D") as CollisionShape3D
 
 func _ready() -> void:
 	add_to_group("enemy")
@@ -92,6 +118,20 @@ func _ready() -> void:
 		stun_light.visible = false
 		stun_light.light_energy = stun_light_energy
 		stun_light.omni_range = stun_light_range
+	if ground_sense != null:
+		# Solo siente el suelo/paredes; capas por codigo (regla del proyecto, ver World.LAYER_*).
+		ground_sense.collision_layer = 0
+		ground_sense.collision_mask = World.LAYER_WORLD
+		ground_sense.monitoring = true
+		ground_sense.monitorable = false
+	if ragdoll_body != null:
+		# El ragdoll vive en el mundo (top_level), rueda contra el suelo y nadie lo detecta a el.
+		ragdoll_body.top_level = true
+		ragdoll_body.collision_layer = 0
+		ragdoll_body.collision_mask = World.LAYER_WORLD
+		ragdoll_body.gravity_scale = ragdoll_gravity_scale
+		ragdoll_body.freeze = true
+		ragdoll_body.visible = false
 	if membership != null:
 		membership.hide_when_inactive = false
 		if not membership.changed.is_connected(_on_membership_changed):
@@ -116,14 +156,21 @@ func is_stunned() -> bool:
 func is_armored() -> bool:
 	return combat_state == CombatState.ARMORED
 
+func is_ragdolling() -> bool:
+	return _ragdolling
+
 func can_attack() -> bool:
-	return _is_active and not _dead and not is_stunned() and not is_airborne()
+	return _is_active and not _dead and not is_stunned() and not is_airborne() and not _ragdolling
 
 func can_receive_hit() -> bool:
 	return _is_active and not _dead
 
 func tick_base(delta: float) -> bool:
 	if _dead:
+		return false
+	if _ragdolling:
+		_set_run_dust(false)
+		_update_ragdoll()
 		return false
 	_update_combat_state()
 	if is_airborne():
@@ -154,7 +201,9 @@ func take_hit_from_enemy(hits: float = 1.0, hit_direction: Vector3 = Vector3.ZER
 	return died
 
 func apply_stun(duration: float) -> void:
-	if duration <= 0.0 or _dead:
+	# Mientras el ragdoll manda (ya toco el piso), el golpe no re-stunea: la fisica es la dueña
+	# del cuerpo hasta que se para. El daño igual entra por Hurtbox.receive_hit → Health.
+	if duration <= 0.0 or _dead or _ragdolling:
 		return
 	combat_state = CombatState.STUNNED
 	_stunned_until = maxf(_stunned_until, World.now() + duration)
@@ -165,6 +214,8 @@ func apply_stun(duration: float) -> void:
 		# Suspendido mientras dure el stun (juggle): cae cuando el stun termina.
 		# airborne_max_time NO va aca; es solo el tope de seguridad en _update_airborne.
 		_airborne_until = maxf(_airborne_until, _stunned_until)
+		# Golpeado en el aire = queda acostado (el hang no se toca, solo la pose).
+		_lying = true
 	_play_stun_reaction(duration)
 	_refresh_visual_state()
 
@@ -191,7 +242,7 @@ func set_armored(enabled: bool) -> void:
 	_refresh_visual_state()
 
 func launch(height: float, hang_time: float) -> bool:
-	if not can_receive_hit() or is_armored():
+	if not can_receive_hit() or is_armored() or _ragdolling:
 		return false
 	_begin_airborne()
 	_air_gravity = airborne_gravity  # el launcher cae con la gravedad propia del enemigo
@@ -214,13 +265,13 @@ func _launch_routine(id: int, height: float, hang_time: float) -> void:
 	_airborne_until = World.now() + hang_time
 
 func slam(down_speed: float) -> void:
-	if not can_receive_hit() or is_armored() or not is_airborne():
+	if not can_receive_hit() or is_armored() or not is_airborne() or _ragdolling:
 		return
 	_airborne_until = World.now()
 	velocity.y = -absf(down_speed)
 
 func slam_bounce(down_speed: float, target_world_y: Callable, hang_time: float) -> void:
-	if not can_receive_hit() or is_armored():
+	if not can_receive_hit() or is_armored() or _ragdolling:
 		return
 	_bounce_target_y = target_world_y
 	_bounce_hang_time = hang_time
@@ -233,7 +284,7 @@ func slam_bounce(down_speed: float, target_world_y: Callable, hang_time: float) 
 ## Empujon en arco. El arco (velocidad + altura + cierre) lo define quien ataca via
 ## PushSettings, no el enemigo: asi cada arma/ataque empuja distinto (inyectable).
 func push(direction: Vector3, settings: PushSettings) -> void:
-	if not can_receive_hit() or is_armored():
+	if not can_receive_hit() or is_armored() or _ragdolling:
 		return
 	direction.y = 0.0
 	if direction.length_squared() < 0.0001:
@@ -247,6 +298,9 @@ func push(direction: Vector3, settings: PushSettings) -> void:
 	_airborne_until = World.now()
 	velocity = direction.normalized() * settings.horizontal_speed
 	velocity.y = absf(settings.up_speed)
+	# Empujado = cae acostado. Un push sobre un enemigo en el piso tambien lo acuesta: entra igual
+	# a AIRBORNE (arco bajo), sigue su trayectoria y el ragdoll arranca al tocar el suelo.
+	_set_lying(true)
 
 func try_parry(_player: Player, _hit_direction: Vector3 = Vector3.ZERO) -> bool:
 	return false
@@ -335,6 +389,7 @@ func _begin_airborne() -> void:
 		return
 	air_state = AirState.AIRBORNE
 	_airborne_ground_y = global_position.y
+	_left_ground_once = false  # hasta que salga del rango de GroundSense no cuenta como "toco"
 
 func _update_airborne(delta: float) -> void:
 	if is_stunned():
@@ -344,9 +399,19 @@ func _update_airborne(delta: float) -> void:
 	else:
 		velocity.y += _air_gravity * delta
 	move_and_slide()
-	if is_on_floor() or World.now() >= _airborne_until + airborne_max_time:
+	# La esfera GroundSense siente el piso un pelo antes que los pies: el ragdoll de un cuerpo
+	# acostado arranca justo antes del contacto real y se ve mas natural (anticipacion). Solo
+	# cuenta despues de haber salido del rango una vez (si no, un push desde el piso dispararia
+	# en el frame 0). Los pushes bajos que nunca salen del rango caen por is_on_floor().
+	var sensed := ground_sense != null and ground_sense.has_overlapping_bodies()
+	if not sensed:
+		_left_ground_once = true
+	var early_ground := _lying and _left_ground_once and sensed
+	if is_on_floor() or early_ground or World.now() >= _airborne_until + airborne_max_time:
 		if _slam_bounce:
 			_do_bounce()
+		elif _lying:
+			_start_ragdoll()
 		else:
 			_land()
 
@@ -365,6 +430,124 @@ func _land() -> void:
 	air_state = AirState.GROUNDED
 	velocity = Vector3.ZERO
 	_air_gravity = airborne_gravity  # limpia el override del push para el proximo vuelo
+
+## Acuesta al enemigo: la pose horizontal del vuelo (push o stun aereo). Reusa el mismo eje que
+## la inclinacion del stun, pero al angulo pleno `lie_angle`. Solo cambia el gesto; la trayectoria
+## (arco del push / hang del stun) no se toca. Ignora si ya esta el ragdoll fisico en el piso.
+func _set_lying(on: bool) -> void:
+	_lying = on
+	if visual == null or _ragdolling:
+		return
+	var target := _tilt_quaternion(lie_angle) if on else Quaternion.IDENTITY
+	var pivot := _lie_pivot() if on else Vector3.ZERO
+	_rotate_visual_to(target, pivot, stun_tilt_time)
+
+## Pivote de la pose acostada: la MITAD del modelo (centro de la capsula), no los pies. El cuerpo
+## stuneado se tumba girando sobre su centro. En el piso (ragdoll) el pivote ya no importa: manda
+## la fisica. La inclinacion corta del stun en tierra sigue pivotando desde los pies (pivot cero).
+func _lie_pivot() -> Vector3:
+	return Vector3.UP * _body_center_height()
+
+## Rota el Visual alrededor de `pivot` (espacio local del enemigo), no de su origen (los pies):
+## origin = pivot - R*pivot. Setea rotacion y posicion por separado para NO pisar la escala del
+## squash, que corre en su propio tween en paralelo.
+func _apply_visual_rotation(q: Quaternion, pivot: Vector3) -> void:
+	visual.quaternion = q
+	visual.position = pivot - Basis(q) * pivot
+
+func _tween_visual_rotation(t: float, from_q: Quaternion, to_q: Quaternion, pivot: Vector3) -> void:
+	_apply_visual_rotation(from_q.slerp(to_q, t), pivot)
+
+func _rotate_visual_to(target: Quaternion, pivot: Vector3, duration: float) -> void:
+	if _stun_tween != null:
+		_stun_tween.kill()
+	var from_q := visual.quaternion
+	_stun_tween = create_tween()
+	_stun_tween.tween_method(
+			_tween_visual_rotation.bind(from_q, target, pivot), 0.0, 1.0, maxf(0.01, duration))
+
+## Aterrizaje de un cuerpo acostado: el CharacterBody se apaga y un RigidBody capsula (el ragdoll)
+## toma la posta con la velocidad y un giro para rodar. El rigid body SOLO existe aca, en el piso.
+func _start_ragdoll() -> void:
+	if ragdoll_body == null:
+		# Escena sin nodo Ragdoll: cae al comportamiento normal (fallback defensivo, como el resto
+		# de modulos opcionales por get_node_or_null).
+		_lying = false
+		_land()
+		return
+	_ragdolling = true
+	air_state = AirState.GROUNDED
+	combat_state = CombatState.NORMAL
+	_airborne_until = -999.0
+	_ragdoll_until = World.now() + ragdoll_getup_delay
+	if _stun_tween != null:
+		_stun_tween.kill()
+	if _squash_tween != null:
+		_squash_tween.kill()
+	# El cuerpo deja de colisionar y de verse; el ragdoll es lo visible mientras rueda.
+	if _body_shape != null:
+		_body_shape.set_deferred("disabled", true)
+	if visual != null:
+		visual.visible = false
+	if stun_light != null:
+		stun_light.visible = false
+	# Arranca donde estaba el cuerpo (capsula centrada), ya acostado, heredando su velocidad.
+	var center := global_position + Vector3.UP * _body_center_height()
+	ragdoll_body.global_transform = Transform3D(Basis(_tilt_quaternion(lie_angle)), center)
+	ragdoll_body.freeze = false
+	ragdoll_body.visible = true
+	ragdoll_body.linear_velocity = velocity
+	ragdoll_body.angular_velocity = _ragdoll_spin_axis() * ragdoll_spin
+	velocity = Vector3.ZERO
+
+func _update_ragdoll() -> void:
+	if ragdoll_body != null:
+		# El cuerpo (Hurtbox, luz, chispas) sigue al ragdoll en el plano mientras rueda.
+		global_position.x = ragdoll_body.global_position.x
+		global_position.z = ragdoll_body.global_position.z
+	if World.now() >= _ragdoll_until:
+		_end_ragdoll()
+
+## Se para: congela y esconde el ragdoll, reubica el cuerpo donde se asento y lo endereza.
+func _end_ragdoll() -> void:
+	var rest := ragdoll_body.global_position if ragdoll_body != null else global_position
+	if ragdoll_body != null:
+		ragdoll_body.freeze = true
+		ragdoll_body.visible = false
+		ragdoll_body.linear_velocity = Vector3.ZERO
+		ragdoll_body.angular_velocity = Vector3.ZERO
+	_ragdolling = false
+	_lying = false
+	air_state = AirState.GROUNDED
+	combat_state = CombatState.NORMAL
+	velocity = Vector3.ZERO
+	# Reubica el cuerpo donde rodo el ragdoll; los pies al piso. Greybox plano: usa la altura de
+	# despegue. H3: raycast al piso real para terreno con desnivel.
+	global_position.x = rest.x
+	global_position.z = rest.z
+	global_position.y = _airborne_ground_y
+	if _body_shape != null:
+		_body_shape.set_deferred("disabled", false)
+	if visual != null:
+		visual.visible = true
+		visual.scale = Vector3.ONE
+		# Arranca acostado (sobre la mitad) y se endereza. En el piso el pivote ya no importa,
+		# pero mantenerlo evita un salto de posicion al pararse.
+		_apply_visual_rotation(_tilt_quaternion(lie_angle), _lie_pivot())
+		_rotate_visual_to(Quaternion.IDENTITY, _lie_pivot(), ragdoll_stand_time)
+	_refresh_visual_state()
+
+## Altura del centro de la capsula sobre los pies (el CollisionShape del cuerpo esta offset +Y).
+func _body_center_height() -> float:
+	return _body_shape.position.y if _body_shape != null else 0.9
+
+## Eje horizontal, perpendicular a la direccion del golpe, sobre el que voltea el ragdoll al rodar.
+func _ragdoll_spin_axis() -> Vector3:
+	var dir := Vector3(_last_hit_direction.x, 0.0, _last_hit_direction.z)
+	if dir.length_squared() < 0.0001:
+		return Vector3.RIGHT
+	var axis := Vector3.UP.cross(dir.normalized())
+	return axis.normalized() if axis.length_squared() > 0.0001 else Vector3.RIGHT
 
 ## Dirección en la que este enemigo retrocede y se inclina al ser golpeado: SIEMPRE se aleja
 ## del atacante, nunca de la hitbox que lo tocó. La hoja del arma orbita alrededor del jugador
@@ -416,10 +599,12 @@ func _tick_stun_knockback(delta: float) -> void:
 func _play_stun_reaction(duration: float) -> void:
 	if visual == null:
 		return
-	if _stun_tween != null:
-		_stun_tween.kill()
-	_stun_tween = create_tween()
-	_stun_tween.tween_property(visual, "quaternion", _stun_tilt_quaternion(), stun_tilt_time)
+	# Acostado (stun aereo) gira al angulo pleno sobre la MITAD del modelo; en el piso, la
+	# inclinacion corta de siempre sobre los pies (pivot cero).
+	if _lying:
+		_rotate_visual_to(_tilt_quaternion(lie_angle), _lie_pivot(), stun_tilt_time)
+	else:
+		_rotate_visual_to(_tilt_quaternion(stun_tilt_angle), Vector3.ZERO, stun_tilt_time)
 	_play_squash(duration)
 
 ## El rebote arranca con el golpe y termina mucho antes que el stun: encoge en
@@ -439,13 +624,14 @@ func _play_squash(duration: float) -> void:
 func _reset_stun_reaction() -> void:
 	if visual == null:
 		return
-	if _stun_tween != null:
-		_stun_tween.kill()
 	if _squash_tween != null:
 		_squash_tween.kill()
 	visual.scale = Vector3.ONE  # el rebote ya termino a mitad del stun
-	_stun_tween = create_tween()
-	_stun_tween.tween_property(visual, "quaternion", Quaternion.IDENTITY, stun_tilt_time)
+	# Si sigue acostado (juggle terminado pero aun cayendo) NO se endereza: espera el ragdoll.
+	if _lying:
+		_rotate_visual_to(_tilt_quaternion(lie_angle), _lie_pivot(), stun_tilt_time)
+	else:
+		_rotate_visual_to(Quaternion.IDENTITY, Vector3.ZERO, stun_tilt_time)
 
 ## Inclinacion del golpe: el cuerpo cae en la direccion en que el golpe lo aleja del atacante,
 ## pivotando desde los pies. Se expresa como Quaternion (eje + angulo), no como Euler.
@@ -453,7 +639,7 @@ func _reset_stun_reaction() -> void:
 ## `_last_hit_direction` es global, pero `visual.quaternion` es local al enemigo, que gira con
 ## `look_at` para encarar a su objetivo. Sin pasar la direccion a espacio local, la inclinacion
 ## depende de hacia donde este mirando: de frente al jugador, el cuerpo cae hacia adelante.
-func _stun_tilt_quaternion() -> Quaternion:
+func _tilt_quaternion(angle_deg: float) -> Quaternion:
 	var direction := Vector3(_last_hit_direction.x, 0.0, _last_hit_direction.z)
 	if direction.length_squared() < 0.0001:
 		return Quaternion.IDENTITY
@@ -465,7 +651,7 @@ func _stun_tilt_quaternion() -> Quaternion:
 	var axis := Vector3.UP.cross(local_dir.normalized())
 	if axis.length_squared() < 0.0001:
 		return Quaternion.IDENTITY
-	return Quaternion(axis.normalized(), deg_to_rad(stun_tilt_angle))
+	return Quaternion(axis.normalized(), deg_to_rad(angle_deg))
 
 func _set_run_dust(active: bool) -> void:
 	if run_dust != null and run_dust.emitting != active:
@@ -473,6 +659,18 @@ func _set_run_dust(active: bool) -> void:
 
 func _die() -> void:
 	_dead = true
+	if _ragdolling:
+		# Murio a mitad del ragdoll: apaga la fisica y devuelve el cuerpo a la vista para la
+		# reaccion de muerte normal.
+		_ragdolling = false
+		if ragdoll_body != null:
+			ragdoll_body.freeze = true
+			ragdoll_body.visible = false
+		if _body_shape != null:
+			_body_shape.set_deferred("disabled", false)
+		if visual != null:
+			visual.visible = true
+	_lying = false
 	_set_run_dust(false)
 	remove_from_group("enemy")  # los vivos ya no lo ven (targeting/provocación)
 	collision_layer = 0

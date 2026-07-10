@@ -438,6 +438,26 @@ func _ready() -> void:
 	stunned_enemy.queue_free()
 	airborne_enemy.queue_free()
 
+	# Ragdoll de aterrizaje: un push (o stun aereo) deja al enemigo acostado; al tocar el piso el
+	# cuerpo pasa a RigidBody y se para tras ragdoll_getup_delay. La trayectoria previa no cambia.
+	var lying_enemy := (load("res://enemies/grounded_enemy.tscn") as PackedScene).instantiate() as EnemyBase
+	add_child(lying_enemy)
+	await get_tree().process_frame
+	lying_enemy._last_hit_direction = Vector3.RIGHT
+	lying_enemy.push(Vector3.RIGHT, PushSettings.new())
+	assert(lying_enemy._lying)          # el push lo acuesta
+	assert(lying_enemy.is_airborne())   # sigue su arco en el aire (rigid body solo en el piso)
+	lying_enemy._start_ragdoll()        # simula el toque de la esfera con el suelo
+	assert(lying_enemy._ragdolling)
+	assert(lying_enemy.ragdoll_body != null and lying_enemy.ragdoll_body.visible)
+	assert(not lying_enemy.visual.visible)  # el cuerpo cede la vista al ragdoll
+	lying_enemy._ragdoll_until = World.now() - 0.1  # vencido: el proximo tick lo para
+	lying_enemy.tick_base(0.1)
+	assert(not lying_enemy._ragdolling)     # se paro
+	assert(not lying_enemy._lying)
+	assert(lying_enemy.visual.visible)
+	lying_enemy.queue_free()
+
 	# LockOn (batch 6): adquiere el enemigo más cercano dentro de rango/ángulo, ignora el lejano
 	var enemy_near := EnemyBase.new()
 	add_child(enemy_near)
