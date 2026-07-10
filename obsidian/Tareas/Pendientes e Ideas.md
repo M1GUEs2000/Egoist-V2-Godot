@@ -20,22 +20,7 @@ Lo que NO vive aca: tunear valores y probar jugando de un sistema ya implementad
 
 ## Pendientes
 
-| Que | Nodo | Detalle |
-|---|---|---|
-| Scanner de cambio de mundo | [[World Switch]] | Sin diseño: no hay modulo, trigger ni tuneables. Tutupa lo define el 2026-07-10. |
-| El AOE aereo del [[Mazo]] debe lanzar a **todos** los enemigos del area | [[Mazo]] | Hoy `AirSlamHitbox` es un `Area3D` que reacciona a `area_entered` y se enciende al iniciar la caida: alcanza al primer enemigo que atraviesa, y no ve a los que ya estaban parados dentro del radio al impactar. Hay que consultar los solapamientos vigentes en el instante del impacto. |
-| El hitbox del AOE aereo del Mazo debe ser un **cilindro** | [[Mazo]] | Hoy es una esfera (`air_y_aoe_radius`). El area es de suelo: la esfera cubre de menos al ras y de mas en altura. |
-| Rediseñar el combo aereo del [[Mazo]] | [[Mazo]] | Sin diseño. Hoy el aereo del Mazo no es una cadena encadenable como la de la [[Espada]]: son moves puntuales sueltos (tap con push, X cargado ground pound, Y cargado slam). Definir que reemplaza a que. |
-| El dash del bloque verde debe hacer daño | [[Bloques]] | Hoy no daña: la caracteristica Dash entra por `Player.force_dash`, que es solo movimiento. El dodge normal si daña, via `dash_deals_damage`. El daño de un dash forzado lo pone un hitbox propio — ver como lo resuelve el X cargado de la [[Espada]] con su `ChargedDashHitbox`. |
-| El rebote en enemigos debe **stunear sin dañar** | [[Rebote en Enemigos]] | El stun ya esta desacoplado del daño: `EnemyBase.receive_stun` no toca `Health`. Falta un `enemy_bounce_stun: StunSettings` en `PlayerTuning` (mismo patron que `enemy_bounce_push`) y un verbo `receive_stun_from(source, stun)` en `EnemyBase`, porque un rebote no pasa por la hurtbox y la reaccion visual del stun se orienta con `_last_hit_direction`. |
-
-### Verificaciones abiertas
-
-| Que | Nodo | Detalle |
-|---|---|---|
-| El combo cruza dos armas y `cancel_routines()` es por arma | [[Combate]] | Espada (slot X) → Mazo (slot Y): la rutina de la Espada no se cancela al atacar con el Mazo. Su tween y su ventana de daño siguen vivos, y como el arma saliente se oculta con `visible = false`, el sintoma seria daño fantasma invisible. Sin verificar. |
-| Rebote en enemigos y slam del Mazo compiten por el mismo contacto | [[Mazo]] | Al caer sobre un enemigo, `PlayerEnemyBounce` ve la colision fisica y el `Hitbox` ve la hurtbox. Rebotar conserva el doble salto; el slam lo deja disponible via su hang. Falta decidir la precedencia y hacerla tuneable. |
-| Falta un `WorldEnvironment` con glow | [[Combate]] | Sin el no hay halo de bloom: ni en el glow de carga de la hoja, ni en las chispas de impacto, ni en la luz del stun. Es un cambio de una escena pero afecta a todo lo que se ve. |
+Sin entradas activas fuera de [[H1 - Vertical Slice]].
 
 ## Ideas potenciales
 

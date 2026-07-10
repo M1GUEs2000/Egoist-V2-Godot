@@ -30,7 +30,7 @@ Esta nota es el indice del sistema. El detalle vive en una subnota por modulo o 
 | Bloques traversal | `TraversalBlock`, `BreakOnDeath`, `SpikeWall` | E3 | [[Bloques]] |
 | Cadenas | `PlayerSwing` | E0 | [[Cadenas]] |
 | Occlusion fade de camara | `CameraOcclusionFade` | E2 | [[Occlusion Fade de Camara]] |
-| Landing indicator | `LandingIndicator` | E2 | [[Landing Indicator]] |
+| Landing indicator | `LandingIndicator` | E3 | [[Landing Indicator]] |
 | Colores de mundo | `World.world_color()` | E2 | [[Colores de mundo]] |
 
 ## Reglas madre del nodo

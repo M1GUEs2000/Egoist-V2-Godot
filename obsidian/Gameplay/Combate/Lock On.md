@@ -6,7 +6,7 @@ tags:
   - sistema
   - combate
 status: active
-system_status: E2
+system_status: E3
 hito: H1
 ---
 
@@ -22,7 +22,7 @@ Sistema tipo Hades. No reemplaza movimiento: solo ajusta target, orientacion y s
 
 `player/lock_on.gd` implementado: adquisicion de target por direccion cuantizada a 16 direcciones (`_find_best_target`/`_quantize`), reticle sobre el AABB combinado de las mallas del target (`_reticle_position`), visibilidad condicionada a armas afuera (`has_visible_target`/`_is_weapons_out`), e integracion con `PlayerLocomotion.tick` (`set_aim_direction`). Cobertura en `world/smoke_test.gd`.
 
-## Pendiente
+## Ultimos detalles
 
 - Tunear rango/angulo/altura del reticle jugando.
 
@@ -30,4 +30,3 @@ Sistema tipo Hades. No reemplaza movimiento: solo ajusta target, orientacion y s
 
 - [[Combate]]
 - [[Input Feel]]
-

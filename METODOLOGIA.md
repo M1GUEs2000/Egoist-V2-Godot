@@ -169,7 +169,7 @@ Escala E0–E4 (ver *Ciclo de vida*). Se actualiza en el mismo commit que cambia
 | Pickups de mundo | `TraversalBlock` · `ActionWorldSwitchModifier` | **E2** | Validar maldicion de accion y pickups combinados jugando |
 | HUD | `HUD` | **E1** | Es placeholder funcional (labels/barras); rediseño visual pendiente |
 | Cámara | `CameraRig` | **E2** | Iterar pitch/yaw/distance/damping jugando |
-| Lock-on | `LockOn` | **E2** | Implementado; falta tunear rango/angulo/reticle jugando |
+| Lock-on | `LockOn` | **E3** | Ultimos detalles de rango/angulo/reticle jugando |
 | Columpio de cadenas | `PlayerSwing` | **E0** | Stub — batch 6 |
 | Visual de mundos | `WorldVisual` | **E0** | Stub — 2 Environments + lerp |
-| Indicador de aterrizaje | `LandingIndicator` | **E2** | Implementado: raycast, orientacion por normal, tuneables por export |
+| Indicador de aterrizaje | `LandingIndicator` | **E3** | Ultimos detalles visuales si aparecen jugando |
