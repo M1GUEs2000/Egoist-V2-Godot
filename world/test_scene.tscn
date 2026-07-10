@@ -174,7 +174,7 @@ collision_mask = 0
 script = ExtResource("4_membership")
 
 [node name="LivingPlatform3" type="StaticBody3D" parent="." unique_id=1896626281]
-transform = Transform3D(4.5980473, 0.029133607, 0, -0.13401459, 0.99957556, 0, 0, 0, 5.005, 42.299328, -1.6487484, -151.4067)
+transform = Transform3D(4.5980473, 0.029133607, 0, -0.13401459, 0.99957556, 0, 0, 0, 5.005, 38.729977, -1.6487484, -148.69684)
 collision_mask = 0
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="LivingPlatform3" unique_id=1239432844]
@@ -331,6 +331,11 @@ enable_launch = true
 transform = Transform3D(1.985, 0, 0, 0, 1.985, 0, 0, 0, 1.985, 44.143764, 9.407414, -123.4495)
 enable_launch = true
 enable_meter = true
+enable_world_switch = true
+hits_to_break = 50
+
+[node name="WorldSwitchPickup6" parent="." unique_id=791179567 instance=ExtResource("6_traversal")]
+transform = Transform3D(1.985, 0, 0, 0, 1.985, 0, 0, 0, 1.985, 40.82506, 6.635214, -144.29689)
 enable_world_switch = true
 hits_to_break = 50
 

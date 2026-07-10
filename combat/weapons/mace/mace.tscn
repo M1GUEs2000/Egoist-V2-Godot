@@ -32,24 +32,27 @@ size = Vector3(2.2, 1.8, 2.2)
 script = ExtResource("1_mace")
 tuning = ExtResource("2_tuning")
 
-[node name="Pivot" type="Node3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 0.965926, -0.258819, 0, 0.258819, 0.965926, 0.45, 1, -0.55)
+[node name="Hand" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
 
-[node name="HandleMesh" type="MeshInstance3D" parent="Pivot"]
+[node name="Pivot" type="Node3D" parent="Hand"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.71)
+
+[node name="HandleMesh" type="MeshInstance3D" parent="Hand/Pivot"]
 transform = Transform3D(1, 0, 0, 0, -0.0000000437114, -1, 0, 1, -0.0000000437114, 0, 0, -0.58)
 mesh = SubResource("CylinderMesh_handle")
 surface_material_override/0 = SubResource("Mat_handle")
 
-[node name="HeadMesh" type="MeshInstance3D" parent="Pivot"]
+[node name="HeadMesh" type="MeshInstance3D" parent="Hand/Pivot"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -1.28)
 mesh = SubResource("SphereMesh_head")
 surface_material_override/0 = SubResource("Mat_head")
 
-[node name="BladeHitbox" type="Area3D" parent="Pivot"]
+[node name="BladeHitbox" type="Area3D" parent="Hand/Pivot"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.78)
 script = ExtResource("3_hitbox")
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="Pivot/BladeHitbox"]
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Hand/Pivot/BladeHitbox"]
 shape = SubResource("BoxShape3D_mace")
 
 [node name="AirDiscHitbox" type="Area3D" parent="."]

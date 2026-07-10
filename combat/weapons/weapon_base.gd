@@ -8,11 +8,18 @@ class_name WeaponBase extends Node3D
 ## hoja es un Area3D hijo del Pivot que barre físicamente con el swing (Jolt lo samplea
 ## cada physics frame, mismo grano que el trace de v1). En el aire se suma el disco.
 ##
-## Convención de escena de un arma (ver sword.tscn):
+## Convención de escena de un arma (ver sword.tscn). El root del arma está en el origen
+## del player: es el EJE alrededor del cual orbita la mano.
 ##   Arma (WeaponBase)
-##   ├── Pivot (Node3D)            ← rota durante los swings
-##   │   └── BladeHitbox (Hitbox)  ← acompaña la hoja
-##   └── AirDiscHitbox (Hitbox)    ← opcional: disco alrededor del player en golpes aéreos
+##   ├── Hand (Node3D)                 ← la mano: rota durante los swings y así orbita al player
+##   │   └── Pivot (Node3D)            ← muñeca RÍGIDA: solo aleja la hoja hand_radius de la mano
+##   │       └── BladeHitbox (Hitbox)  ← acompaña la hoja
+##   └── AirDiscHitbox (Hitbox)        ← opcional: disco alrededor del player en golpes aéreos
+##
+## El golpe no nace de girar la hoja sobre un punto fijo al costado del jugador: nace de
+## MOVER la mano alrededor del jugador. La hoja cuelga rígida, apuntando siempre hacia
+## afuera, y describe el arco porque la mano la lleva. Rotar la mano en Y la pasea por un
+## semicírculo al frente; rotarla en X la sube/baja; alejar el radio la extiende (estocada).
 
 @export var tuning: WeaponTuning
 
@@ -41,9 +48,13 @@ var _swing_tween: Tween
 var _launcher_id := 0
 var _launcher_height := 0.0
 var _launcher_hang_time := 0.0
+## Pose de mano desde la que arranca la estocada en curso (ver thrust).
+var _thrust_from := Quaternion.IDENTITY
+var _thrust_reach := 0.0
 
-@onready var _pivot: Node3D = $Pivot
-@onready var _blade_hitbox: Hitbox = $Pivot/BladeHitbox
+@onready var _hand: Node3D = $Hand
+@onready var _pivot: Node3D = $Hand/Pivot
+@onready var _blade_hitbox: Hitbox = $Hand/Pivot/BladeHitbox
 @onready var _air_disc_hitbox: Hitbox = get_node_or_null("AirDiscHitbox")
 @onready var _blade_mesh: MeshInstance3D = _find_charge_glow_mesh()
 
@@ -52,6 +63,8 @@ var _blade_material: StandardMaterial3D
 func _ready() -> void:
 	if tuning == null:
 		tuning = _default_tuning()
+	_hand.position = Vector3(0.0, tuning.hand_height, 0.0)
+	_reset_hand()
 	_setup_blade_glow()
 
 func setup(player: Player) -> void:
@@ -271,14 +284,14 @@ func on_kill() -> void:
 ## Prepara un material propio en la hoja con emission apagada (energy 0), listo para el
 ## glow de carga. Duplica el material base para no pisar otras instancias del arma.
 func _find_charge_glow_mesh() -> MeshInstance3D:
-	var preferred := get_node_or_null("Pivot/BladeMesh") as MeshInstance3D
+	var preferred := get_node_or_null("Hand/Pivot/BladeMesh") as MeshInstance3D
 	if preferred != null:
 		return preferred
 	# El Mazo no tiene BladeMesh: su parte visible/cargable es la cabeza.
-	preferred = get_node_or_null("Pivot/HeadMesh") as MeshInstance3D
+	preferred = get_node_or_null("Hand/Pivot/HeadMesh") as MeshInstance3D
 	if preferred != null:
 		return preferred
-	return get_node_or_null("Pivot/HandleMesh") as MeshInstance3D
+	return get_node_or_null("Hand/Pivot/HandleMesh") as MeshInstance3D
 
 func _setup_blade_glow() -> void:
 	if _blade_mesh == null:
@@ -337,15 +350,17 @@ func run_launcher_window(hitbox: Hitbox, height: float, hang_time: float,
 		return
 	hitbox.end_swing()
 
-# ---- Swings procedurales (tweens de quaternion sobre el Pivot, sin AnimationPlayer) ----
-## Genérico para cualquier arma con Pivot; la coreografía (qué ángulo, qué step) la
-## define cada arma (ver Sword/Mace), esto solo mueve el Pivot.
+# ---- Swings procedurales (tweens de quaternion sobre la Hand, sin AnimationPlayer) ----
+## Genérico para cualquier arma con Hand/Pivot; la coreografía (qué ángulo, qué step) la
+## define cada arma (ver Sword/Mace), esto solo mueve la mano alrededor del jugador.
 
-## Swing horizontal (eje Y local): barrido de un lado al otro. Corte por defecto.
+## Swing horizontal (eje Y): la mano recorre un semicírculo al frente, de un lado al otro.
+## Corte por defecto.
 func swing(angle: float) -> void:
 	_swing_axis(angle, Vector3.UP)
 
-## Swing vertical ascendente (eje X local): corte de abajo hacia arriba (uppercut del launcher).
+## Swing vertical ascendente (eje X): la mano sube en arco frente al jugador (uppercut
+## del launcher).
 func swing_up(angle: float) -> void:
 	_swing_axis(angle, Vector3.RIGHT)
 
@@ -353,28 +368,55 @@ func _swing_axis(angle: float, axis: Vector3) -> void:
 	var half := deg_to_rad(angle * 0.5)
 	_play_swing(Quaternion(axis, -half), Quaternion(axis, half))
 
+## Estocada: la mano viaja desde su reposo hasta el frente del jugador extendiendo el brazo
+## `reach` metros, y vuelve. La hoja no rota (muñeca rígida): la punta avanza porque la mano
+## se aleja del eje. El avance del cuerpo lo pone attack_step del jugador, no esto.
+func thrust(reach: float) -> void:
+	_kill_swing_tween()
+	_thrust_from = _hand_rest()
+	_thrust_reach = reach
+	_swing_tween = create_tween()
+	_swing_tween.tween_method(_set_thrust_progress, 0.0, 1.0, tuning.swing_time)
+	_swing_tween.tween_callback(_reset_hand)
+
+## progress 0 = mano en reposo · 0.5 = brazo extendido al frente · 1 = de vuelta.
+## La mano llega al frente en la primera mitad; el radio sale y vuelve en todo el golpe.
+func _set_thrust_progress(progress: float) -> void:
+	_hand.quaternion = _thrust_from.slerp(Quaternion.IDENTITY, minf(1.0, progress * 2.0))
+	_set_hand_radius(tuning.hand_radius + _thrust_reach * sin(progress * PI))
+
 func _play_swing(from: Quaternion, to: Quaternion) -> void:
 	_kill_swing_tween()
-	_pivot.quaternion = from
+	_hand.quaternion = from
 	_swing_tween = create_tween()
-	_swing_tween.tween_property(_pivot, "quaternion", to, tuning.swing_time)
-	_swing_tween.tween_callback(_reset_pivot)
+	_swing_tween.tween_property(_hand, "quaternion", to, tuning.swing_time)
+	_swing_tween.tween_callback(_reset_hand)
 
-## Vuelta completa. `duration` < 0 → dura lo que un swing normal; las vueltas del X
-## cargado del Mazo pasan su propio charged_spin_time (si no, el tween queda a medio
-## girar cuando arranca la vuelta siguiente).
+## Vuelta completa: la mano da la vuelta entera alrededor del jugador. `duration` < 0 → dura
+## lo que un swing normal; las vueltas del X cargado del Mazo pasan su propio
+## charged_spin_time (si no, el tween queda a medio girar cuando arranca la vuelta siguiente).
 func _play_spin(duration := -1.0) -> void:
 	_kill_swing_tween()
 	var spin_time := duration if duration > 0.0 else tuning.swing_time
 	_swing_tween = create_tween()
 	_swing_tween.tween_method(_set_spin_angle, 0.0, TAU, spin_time)
-	_swing_tween.tween_callback(_reset_pivot)
+	_swing_tween.tween_callback(_reset_hand)
 
 func _set_spin_angle(angle: float) -> void:
-	_pivot.quaternion = Quaternion(Vector3.UP, angle)
+	_hand.quaternion = Quaternion(Vector3.UP, angle)
 
-func _reset_pivot() -> void:
-	_pivot.quaternion = Quaternion.IDENTITY
+## Pose de reposo de la mano: a un lado del jugador (hand_rest_yaw), brazo sin extender.
+func _hand_rest() -> Quaternion:
+	return Quaternion(Vector3.UP, deg_to_rad(tuning.hand_rest_yaw))
+
+## Aleja/acerca la hoja moviendo la mano sobre su radio. La muñeca no rota: la hoja apunta
+## siempre radialmente hacia afuera, así que cambiar el radio la extiende hacia adelante.
+func _set_hand_radius(radius: float) -> void:
+	_pivot.position = Vector3(0.0, 0.0, -radius)
+
+func _reset_hand() -> void:
+	_hand.quaternion = _hand_rest()
+	_set_hand_radius(tuning.hand_radius)
 
 func _kill_swing_tween() -> void:
 	if _swing_tween != null and _swing_tween.is_valid():

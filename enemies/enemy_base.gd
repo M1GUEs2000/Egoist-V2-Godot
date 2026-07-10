@@ -18,6 +18,20 @@ enum AirState { GROUNDED, AIRBORNE }
 @export var death_destroy_delay := 0.4
 @export var normal_color := Color(0.9, 0.2, 0.2, 1.0)
 @export var inactive_color := Color(0.55, 0.55, 0.55, 1.0)
+## Velocidad horizontal inicial del retroceso al entrar en stun, en m/s.
+@export var stun_knockback_speed := 4.0
+## Frenado del retroceso durante stun, en m/s². Mas alto = se detiene antes.
+@export var stun_knockback_decay := 20.0
+## Angulo maximo de inclinacion visual durante stun, en grados.
+@export var stun_tilt_angle := 12.0
+## Tiempo del tween de inclinacion al entrar/salir de stun, en segundos.
+@export var stun_tilt_time := 0.08
+## Energia de emision del material durante stun. Sin bloom, solo enciende la superficie.
+@export var stun_emission_energy := 1.8
+## Energia de la luz amarilla durante stun.
+@export var stun_light_energy := 1.6
+## Alcance de la luz amarilla durante stun, en metros.
+@export var stun_light_range := 3.0
 
 var air_state := AirState.GROUNDED
 var combat_state := CombatState.NORMAL
@@ -34,10 +48,13 @@ var _bounce_target_y := Callable()
 var _bounce_hang_time := 0.0
 var _launch_id := 0
 var _air_gravity := 0.0  # gravedad del vuelo actual; el push la override con su propio arco
+var _stun_tween: Tween
 
 @onready var health: Health = get_node_or_null("Health") as Health
 @onready var membership: WorldMembership = get_node_or_null("WorldMembership") as WorldMembership
 @onready var hurtbox: Hurtbox = get_node_or_null("Hurtbox") as Hurtbox
+@onready var visual: Node3D = get_node_or_null("Visual") as Node3D
+@onready var stun_light: OmniLight3D = get_node_or_null("StunLight") as OmniLight3D
 
 func _ready() -> void:
 	add_to_group("enemy")
@@ -49,6 +66,10 @@ func _ready() -> void:
 		health.died.connect(_die)
 	if hurtbox != null:
 		hurtbox.triggers_air_hit_stall = true
+	if stun_light != null:
+		stun_light.visible = false
+		stun_light.light_energy = stun_light_energy
+		stun_light.omni_range = stun_light_range
 	if membership != null:
 		membership.hide_when_inactive = false
 		if not membership.changed.is_connected(_on_membership_changed):
@@ -87,7 +108,7 @@ func tick_base(delta: float) -> bool:
 		_update_airborne(delta)
 		return false
 	if is_stunned():
-		velocity = velocity.move_toward(Vector3.ZERO, 20.0 * delta)
+		_tick_stun_knockback(delta)
 		move_and_slide()
 		return false
 	return _is_active
@@ -109,13 +130,14 @@ func apply_stun(duration: float) -> void:
 		return
 	combat_state = CombatState.STUNNED
 	_stunned_until = maxf(_stunned_until, World.now() + duration)
-	# El golpe frena el momentum: cancela el push (u otro impulso) en curso y deja al
-	# enemigo quieto stuneado (en aire flota quieto y cae al terminar el stun).
-	velocity = Vector3.ZERO
+	# El golpe cancela el push (u otro impulso) en curso y lo reemplaza por un retroceso
+	# corto propio del stun, sin acumular momentum previo.
+	_apply_stun_knockback()
 	if is_airborne():
 		# Suspendido mientras dure el stun (juggle): cae cuando el stun termina.
 		# airborne_max_time NO va aca; es solo el tope de seguridad en _update_airborne.
 		_airborne_until = maxf(_airborne_until, _stunned_until)
+	_play_stun_reaction()
 	_refresh_visual_state()
 
 func apply_armor(duration: float) -> void:
@@ -124,6 +146,7 @@ func apply_armor(duration: float) -> void:
 	combat_state = CombatState.ARMORED
 	_armor_hits_taken = 0
 	_stunned_until = -999.0
+	_reset_stun_reaction()
 	_refresh_visual_state()
 	await get_tree().create_timer(duration).timeout
 	if not _dead and combat_state == CombatState.ARMORED:
@@ -136,6 +159,7 @@ func set_armored(enabled: bool) -> void:
 	combat_state = CombatState.ARMORED if enabled else CombatState.NORMAL
 	_armor_hits_taken = 0
 	_stunned_until = -999.0
+	_reset_stun_reaction()
 	_refresh_visual_state()
 
 func launch(height: float, hang_time: float) -> bool:
@@ -231,13 +255,7 @@ func on_world_changed() -> void:
 func on_hurtbox_hit(from: Node, damage: float, hit_direction: Vector3, stun: StunSettings) -> void:
 	if not can_receive_hit():
 		return
-	if hit_direction.length_squared() > 0.0001:
-		_last_hit_direction = hit_direction.normalized()
-	elif from != null and from is Node3D:
-		var dir := global_position - (from as Node3D).global_position
-		dir.y = 0.0
-		if dir.length_squared() > 0.0001:
-			_last_hit_direction = dir.normalized()
+	_remember_hit_direction(from, hit_direction)
 	if hostility == Hostility.PASSIVE:
 		_on_passive_attacked(from)
 	if is_armored():
@@ -275,6 +293,7 @@ func _provoke_nearby() -> void:
 func _update_combat_state() -> void:
 	if combat_state == CombatState.STUNNED and World.now() >= _stunned_until:
 		combat_state = CombatState.NORMAL
+		_reset_stun_reaction()
 		_refresh_visual_state()
 
 func _effective_stun_threshold() -> float:
@@ -289,6 +308,8 @@ func _begin_airborne() -> void:
 	_airborne_ground_y = global_position.y
 
 func _update_airborne(delta: float) -> void:
+	if is_stunned():
+		_tick_stun_knockback(delta)
 	if World.now() < _airborne_until and velocity.y <= 0.0:
 		velocity.y = 0.0
 	else:
@@ -316,6 +337,61 @@ func _land() -> void:
 	velocity = Vector3.ZERO
 	_air_gravity = airborne_gravity  # limpia el override del push para el proximo vuelo
 
+## Dirección en la que este enemigo retrocede y se inclina al ser golpeado: SIEMPRE se aleja
+## del atacante, nunca de la hitbox que lo tocó. La hoja del arma orbita alrededor del jugador
+## (ver la Hand en WeaponBase), así que a mitad de un swing está a un costado del enemigo —
+## usarla como origen mandaba el retroceso de lado, o de vuelta hacia el jugador.
+## hit_direction (hitbox → hurtbox) queda solo de fallback: golpes sin atacante posicionable.
+func _remember_hit_direction(from: Node, hit_direction: Vector3) -> void:
+	var attacker := from as Node3D
+	if attacker != null:
+		var away := global_position - attacker.global_position
+		away.y = 0.0
+		if away.length_squared() > 0.0001:
+			_last_hit_direction = away.normalized()
+			return
+	if hit_direction.length_squared() > 0.0001:
+		_last_hit_direction = hit_direction.normalized()
+
+func _apply_stun_knockback() -> void:
+	var direction := Vector3(_last_hit_direction.x, 0.0, _last_hit_direction.z)
+	if direction.length_squared() < 0.0001:
+		direction = Vector3.FORWARD
+	var vertical := velocity.y if is_airborne() else 0.0
+	velocity = direction.normalized() * stun_knockback_speed
+	velocity.y = vertical
+
+func _tick_stun_knockback(delta: float) -> void:
+	var horizontal := Vector3(velocity.x, 0.0, velocity.z)
+	horizontal = horizontal.move_toward(Vector3.ZERO, stun_knockback_decay * delta)
+	velocity.x = horizontal.x
+	velocity.z = horizontal.z
+
+func _play_stun_reaction() -> void:
+	if visual == null:
+		return
+	if _stun_tween != null:
+		_stun_tween.kill()
+	_stun_tween = create_tween()
+	_stun_tween.tween_property(visual, "rotation", _stun_tilt_rotation(), stun_tilt_time)
+
+func _reset_stun_reaction() -> void:
+	if visual == null:
+		return
+	if _stun_tween != null:
+		_stun_tween.kill()
+	_stun_tween = create_tween()
+	_stun_tween.tween_property(visual, "rotation", Vector3.ZERO, stun_tilt_time)
+
+func _stun_tilt_rotation() -> Vector3:
+	var direction := Vector3(_last_hit_direction.x, 0.0, _last_hit_direction.z)
+	if direction.length_squared() < 0.0001:
+		direction = Vector3.FORWARD
+	var axis := Vector3.UP.cross(direction.normalized())
+	if axis.length_squared() < 0.0001:
+		axis = Vector3.RIGHT
+	return axis.normalized() * deg_to_rad(stun_tilt_angle)
+
 func _die() -> void:
 	_dead = true
 	remove_from_group("enemy")  # los vivos ya no lo ven (targeting/provocación)
@@ -338,10 +414,21 @@ func _refresh_visual_state() -> void:
 		color = Color(0.6, 0.2, 0.9, 1.0)
 	elif is_stunned():
 		color = Color(1.0, 0.9, 0.15, 1.0)
-	for mesh in find_children("*", "MeshInstance3D", false):
+	var stunned := is_stunned() and not _dead and _is_active
+	if stun_light != null:
+		stun_light.visible = stunned
+		stun_light.light_energy = stun_light_energy if stunned else 0.0
+		stun_light.omni_range = stun_light_range
+	var mesh_root := visual if visual != null else self
+	var recursive := visual != null
+	for mesh in mesh_root.find_children("*", "MeshInstance3D", recursive):
 		var mesh_instance := mesh as MeshInstance3D
 		var material := mesh_instance.get_surface_override_material(0) as StandardMaterial3D
 		if material == null:
 			material = StandardMaterial3D.new()
 			mesh_instance.set_surface_override_material(0, material)
 		material.albedo_color = color
+		material.emission_enabled = stunned
+		if stunned:
+			material.emission = color
+			material.emission_energy_multiplier = stun_emission_energy

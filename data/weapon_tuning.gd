@@ -7,6 +7,16 @@ class_name WeaponTuning extends Resource
 @export var max_level := 3
 @export var stun: StunSettings
 
+@export_group("Mano")
+## Altura de la mano sobre el origen del jugador, en metros. La mano orbita a esta altura.
+@export var hand_height := 1.0
+## Distancia de la mano al eje del jugador, en metros: el radio de la órbita. Subirlo
+## despega los swings del cuerpo y agranda el arco que barre la hoja.
+@export var hand_radius := 0.71
+## Yaw de la pose de reposo de la mano, en grados alrededor del jugador. 0 = al frente,
+## positivo = a la izquierda, negativo = a la derecha.
+@export var hand_rest_yaw := -39.0
+
 @export_group("Combo aéreo")
 ## Duración de cada golpe aéreo.
 @export var air_step_time := 0.12

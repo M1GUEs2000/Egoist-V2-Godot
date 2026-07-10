@@ -31,7 +31,8 @@ Combate del jugador: slots X/Y, espada, hitboxes, parry, meter, combo aereo e in
 
 - Slot X es ataque ligero; slot Y es ataque pesado.
 - La misma arma cambia comportamiento segun slot.
-- La espada es procedural hasta H3: no depende de animaciones de combate.
+- Las armas son procedurales hasta H3: no dependen de animaciones de combate.
+- El golpe nace de mover la **mano** alrededor del jugador, no de girar la hoja sobre un punto fijo (ver seccion Mano orbital). *(2026-07-09)*
 - El stun es universal: la fuente define potencia/duracion/tipo (`StunSettings`), pero el receptor decide si entra con su threshold (ver seccion Stun universal). *(2026-07-07)*
 - El golpe aereo flota solo si conecta; si falla, cae mas fuerte.
 - El finisher aereo usa verbos opcionales `slam`, `push` y `slam_bounce`.
@@ -40,6 +41,27 @@ Combate del jugador: slots X/Y, espada, hitboxes, parry, meter, combo aereo e in
 - Los enemigos tambien son superficies de traversal: el player puede rebotar desde su colision con `PlayerEnemyBounce`; si `enemy_bounce_push` existe, el enemigo recibe `push()` como reaccion opcional.
 - Cada arma escala cuanto sostiene en el aire un golpe conectado con `air_stall_scale`; el Player calcula el stall base y el arma multiplica el resultado. *(2026-07-09)*
 - La hoja brilla al cargar un ataque (glow ambar proporcional a `InputBuffer.charge_progress`, tuneable con `charge_glow_color` / `charge_glow_max_energy`). Sin bloom aun: falta un `WorldEnvironment` con glow para el halo. *(2026-07-06)*
+
+## Mano orbital
+
+Toda arma cuelga de una **mano** que orbita alrededor del jugador. El root del arma esta en el origen del player y es el eje de la orbita. *(2026-07-09)*
+
+```text
+Arma (WeaponBase)
+├── Hand (Node3D)            <- la mano: rota durante los swings, y asi orbita al player
+│   └── Pivot (Node3D)       <- muñeca RIGIDA: solo aleja la hoja hand_radius de la mano
+│       └── BladeHitbox      <- acompaña la hoja
+└── AirDiscHitbox            <- opcional: disco alrededor del player en golpes aereos
+```
+
+- La muñeca no rota: la hoja apunta siempre radialmente hacia afuera y describe el arco porque la mano la lleva.
+- Rotar la mano en Y la pasea por un semicirculo al frente; en X la sube o baja; alejar el radio la extiende (estocada).
+- Los angulos de cada golpe (`combo_swing_angle`, `strike_angle`, etc.) miden **cuanto arco recorre la mano alrededor del jugador**.
+- Tuneables comunes en `WeaponTuning`: `hand_radius` (radio de la orbita), `hand_height` (altura), `hand_rest_yaw` (pose de reposo; negativo = a la derecha del player).
+- `_play_swing` / `_play_spin` / `swing` / `swing_up` / `thrust` viven en `WeaponBase` y mueven la mano; cada arma solo pone su coreografia.
+
+> [!warning] Contrato de escena
+> Un arma sin nodo `Hand` no carga. `WeaponBase` resuelve `$Hand/Pivot/BladeHitbox` y el mesh del glow bajo `Hand/Pivot/`.
 
 ## Loadout X/Y
 

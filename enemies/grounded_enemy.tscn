@@ -30,10 +30,19 @@ airborne_gravity = -15.0
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
 shape = SubResource("CapsuleShape3D_body")
 
-[node name="Mesh" type="MeshInstance3D" parent="." unique_id=1421867283]
+[node name="Visual" type="Node3D" parent="." unique_id=1306028843]
+
+[node name="Mesh" type="MeshInstance3D" parent="Visual" unique_id=1421867283]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
 mesh = SubResource("CapsuleMesh_body")
 surface_material_override/0 = SubResource("Mat_body")
+
+[node name="StunLight" type="OmniLight3D" parent="." unique_id=915778972]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.1, 0)
+visible = false
+light_color = Color(1, 0.9, 0.15, 1)
+light_energy = 0.0
+omni_range = 3.0
 
 [node name="Health" type="Node" parent="." unique_id=1832183654]
 script = ExtResource("2_health")

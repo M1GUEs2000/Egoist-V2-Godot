@@ -39,31 +39,18 @@ Arma de mas dano. Controla masas. Tiene bastante knockback. Tumba a los enemigos
 
 ## Estado Godot
 
-*(2026-07-09)* En desarrollo activo. Combos codificados y **alineados con el motor de
-la [[Espada]]** tras corregir dos bugs (commit `514a4b2`); promovido a `system_status: E2`
-(knobs en `mace_tuning.tres`, direccion de diseño clara). Adelantado respecto al plan
-original (que los dejaba para después de cerrar H1 con la Espada) a pedido explícito.
+*(2026-07-09)* En desarrollo activo. Combos codificados sobre el mismo motor que la
+[[Espada]]; knobs en `mace_tuning.tres` y direccion de diseño clara (`system_status: E2`).
 
 > [!warning] Pendiente de playtest
 > La tabla de combos de arriba describe la **intención** de diseño, no un
 > comportamiento validado jugando. El feel real (ventanas, daños, sweet spots) todavia
 > no se probó — el salto E2→E3 solo lo decide Tutupa jugando (ver `METODOLOGIA.md`).
 
-**Correcciones 2026-07-08/09 (alineación con el motor de la Espada):**
-
-- `_begin_ground_step()` llamaba `begin_damage_window()` + `ComboTracker.register_hit()`
-  a mano, duplicando lo que `WeaponBase.run_combo_chain()` ya hace tras `begin_step`.
-  Eso limpiaba `_window_hits` entre las dos llamadas y rompía el registro de golpes.
-  Fix: quitar ambas líneas. La Espada es la referencia: su `_begin_ground_step()` solo
-  pone coreografía + movement/air-hold.
-- `_hold_x()` no cancelaba el combo tap del press antes del cargado, así que el tap
-  seguía vivo unos frames encimado con el cargado. Fix: `cancel_routines()` al inicio,
-  idéntico a `Sword._hold_x()`. Aplica a tierra y aire.
-- Verificado que `Sword._hold_x()` sigue cancelando (dash cargado intacto) y que
-  `Sword._begin_ground_step()` no regresionó por los cambios compartidos.
-
-- `combat/weapons/mace/mace.gd` define `Mace extends WeaponBase` (ya no hereda de
+- `combat/weapons/mace/mace.gd` define `Mace extends WeaponBase` (no hereda de
   `Sword`): coreografía propia sobre el motor genérico de `WeaponBase`.
+- Sus swings mueven la mano alrededor del jugador, igual que la Espada (ver Mano orbital
+  en [[Combate]]); el palo va rigido, apuntando hacia afuera. *(2026-07-09)*
 - Tap X/Y terrestre: combo de 3 (swing, swing, smash AOE) vía `run_combo_chain` con el
   parámetro nuevo `wait_branch_extra_steps` — la rama espera agrega 2 smashes más
   (5 golpes totales) en vez de solo cambiar coreografía como la Espada. Si la ventana
@@ -88,24 +75,18 @@ original (que los dejaba para después de cerrar H1 con la Espada) a pedido expl
   tiene menos impactos y cada uno pesa mas. *(2026-07-09)*
 - "Congelar" no es un verbo nuevo: reusa el sistema de stun existente
   (`StunSettings` con power/duración altos, mode STILL) — ver [[Combate]].
-- Refactor compartido con la Espada (sin cambiar su comportamiento): las primitivas
-  de swing procedural (`swing`/`swing_up`/`_play_spin`/etc.) y el patrón de launcher
-  (`run_launcher_window`) se movieron de `sword.gd` a `weapon_base.gd`, porque el
-  Mazo los necesita igual.
-- `mace.tscn`: visual de palo con bola; ya no tiene `ChargedDashHitbox` (huérfano,
-  el Mazo no usa dash cargado). `AirDiscHitbox`/`LauncherHitbox` agrandados
-  ("área grande"/"omnidireccional" según esta nota).
-- Todos los ángulos/tiempos/daños en `data/mace_tuning.tres` son un primer pase sin
-  jugar — pendiente iterar (gate E1→E2 lo puede promover Claude tras la
-  verificación headless; E2→E3 es de Tutupa jugando, ver `METODOLOGIA.md`).
+- Las primitivas de swing procedural (`swing`/`swing_up`/`_play_spin`/`thrust`) y el
+  patrón de launcher (`run_launcher_window`) viven en `weapon_base.gd`, compartidas con
+  la Espada. Cada arma pone solo su coreografía.
+- `mace.tscn`: visual de palo con bola, sin `ChargedDashHitbox` (el Mazo no usa dash
+  cargado). `AirDiscHitbox`/`LauncherHitbox` son grandes ("área grande"/"omnidireccional").
+- Los ángulos/tiempos/daños de `data/mace_tuning.tres` son un primer pase sin jugar.
 - Instanciado como hijo del player en `player.tscn`; `PlayerCombat` solo muestra las
   armas asignadas a slots.
 
 ## Pendiente
 
 - Probar jugando cada fila de la tabla contra un `HitDummy`/enemigo.
-- Confirmar que el combate de la Espada en el otro slot no regresionó (se tocaron
-  `weapon_base.gd`, `input_buffer.gd` y `player_combat.gd`, compartidos por ambas).
 - Tunear `mace_tuning.tres` con el feel real.
 
 ## Relacionado

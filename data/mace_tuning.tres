@@ -19,7 +19,7 @@ gravity = -40.0
 [sub_resource type="Resource" id="Resource_macestun"]
 script = ExtResource("2_stun")
 power = 1.5
-grounded = 0.9
+grounded = 0.35
 airborne = 0.9
 
 [sub_resource type="Resource" id="Resource_macefreeze"]

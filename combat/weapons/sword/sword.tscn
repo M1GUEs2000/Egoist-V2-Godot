@@ -26,19 +26,22 @@ radius = 1.1
 script = ExtResource("1_sword")
 tuning = ExtResource("2_tuning")
 
-[node name="Pivot" type="Node3D" parent="." unique_id=1623413767]
-transform = Transform3D(1, 0, 0, 0, 0.965926, -0.258819, 0, 0.258819, 0.965926, 0.45, 1, -0.55)
+[node name="Hand" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
 
-[node name="BladeMesh" type="MeshInstance3D" parent="Pivot" unique_id=1928621873]
+[node name="Pivot" type="Node3D" parent="Hand" unique_id=1623413767]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.71)
+
+[node name="BladeMesh" type="MeshInstance3D" parent="Hand/Pivot" unique_id=1928621873]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.75)
 mesh = SubResource("BoxMesh_blade")
 surface_material_override/0 = SubResource("Mat_sword")
 
-[node name="BladeHitbox" type="Area3D" parent="Pivot" unique_id=2004569022]
+[node name="BladeHitbox" type="Area3D" parent="Hand/Pivot" unique_id=2004569022]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.75)
 script = ExtResource("3_hitbox")
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="Pivot/BladeHitbox" unique_id=592468529]
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Hand/Pivot/BladeHitbox" unique_id=592468529]
 transform = Transform3D(1.045, 0, 0, 0, 1.045, 1.5571755e-08, 0, -1.5571755e-08, 1.045, 0, -5.364418e-07, -0.041894436)
 shape = SubResource("BoxShape3D_blade")
 
