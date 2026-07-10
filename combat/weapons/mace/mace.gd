@@ -1,13 +1,14 @@
 class_name Mace extends WeaponBase
 ## Mazo (boveda: Armas/Mazo): tap = combo de 3 + rama espera (2 smashes extra);
 ## X cargado = 3 niveles con sweet spot congelante; Y cargado = continuidad de combo:
-## paso corto + launcher en tierra, caida diagonal + AOE launcher en aire.
+## paso corto + launcher en tierra, caida diagonal + AOE que rebota (slam_bounce) en aire.
 ## Coreografia sobre el motor generico de WeaponBase; aca vive solo la personalidad.
 
 const STEP_COUNT := 3
 const WAIT_BRANCH_EXTRA_STEPS := 2
+const AIR_STEP_COUNT := 2
 
-var _air_slam_impacted := false
+var _air_y_meet_y := 0.0
 
 @onready var _launcher_hitbox: Hitbox = $LauncherHitbox
 @onready var _air_slam_hitbox: Hitbox = $AirSlamHitbox
@@ -18,10 +19,17 @@ func setup(player: Player) -> void:
 	super.setup(player)
 	var t := _t()
 	(_launcher_shape.shape as BoxShape3D).size = t.ground_y_launcher_size
-	(_air_slam_shape.shape as SphereShape3D).radius = t.air_y_aoe_radius
+	var air_slam_cylinder := _air_slam_shape.shape as CylinderShape3D
+	air_slam_cylinder.radius = t.air_y_aoe_radius
+	air_slam_cylinder.height = t.air_y_aoe_height
 	setup_launcher_hitbox(_launcher_hitbox, t.ground_y_launcher_deals_damage, tuning.stun)
-	setup_launcher_hitbox(_air_slam_hitbox, true, tuning.stun)
-	_air_slam_hitbox.landed.connect(_on_air_slam_impact)
+	# El AOE aereo NO lancea hacia arriba: clava a los enemigos al suelo y los rebota hasta
+	# la altura del jugador (verbo slam_bounce, igual que el Y cargado de la Espada).
+	_air_slam_hitbox.source = player
+	_air_slam_hitbox.damage = 1.0
+	_air_slam_hitbox.stun = tuning.stun
+	_air_slam_hitbox.can_be_parried = false
+	_air_slam_hitbox.landed.connect(_on_air_slam_hit)
 
 func tap(_slot: World.Slot) -> void:
 	_tap_combo()
@@ -127,14 +135,25 @@ func _hold_y() -> void:
 
 # ---- Aereo ----
 
+## Combo aereo X de 2 golpes (un tap por golpe, mismo motor que el terrestre): corre a
+## swing_time porque el Mazo es pesado (el air_step_time generico es para armas rapidas).
 func _aerial_tap() -> void:
-	begin_routine()
+	if try_queue_combo(&"air"):
+		return
 	reset_hit_profile()
-	swing(_t().combo_swing_angle)
-	arm_push(tuning.push, tuning.swing_time * tuning.push_at)
+	run_combo_chain(&"air", AIR_STEP_COUNT, tuning.swing_time, _t().combo_window,
+			0, 0.0, _begin_air_step)
+
+## Golpe 1: jab con el mango, sin push (golpe de preparacion). Golpe 2 (finisher): cabezazo
+## horizontal que arma el push hacia adelante a mitad del swing.
+func _begin_air_step(step: int, _finisher: bool, _wait_branch: bool) -> void:
+	if step == 1:
+		thrust(_t().air_handle_reach)
+	else:
+		swing(_t().combo_swing_angle)
+		arm_push(tuning.push, tuning.swing_time * tuning.push_at)
+	_player.attack_step(tuning.swing_time)
 	_player.notify_aerial_attack(tuning.swing_time)
-	begin_damage_window(tuning.swing_time)
-	ComboTracker.register_hit()
 
 func _aerial_charged_x(sweet_spot: bool) -> void:
 	var t := _t()
@@ -159,29 +178,27 @@ func _aerial_charged_x(sweet_spot: bool) -> void:
 			return
 	reset_hit_profile()
 
-## Y aereo difiere del X aereo: no es ground pound vertical de dano bruto. Compone una
-## caida diagonal para interceptar y el AOE launcher relanza enemigos sin consumir doble salto.
+## Y aereo: cae en diagonal para interceptar. Al impactar (enemigo en el aire o suelo)
+## estalla el cilindro UNA vez y clava/rebota a todos los de adentro (slam_bounce). Si el
+## impacto fue contra un enemigo en el aire, el jugador rebota arriba-y-adelante segun la
+## direccion de la caida ("grados de rebote"), sin gastar el doble salto.
 func _aerial_hold_y(id: int) -> void:
 	var t := _t()
-	_air_slam_impacted = false
 	_set_air_y_fall_velocity()
 	_player.notify_aerial_attack(t.air_y_max_fall_time)
-	_launcher_height = t.air_y_launcher_height
-	_launcher_hang_time = t.air_y_launcher_hang_time
-	_air_slam_hitbox.begin_swing()
 	ComboTracker.register_hit()
 	var end_at := World.now() + t.air_y_max_fall_time
-	while is_routine_current(id) and not _air_slam_impacted and World.now() < end_at:
+	var hit_enemy_in_air := false
+	while is_routine_current(id) and World.now() < end_at:
 		if _player.is_on_floor():
-			_air_slam_impacted = true
+			break
+		if _airborne_enemy_contact():
+			hit_enemy_in_air = true
 			break
 		await get_tree().physics_frame
 	if not is_routine_current(id):
-		_air_slam_hitbox.end_swing()
 		return
-	await wait_seconds(t.air_y_aoe_duration)
-	if is_routine_current(id):
-		_air_slam_hitbox.end_swing()
+	await _burst_air_slam(id, hit_enemy_in_air)
 
 func _set_air_y_fall_velocity() -> void:
 	var t := _t()
@@ -192,17 +209,44 @@ func _set_air_y_fall_velocity() -> void:
 	_player.vertical_velocity = -absf(vertical_speed)
 	_player.air_state = Player.AirState.AIRBORNE
 
-## Conectar contra un enemigo frena la caida en seco y sostiene al jugador su propio hang
-## (no el air-hit-stall generico): esa es la ventana para gastar el doble salto y perseguir al
-## enemigo que el AOE acaba de lanzar. Contra el suelo no hay hang — ahi el move se acaba.
-func _on_air_slam_impact(_hurtbox: Hurtbox, _died: bool) -> void:
-	if _air_slam_impacted:
-		return
-	_air_slam_impacted = true
-	if _player.is_on_floor():
-		return
-	_player.set_momentum(Vector3.ZERO)  # corta la diagonal: el jugador queda clavado en el aire
-	_player.hover(_t().air_y_player_hang_time)
+## Contacto fisico real con un enemigo durante la caida (mismas colisiones de CharacterBody3D
+## que usa PlayerEnemyBounce): un collider en LAYER_ENEMY. Sin Area3D de deteccion aparte.
+func _airborne_enemy_contact() -> bool:
+	for index in range(_player.get_slide_collision_count()):
+		var collision := _player.get_slide_collision(index)
+		if collision == null:
+			continue
+		var collider := collision.get_collider() as CollisionObject3D
+		if collider != null and (collider.collision_layer & World.LAYER_ENEMY) != 0:
+			return true
+	return false
+
+## Estallido del cilindro: fija la altura de encuentro, rebota al jugador (solo si el impacto
+## fue en el aire) y prende el hitbox una vez para golpear/rebotar a todos los de adentro.
+func _burst_air_slam(id: int, hit_enemy_in_air: bool) -> void:
+	var t := _t()
+	_air_y_meet_y = _player.global_position.y + t.air_y_meet_height
+	if hit_enemy_in_air:
+		# La caida fue abajo+adelante; el rebote sale arriba+adelante. Los dos knobs fijan el
+		# angulo ("grados de rebote"). No gasta el doble salto.
+		_player.set_momentum(_player.forward() * t.air_y_bounce_forward_speed)
+		_player.vertical_velocity = t.air_y_bounce_up_speed
+		_player.air_state = Player.AirState.AIRBORNE
+	_air_slam_hitbox.begin_swing()
+	await wait_seconds(t.air_y_aoe_duration)
+	if is_routine_current(id):
+		_air_slam_hitbox.end_swing()
+
+## Cada enemigo del estallido: alimenta meter/kills y lo clava al suelo -> rebota hasta la
+## altura del jugador (slam_bounce), no un launch hacia arriba.
+func _on_air_slam_hit(hurtbox: Hurtbox, died: bool) -> void:
+	register_weapon_hit(hurtbox, died)
+	var target: Node = hurtbox.owner_node
+	if target.has_method("slam_bounce"):
+		var meet_y := _air_y_meet_y
+		target.call("slam_bounce", _t().air_y_down_speed,
+				func() -> float: return meet_y,
+				_t().air_y_launcher_hang_time)
 
 func _set_hitbox_stun(s: StunSettings) -> void:
 	_blade_hitbox.stun = s

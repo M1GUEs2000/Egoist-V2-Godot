@@ -294,10 +294,17 @@ func _ready() -> void:
 	assert(mace_tuning.ground_y_dash_distance > 0.0)
 	assert(mace_tuning.ground_y_launcher_size.length() > 0.0)
 	assert(mace_tuning.air_y_aoe_radius > 0.0)
+	assert(mace_tuning.air_y_aoe_height > 0.0)
+	assert(mace_tuning.air_y_down_speed > 0.0)
+	assert(mace_tuning.air_y_bounce_up_speed > 0.0)
+	assert(mace_tuning.air_handle_reach > 0.0)
 
 	var mace := (load("res://combat/weapons/mace/mace.tscn") as PackedScene).instantiate() as Mace
 	add_child(mace)
 	mace.setup(player)
+	# El AOE aereo es un cilindro dimensionado desde tuning (radio + altura), no una esfera.
+	assert(mace._air_slam_shape.shape is CylinderShape3D)
+	assert(is_equal_approx((mace._air_slam_shape.shape as CylinderShape3D).radius, mace_tuning.air_y_aoe_radius))
 	player.launcher.cancel()
 	mace.run_launcher_window(mace._launcher_hitbox, 2.0, 0.1, 0.01, 0.01, false)
 	await get_tree().create_timer(0.04).timeout
@@ -316,19 +323,32 @@ func _ready() -> void:
 	mace.cancel_routines()
 	await get_tree().physics_frame
 
-	# Y aereo: conectar contra un enemigo frena la caida en seco con el hang PROPIO del move y
-	# NO gasta el doble salto. Esa ventana existe para que el jugador lo gaste persiguiendo al
-	# enemigo que el AOE acaba de lanzar: sin esto el combo del Mazo no cierra.
+	# Y aereo: al clavar un enemigo EN EL AIRE el jugador rebota arriba+adelante ("grados de
+	# rebote", la direccion de la caida), no se queda clavado ni se lanza recto, y NO gasta el
+	# doble salto. Esa es la ventana para perseguir a los enemigos que el AOE rebota a tu altura.
 	player.launcher.cancel()
 	player.air_state = Player.AirState.AIRBORNE
 	player.vertical_velocity = -20.0
 	player.set_momentum(Vector3.RIGHT * 12.0)
 	player._can_double_jump = true
-	mace._air_slam_impacted = false
-	mace._on_air_slam_impact(_make_hurtbox(_make_push_probe()), false)
-	assert(player.vertical_velocity == 0.0)  # la caida se frena, no solo se ralentiza
-	assert(player.bump_velocity == Vector3.ZERO)  # la diagonal se corta
-	assert(player._can_double_jump)  # el hang no cobra el doble salto
+	var burst_id := mace.begin_routine()
+	mace._burst_air_slam(burst_id, true)
+	assert(player.vertical_velocity > 0.0)  # rebota hacia arriba
+	assert(player.bump_velocity.length() > 0.0)  # con componente horizontal (adelante)
+	assert(player._can_double_jump)  # el rebote no cobra el doble salto
+	mace._air_slam_hitbox.end_swing()
+	mace.cancel_routines()
+	await get_tree().physics_frame
+
+	# Aereo tap X: es un combo de 2 (jab con el mango + cabezazo con push), no un solo golpe.
+	player.air_state = Player.AirState.AIRBORNE
+	mace.tap(World.Slot.X)
+	assert(mace._combo_playing)
+	assert(mace._combo_kind == &"air")
+	mace.cancel_routines()
+	mace._blade_hitbox.end_swing()
+	mace._air_disc_hitbox.end_swing()
+	await get_tree().physics_frame
 
 	var stunned_enemy := (load("res://enemies/grounded_enemy.tscn") as PackedScene).instantiate() as EnemyBase
 	add_child(stunned_enemy)

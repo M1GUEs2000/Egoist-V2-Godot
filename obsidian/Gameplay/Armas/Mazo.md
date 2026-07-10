@@ -30,10 +30,10 @@ Arma de mas dano. Controla masas. Tiene bastante knockback. Tumba a los enemigos
 
 | Input | Descripcion |
 |---|---|
-| X | Ataque con knockback hacia adelante. |
+| X | Combo de 2: golpe con el mango (sin push) y luego cabezazo con knockback hacia adelante. |
 | X cargado | Caes con un ataque AOE. |
 | X cargado sweet spot | Caes con un ataque y al final das una vuelta. Los mantiene en el aire. |
-| Y cargado | Caida diagonal con angulo tuneable; al impactar enemigo o suelo dispara un AOE launcher en la zona de impacto. Conectar contra un enemigo frena la caida en seco y sostiene al jugador su hang propio, sin gastarle el doble salto: esa es la ventana para gastarlo persiguiendo al enemigo que acaba de lanzar. No tiene niveles ni sweet spot por ahora. |
+| Y cargado | Caida diagonal con angulo tuneable; al impactar enemigo o suelo estalla un AOE cilindrico en la zona. Todos los enemigos del cilindro son clavados al suelo y rebotan hasta tu altura (`slam_bounce`), no lanzados hacia arriba. Conectar contra un enemigo **en el aire** hace que el jugador rebote arriba-y-adelante (segun la direccion de la caida), sin gastarle el doble salto: esa es la ventana para perseguir a los enemigos que quedan a tu altura. No tiene niveles ni sweet spot por ahora. |
 
 ## Estado Godot
 
@@ -64,17 +64,24 @@ Arma de mas dano. Controla masas. Tiene bastante knockback. Tumba a los enemigos
   `ground_y_dash_duration`) y luego launcher de area grande. El launcher lanza enemigos
   pero no lanza al jugador: el salto para perseguirlos es manual. No gasta meter por
   ahora y no tiene niveles ni sweet spot. *(2026-07-09)*
-- Aéreo: tap X/Y sin carga arma `push` hacia adelante a mitad del swing (`push_at = 0.5`);
+- Aéreo: tap X sin carga es un **combo de 2** (un tap por golpe, corre a `swing_time` porque
+  el Mazo es pesado) — golpe 1 jab con el mango (`thrust`, `air_handle_reach`, sin push) y
+  golpe 2 cabezazo horizontal que arma el `push` a mitad del swing (`push_at`);
   X cargado cae con AOE (ground pound) y gasta 1 barra fija; sweet spot agrega una
   vuelta final que congela. Y cargado cae en diagonal (`air_y_fall_angle` /
-  `air_y_fall_speed`) y dispara `AirSlamHitbox`, que relanza enemigos. No gasta meter por
-  ahora y no tiene niveles ni sweet spot. *(2026-07-09)*
-- El Y aereo tiene **hang propio**: al conectar contra un enemigo corta el momentum de la
-  diagonal y llama `Player.hover(air_y_player_hang_time)`, que frena la caida en seco y
-  sostiene al jugador un tiempo exacto. No es el air-hit-stall generico (ver [[Combate]]) y no
-  gasta el doble salto. Contra el suelo no hay hang: ahi el move termina. *(2026-07-09)*
-- `AirSlamHitbox` alcanza a los enemigos que **entran** en su area mientras esta activo, que
-  arranca al iniciar la caida. Su shape es una esfera (`air_y_aoe_radius`). *(2026-07-09)*
+  `air_y_fall_speed`); al impactar estalla `AirSlamHitbox` (cilindro) una vez y todos los
+  enemigos de adentro reciben `slam_bounce` (bajan, rebotan en el piso y vuelven a tu
+  altura, `air_y_down_speed` / `air_y_meet_height` / `air_y_launcher_hang_time`). No gasta
+  meter por ahora y no tiene niveles ni sweet spot. *(2026-07-10)*
+- El Y aereo hace **rebotar al jugador**: al clavar un enemigo en el aire, el jugador sale
+  arriba-y-adelante (`air_y_bounce_forward_speed` / `air_y_bounce_up_speed`, que juntos fijan
+  el angulo del rebote segun la direccion de la caida), sin gastar el doble salto. Reemplaza
+  el hover previo. Contra el suelo (sin enemigo en el aire) el jugador no rebota: solo estalla
+  el AOE. Esa es la ventana para perseguir a los enemigos que quedan a tu altura. *(2026-07-10)*
+- `AirSlamHitbox` es un **cilindro** (`air_y_aoe_radius` / `air_y_aoe_height`) que se prende
+  **una sola vez en el impacto** (estallido), no durante toda la caida. El impacto se detecta
+  por contacto fisico con el suelo o con un enemigo (mismas colisiones de `CharacterBody3D`
+  que usa [[Rebote en Enemigos]]). *(2026-07-10)*
 - `air_stall_scale = 1.8`: el Mazo sostiene mas al jugador por golpe conectado porque
   tiene menos impactos y cada uno pesa mas. *(2026-07-09)*
 - "Congelar" no es un verbo nuevo: reusa el sistema de stun existente
@@ -95,7 +102,7 @@ Arma de mas dano. Controla masas. Tiene bastante knockback. Tumba a los enemigos
 - Tunear `mace_tuning.tres` con el feel real.
 - Definir si el Y cargado (tierra y aire) gasta meter, y si recupera niveles/sweet spot.
 
-Lo que todavia no existe (el AOE aereo lanzando a todos, su hitbox cilindrico, el rediseño del combo aereo) y las verificaciones abiertas viven en [[Pendientes e Ideas]].
+Lo que todavia falta (el rediseño del combo aereo) y las verificaciones abiertas viven en [[Pendientes e Ideas]].
 
 ## Relacionado
 

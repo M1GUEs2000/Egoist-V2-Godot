@@ -53,29 +53,41 @@ class_name MaceTuning extends WeaponTuning
 @export var ground_y_launcher_deals_damage := true
 
 @export_group("Aéreo")
-# El tap X sin carga y el Y cargado sin sweet spot arman el `push` heredado de WeaponTuning
-# (mismo campo que usa el finisher aéreo de la Espada), con más alcance y altura acá: arma
-# de más knockback. El golpe final del X cargado usa su propio charged_final_push.
+# El golpe 2 del tap X aereo arma el `push` heredado de WeaponTuning (mismo campo que usa el
+# finisher aereo de la Espada), con mas alcance/altura aca: arma de mas knockback. El golpe 1
+# es un jab con el mango, sin push. El golpe final del X cargado usa su propio charged_final_push.
+## Alcance del jab con el mango (golpe 1 del combo aereo X), en metros: la mano extiende el
+## brazo esta distancia hacia adelante. Golpe corto de preparacion, sin push.
+@export var air_handle_reach := 1.2
 ## Caída forzada del X cargado aéreo (ground pound).
 @export var air_smash_fall_speed := 22.0
 ## Angulo de caida del Y cargado aereo, en grados bajo el horizonte. 90 = vertical puro.
 @export_range(1.0, 89.0) var air_y_fall_angle := 58.0
 ## Velocidad total de la caida diagonal del Y cargado aereo, en m/s.
 @export var air_y_fall_speed := 24.0
-## Radio del AOE launcher que se dispara al impactar enemigo o suelo, en metros.
-@export var air_y_aoe_radius := 2.2
-## Altura a la que el AOE aereo manda enemigos, en metros.
-@export var air_y_launcher_height := 4.5
-## Tiempo que los enemigos quedan suspendidos tras el AOE aereo, en segundos.
+## Radio del cilindro del AOE aereo que se dispara al impactar enemigo o suelo, en metros.
+@export var air_y_aoe_radius := 3.5
+## Altura del cilindro del AOE aereo, en metros: tolerancia vertical para alcanzar
+## enemigos en el aire y en el suelo dentro del radio (ver Mazo: hitbox cilindrico).
+@export var air_y_aoe_height := 7.0
+## Velocidad a la que el AOE aereo clava a los enemigos contra el suelo antes de rebotarlos
+## (verbo slam_bounce), en m/s. Analogo al aerial_charged_down_speed de la Espada.
+@export var air_y_down_speed := 30.0
+## Altura de encuentro tras el rebote, relativa a la altura del jugador al impactar, en metros.
+## 0 = los enemigos vuelven exactamente a tu altura.
+@export var air_y_meet_height := 0.0
+## Tiempo que los enemigos quedan suspendidos a tu altura tras rebotar, en segundos.
 @export var air_y_launcher_hang_time := 1.1
 ## Duracion del AOE aereo una vez impacta enemigo o suelo, en segundos.
 @export var air_y_aoe_duration := 0.18
 ## Tiempo maximo que puede durar la caida diagonal antes de apagarse sola, en segundos.
 @export var air_y_max_fall_time := 1.2
-## Hang PROPIO del Y aereo, en segundos: al conectar contra un enemigo la caida se frena en
-## seco y el jugador queda suspendido este tiempo. Es la ventana para gastar el doble salto y
-## seguir al enemigo que el AOE acaba de lanzar. No aplica si el slam termina contra el suelo.
-@export var air_y_player_hang_time := 0.35
+## Rebote del jugador al clavar un enemigo en el aire: velocidad hacia adelante (direccion de
+## la caida), en m/s. Junto con air_y_bounce_up_speed fija el angulo del rebote.
+@export var air_y_bounce_forward_speed := 12.0
+## Rebote del jugador al clavar un enemigo en el aire: velocidad hacia arriba, en m/s.
+## No gasta el doble salto. Menor que jump_force (17) para un rebote controlado.
+@export var air_y_bounce_up_speed := 14.0
 ## Sweet spot aéreo (X cargado con vuelta final / Y cargado): congela a los golpeados
 ## y extiende el tiempo airborne del jugador (PlayerLauncher.notify_aerial_attack).
 @export var air_freeze_stun: StunSettings

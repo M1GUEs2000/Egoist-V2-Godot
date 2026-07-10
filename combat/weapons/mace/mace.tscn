@@ -28,8 +28,9 @@ radius = 1.6
 [sub_resource type="BoxShape3D" id="BoxShape3D_launcher"]
 size = Vector3(3.2, 2, 3.2)
 
-[sub_resource type="SphereShape3D" id="SphereShape3D_air_slam"]
-radius = 2.2
+[sub_resource type="CylinderShape3D" id="CylinderShape3D_air_slam"]
+radius = 3.5
+height = 7.0
 
 [node name="Maso" type="Node3D" unique_id=703914882]
 script = ExtResource("1_mace")
@@ -76,5 +77,5 @@ shape = SubResource("BoxShape3D_launcher")
 script = ExtResource("3_hitbox")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="AirSlamHitbox" unique_id=871335587]
-transform = Transform3D(1.7, 0, 0, 0, 1.7, 0, 0, 0, 1.7, 0, 3.673624, 0)
-shape = SubResource("SphereShape3D_air_slam")
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.5, 0)
+shape = SubResource("CylinderShape3D_air_slam")
