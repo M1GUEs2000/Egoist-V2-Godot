@@ -192,8 +192,17 @@ func _set_air_y_fall_velocity() -> void:
 	_player.vertical_velocity = -absf(vertical_speed)
 	_player.air_state = Player.AirState.AIRBORNE
 
+## Conectar contra un enemigo frena la caida en seco y sostiene al jugador su propio hang
+## (no el air-hit-stall generico): esa es la ventana para gastar el doble salto y perseguir al
+## enemigo que el AOE acaba de lanzar. Contra el suelo no hay hang — ahi el move se acaba.
 func _on_air_slam_impact(_hurtbox: Hurtbox, _died: bool) -> void:
+	if _air_slam_impacted:
+		return
 	_air_slam_impacted = true
+	if _player.is_on_floor():
+		return
+	_player.set_momentum(Vector3.ZERO)  # corta la diagonal: el jugador queda clavado en el aire
+	_player.hover(_t().air_y_player_hang_time)
 
 func _set_hitbox_stun(s: StunSettings) -> void:
 	_blade_hitbox.stun = s

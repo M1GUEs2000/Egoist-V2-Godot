@@ -36,6 +36,7 @@ Combate del jugador: slots X/Y, espada, hitboxes, parry, meter, combo aereo e in
 - El stun es universal: la fuente define potencia/duracion/tipo (`StunSettings`), pero el receptor decide si entra con su threshold (ver seccion Stun universal). *(2026-07-07)*
 - Cada golpe de un combo, en tierra o en aire, avanza al jugador hacia el enemigo lockeado (o hacia su frente) con `Player.attack_step`. Distancia en `PlayerTuning.attack_step_distance`. *(2026-07-09)*
 - El golpe aereo flota solo si conecta; si falla, cae mas fuerte.
+- Un move puede pedir un **hang propio** con `Player.hover(duration)`: frena la caida en seco y sostiene al jugador un tiempo exacto, sin depender del contador de combo ni de `air_stall_scale`, y sin gastarle el doble salto. Es distinto del air-hit-stall generico, que ralentiza segun cuantos golpes lleve encadenados. Lo usa el Y cargado aereo del [[Mazo]]. *(2026-07-09)*
 - El finisher aereo usa verbos opcionales `slam`, `push` y `slam_bounce`.
 - El combo aereo `X espera X X`: la primera vuelta eleva un poco al jugador (`Player.air_hop`, tuneable con `air_wait_spin_hop`). El air-hit-stall preserva subidas (no corta velocidad vertical positiva), asi el hop sobrevive al stall. *(2026-07-06)*
 - El push es un verbo generico que cualquier ataque puede armar con `WeaponBase.arm_push`: a `push_at` del swing empuja lo ya golpeado, y lo que conecte despues se empuja al instante. Usa `WeaponTuning.push` y sirve en tierra o aire. *(2026-07-09)*

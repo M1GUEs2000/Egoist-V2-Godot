@@ -72,6 +72,10 @@ class_name MaceTuning extends WeaponTuning
 @export var air_y_aoe_duration := 0.18
 ## Tiempo maximo que puede durar la caida diagonal antes de apagarse sola, en segundos.
 @export var air_y_max_fall_time := 1.2
+## Hang PROPIO del Y aereo, en segundos: al conectar contra un enemigo la caida se frena en
+## seco y el jugador queda suspendido este tiempo. Es la ventana para gastar el doble salto y
+## seguir al enemigo que el AOE acaba de lanzar. No aplica si el slam termina contra el suelo.
+@export var air_y_player_hang_time := 0.35
 ## Sweet spot aéreo (X cargado con vuelta final / Y cargado): congela a los golpeados
 ## y extiende el tiempo airborne del jugador (PlayerLauncher.notify_aerial_attack).
 @export var air_freeze_stun: StunSettings
