@@ -4,3 +4,7 @@
 
 # Obsidian local config
 obsidian/.obsidian/
+
+# Temporales que genera LimboAI/Windows al recargar la GDExtension con la DLL
+# bloqueada (renombra la vieja a "~..."). Los binarios reales del addon si van.
+addons/limboai/bin/~*

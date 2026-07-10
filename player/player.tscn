@@ -1,4 +1,4 @@
-[gd_scene load_steps=25 format=3 uid="uid://bf1ikbdvqburt"]
+[gd_scene format=3 uid="uid://bf1ikbdvqburt"]
 
 [ext_resource type="Script" uid="uid://dtdjcbbq5svxk" path="res://player/player.gd" id="1_player"]
 [ext_resource type="Script" uid="uid://b5vox4rloqjr0" path="res://player/player_locomotion.gd" id="2_loco"]
@@ -9,17 +9,17 @@
 [ext_resource type="Script" uid="uid://dkevr562haiww" path="res://player/player_meter.gd" id="7_meter"]
 [ext_resource type="Script" uid="uid://dhkdpns7h4266" path="res://player/player_combat.gd" id="8_combat"]
 [ext_resource type="Script" uid="uid://cetay6uko8ait" path="res://combat/input_buffer.gd" id="9_buffer"]
-[ext_resource type="PackedScene" path="res://combat/weapons/sword/sword.tscn" id="10_sword_scene"]
+[ext_resource type="PackedScene" uid="uid://c5y7l00xx4ab" path="res://combat/weapons/sword/sword.tscn" id="10_sword_scene"]
 [ext_resource type="Script" uid="uid://dps4dtd6ln81s" path="res://core/action_world_switch_modifier.gd" id="11_action_switch"]
 [ext_resource type="Script" uid="uid://coemg5ljdfu7t" path="res://combat/health.gd" id="12_health"]
 [ext_resource type="Script" uid="uid://b8sxxvjw7ocm3" path="res://player/player_health.gd" id="13_player_health"]
 [ext_resource type="Script" uid="uid://dvxrsptoplacw" path="res://combat/hurtbox.gd" id="14_hurtbox"]
 [ext_resource type="PackedScene" path="res://combat/weapons/mace/mace.tscn" id="15_mace_scene"]
-[ext_resource type="Script" path="res://player/player_wall_slide.gd" id="16_wall_slide"]
-[ext_resource type="Script" path="res://player/player_stun.gd" id="17_stun"]
-[ext_resource type="Script" path="res://player/lock_on.gd" id="18_lock_on"]
-[ext_resource type="Script" path="res://visual/landing_indicator.gd" id="19_landing"]
-[ext_resource type="Script" path="res://player/player_enemy_bounce.gd" id="20_enemy_bounce"]
+[ext_resource type="Script" uid="uid://bjojax6u4p856" path="res://player/player_wall_slide.gd" id="16_wall_slide"]
+[ext_resource type="Script" uid="uid://hnpykw4f3srn" path="res://player/player_stun.gd" id="17_stun"]
+[ext_resource type="Script" uid="uid://22nvlsquw6vq" path="res://player/lock_on.gd" id="18_lock_on"]
+[ext_resource type="Script" uid="uid://cvgrnt0knmbdg" path="res://visual/landing_indicator.gd" id="19_landing"]
+[ext_resource type="Script" uid="uid://qxrrdrbwfak1" path="res://player/player_enemy_bounce.gd" id="20_enemy_bounce"]
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_body"]
 radius = 0.4
@@ -83,13 +83,13 @@ shape = SubResource("SphereShape3D_dash")
 [node name="Launcher" type="Node" parent="." unique_id=1536080464]
 script = ExtResource("4_launcher")
 
-[node name="WallSlide" type="Node" parent="."]
+[node name="WallSlide" type="Node" parent="." unique_id=1043687573]
 script = ExtResource("16_wall_slide")
 
-[node name="EnemyBounce" type="Node" parent="."]
+[node name="EnemyBounce" type="Node" parent="." unique_id=193226634]
 script = ExtResource("20_enemy_bounce")
 
-[node name="Stun" type="Node" parent="."]
+[node name="Stun" type="Node" parent="." unique_id=1887160608]
 script = ExtResource("17_stun")
 
 [node name="Meter" type="Node" parent="." unique_id=1955322637]
@@ -106,19 +106,19 @@ script = ExtResource("9_buffer")
 [node name="Sword" parent="." unique_id=28033381 instance=ExtResource("10_sword_scene")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.25856447, 0)
 
-[node name="Maso" parent="." instance=ExtResource("15_mace_scene")]
+[node name="Maso" parent="." unique_id=474145609 instance=ExtResource("15_mace_scene")]
 
 [node name="ActionWorldSwitchModifier" type="Node" parent="." unique_id=28956879]
 script = ExtResource("11_action_switch")
 
-[node name="LockOn" type="Node3D" parent="."]
+[node name="LockOn" type="Node3D" parent="." unique_id=1879260934]
 script = ExtResource("18_lock_on")
 
-[node name="Reticle" type="MeshInstance3D" parent="LockOn"]
+[node name="Reticle" type="MeshInstance3D" parent="LockOn" unique_id=1285622105]
 visible = false
 cast_shadow = 0
 mesh = SubResource("CylinderMesh_reticle")
 surface_material_override/0 = SubResource("StandardMaterial3D_reticle")
 
-[node name="LandingIndicator" type="Node3D" parent="."]
+[node name="LandingIndicator" type="Node3D" parent="." unique_id=1513841959]
 script = ExtResource("19_landing")
