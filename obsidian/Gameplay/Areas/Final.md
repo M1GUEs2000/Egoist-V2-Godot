@@ -21,5 +21,5 @@ Area final: oscuridad, revelacion de mascaras y batalla final.
 
 - [[Areas]]
 - [[Historia]]
-- [[Roadmap Futuro]]
+- [[hitos]]
 

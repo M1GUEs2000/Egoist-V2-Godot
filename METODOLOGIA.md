@@ -153,6 +153,8 @@ Si un paso falla, no se avanza al siguiente ni se declara "listo".
 
 ## Estado de los sistemas
 
+Esta tabla mide la **madurez de cada sistema** (E0–E4). Las **subtareas discretas** (qué falta, en qué estado, de qué nodo) viven en el kanban de la bóveda: `obsidian/tareas.md` → `Tareas/tareaspendientes · tareasenprogreso · tareascompletadas`. Una subtarea puede tocar uno o más nodos; su estado es el archivo donde vive.
+
 Escala E0–E4 (ver *Ciclo de vida*). Se actualiza en el mismo commit que cambia el estado. Las herramientas de test (`smoke_test`, `HitDummy`, `test_scene`) no llevan estado. Estados iniciales propuestos por Claude — **pendientes de validación jugando**.
 
 | Sistema | Módulos | Estado | Qué falta |

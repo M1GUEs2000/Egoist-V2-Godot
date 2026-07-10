@@ -23,5 +23,5 @@ Los jefes empiezan despues del loop H1. El primer jefe define el template.
 ## Relacionado
 
 - [[Enemigos]]
-- [[Roadmap Futuro]]
+- [[hitos]]
 

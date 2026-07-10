@@ -35,5 +35,5 @@ Explorar debe dar opciones de gameplay: rutas, poder, runas, consumibles, NPCs y
 
 - [[Armas]]
 - [[Historia]]
-- [[Roadmap Futuro]]
+- [[hitos]]
 

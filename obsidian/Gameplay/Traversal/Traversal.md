@@ -53,10 +53,10 @@ Esta nota es el indice del sistema. El detalle vive en una subnota por modulo o 
 - Construir un greybox de [[Playa]] con loop salto + airdash + switch + bloques.
 - Probar que no haya softlocks si el jugador consume mal un switch.
 
-Lo que todavia no existe vive en [[Pendientes e Ideas]].
+Lo que todavia no existe vive en el kanban ([[tareas]]) o, si no esta comprometido, en [[ideas]].
 
 ## Relacionado
 
 - [[Combate]]
 - [[Areas]]
-- [[H1 - Vertical Slice]]
+- [[hitos]]

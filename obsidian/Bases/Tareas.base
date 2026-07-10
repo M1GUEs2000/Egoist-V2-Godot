@@ -1,22 +1,16 @@
 filters:
   and:
-    - file.hasTag("tarea")
+    - file.hasTag("kanban")
     - file.ext == "md"
 properties:
-  hito:
-    displayName: Hito
-  status:
+  estado:
     displayName: Estado
-  priority:
-    displayName: Prioridad
+  orden:
+    displayName: Orden
 views:
   - type: table
-    name: Backlog por hito
-    groupBy:
-      property: hito
-      direction: ASC
+    name: Tareas por estado
     order:
+      - orden
+      - estado
       - file.name
-      - hito
-      - status
-      - priority

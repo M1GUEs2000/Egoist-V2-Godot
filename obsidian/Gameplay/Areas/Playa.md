@@ -28,6 +28,6 @@ Area del vertical slice. Debe entregar 10 minutos jugables con Espada.
 ## Relacionado
 
 - [[Areas]]
-- [[H1 - Vertical Slice]]
+- [[hitos]]
 - [[Playa Arte]]
 

@@ -56,7 +56,7 @@ Pared de pinchos reusable (`world/blocks/spike_wall.tscn`). **Una sola escena pa
 - Tuning de impulsos por zona.
 - Probar la spike wall jugando.
 
-Lo que todavia no existe (efecto del color negro, bloques dañinos) vive en [[Pendientes e Ideas]].
+Lo que todavia no existe (efecto del color negro, bloques dañinos) vive en [[ideas]].
 
 ## Relacionado
 

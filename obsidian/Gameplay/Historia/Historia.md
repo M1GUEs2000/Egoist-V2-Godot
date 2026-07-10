@@ -34,5 +34,5 @@ El jugador porta una mascara completa y busca revivir. La isla une vivos y muert
 
 - [[Exploracion]]
 - [[Areas]]
-- [[Roadmap Futuro]]
+- [[hitos]]
 

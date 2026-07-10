@@ -21,4 +21,4 @@ Area mas morbida y extensa de V1.0.
 ## Relacionado
 
 - [[Areas]]
-- [[Roadmap Futuro]]
+- [[hitos]]

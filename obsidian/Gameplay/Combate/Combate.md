@@ -129,4 +129,4 @@ Todos los momentos de gravedad del player (launcher float/fall, air stall, whiff
 - [[Armas]]
 - [[Traversal]]
 - [[Enemigos]]
-- [[H1 - Vertical Slice]]
+- [[hitos]]

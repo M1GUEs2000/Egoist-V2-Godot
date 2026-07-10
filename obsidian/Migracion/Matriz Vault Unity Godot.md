@@ -41,4 +41,4 @@ Esta tabla resume como se migra la verdad vieja a Godot V2.
 
 - [[Arquitectura Godot]]
 - [[Decisiones Congeladas]]
-- [[H1 - Vertical Slice]]
+- [[hitos]]

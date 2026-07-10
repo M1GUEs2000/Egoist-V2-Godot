@@ -102,7 +102,7 @@ Arma de mas dano. Controla masas. Tiene bastante knockback. Tumba a los enemigos
 - Tunear `mace_tuning.tres` con el feel real.
 - Definir si el Y cargado (tierra y aire) gasta meter, y si recupera niveles/sweet spot.
 
-Lo que todavia falta (el rediseño del combo aereo) y las verificaciones abiertas viven en [[Pendientes e Ideas]].
+Las verificaciones abiertas del Mazo viven en el kanban ([[tareasenprogreso]]).
 
 ## Relacionado
 

@@ -29,7 +29,7 @@ status: active
 - Una tarea activa a la vez.
 - Si aparecen tres subtareas, se anotan y se vuelve a la activa.
 - Tres semanas sin tocar el proyecto: primera sesion es solo jugar el build.
-- Ideas nuevas fuera de H1 van a [[Roadmap Futuro]].
+- Ideas nuevas fuera de H1 van a [[hitos]].
 
 ## Relacionado
 

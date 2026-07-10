@@ -29,6 +29,6 @@ La boveda vieja estima V1.0 en unas 1500 horas a menos de 10 horas semanales. V2
 
 ## Relacionado
 
-- [[H1 - Vertical Slice]]
+- [[hitos]]
 - [[Workflow]]
 

@@ -29,5 +29,5 @@ status: active
 ## Relacionado
 
 - [[Metodologia V2]]
-- [[H1 - Vertical Slice]]
+- [[hitos]]
 

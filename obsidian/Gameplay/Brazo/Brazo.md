@@ -61,4 +61,4 @@ No es un disparo de arma tradicional. La palabra "disparo" describe la accion de
 - [[Traversal]]
 - [[Lock On]]
 - [[Meter]]
-- [[H1 - Vertical Slice]]
+- [[hitos]]

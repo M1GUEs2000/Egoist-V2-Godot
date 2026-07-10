@@ -52,6 +52,7 @@ obsidian/
   README.md
   Arquitectura Godot.md
   Metodologia V2.md
+  tareas.md                 <- hub del seguimiento (ver seccion de abajo)
   Gameplay/
     Combate/Combate.md
     Traversal/Traversal.md
@@ -64,15 +65,29 @@ obsidian/
     Exploracion/Exploracion.md
     Animacion/Animacion.md
   Tareas/
-    H0 - Fundacion.md
-    H1 - Vertical Slice.md
-    Pendientes e Ideas.md   <- todo lo que aun no existe, en un solo lugar
-    Roadmap Futuro.md
+    tareaspendientes.md     <- kanban: subtareas decididas sin empezar
+    tareasenprogreso.md     <- kanban: construidas, falta probar/tunear
+    tareascompletadas.md    <- kanban: terminadas (historial)
+    hitos.md                <- los hitos H0-H5 en un solo nodo
+    ideas.md                <- ideas potenciales, no comprometidas
   Decisiones/
   Arte/
   Migracion/
   Bases/
+    Sistemas.base           <- #sistema por estado E0-E4
+    Hitos.base              <- #sistema por hito
+    Tareas.base             <- las 3 tablas del kanban por estado
 ```
+
+## Seguimiento de tareas
+
+El seguimiento tiene **dos niveles** y se navega desde el hub [[tareas]]:
+
+- **Nodos (Sistemas)** — las notas `#sistema` (Combate, Enemigos...) con su `system_status` (E0-E4) y su `hito`. Son el "dueño" del trabajo.
+- **Subtareas** — el detalle, en un **kanban de 3 archivos** (`Tareas/tareaspendientes · tareasenprogreso · tareascompletadas`). Columnas `Tarea · Qué falta · Nodo(s)`. El **estado es el archivo** donde vive la fila (una subtarea nunca esta en dos a la vez), y una subtarea puede pertenecer a **uno o mas nodos**. El **hito** de una subtarea sale de su nodo.
+- Ademas: `Tareas/hitos.md` (los hitos H0-H5 y el roadmap en un solo nodo) e `Tareas/ideas.md` (ideas no comprometidas).
+
+Tres vistas `.base` en `Bases/`, mismo dato por ejes distintos: [[Sistemas.base]] (sistemas por estado E0-E4), [[Hitos.base]] (sistemas por hito) y [[Tareas.base]] (las 3 tablas del kanban por estado). Ver [[Metodologia V2]] para el ciclo E0-E4 y las reglas de promocion.
 
 ## Indice de nodos de gameplay
 

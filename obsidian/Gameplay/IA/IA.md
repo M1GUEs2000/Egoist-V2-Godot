@@ -104,4 +104,4 @@ La intencion por nivel (`PASSIVE`, `REACTIVE`, `AGGRESSIVE`, `ULTRA_AGGRESSIVE`)
 - [[Enemigos]]
 - [[Hostilidad]]
 - [[Comportamientos]]
-- [[H1 - Vertical Slice]]
+- [[hitos]]

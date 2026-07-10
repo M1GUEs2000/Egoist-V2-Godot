@@ -25,7 +25,7 @@ Esta es la boveda nueva del proyecto Godot. La boveda vieja queda como archivo h
 | Motor | Godot 4.7, Forward Plus, Jolt Physics |
 | Codigo | GDScript tipado estatico |
 | Main scene | `res://world/test_scene.tscn` |
-| Hito activo | [[H1 - Vertical Slice]] |
+| Hito activo | H1 — Vertical Slice (ver [[hitos]]) |
 | Fuente historica | `C:/Users/Tutupa/Documents/Proyectos/Egoist/Boveda` |
 | Referencia tecnica | `C:/Users/Tutupa/Documents/Proyectos/Egoist/Unity/Egoist V1` |
 
@@ -50,10 +50,9 @@ La boveda se navega por nodos. Primero se lee este README, despues [[Arquitectur
 | [[Exploracion]] | Runas, consumibles, secretos y recompensas opcionales. |
 | [[Animacion]] | Import/retarget Godot, Mixamo placeholder y animaciones propias H3. |
 | [[Blender Pipeline]] | Regla de arte, targets tecnicos y workflow por asset. |
-| [[H0 - Fundacion]] | Fundacion tecnica Godot. |
-| [[H1 - Vertical Slice]] | Backlog activo: 10 minutos jugables de Playa con Espada. |
-| [[Pendientes e Ideas]] | Lugar unico de lo que todavia no existe: pendientes decididos e ideas potenciales. |
-| [[Roadmap Futuro]] | H2-H5 y v2.0, fuera del backlog activo. |
+| [[tareas]] | Hub del kanban: subtareas por estado (pendientes, en progreso, completadas). |
+| [[hitos]] | Los hitos H0-H5 en un solo nodo: metas, puerta de salida y roadmap. |
+| [[ideas]] | Ideas potenciales, no comprometidas. |
 
 ## Reglas madre
 
@@ -65,11 +64,12 @@ La boveda se navega por nodos. Primero se lee este README, despues [[Arquitectur
 
 ## Bases
 
-- [[Sistemas.base]]: vista de notas por estado E0-E4.
-- [[Tareas.base]]: vista de tareas/hitos por estado.
+- [[Sistemas.base]]: sistemas por estado de madurez E0-E4.
+- [[Hitos.base]]: los mismos sistemas, agrupados por hito (H0-H5).
+- [[Tareas.base]]: las 3 tablas de tareas por estado (pendiente / en progreso / completada). Ver [[tareas]].
 
 ## Relacionado
 
 - [[Arquitectura Godot]]
-- [[H1 - Vertical Slice]]
+- [[hitos]]
 - [[Decisiones Congeladas]]

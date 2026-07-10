@@ -61,4 +61,4 @@ E1. Implementado con knobs y asserts en `world/smoke_test.gd`, pero falta:
 - [[Launcher y Aire]]
 - [[Dash y Airdash]]
 - [[Combate]]
-- [[H1 - Vertical Slice]]
+- [[hitos]]
