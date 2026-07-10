@@ -91,28 +91,11 @@ Arma de mas dano. Controla masas. Tiene bastante knockback. Tumba a los enemigos
 
 ## Pendiente
 
-### Y cargado aereo: el AOE todavia no es un AOE
-
-- El `AirSlamHitbox` debe **lanzar a todos los enemigos dentro de su area** en el instante en que
-  el slam topa el suelo o un enemigo, no solo al que lo dispara. Hoy es un `Area3D` que reacciona
-  a `area_entered`, asi que alcanza al primer enemigo que atraviesa durante la caida y no ve a los
-  que ya estaban parados dentro del radio al momento del impacto. La resolucion pasa por consultar
-  los solapamientos vigentes al impactar, en vez de esperar entradas nuevas.
-- Cambiar el shape del `AirSlamHitbox` de esfera a **cilindro**: el area es de suelo, y una esfera
-  cubre de menos al ras y de mas en altura.
-
-### General
-
-- **Modificar el combo aereo** *(idea, no comprometida — sin diseño todavia)*. Hoy el aereo del
-  Mazo no es una cadena encadenable como la de la [[Espada]]: son moves puntuales sueltos (tap
-  con push, X cargado ground pound, Y cargado slam). Definir que reemplaza a que.
 - Probar jugando cada fila de la tabla contra un `HitDummy`/enemigo.
 - Tunear `mace_tuning.tres` con el feel real.
 - Definir si el Y cargado (tierra y aire) gasta meter, y si recupera niveles/sweet spot.
-- El combo de referencia cruza dos armas (Espada slot X → Mazo slot Y). `cancel_routines()` es por
-  arma: verificar que la rutina de la Espada no siga viva mientras el Mazo ejecuta el slam.
-- El rebote en enemigos ([[Rebote en Enemigos]]) y el slam compiten por el mismo contacto: decidir
-  la precedencia. Rebotar conserva el doble salto; el slam lo deja disponible via su hang.
+
+Lo que todavia no existe (el AOE aereo lanzando a todos, su hitbox cilindrico, el rediseño del combo aereo) y las verificaciones abiertas viven en [[Pendientes e Ideas]].
 
 ## Relacionado
 

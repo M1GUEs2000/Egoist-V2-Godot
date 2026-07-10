@@ -63,6 +63,10 @@ obsidian/
     Exploracion/Exploracion.md
     Animacion/Animacion.md
   Tareas/
+    H0 - Fundacion.md
+    H1 - Vertical Slice.md
+    Pendientes e Ideas.md   <- todo lo que aun no existe, en un solo lugar
+    Roadmap Futuro.md
   Decisiones/
   Arte/
   Migracion/

@@ -51,7 +51,8 @@ Esta nota es el indice del sistema. El detalle vive en una subnota por modulo o 
 - Implementar [[Cadenas]] con agarre, subir/bajar, impulso de salida y cooldown de reagarre.
 - Construir un greybox de [[Playa]] con loop salto + airdash + switch + bloques.
 - Probar que no haya softlocks si el jugador consume mal un switch.
-- Definir el **scanner de cambio de mundo** *(idea, no comprometida — Tutupa la define el 2026-07-10)*. El nodo dueño es [[World Switch]].
+
+Lo que todavia no existe vive en [[Pendientes e Ideas]].
 
 ## Relacionado
 

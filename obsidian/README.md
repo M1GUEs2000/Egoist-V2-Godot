@@ -51,6 +51,7 @@ La boveda se navega por nodos. Primero se lee este README, despues [[Arquitectur
 | [[Blender Pipeline]] | Regla de arte, targets tecnicos y workflow por asset. |
 | [[H0 - Fundacion]] | Fundacion tecnica Godot. |
 | [[H1 - Vertical Slice]] | Backlog activo: 10 minutos jugables de Playa con Espada. |
+| [[Pendientes e Ideas]] | Lugar unico de lo que todavia no existe: pendientes decididos e ideas potenciales. |
 | [[Roadmap Futuro]] | H2-H5 y v2.0, fuera del backlog activo. |
 
 ## Reglas madre
