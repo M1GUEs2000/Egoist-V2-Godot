@@ -21,6 +21,7 @@ var _dodge_queued := false  # dodge pedido tarde en un golpe: sale al terminarlo
 @onready var launcher: PlayerLauncher = $Launcher
 @onready var wall_slide: PlayerWallSlide = $WallSlide
 @onready var enemy_bounce: PlayerEnemyBounce = $EnemyBounce
+@onready var air_kill_reset: PlayerAirKillReset = $AirKillReset
 @onready var stun: PlayerStun = $Stun
 @onready var meter: PlayerMeter = $Meter
 @onready var health: Health = $Health
@@ -43,6 +44,7 @@ func _ready() -> void:
 	launcher.setup(self)
 	wall_slide.setup(self)
 	enemy_bounce.setup(self)
+	air_kill_reset.setup(self)
 	dash.setup(self, locomotion, launcher.register_air_hit_stall, launcher.cancel)
 	combat.setup(self)
 
@@ -115,6 +117,7 @@ func _physics_process(delta: float) -> void:
 		dash.restore_airdash()
 		_can_double_jump = true
 		launcher.reset_air_stall()
+		air_kill_reset.reset_air_charge_fall_control()
 		wall_slide.cancel()
 	else:
 		air_state = AirState.AIRBORNE
@@ -158,6 +161,15 @@ func restore_double_jump() -> void:
 
 func restore_airdash() -> void:
 	dash.restore_airdash()
+
+func apply_air_charge_fall_control() -> void:
+	air_kill_reset.apply_air_charge_fall_control()
+
+func reset_air_charge_fall_control() -> void:
+	air_kill_reset.reset_air_charge_fall_control()
+
+func apply_air_kill_reset() -> void:
+	air_kill_reset.apply_air_kill_reset()
 
 func activate_action_world_switch() -> void:
 	action_world_switch.activate()

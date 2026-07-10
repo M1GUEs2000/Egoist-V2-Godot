@@ -237,10 +237,56 @@ func _ready() -> void:
 	assert(not player.dash._hitbox.monitoring)
 	player.dash.cancel()
 
+	# AirKillReset: cargar en aire reduce cada vez menos la caida vertical; una kill aerea
+	# resetea la secuencia junto con doble salto y airdash.
+	player.air_state = Player.AirState.AIRBORNE
+	player.tuning.air_charge_fall_reduction_steps = Array[float]([1.0, 0.8, 0.5, 0.1])
+	player.vertical_velocity = -20.0
+	player.apply_air_charge_fall_control()
+	assert(is_equal_approx(player.vertical_velocity, 0.0))
+	player.vertical_velocity = -20.0
+	player.apply_air_charge_fall_control()
+	assert(is_equal_approx(player.vertical_velocity, -4.0))
+	player.vertical_velocity = -20.0
+	player.apply_air_charge_fall_control()
+	assert(is_equal_approx(player.vertical_velocity, -10.0))
+	player.vertical_velocity = -20.0
+	player.apply_air_charge_fall_control()
+	assert(is_equal_approx(player.vertical_velocity, -18.0))
+	player.vertical_velocity = -20.0
+	player.apply_air_charge_fall_control()
+	assert(is_equal_approx(player.vertical_velocity, -18.0))
+	player.reset_air_charge_fall_control()
+	player.vertical_velocity = -20.0
+	player.apply_air_charge_fall_control()
+	assert(is_equal_approx(player.vertical_velocity, 0.0))
+
+	player.vertical_velocity = -20.0
+	player.apply_air_charge_fall_control()
+	player._can_double_jump = false
+	player.dash._can_airdash = false
+	player.apply_air_kill_reset()
+	assert(player._can_double_jump)
+	assert(player.dash._can_airdash)
+	player.vertical_velocity = -20.0
+	player.apply_air_charge_fall_control()
+	assert(is_equal_approx(player.vertical_velocity, 0.0))
+
 	# WeaponBase.arm_push: empuja hits acumulados, hits tardíos, y se desarma al cancelar
 	var push_settings := PushSettings.new()
 	push_settings.horizontal_speed = 7.0
 	var weapon := _make_test_weapon(player, push_settings)
+	player.vertical_velocity = -20.0
+	player.apply_air_charge_fall_control()
+	player._can_double_jump = false
+	player.dash._can_airdash = false
+	weapon.register_weapon_hit(_make_hurtbox(_make_push_probe()), true)
+	assert(player._can_double_jump)
+	assert(player.dash._can_airdash)
+	player.vertical_velocity = -20.0
+	player.apply_air_charge_fall_control()
+	assert(is_equal_approx(player.vertical_velocity, 0.0))
+
 	var probe_a := _make_push_probe()
 	var hurtbox_a := _make_hurtbox(probe_a)
 	weapon.begin_routine()

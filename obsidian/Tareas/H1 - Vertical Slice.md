@@ -38,6 +38,8 @@ Demostrar que pelear con Espada, moverse en 3D isometrico y cambiar de mundo se 
 - [ ] Pendiente probar: Mazo aéreo — hitbox cilíndrico + AOE que rebota a todos (`slam_bounce`) al impactar.
 - [ ] Pendiente probar: Mazo aéreo — rebote del jugador arriba+adelante al clavar un enemigo en el aire.
 - [ ] Pendiente probar: Mazo aéreo — combo X de 2 golpes (mango sin push + cabezazo con push).
+- [ ] Pendiente probar: reset aereo por kill (doble salto + airdash + secuencia de caida por cargas).
+- [ ] Pendiente probar: carga aerea reduce caida vertical segun `air_charge_fall_reduction_steps`.
 - [ ] Pendiente probar: dash del bloque verde hace daño al atravesar.
 - [ ] Pendiente probar: rebote en enemigos empuja (push) sin dañar.
 - [ ] Pendiente probar: headless (`--import`, `--quit-after 2`, `smoke_test` = SMOKE OK) de todo el batch.
@@ -50,7 +52,7 @@ Demostrar que pelear con Espada, moverse en 3D isometrico y cambiar de mundo se 
 - [ ] Rehacer HUD H1.
 - [ ] Crear prefabs/escenas de player, melee, ranged, armored, bloques y pickups.
 - [ ] Greybox del primer tramo de Playa.
-- [ ] Reset aereo por kill.
+- [x] Implementar reset aereo por kill.
 - [ ] Decidir knockback normal.
 - [ ] Playtest externo 2-3 personas.
 

@@ -43,6 +43,7 @@ Combate del jugador: slots X/Y, espada, hitboxes, parry, meter, combo aereo e in
 - Los enemigos tambien son superficies de traversal: el player puede rebotar desde su colision con `PlayerEnemyBounce`; si `enemy_bounce_push` existe, el enemigo recibe `push()` como reaccion opcional.
 - Cada arma escala cuanto sostiene en el aire un golpe conectado con `air_stall_scale`; el Player calcula el stall base y el arma multiplica el resultado. *(2026-07-09)*
 - La hoja brilla al cargar un ataque (glow ambar proporcional a `InputBuffer.charge_progress`, tuneable con `charge_glow_color` / `charge_glow_max_energy`). El halo ya existe: `test_scene` tiene un `WorldEnvironment` con glow (HDR threshold 1.0, tonemap Filmic); falta tunear el bloom jugando. *(2026-07-10)*
+- Al empezar una carga en aire, `PlayerAirKillReset` reduce solo la caida vertical negativa segun `PlayerTuning.air_charge_fall_reduction_steps` (`100% -> 80% -> 50% -> 10%` por default). No usa hover ni toca momentum horizontal. Matar en aire resetea la secuencia junto con doble salto y airdash. *(2026-07-10, pendiente de probar)*
 
 ## Mano orbital
 
@@ -113,7 +114,7 @@ Todos los momentos de gravedad del player (launcher float/fall, air stall, whiff
 
 - Probar y tunear espada X/Y en suelo y aire.
 - Confirmar si hold debe cancelar tap; si si, usar modo de input de carga exclusiva.
-- Completar reset aereo por kill.
+- Probar reset aereo por kill y reduccion de caida al cargar en aire.
 - Decidir knockback de golpes normales.
 - Rehacer HUD de combate para armas, meter, combo y cooldowns.
 

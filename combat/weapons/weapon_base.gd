@@ -265,7 +265,10 @@ func register_weapon_hit(hurtbox: Hurtbox, died: bool) -> void:
 		meter.gain_on_hit()
 		if died:
 			meter.gain_on_kill()
-			on_kill()
+	if died:
+		if _player.is_airborne():
+			_player.apply_air_kill_reset()
+		on_kill()
 
 func _on_hit(hurtbox: Hurtbox, died: bool) -> void:
 	_window_hits.append(hurtbox)

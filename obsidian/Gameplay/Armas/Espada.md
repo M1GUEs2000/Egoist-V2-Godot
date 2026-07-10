@@ -64,7 +64,7 @@ Arma base / equilibrada. Velocidad media. Sirve para mantener el flujo del comba
 - Tunear `sword_tuning.tres`.
 - Validar que hold no dispare tap si se decide carga exclusiva.
 - Confirmar dano distinto por golpes finales/cargados.
-- Confirmar reset aereo por kill.
+- Probar reset aereo por kill con [[Reset Aereo por Kill]].
 
 ## Relacionado
 

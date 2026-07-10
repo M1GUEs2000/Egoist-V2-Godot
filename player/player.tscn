@@ -20,6 +20,7 @@
 [ext_resource type="Script" uid="uid://22nvlsquw6vq" path="res://player/lock_on.gd" id="18_lock_on"]
 [ext_resource type="Script" uid="uid://cvgrnt0knmbdg" path="res://visual/landing_indicator.gd" id="19_landing"]
 [ext_resource type="Script" uid="uid://qxrrdrbwfak1" path="res://player/player_enemy_bounce.gd" id="20_enemy_bounce"]
+[ext_resource type="Script" uid="uid://clt0r7s6l4m2q" path="res://player/player_air_kill_reset.gd" id="21_air_kill"]
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_body"]
 radius = 0.4
@@ -213,6 +214,9 @@ script = ExtResource("16_wall_slide")
 
 [node name="EnemyBounce" type="Node" parent="." unique_id=193226634]
 script = ExtResource("20_enemy_bounce")
+
+[node name="AirKillReset" type="Node" parent="."]
+script = ExtResource("21_air_kill")
 
 [node name="Stun" type="Node" parent="." unique_id=1887160608]
 script = ExtResource("17_stun")

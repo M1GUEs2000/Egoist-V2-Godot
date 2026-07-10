@@ -192,3 +192,8 @@ class_name PlayerTuning extends Resource
 @export var air_stall_float_gravity := 0.15
 ## Escala de gravedad al atacar en el aire SIN conectar: cae MÁS fuerte que lo normal.
 @export var aerial_whiff_fall_gravity := 1.6
+
+@export_group("Air charge fall")
+## Reduccion de caida al empezar cargas en el aire. 1.0 reinicia la caida a 0; 0.8 deja
+## el 20% de la velocidad vertical negativa; al agotarse la lista se repite el ultimo valor.
+@export var air_charge_fall_reduction_steps: Array[float] = [1.0, 0.8, 0.5, 0.1]

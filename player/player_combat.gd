@@ -22,6 +22,7 @@ var _last_attack_time := -999.0
 var _charging_weapon: WeaponBase  # arma del último press: recibe el glow de carga
 var _active_weapon: WeaponBase  # arma visible actualmente
 var _rest_rotations := {}  # WeaponBase → Quaternion
+var _air_charge_fall_applied := false
 
 @onready var buffer: InputBuffer = $InputBuffer
 
@@ -93,6 +94,7 @@ func _on_press(weapon: WeaponBase, slot: World.Slot) -> void:
 	_body.fire_action_world_switch()
 	_last_attack_time = World.now()
 	_charging_weapon = weapon
+	_air_charge_fall_applied = false
 	if weapon.should_reset_pose_on_press():
 		weapon.quaternion = _rest_rotations[weapon]
 	_set_active_weapon(weapon)
@@ -101,6 +103,9 @@ func _on_press(weapon: WeaponBase, slot: World.Slot) -> void:
 ## El nivel de carga se resuelve recién al disparar el hold (no al bindear en el
 ## press), así el arma puede leer cuánto se sostuvo de verdad (ver Mazo.charge_level).
 func _fire_hold(weapon: WeaponBase, slot: World.Slot) -> void:
+	if not _air_charge_fall_applied:
+		_air_charge_fall_applied = true
+		_body.apply_air_charge_fall_control()
 	weapon.hold(slot, weapon.charge_level(buffer.held_duration()))
 
 ## Armas guardadas: rotan a la pose inactiva (hoja hacia abajo) al pasar el rato.
@@ -109,7 +114,11 @@ func _process(delta: float) -> void:
 		return
 	# Glow de carga: la hoja del arma presionada brilla según el progreso de carga.
 	if _charging_weapon != null:
-		_charging_weapon.set_charge_glow(buffer.charge_progress())
+		var charge_progress := buffer.charge_progress()
+		_charging_weapon.set_charge_glow(charge_progress)
+		if not _air_charge_fall_applied and charge_progress >= 1.0:
+			_air_charge_fall_applied = true
+			_body.apply_air_charge_fall_control()
 	if weapons_out():
 		return
 	for weapon in _weapons():
