@@ -51,6 +51,12 @@ El criterio es universal (igual que el player, ver [[Combate]]): la fuente manda
 
 Tanto el retroceso como la inclinacion del stun leen esta direccion. *(2026-07-09)*
 
+## Chispas de impacto
+
+`HitSparks` (`GPUParticles3D` one-shot) escupe chispas rojas incandescentes en **todo golpe recibido**, stunee o no. Nacen en la superficie que mira al atacante — `hit_sparks_height` sobre los pies y `hit_sparks_offset` adelantadas hacia el — no en el centro del cuerpo. *(2026-07-09)*
+
+El emisor es `top_level`: las particulas viven en el mundo, asi que el squash, la inclinacion y el giro del enemigo no las deforman ni se las llevan. Sin `WorldEnvironment` con glow no hay halo, pero la emision alta ya las quema (misma deuda que el glow de carga, ver [[Combate]]).
+
 ## Reaccion visual
 
 Mientras `combat_state == STUNNED`, `EnemyBase` activa cuatro capas de feedback:
@@ -58,9 +64,9 @@ Mientras `combat_state == STUNNED`, `EnemyBase` activa cuatro capas de feedback:
 - Color amarillo + emision en los meshes bajo el pivote `Visual`.
 - `StunLight` (`OmniLight3D`) amarilla, apagada por default y encendida solo durante el stun.
 - Inclinacion del pivote `Visual` hacia atras, pivoteando desde los pies: el origen del enemigo esta a ras del piso, asi que `Visual` rota sobre el eje horizontal perpendicular al golpe. Tween de ida y vuelta.
-- Squash: en el instante del golpe el enemigo se encoge a `stun_squash_scale` y rebota hasta su escala normal a lo largo del stun. Escala el pivote `Visual`, asi que se hunde contra el piso. Cada golpe reinicia el rebote, y un combo se lee como una sucesion de impactos.
+- Squash: el enemigo se encoge a `stun_squash_scale` y rebota hasta su escala normal. Escala el pivote `Visual`, asi que se hunde contra el piso. Cada golpe reinicia el rebote, y un combo se lee como una sucesion de impactos.
 
-El rebote del squash **no interpola**: cuantiza el progreso en `stun_squash_steps` poses y salta entre ellas, para leerse como una animacion a frames cortados y no como un crecimiento fluido.
+El rebote ocupa solo el arranque del stun, no toda su duracion: termina de encogerse a los `stun_squash_in_time` segundos del golpe y ya recupero su tamaño a los `stun_squash_out_time`. El resto del stun el enemigo se queda grande. Los tiempos son **absolutos**, no fracciones: retunear la duracion del stun no deforma el gesto del impacto. Un stun mas corto que el gesto lo recorta. Corre en su propio tween, en paralelo con la inclinacion.
 
 El retroceso desplaza al enemigo alejandolo del atacante, reemplaza cualquier push previo y decae durante el stun.
 
@@ -68,7 +74,7 @@ El squash y la inclinacion solo afectan al pivote `Visual`: la capsula de colisi
 
 El mesh del arma (`MeleeAttack/Weapon`) no se pinta con el estado del enemigo: queda fuera del pivote `Visual` a proposito para no mezclar el feedback de stun con posibles telegraphs/colores propios del ataque.
 
-Los valores son exports por escena en `EnemyBase`, siguiendo la excepcion actual de enemigos: `stun_knockback_speed`, `stun_knockback_decay`, `stun_tilt_angle`, `stun_tilt_time`, `stun_squash_scale`, `stun_squash_steps`, `stun_emission_energy`, `stun_light_energy` y `stun_light_range`. *(2026-07-09, pendiente de tunear jugando)*
+Los valores son exports por escena en `EnemyBase`, siguiendo la excepcion actual de enemigos: `stun_knockback_speed`, `stun_knockback_decay`, `stun_tilt_angle`, `stun_tilt_time`, `stun_squash_scale`, `stun_squash_in_time`, `stun_squash_out_time`, `stun_emission_energy`, `stun_light_energy` y `stun_light_range`. *(2026-07-09, pendiente de tunear jugando)*
 
 ## Duraciones actuales de fuentes del jugador
 
