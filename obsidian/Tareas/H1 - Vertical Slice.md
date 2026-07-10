@@ -28,13 +28,19 @@ Demostrar que pelear con Espada, moverse en 3D isometrico y cambiar de mundo se 
 - [ ] Tunear el occlusion fade de camara (funciona; falta ajustar feel/valores).
 - [ ] Probar el loadout X/Y y el Maso placeholder en juego.
 - [ ] Diseñar e implementar scanner de cambio de mundo.
-- [ ] Implementar AOE aereo del [[Mazo]] que lance a todos los enemigos del area.
-- [ ] Cambiar el hitbox del AOE aereo del [[Mazo]] a cilindro.
-- [ ] Rediseñar el combo aereo del [[Mazo]].
-- [ ] Hacer que el dash del bloque verde haga daño.
-- [ ] Hacer que el rebote en enemigos stunee sin dañar.
+- [x] Implementar AOE aereo del [[Mazo]] que lance a todos los enemigos del area.
+- [x] Cambiar el hitbox del AOE aereo del [[Mazo]] a cilindro.
+- [x] Rediseñar el combo aereo del [[Mazo]].
+- [x] Hacer que el dash del bloque verde haga daño.
+- [x] Hacer que el rebote en enemigos empuje (push) sin dañar.
 - [ ] Verificar que el combo entre dos armas no deje daño fantasma por `cancel_routines()` por arma.
-- [ ] Decidir precedencia entre rebote en enemigos y slam del [[Mazo]] cuando compiten por el mismo contacto.
+- [x] Decidir precedencia entre rebote en enemigos y slam del [[Mazo]] cuando compiten por el mismo contacto.
+- [ ] Pendiente probar: Mazo aéreo — hitbox cilíndrico + AOE que rebota a todos (`slam_bounce`) al impactar.
+- [ ] Pendiente probar: Mazo aéreo — rebote del jugador arriba+adelante al clavar un enemigo en el aire.
+- [ ] Pendiente probar: Mazo aéreo — combo X de 2 golpes (mango sin push + cabezazo con push).
+- [ ] Pendiente probar: dash del bloque verde hace daño al atravesar.
+- [ ] Pendiente probar: rebote en enemigos empuja (push) sin dañar.
+- [ ] Pendiente probar: headless (`--import`, `--quit-after 2`, `smoke_test` = SMOKE OK) de todo el batch.
 - [x] Agregar `WorldEnvironment` con glow. *(en `test_scene`; falta tunear bloom jugando)*
 - [x] Añadir particulas de polvo al correr para jugador y enemigos, tuneables por recurso/export. *(player: `RunDust` + `PlayerTuning.run_dust_min_speed`; enemigos: `RunDust` + export `run_dust_min_speed`)*
 - [x] Añadir particulas de polvo al deslizarse por pared, tuneables por recurso/export. *(`WallSlideDust`, en sync con el glow)*

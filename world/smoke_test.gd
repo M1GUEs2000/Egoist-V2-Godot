@@ -226,6 +226,17 @@ func _ready() -> void:
 	assert(stomp_enemy.pushes == 0)
 	assert(not player.enemy_bounce.blocks_move_input())
 
+	# Bloque verde: force_dash con deals_damage prende el DashHitbox del player (daña al
+	# atravesar); sin el flag el mismo dash forzado es solo movimiento.
+	player.dash.cancel()
+	player.force_dash(Vector3.RIGHT, 4.0, 0.12, false, true)
+	assert(player.dash._hitbox.monitoring)
+	player.dash.cancel()
+	assert(not player.dash._hitbox.monitoring)
+	player.force_dash(Vector3.RIGHT, 4.0, 0.12, false, false)
+	assert(not player.dash._hitbox.monitoring)
+	player.dash.cancel()
+
 	# WeaponBase.arm_push: empuja hits acumulados, hits tardíos, y se desarma al cancelar
 	var push_settings := PushSettings.new()
 	push_settings.horizontal_speed = 7.0

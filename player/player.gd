@@ -254,11 +254,12 @@ func bump(dir: Vector3, h_speed: float, v_speed: float) -> void:
 	vertical_velocity = v_speed
 	air_state = AirState.AIRBORNE
 
-func force_dash(dir: Vector3, distance: float, duration: float, boost_bump_momentum := false) -> void:
+func force_dash(dir: Vector3, distance: float, duration: float, boost_bump_momentum := false,
+		deals_damage := false) -> void:
 	_dodge_queued = false
 	wall_slide.cancel()
 	enemy_bounce.cancel()
-	dash.force_dash(dir, distance, duration, boost_bump_momentum)
+	dash.force_dash(dir, distance, duration, boost_bump_momentum, deals_damage)
 
 func launch(height: float, hang_time: float, rise_time: float = World.LAUNCH_RISE_TIME) -> void:
 	_dodge_queued = false

@@ -26,7 +26,7 @@ Objetos golpeables de traversal.
 | Caracteristica | Efecto | Color |
 |---|---|---|
 | Launch / bump | Suma momentum horizontal, aplica bump vertical, restaura doble salto y airdash. | Rojo |
-| Dash | Fuerza dash hacia donde mira el jugador. | Verde |
+| Dash | Fuerza dash hacia donde mira el jugador; el dash **daña al atravesar** enemigos (`dash_deals_damage`, prende el `DashHitbox` del player). | Verde |
 | Meter | Suma barras de meter al jugador. | Celeste |
 | Maldicion | Al romperse, la proxima accion cambia de mundo. | Amarillo |
 | World switch | Cambia de mundo al golpearlo. | Color del mundo destino |
@@ -56,7 +56,7 @@ Pared de pinchos reusable (`world/blocks/spike_wall.tscn`). **Una sola escena pa
 - Tuning de impulsos por zona.
 - Probar la spike wall jugando.
 
-Lo que todavia no existe (dash verde con daño, efecto del color negro, bloques dañinos) vive en [[Pendientes e Ideas]].
+Lo que todavia no existe (efecto del color negro, bloques dañinos) vive en [[Pendientes e Ideas]].
 
 ## Relacionado
 

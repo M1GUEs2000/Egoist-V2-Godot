@@ -84,14 +84,17 @@ func dodge() -> void:
 	_start_dash(_dash_dir, _body.tuning.dash_distance, _body.tuning.dash_duration, true, false,
 			had_bar and _body.tuning.dash_deals_damage, false)
 
-## Dash dirigido por otra mecánica (ej: el dash cargado de la espada). SOLO movimiento: el
-## daño de esos dashes lo pone su propio hitbox (no el del dodge). Ver Sword._run_charged_dash_window.
-func force_dash(dir: Vector3, distance: float, duration: float, boost_bump_momentum: bool) -> void:
+## Dash dirigido por otra mecánica (dash cargado de la espada, paso del Mazo, bloque verde).
+## Por defecto SOLO movimiento; con `deals_damage` prende el DashHitbox propio del player y
+## daña al atravesar (lo usa el bloque verde). Espada/Mazo lo dejan en false: su daño, si lo
+## hay, lo pone su propio hitbox (ver Sword._run_charged_dash_window).
+func force_dash(dir: Vector3, distance: float, duration: float, boost_bump_momentum: bool,
+		deals_damage := false) -> void:
 	dir.y = 0.0
 	if dir.length_squared() < 0.0001:
 		dir = _body.forward()
 	# Dash ofensivo: atraviesa enemigos, choca con objetos (pass_through_enemies = true).
-	_start_dash(dir.normalized(), distance, duration, boost_bump_momentum, true, false, true)
+	_start_dash(dir.normalized(), distance, duration, boost_bump_momentum, true, deals_damage, true)
 
 func tick(delta: float) -> void:
 	_timer -= delta

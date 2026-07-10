@@ -18,6 +18,8 @@ class_name TraversalBlock extends Node3D
 @export var dash_distance := 4.0
 @export var dash_duration := 0.12
 @export var boost_existing_bump_momentum := false
+## Si el dash forzado por el bloque verde prende el DashHitbox del player y daña al atravesar.
+@export var dash_deals_damage := true
 @export var hit_cooldown := 0.1
 
 @export_group("Meter")
@@ -109,7 +111,8 @@ func _apply_dash(player: Player) -> void:
 	if World.now() - _last_dash_hit_time < hit_cooldown:
 		return
 	_last_dash_hit_time = World.now()
-	player.force_dash(player.forward(), dash_distance, dash_duration, boost_existing_bump_momentum)
+	player.force_dash(player.forward(), dash_distance, dash_duration, boost_existing_bump_momentum,
+			dash_deals_damage)
 
 func _rebuild_glow_segments() -> void:
 	for child in _glow_segments.get_children():
