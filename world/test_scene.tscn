@@ -342,6 +342,20 @@ hits_to_break = 50
 [node name="DashBlock" parent="." unique_id=1246866083 instance=ExtResource("6_traversal")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5, 0, -2)
 enable_dash = true
+dash_distance = 8.0
+dash_duration = 0.3
+
+[node name="DashBlock2" parent="." unique_id=616733513 instance=ExtResource("6_traversal")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -12.873046, 0, -7.0995636)
+enable_dash = true
+dash_distance = 8.0
+dash_duration = 0.5
+
+[node name="DashBlock3" parent="." unique_id=322836494 instance=ExtResource("6_traversal")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6.8207273, 0, -18.158073)
+enable_dash = true
+dash_distance = 8.0
+dash_duration = 0.5
 
 [node name="BreakableWall" parent="." unique_id=931707207 instance=ExtResource("10_breakable_wall")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -4.5)

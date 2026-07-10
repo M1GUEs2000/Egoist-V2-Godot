@@ -52,6 +52,10 @@ Pared de pinchos reusable (`world/blocks/spike_wall.tscn`). **Una sola escena pa
 
 ## Pendiente
 
+- **El dash del bloque verde debe hacer daño.** Hoy no daña: la caracteristica Dash entra por
+  `Player.force_dash`, que es solo movimiento — el dodge normal si daña, via `dash_deals_damage`.
+  El daño de un dash forzado lo pone un hitbox propio; ver como lo resuelve el X cargado de la
+  [[Espada]] con su `ChargedDashHitbox`.
 - Prefabs H1.
 - Tuning de impulsos por zona.
 - Probar la spike wall jugando.

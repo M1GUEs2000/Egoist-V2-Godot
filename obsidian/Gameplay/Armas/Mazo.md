@@ -103,6 +103,9 @@ Arma de mas dano. Controla masas. Tiene bastante knockback. Tumba a los enemigos
 
 ### General
 
+- **Modificar el combo aereo** *(idea, no comprometida — sin diseño todavia)*. Hoy el aereo del
+  Mazo no es una cadena encadenable como la de la [[Espada]]: son moves puntuales sueltos (tap
+  con push, X cargado ground pound, Y cargado slam). Definir que reemplaza a que.
 - Probar jugando cada fila de la tabla contra un `HitDummy`/enemigo.
 - Tunear `mace_tuning.tres` con el feel real.
 - Definir si el Y cargado (tierra y aire) gasta meter, y si recupera niveles/sweet spot.
