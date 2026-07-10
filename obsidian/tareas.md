@@ -9,37 +9,57 @@ status: active
 
 # Tareas
 
-Hub de navegacion de las subtareas del proyecto. El seguimiento tiene **dos niveles**:
+Board de subtareas con el plugin **Tasks**. El seguimiento tiene **dos niveles**:
 
-- **Nodos (Sistemas)** — los sistemas que ya existen (Brazo, Combate, Enemigos...), gobernados por [[Sistemas.base]]. Ahi se ve cada nodo con su estado E0-E4. El nodo es el **dueño**: de aca sale el conteo ("Brazo tiene 3 pendientes").
-- **Subtareas** — el detalle del trabajo. Cada subtarea vive en **una sola** de las tres tablas de abajo (el archivo *es* el estado). Puede pertenecer a **uno o mas nodos**.
+- **Nodos (Sistemas)** — los sistemas que ya existen (Combate, Enemigos...), con su estado E0-E4 en [[Sistemas.base]] y su hito en [[Hitos.base]]. Son el dueño del trabajo.
+- **Subtareas** — el detalle, viven como lineas `- [ ]` en [[backlog]]. La **etapa** de cada tarea es su casilla y sigue el mismo ciclo que los estados del nodo:
 
-## Los nodos de Tareas
+| Casilla | Etapa | Estado |
+|---|---|---|
+| `[ ]` | Por implementar | E0 |
+| `[/]` | Implementacion | E1 |
+| `[t]` | Tuning | E2 |
+| `[f]` | Tuning final | E3 |
+| `[x]` | Completada | E4 |
 
-Todo el seguimiento vive en cinco nodos (carpeta `Tareas/`), nada mas:
+Cambiar de etapa = **clic en la casilla** (cicla en orden). Una tarea puede llevar **varios nodos** como `[[wikilink]]` al final.
 
-| Nodo | Que contiene |
-|---|---|
-| [[tareaspendientes]] | Subtareas decididas, todavia no empezadas. |
-| [[tareasenprogreso]] | Subtareas en construccion o tuneo activo. |
-| [[tareascompletadas]] | Subtareas terminadas (historial). |
-| [[hitos]] | Los hitos H0-H5 en un solo lugar: meta, puerta de salida y roadmap. |
-| [[ideas]] | Ideas potenciales, no comprometidas (pueden no entrar). |
+## Board por etapa
 
-Las tres tablas de subtareas tienen columnas iguales: **Tarea · Qué falta · Nodo(s)**. El **estado** lo dice el archivo (no hay columna Estado). El **hito** sale del nodo (cada nodo lleva su `hito` en el frontmatter).
+```tasks
+group by function const m = {' ': '1 · Por implementar', '/': '2 · Implementacion', 't': '3 · Tuning', 'f': '4 · Tuning final', 'x': '5 · Completada'}; return m[task.status.symbol] ?? ('9 · ' + task.status.name);
+sort by description
+```
 
-## Como se usa
+## Solo lo activo (sin completadas)
 
-- **Ver las tareas de un nodo**: buscar el wikilink del nodo (ej. `[[Brazo]]`) dentro de la tabla. Salen sus filas con Tarea y Qué falta.
-- **Mover de estado**: cortar la fila de un archivo y pegarla en el otro. Nunca vive en dos a la vez — esa es la unica fuente de verdad del estado, sin drift.
-- **Una tarea, varios nodos**: si toca a mas de un sistema, se listan todos en Nodo(s) (ej. `[[Stun]], [[Enemigos]]`).
+```tasks
+not done
+group by function const m = {' ': '1 · Por implementar', '/': '2 · Implementacion', 't': '3 · Tuning', 'f': '4 · Tuning final'}; return m[task.status.symbol] ?? ('9 · ' + task.status.name);
+sort by description
+```
 
-> [!important]
-> Tunear valores y "probar jugando" de un sistema ya implementado **son subtareas** (van en [[tareasenprogreso]]), no parte silenciosa del estado del nodo.
+## Por nodo
+
+Para ver las tareas de un nodo, abri su nota y mira los **backlinks** (cada tarea lo linkea), o pega un bloque como este cambiando el nombre:
+
+````text
+```tasks
+not done
+description includes Mazo
+```
+````
+
+Ejemplo en vivo (Mazo):
+
+```tasks
+not done
+description includes Mazo
+```
 
 ## Relacionado
 
-- [[Tareas.base]] — las 3 tablas por estado como base navegable
+- [[backlog]] — la fuente editable de las tareas
 - [[Sistemas.base]] — sistemas por estado E0-E4
 - [[Hitos.base]] — sistemas por hito
 - [[hitos]]

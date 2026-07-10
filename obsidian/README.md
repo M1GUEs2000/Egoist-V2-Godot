@@ -66,7 +66,8 @@ La boveda se navega por nodos. Primero se lee este README, despues [[Arquitectur
 
 - [[Sistemas.base]]: sistemas por estado de madurez E0-E4.
 - [[Hitos.base]]: los mismos sistemas, agrupados por hito (H0-H5).
-- [[Tareas.base]]: las 3 tablas de tareas por estado (pendiente / en progreso / completada). Ver [[tareas]].
+
+Las subtareas usan el plugin **Tasks**: la fuente es [[backlog]] y el board por etapa vive en [[tareas]].
 
 ## Relacionado
 

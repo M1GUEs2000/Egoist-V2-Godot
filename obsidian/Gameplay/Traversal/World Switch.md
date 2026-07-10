@@ -33,7 +33,7 @@ Switch por triggers ganados, no dodge gratis.
 
 ## Pendiente
 
-El scanner de cambio de mundo, todavia sin diseñar, vive en [[tareaspendientes]].
+El scanner de cambio de mundo, todavia sin diseñar, vive en el board de tareas ([[tareas]]).
 
 ## Relacionado
 

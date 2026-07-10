@@ -1,0 +1,79 @@
+{
+  "collapse-filter": false,
+  "search": "",
+  "showTags": false,
+  "showAttachments": false,
+  "hideUnresolved": false,
+  "showOrphans": true,
+  "collapse-color-groups": false,
+  "colorGroups": [
+    {
+      "query": "tag:#combate  ",
+      "color": {
+        "a": 1,
+        "rgb": 14701138
+      }
+    },
+    {
+      "query": "tag:#ia  ",
+      "color": {
+        "a": 1,
+        "rgb": 14731039
+      }
+    },
+    {
+      "query": "tag:#arma  ",
+      "color": {
+        "a": 1,
+        "rgb": 11657298
+      }
+    },
+    {
+      "query": "tag:#armas ",
+      "color": {
+        "a": 1,
+        "rgb": 11654994
+      }
+    },
+    {
+      "query": "tag:#traversal  ",
+      "color": {
+        "a": 1,
+        "rgb": 581014
+      }
+    },
+    {
+      "query": "tag:#lore  ",
+      "color": {
+        "a": 1,
+        "rgb": 1795208
+      }
+    },
+    {
+      "query": "tag:#enemigo  ",
+      "color": {
+        "a": 1,
+        "rgb": 15744457
+      }
+    },
+    {
+      "query": "tag:#tarea  ",
+      "color": {
+        "a": 1,
+        "rgb": 2347264
+      }
+    }
+  ],
+  "collapse-display": false,
+  "showArrow": true,
+  "textFadeMultiplier": 0.7,
+  "nodeSizeMultiplier": 1,
+  "lineSizeMultiplier": 1,
+  "collapse-forces": true,
+  "centerStrength": 0.518713248970312,
+  "repelStrength": 10,
+  "linkStrength": 1,
+  "linkDistance": 250,
+  "scale": 0.2588386562181594,
+  "close": false
+}

@@ -21,7 +21,7 @@ Puerta de salida: world switch por triggers, enemigos/objetos respetan mundo, HU
 > [!danger] Go/no-go
 > Si la Espada + world switch no se siente bien, se redisenia aqui. No se empuja el problema a H4.
 
-El backlog activo de H1 vive en el kanban: [[tareaspendientes]], [[tareasenprogreso]], [[tareascompletadas]].
+El backlog activo de H1 vive en el board de tareas ([[tareas]]); la fuente editable es [[backlog]].
 
 ## Roadmap (H2–H5)
 
