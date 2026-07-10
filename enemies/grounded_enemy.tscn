@@ -19,6 +19,49 @@ height = 1.8
 [sub_resource type="StandardMaterial3D" id="Mat_body"]
 albedo_color = Color(0.9, 0.2, 0.2, 1)
 
+[sub_resource type="Gradient" id="Gradient_sparks"]
+offsets = PackedFloat32Array(0, 0.6, 1)
+colors = PackedColorArray(1, 0.95, 0.75, 1, 1, 0.25, 0.1, 1, 0.7, 0.05, 0.02, 0)
+
+[sub_resource type="GradientTexture1D" id="GradientTexture1D_sparks"]
+gradient = SubResource("Gradient_sparks")
+
+[sub_resource type="Curve" id="Curve_sparks"]
+_data = [Vector2(0, 1), 0.0, 0.0, 0, 0, Vector2(1, 0), 0.0, 0.0, 0, 0]
+point_count = 2
+
+[sub_resource type="CurveTexture" id="CurveTexture_sparks"]
+curve = SubResource("Curve_sparks")
+
+[sub_resource type="ParticleProcessMaterial" id="ParticleProcessMaterial_sparks"]
+lifetime_randomness = 0.4
+emission_shape = 1
+emission_sphere_radius = 0.12
+spread = 60.0
+initial_velocity_min = 3.5
+initial_velocity_max = 8.0
+gravity = Vector3(0, -14, 0)
+damping_min = 2.0
+damping_max = 5.0
+scale_min = 0.35
+scale_curve = SubResource("CurveTexture_sparks")
+color_ramp = SubResource("GradientTexture1D_sparks")
+
+[sub_resource type="StandardMaterial3D" id="Mat_sparks"]
+transparency = 1
+shading_mode = 0
+vertex_color_use_as_albedo = true
+albedo_color = Color(1, 0.15, 0.06, 1)
+billboard_mode = 3
+billboard_keep_scale = true
+particles_anim_h_frames = 1
+particles_anim_v_frames = 1
+particles_anim_loop = false
+
+[sub_resource type="QuadMesh" id="QuadMesh_sparks"]
+material = SubResource("Mat_sparks")
+size = Vector2(0.28, 0.28)
+
 [sub_resource type="BoxMesh" id="BoxMesh_weapon"]
 size = Vector3(0.25, 0.25, 1.1)
 
@@ -40,9 +83,21 @@ surface_material_override/0 = SubResource("Mat_body")
 [node name="StunLight" type="OmniLight3D" parent="." unique_id=915778972]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.1, 0)
 visible = false
-light_color = Color(1, 0.9, 0.15, 1)
-light_energy = 0.0
+light_color = Color(0.91764706, 0.75686276, 0, 1)
+light_energy = 1.63
 omni_range = 3.0
+
+[node name="HitSparks" type="GPUParticles3D" parent="." unique_id=1766602801]
+top_level = true
+emitting = false
+amount = 94
+lifetime = 0.35
+one_shot = true
+explosiveness = 1.0
+randomness = 0.3
+fixed_fps = 0
+process_material = SubResource("ParticleProcessMaterial_sparks")
+draw_pass_1 = SubResource("QuadMesh_sparks")
 
 [node name="Health" type="Node" parent="." unique_id=1832183654]
 script = ExtResource("2_health")
@@ -50,6 +105,7 @@ max_health = 101.45
 
 [node name="WorldMembership" type="Node" parent="." unique_id=345613920]
 script = ExtResource("4_membership")
+mode = 1
 affiliation = 1
 hide_when_inactive = false
 

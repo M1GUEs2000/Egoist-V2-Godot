@@ -174,7 +174,7 @@ collision_mask = 0
 script = ExtResource("4_membership")
 
 [node name="LivingPlatform3" type="StaticBody3D" parent="." unique_id=1896626281]
-transform = Transform3D(4.5980473, 0.029133607, 0, -0.13401459, 0.99957556, 0, 0, 0, 5.005, 38.729977, -1.6487484, -148.69684)
+transform = Transform3D(4.5980473, 0.029133607, 0, -0.13401459, 0.99957556, 0, 0, 0, 5.005, 32.406536, -1.6487484, -151.29892)
 collision_mask = 0
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="LivingPlatform3" unique_id=1239432844]
@@ -265,7 +265,7 @@ script = ExtResource("4_membership")
 affiliation = 1
 
 [node name="DeadPlatform7" type="StaticBody3D" parent="." unique_id=415911114]
-transform = Transform3D(-0.07225325, 0.9999191, 5.191128e-10, -2.83977, -0.0063603213, -1.9918585, -4.918627, -0.011016401, 1.1499999, 52.51333, 11.416581, -132.83694)
+transform = Transform3D(-2.425681, 1.023297, 0.6967189, -4.323122, -0.0068709333, -3.8929775, -7.0849385, -0.3461551, 2.1368995, 52.170227, 11.416581, -142.27228)
 collision_mask = 0
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="DeadPlatform7" unique_id=1749269711]
@@ -328,14 +328,14 @@ transform = Transform3D(1.515, 0, 0, 0, 1.515, 0, 0, 0, 1.515, 28.239777, 3.0038
 enable_launch = true
 
 [node name="WorldSwitchPickup5" parent="." unique_id=1479752669 instance=ExtResource("6_traversal")]
-transform = Transform3D(1.985, 0, 0, 0, 1.985, 0, 0, 0, 1.985, 44.143764, 9.407414, -123.4495)
+transform = Transform3D(1.985, 0, 0, 0, 1.985, 0, 0, 0, 1.985, 42.256702, 9.407414, -129.7969)
 enable_launch = true
 enable_meter = true
 enable_world_switch = true
 hits_to_break = 50
 
 [node name="WorldSwitchPickup6" parent="." unique_id=791179567 instance=ExtResource("6_traversal")]
-transform = Transform3D(1.985, 0, 0, 0, 1.985, 0, 0, 0, 1.985, 40.82506, 6.635214, -144.29689)
+transform = Transform3D(1.985, 0, 0, 0, 1.985, 0, 0, 0, 1.985, 34.50162, 6.635214, -146.89897)
 enable_world_switch = true
 hits_to_break = 50
 
@@ -351,7 +351,7 @@ transform = Transform3D(0.3365483, -0.8794717, -0.3365483, 0.15660828, 0.4046937
 world = 1
 
 [node name="DeadSpikeWall2" parent="." unique_id=457786635 instance=ExtResource("13_spike_wall")]
-transform = Transform3D(1.0204163, -0.26526126, -0.94995564, -0.7300193, 3.1886072, -0.15015295, 3.1385067, 0.82791656, 0.27393147, 37.66935, 4.9999714, -118.726166)
+transform = Transform3D(1.0204163, -0.26526126, -0.94995564, -0.7300193, 3.1886072, -0.15015295, 3.1385067, 0.82791656, 0.27393147, 37.154686, 4.9999714, -121.1279)
 world = 1
 
 [node name="DeadSpikeWall3" parent="." unique_id=155930929 instance=ExtResource("13_spike_wall")]
@@ -365,7 +365,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8.5, 0, 5)
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8.5, 0, 5)
 
 [node name="LivingSpikeWall3" parent="." unique_id=1050733178 instance=ExtResource("13_spike_wall")]
-transform = Transform3D(0.7112188, 0, -1.4902995, 0, 2.7046368, 0, 3.4735, 0, 0.30514723, 50.680473, 7.354654, -129.94629)
+transform = Transform3D(0.7112188, 0, -1.4902995, 0, 2.7046368, 0, 3.4735, 0, 0.30514723, 48.62185, 7.354654, -135.6075)
 
 [node name="GroundedEnemy" parent="." unique_id=295057239 instance=ExtResource("12_enemy")]
 transform = Transform3D(0.866025, 0, 0.5, 0, 1, 0, -0.5, 0, 0.866025, 8.785327, 0.1, -0.57565784)

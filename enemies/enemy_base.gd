@@ -24,20 +24,30 @@ enum AirState { GROUNDED, AIRBORNE }
 @export var stun_knockback_decay := 20.0
 ## Angulo maximo de inclinacion visual durante stun, en grados.
 @export var stun_tilt_angle := 12.0
-## Tiempo del tween de inclinacion al entrar/salir de stun, en segundos.
-@export var stun_tilt_time := 0.08
-## Escala a la que se encoge el enemigo en el instante del golpe (1.0 = sin squash).
-## Vuelve a 1.0 a lo largo del stun; cada golpe reinicia el rebote.
+## Tiempo del tween de inclinacion al entrar/salir de stun, en segundos. Subirlo hace visible
+## el recorrido hacia el angulo; bajarlo lo vuelve un salto instantaneo.
+@export var stun_tilt_time := 0.15
+## Escala a la que se encoge el enemigo en el golpe (1.0 = sin squash).
 @export var stun_squash_scale := 0.8
-## Poses discretas del rebote de squash, incluyendo la inicial y la normal. El crecimiento
-## salta entre ellas en vez de interpolar: es la animacion "a frames cortados". 2 = pop seco.
-@export_range(2, 12, 1) var stun_squash_steps := 3
+
+# El rebote ocupa solo el arranque del stun; el resto el enemigo se queda grande. Los tiempos
+# son absolutos, no fracciones: retunear la duracion del stun no deforma el gesto del impacto.
+# Si el stun es mas corto que estos tiempos, el rebote se recorta para caber.
+## Segundos desde el golpe en los que termina de encogerse.
+@export var stun_squash_in_time := 0.05
+## Segundos desde el golpe en los que ya recupero su tamaño normal. Mayor que in_time.
+@export var stun_squash_out_time := 0.09
 ## Energia de emision del material durante stun. Sin bloom, solo enciende la superficie.
 @export var stun_emission_energy := 1.8
 ## Energia de la luz amarilla durante stun.
 @export var stun_light_energy := 1.6
 ## Alcance de la luz amarilla durante stun, en metros.
 @export var stun_light_range := 3.0
+## Altura sobre los pies a la que nacen las chispas de impacto, en metros.
+@export var hit_sparks_height := 1.0
+## Cuanto se adelantan las chispas desde el eje del enemigo hacia su atacante, en metros:
+## nacen en la superficie golpeada, no en el centro del cuerpo.
+@export var hit_sparks_offset := 0.45
 
 var air_state := AirState.GROUNDED
 var combat_state := CombatState.NORMAL
@@ -55,12 +65,14 @@ var _bounce_hang_time := 0.0
 var _launch_id := 0
 var _air_gravity := 0.0  # gravedad del vuelo actual; el push la override con su propio arco
 var _stun_tween: Tween
+var _squash_tween: Tween
 
 @onready var health: Health = get_node_or_null("Health") as Health
 @onready var membership: WorldMembership = get_node_or_null("WorldMembership") as WorldMembership
 @onready var hurtbox: Hurtbox = get_node_or_null("Hurtbox") as Hurtbox
 @onready var visual: Node3D = get_node_or_null("Visual") as Node3D
 @onready var stun_light: OmniLight3D = get_node_or_null("StunLight") as OmniLight3D
+@onready var hit_sparks: GPUParticles3D = get_node_or_null("HitSparks") as GPUParticles3D
 
 func _ready() -> void:
 	add_to_group("enemy")
@@ -262,6 +274,7 @@ func on_hurtbox_hit(from: Node, damage: float, hit_direction: Vector3, stun: Stu
 	if not can_receive_hit():
 		return
 	_remember_hit_direction(from, hit_direction)
+	_play_hit_sparks()
 	if hostility == Hostility.PASSIVE:
 		_on_passive_attacked(from)
 	if is_armored():
@@ -359,6 +372,19 @@ func _remember_hit_direction(from: Node, hit_direction: Vector3) -> void:
 	if hit_direction.length_squared() > 0.0001:
 		_last_hit_direction = hit_direction.normalized()
 
+## Chispas del impacto: nacen en la superficie que mira al atacante, no en el centro del cuerpo.
+## Salen en TODO golpe recibido, stunee o no. El emisor es `top_level`, asi que las particulas
+## viven en el mundo: el squash, la inclinacion y el giro del enemigo no las deforman.
+func _play_hit_sparks() -> void:
+	if hit_sparks == null:
+		return
+	var toward_attacker := -_last_hit_direction  # _last_hit_direction se aleja del atacante
+	hit_sparks.global_position = global_position \
+			+ Vector3.UP * hit_sparks_height \
+			+ toward_attacker * hit_sparks_offset
+	hit_sparks.restart()
+	hit_sparks.emitting = true
+
 func _apply_stun_knockback() -> void:
 	var direction := Vector3(_last_hit_direction.x, 0.0, _last_hit_direction.z)
 	if direction.length_squared() < 0.0001:
@@ -382,39 +408,54 @@ func _play_stun_reaction(duration: float) -> void:
 		return
 	if _stun_tween != null:
 		_stun_tween.kill()
-	_set_squash_progress(0.0)
 	_stun_tween = create_tween()
-	_stun_tween.set_parallel(true)
-	_stun_tween.tween_property(visual, "rotation", _stun_tilt_rotation(), stun_tilt_time)
-	_stun_tween.tween_method(_set_squash_progress, 0.0, 1.0, maxf(0.01, duration))
+	_stun_tween.tween_property(visual, "quaternion", _stun_tilt_quaternion(), stun_tilt_time)
+	_play_squash(duration)
 
-## El rebote no interpola: cuantiza el progreso en `stun_squash_steps` poses y salta entre
-## ellas. Da la lectura de una animacion a frames cortados en vez de un crecimiento fluido.
-func _set_squash_progress(progress: float) -> void:
-	if visual == null:
-		return
-	var steps := maxi(2, stun_squash_steps)
-	var index := clampi(int(progress * steps), 0, steps - 1)
-	var stepped := float(index) / float(steps - 1)
-	visual.scale = Vector3.ONE * lerpf(stun_squash_scale, 1.0, stepped)
+## El rebote arranca con el golpe y termina mucho antes que el stun: encoge en
+## `stun_squash_in_time` y ya recupero su tamaño en `stun_squash_out_time`; el resto del stun
+## se queda grande. Tween propio, para correr en paralelo con la inclinacion sin atarse a su
+## ritmo. Un stun mas corto que el gesto lo recorta en vez de dejarlo encogido.
+func _play_squash(duration: float) -> void:
+	if _squash_tween != null:
+		_squash_tween.kill()
+	var total := maxf(0.01, duration)
+	var in_time := minf(stun_squash_in_time, total)
+	var out_time := maxf(0.01, minf(stun_squash_out_time, total) - in_time)
+	_squash_tween = create_tween()
+	_squash_tween.tween_property(visual, "scale", Vector3.ONE * stun_squash_scale, maxf(0.01, in_time))
+	_squash_tween.tween_property(visual, "scale", Vector3.ONE, out_time)
 
 func _reset_stun_reaction() -> void:
 	if visual == null:
 		return
 	if _stun_tween != null:
 		_stun_tween.kill()
-	visual.scale = Vector3.ONE
+	if _squash_tween != null:
+		_squash_tween.kill()
+	visual.scale = Vector3.ONE  # el rebote ya termino a mitad del stun
 	_stun_tween = create_tween()
-	_stun_tween.tween_property(visual, "rotation", Vector3.ZERO, stun_tilt_time)
+	_stun_tween.tween_property(visual, "quaternion", Quaternion.IDENTITY, stun_tilt_time)
 
-func _stun_tilt_rotation() -> Vector3:
+## Inclinacion del golpe: el cuerpo cae en la direccion en que el golpe lo aleja del atacante,
+## pivotando desde los pies. Se expresa como Quaternion (eje + angulo), no como Euler.
+##
+## `_last_hit_direction` es global, pero `visual.quaternion` es local al enemigo, que gira con
+## `look_at` para encarar a su objetivo. Sin pasar la direccion a espacio local, la inclinacion
+## depende de hacia donde este mirando: de frente al jugador, el cuerpo cae hacia adelante.
+func _stun_tilt_quaternion() -> Quaternion:
 	var direction := Vector3(_last_hit_direction.x, 0.0, _last_hit_direction.z)
 	if direction.length_squared() < 0.0001:
-		direction = Vector3.FORWARD
-	var axis := Vector3.UP.cross(direction.normalized())
+		return Quaternion.IDENTITY
+	var basis_no_scale := global_transform.basis.orthonormalized()
+	var local_dir := basis_no_scale.inverse() * direction.normalized()
+	local_dir.y = 0.0
+	if local_dir.length_squared() < 0.0001:
+		return Quaternion.IDENTITY
+	var axis := Vector3.UP.cross(local_dir.normalized())
 	if axis.length_squared() < 0.0001:
-		axis = Vector3.RIGHT
-	return axis.normalized() * deg_to_rad(stun_tilt_angle)
+		return Quaternion.IDENTITY
+	return Quaternion(axis.normalized(), deg_to_rad(stun_tilt_angle))
 
 func _die() -> void:
 	_dead = true
