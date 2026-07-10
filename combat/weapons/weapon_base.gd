@@ -198,6 +198,7 @@ func _begin_air_step(step: int, finisher: bool, wait_branch: bool) -> void:
 	play_air_step(step, finisher, wait_branch)
 	if finisher and wait_branch:
 		arm_push(tuning.push, tuning.air_step_time * tuning.push_at)
+	_player.attack_step(tuning.air_step_time)  # avanza hacia el lockeado / al frente, igual que en tierra
 	# No flota sí o sí: solo marca "atacando en el aire" → si NO conecta, caés con
 	# más fuerza. El float lo dispara el hitbox al conectar (landed → air-hit-stall).
 	_player.notify_aerial_attack(tuning.air_step_time)

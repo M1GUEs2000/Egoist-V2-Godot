@@ -34,6 +34,7 @@ Combate del jugador: slots X/Y, espada, hitboxes, parry, meter, combo aereo e in
 - Las armas son procedurales hasta H3: no dependen de animaciones de combate.
 - El golpe nace de mover la **mano** alrededor del jugador, no de girar la hoja sobre un punto fijo (ver seccion Mano orbital). *(2026-07-09)*
 - El stun es universal: la fuente define potencia/duracion/tipo (`StunSettings`), pero el receptor decide si entra con su threshold (ver seccion Stun universal). *(2026-07-07)*
+- Cada golpe de un combo, en tierra o en aire, avanza al jugador hacia el enemigo lockeado (o hacia su frente) con `Player.attack_step`. Distancia en `PlayerTuning.attack_step_distance`. *(2026-07-09)*
 - El golpe aereo flota solo si conecta; si falla, cae mas fuerte.
 - El finisher aereo usa verbos opcionales `slam`, `push` y `slam_bounce`.
 - El combo aereo `X espera X X`: la primera vuelta eleva un poco al jugador (`Player.air_hop`, tuneable con `air_wait_spin_hop`). El air-hit-stall preserva subidas (no corta velocidad vertical positiva), asi el hop sobrevive al stall. *(2026-07-06)*

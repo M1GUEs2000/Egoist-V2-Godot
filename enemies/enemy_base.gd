@@ -26,6 +26,9 @@ enum AirState { GROUNDED, AIRBORNE }
 @export var stun_tilt_angle := 12.0
 ## Tiempo del tween de inclinacion al entrar/salir de stun, en segundos.
 @export var stun_tilt_time := 0.08
+## Escala a la que se encoge el enemigo en el instante del golpe (1.0 = sin squash).
+## Vuelve a 1.0 a lo largo del stun; cada golpe reinicia el rebote.
+@export var stun_squash_scale := 0.8
 ## Energia de emision del material durante stun. Sin bloom, solo enciende la superficie.
 @export var stun_emission_energy := 1.8
 ## Energia de la luz amarilla durante stun.
@@ -137,7 +140,7 @@ func apply_stun(duration: float) -> void:
 		# Suspendido mientras dure el stun (juggle): cae cuando el stun termina.
 		# airborne_max_time NO va aca; es solo el tope de seguridad en _update_airborne.
 		_airborne_until = maxf(_airborne_until, _stunned_until)
-	_play_stun_reaction()
+	_play_stun_reaction(duration)
 	_refresh_visual_state()
 
 func apply_armor(duration: float) -> void:
@@ -367,13 +370,20 @@ func _tick_stun_knockback(delta: float) -> void:
 	velocity.x = horizontal.x
 	velocity.z = horizontal.z
 
-func _play_stun_reaction() -> void:
+## Golpe recibido: el enemigo se encoge de golpe y se inclina hacia atras. El squash rebota
+## hasta su escala normal a lo largo del stun; la inclinacion entra con su propio tween.
+## Cada golpe reinicia ambos, asi un combo se siente como una sucesion de impactos.
+## El squash escala el pivote `Visual`, cuyo origen esta en los pies: se hunde contra el piso.
+func _play_stun_reaction(duration: float) -> void:
 	if visual == null:
 		return
 	if _stun_tween != null:
 		_stun_tween.kill()
+	visual.scale = Vector3.ONE * stun_squash_scale
 	_stun_tween = create_tween()
+	_stun_tween.set_parallel(true)
 	_stun_tween.tween_property(visual, "rotation", _stun_tilt_rotation(), stun_tilt_time)
+	_stun_tween.tween_property(visual, "scale", Vector3.ONE, maxf(0.01, duration))
 
 func _reset_stun_reaction() -> void:
 	if visual == null:
@@ -381,7 +391,9 @@ func _reset_stun_reaction() -> void:
 	if _stun_tween != null:
 		_stun_tween.kill()
 	_stun_tween = create_tween()
+	_stun_tween.set_parallel(true)
 	_stun_tween.tween_property(visual, "rotation", Vector3.ZERO, stun_tilt_time)
+	_stun_tween.tween_property(visual, "scale", Vector3.ONE, stun_tilt_time)
 
 func _stun_tilt_rotation() -> Vector3:
 	var direction := Vector3(_last_hit_direction.x, 0.0, _last_hit_direction.z)

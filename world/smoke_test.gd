@@ -280,14 +280,14 @@ func _ready() -> void:
 
 	# Enemy stun: las fuentes de golpe reducen solo grounded; airborne conserva el juggle.
 	var sword_tuning := load("res://data/sword_tuning.tres") as SwordTuning
-	assert(is_equal_approx(sword_tuning.stun.grounded, 0.5))
+	assert(is_equal_approx(sword_tuning.stun.grounded, 0.35))
 	assert(is_equal_approx(sword_tuning.stun.airborne, 1.0))
-	assert(is_equal_approx(sword_tuning.charged_dash_stun.grounded, 0.5))
+	assert(is_equal_approx(sword_tuning.charged_dash_stun.grounded, 0.35))
 	assert(is_equal_approx(sword_tuning.charged_dash_stun.airborne, 1.0))
-	assert(is_equal_approx(player.tuning.dash_stun.grounded, 0.5))
+	assert(is_equal_approx(player.tuning.dash_stun.grounded, 0.35))
 	assert(is_equal_approx(player.tuning.dash_stun.airborne, 1.0))
 	var mace_tuning := load("res://data/mace_tuning.tres") as MaceTuning
-	assert(is_equal_approx(mace_tuning.stun.grounded, 0.45))
+	assert(is_equal_approx(mace_tuning.stun.grounded, 0.35))
 	assert(is_equal_approx(mace_tuning.stun.airborne, 0.9))
 	assert(is_equal_approx(mace_tuning.charged_freeze_stun.grounded, 1.4))
 	assert(is_equal_approx(mace_tuning.air_freeze_stun.grounded, 1.2))
