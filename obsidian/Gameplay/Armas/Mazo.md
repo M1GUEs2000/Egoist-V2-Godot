@@ -33,7 +33,7 @@ Arma de mas dano. Controla masas. Tiene bastante knockback. Tumba a los enemigos
 | X | Ataque con knockback hacia adelante. |
 | X cargado | Caes con un ataque AOE. |
 | X cargado sweet spot | Caes con un ataque y al final das una vuelta. Los mantiene en el aire. |
-| Y cargado | Caida diagonal con angulo tuneable; al impactar enemigo o suelo dispara un AOE launcher en la zona de impacto y frena la caida si conecta. No tiene niveles ni sweet spot por ahora. |
+| Y cargado | Caida diagonal con angulo tuneable; al impactar enemigo o suelo dispara un AOE launcher en la zona de impacto. Conectar contra un enemigo frena la caida en seco y sostiene al jugador su hang propio, sin gastarle el doble salto: esa es la ventana para gastarlo persiguiendo al enemigo que acaba de lanzar. No tiene niveles ni sweet spot por ahora. |
 
 ## Estado Godot
 
@@ -67,9 +67,14 @@ Arma de mas dano. Controla masas. Tiene bastante knockback. Tumba a los enemigos
 - Aéreo: tap X/Y sin carga arma `push` hacia adelante a mitad del swing (`push_at = 0.5`);
   X cargado cae con AOE (ground pound) y gasta 1 barra fija; sweet spot agrega una
   vuelta final que congela. Y cargado cae en diagonal (`air_y_fall_angle` /
-  `air_y_fall_speed`) y dispara `AirSlamHitbox` al impactar enemigo o suelo; ese AOE
-  relanza enemigos sin consumir el doble salto del jugador. No gasta meter por ahora y
-  no tiene niveles ni sweet spot. *(2026-07-09)*
+  `air_y_fall_speed`) y dispara `AirSlamHitbox`, que relanza enemigos. No gasta meter por
+  ahora y no tiene niveles ni sweet spot. *(2026-07-09)*
+- El Y aereo tiene **hang propio**: al conectar contra un enemigo corta el momentum de la
+  diagonal y llama `Player.hover(air_y_player_hang_time)`, que frena la caida en seco y
+  sostiene al jugador un tiempo exacto. No es el air-hit-stall generico (ver [[Combate]]) y no
+  gasta el doble salto. Contra el suelo no hay hang: ahi el move termina. *(2026-07-09)*
+- `AirSlamHitbox` alcanza a los enemigos que **entran** en su area mientras esta activo, que
+  arranca al iniciar la caida. Su shape es una esfera (`air_y_aoe_radius`). *(2026-07-09)*
 - `air_stall_scale = 1.8`: el Mazo sostiene mas al jugador por golpe conectado porque
   tiene menos impactos y cada uno pesa mas. *(2026-07-09)*
 - "Congelar" no es un verbo nuevo: reusa el sistema de stun existente
@@ -86,8 +91,25 @@ Arma de mas dano. Controla masas. Tiene bastante knockback. Tumba a los enemigos
 
 ## Pendiente
 
+### Y cargado aereo: el AOE todavia no es un AOE
+
+- El `AirSlamHitbox` debe **lanzar a todos los enemigos dentro de su area** en el instante en que
+  el slam topa el suelo o un enemigo, no solo al que lo dispara. Hoy es un `Area3D` que reacciona
+  a `area_entered`, asi que alcanza al primer enemigo que atraviesa durante la caida y no ve a los
+  que ya estaban parados dentro del radio al momento del impacto. La resolucion pasa por consultar
+  los solapamientos vigentes al impactar, en vez de esperar entradas nuevas.
+- Cambiar el shape del `AirSlamHitbox` de esfera a **cilindro**: el area es de suelo, y una esfera
+  cubre de menos al ras y de mas en altura.
+
+### General
+
 - Probar jugando cada fila de la tabla contra un `HitDummy`/enemigo.
 - Tunear `mace_tuning.tres` con el feel real.
+- Definir si el Y cargado (tierra y aire) gasta meter, y si recupera niveles/sweet spot.
+- El combo de referencia cruza dos armas (Espada slot X → Mazo slot Y). `cancel_routines()` es por
+  arma: verificar que la rutina de la Espada no siga viva mientras el Mazo ejecuta el slam.
+- El rebote en enemigos ([[Rebote en Enemigos]]) y el slam compiten por el mismo contacto: decidir
+  la precedencia. Rebotar conserva el doble salto; el slam lo deja disponible via su hang.
 
 ## Relacionado
 

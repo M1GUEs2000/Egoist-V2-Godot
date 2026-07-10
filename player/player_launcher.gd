@@ -61,6 +61,17 @@ func notify_aerial_attack(duration: float) -> void:
 		return
 	_aerial_attack_until = maxf(_aerial_attack_until, World.now() + duration)
 
+## Hang PROPIO de un move (no el air-hit-stall genérico): frena la caída en seco y sostiene al
+## jugador `duration` segundos exactos, sin depender del contador de combo ni de air_stall_scale.
+## No consume el doble salto: la ventana existe justamente para que el jugador lo gaste.
+## Lo usa el Y cargado aéreo del Mazo, que al conectar lanza al enemigo y se queda flotando.
+func hover(duration: float) -> void:
+	if _body.is_on_floor():
+		return
+	_air_stall_until = maxf(_air_stall_until, World.now() + duration)
+	_body.vertical_velocity = 0.0
+	_body.air_state = Player.AirState.AIRBORNE
+
 func register_air_hit_stall(scale := 1.0) -> void:
 	if _body.is_on_floor():
 		return

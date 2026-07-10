@@ -1,26 +1,26 @@
-[gd_scene load_steps=11 format=3]
+[gd_scene format=3 uid="uid://dv6cue7n7nrdf"]
 
-[ext_resource type="Script" path="res://combat/weapons/mace/mace.gd" id="1_mace"]
-[ext_resource type="Resource" path="res://data/mace_tuning.tres" id="2_tuning"]
-[ext_resource type="Script" path="res://combat/hitbox.gd" id="3_hitbox"]
-
-[sub_resource type="BoxShape3D" id="BoxShape3D_mace"]
-size = Vector3(0.8, 0.8, 1.7)
+[ext_resource type="Script" uid="uid://c1rjnwwvq0h0p" path="res://combat/weapons/mace/mace.gd" id="1_mace"]
+[ext_resource type="Resource" uid="uid://y671umdl4mld" path="res://data/mace_tuning.tres" id="2_tuning"]
+[ext_resource type="Script" uid="uid://dr1ehd335mg06" path="res://combat/hitbox.gd" id="3_hitbox"]
 
 [sub_resource type="CylinderMesh" id="CylinderMesh_handle"]
 top_radius = 0.08
 bottom_radius = 0.08
 height = 1.35
 
+[sub_resource type="StandardMaterial3D" id="Mat_handle"]
+albedo_color = Color(0.45, 0.28, 0.14, 1)
+
 [sub_resource type="SphereMesh" id="SphereMesh_head"]
 radius = 0.38
 height = 0.76
 
-[sub_resource type="StandardMaterial3D" id="Mat_handle"]
-albedo_color = Color(0.45, 0.28, 0.14, 1)
-
 [sub_resource type="StandardMaterial3D" id="Mat_head"]
 albedo_color = Color(0.35, 0.36, 0.38, 1)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_mace"]
+size = Vector3(0.8, 0.8, 1.7)
 
 [sub_resource type="SphereShape3D" id="SphereShape3D_air_disc"]
 radius = 1.6
@@ -31,48 +31,50 @@ size = Vector3(3.2, 2, 3.2)
 [sub_resource type="SphereShape3D" id="SphereShape3D_air_slam"]
 radius = 2.2
 
-[node name="Maso" type="Node3D"]
+[node name="Maso" type="Node3D" unique_id=703914882]
 script = ExtResource("1_mace")
 tuning = ExtResource("2_tuning")
 
-[node name="Hand" type="Node3D" parent="."]
+[node name="Hand" type="Node3D" parent="." unique_id=1603165593]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
 
-[node name="Pivot" type="Node3D" parent="Hand"]
+[node name="Pivot" type="Node3D" parent="Hand" unique_id=1634085958]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.71)
 
-[node name="HandleMesh" type="MeshInstance3D" parent="Hand/Pivot"]
-transform = Transform3D(1, 0, 0, 0, -0.0000000437114, -1, 0, 1, -0.0000000437114, 0, 0, -0.58)
+[node name="HandleMesh" type="MeshInstance3D" parent="Hand/Pivot" unique_id=586591196]
+transform = Transform3D(1, 0, 0, 0, -4.37114e-08, -1, 0, 1, -4.37114e-08, 0, 0, -0.58)
 mesh = SubResource("CylinderMesh_handle")
 surface_material_override/0 = SubResource("Mat_handle")
 
-[node name="HeadMesh" type="MeshInstance3D" parent="Hand/Pivot"]
+[node name="HeadMesh" type="MeshInstance3D" parent="Hand/Pivot" unique_id=749881759]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -1.28)
 mesh = SubResource("SphereMesh_head")
 surface_material_override/0 = SubResource("Mat_head")
 
-[node name="BladeHitbox" type="Area3D" parent="Hand/Pivot"]
+[node name="BladeHitbox" type="Area3D" parent="Hand/Pivot" unique_id=269124499]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.78)
 script = ExtResource("3_hitbox")
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="Hand/Pivot/BladeHitbox"]
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Hand/Pivot/BladeHitbox" unique_id=38448451]
 shape = SubResource("BoxShape3D_mace")
 
-[node name="AirDiscHitbox" type="Area3D" parent="."]
+[node name="AirDiscHitbox" type="Area3D" parent="." unique_id=973395872]
 script = ExtResource("3_hitbox")
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="AirDiscHitbox"]
+[node name="CollisionShape3D" type="CollisionShape3D" parent="AirDiscHitbox" unique_id=2130446970]
 shape = SubResource("SphereShape3D_air_disc")
 
-[node name="LauncherHitbox" type="Area3D" parent="."]
+[node name="LauncherHitbox" type="Area3D" parent="." unique_id=44911893]
 transform = Transform3D(1, 0, 0, 0, 0.866025, -0.5, 0, 0.5, 0.866025, 0, 0.65, -0.8)
 script = ExtResource("3_hitbox")
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="LauncherHitbox"]
+[node name="CollisionShape3D" type="CollisionShape3D" parent="LauncherHitbox" unique_id=254872507]
+transform = Transform3D(1.27, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.4723965, -0.8182143)
 shape = SubResource("BoxShape3D_launcher")
 
-[node name="AirSlamHitbox" type="Area3D" parent="."]
+[node name="AirSlamHitbox" type="Area3D" parent="." unique_id=491503571]
 script = ExtResource("3_hitbox")
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="AirSlamHitbox"]
+[node name="CollisionShape3D" type="CollisionShape3D" parent="AirSlamHitbox" unique_id=871335587]
+transform = Transform3D(1.7, 0, 0, 0, 1.7, 0, 0, 0, 1.7, 0, 3.673624, 0)
 shape = SubResource("SphereShape3D_air_slam")

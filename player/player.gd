@@ -211,6 +211,10 @@ func register_air_hit_stall(scale := 1.0) -> void:
 func notify_aerial_attack(duration: float) -> void:
 	launcher.notify_aerial_attack(duration)
 
+## Hang propio de un move: frena la caída y sostiene al jugador, sin gastarle el doble salto.
+func hover(duration: float) -> void:
+	launcher.hover(duration)
+
 func attack_step(duration: float) -> void:
 	locomotion.attack_step(duration)
 

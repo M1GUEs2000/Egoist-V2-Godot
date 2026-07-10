@@ -316,6 +316,20 @@ func _ready() -> void:
 	mace.cancel_routines()
 	await get_tree().physics_frame
 
+	# Y aereo: conectar contra un enemigo frena la caida en seco con el hang PROPIO del move y
+	# NO gasta el doble salto. Esa ventana existe para que el jugador lo gaste persiguiendo al
+	# enemigo que el AOE acaba de lanzar: sin esto el combo del Mazo no cierra.
+	player.launcher.cancel()
+	player.air_state = Player.AirState.AIRBORNE
+	player.vertical_velocity = -20.0
+	player.set_momentum(Vector3.RIGHT * 12.0)
+	player._can_double_jump = true
+	mace._air_slam_impacted = false
+	mace._on_air_slam_impact(_make_hurtbox(_make_push_probe()), false)
+	assert(player.vertical_velocity == 0.0)  # la caida se frena, no solo se ralentiza
+	assert(player.bump_velocity == Vector3.ZERO)  # la diagonal se corta
+	assert(player._can_double_jump)  # el hang no cobra el doble salto
+
 	var stunned_enemy := (load("res://enemies/grounded_enemy.tscn") as PackedScene).instantiate() as EnemyBase
 	add_child(stunned_enemy)
 	await get_tree().process_frame
