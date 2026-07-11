@@ -1,7 +1,8 @@
 class_name Mace extends WeaponBase
 ## Mazo (boveda: Armas/Mazo): tap = combo de 3 + rama espera (2 smashes extra);
 ## X cargado = 3 niveles con sweet spot congelante; Y cargado = continuidad de combo:
-## paso corto + launcher en tierra, caida diagonal + AOE que rebota (slam_bounce) en aire.
+## paso corto + launcher en tierra, caida diagonal + AOE con dos ramas: launcher si
+## impacta suelo, slam_bounce + rebote del jugador si impacta un enemigo en aire.
 ## Coreografia sobre el motor generico de WeaponBase; aca vive solo la personalidad.
 
 const STEP_COUNT := 3
@@ -9,6 +10,7 @@ const WAIT_BRANCH_EXTRA_STEPS := 2
 const AIR_STEP_COUNT := 2
 
 var _air_y_meet_y := 0.0
+var _air_y_hit_enemy_in_air := false
 
 @onready var _launcher_hitbox: Hitbox = $LauncherHitbox
 @onready var _air_slam_hitbox: Hitbox = $AirSlamHitbox
@@ -22,9 +24,9 @@ func setup(player: Player) -> void:
 	var air_slam_cylinder := _air_slam_shape.shape as CylinderShape3D
 	air_slam_cylinder.radius = t.air_y_aoe_radius
 	air_slam_cylinder.height = t.air_y_aoe_height
-	setup_launcher_hitbox(_launcher_hitbox, t.ground_y_launcher_deals_damage, tuning.stun)
-	# El AOE aereo NO lancea hacia arriba: clava a los enemigos al suelo y los rebota hasta
-	# la altura del jugador (verbo slam_bounce, igual que el Y cargado de la Espada).
+	setup_launcher_hitbox(_launcher_hitbox, t.ground_y_launcher_deals_damage, tuning.stun, true)
+	# El AOE aereo usa dos respuestas: launcher si explota en suelo, slam_bounce si la caida
+	# conecto con un enemigo airborne.
 	_air_slam_hitbox.source = player
 	_air_slam_hitbox.damage = 1.0
 	_air_slam_hitbox.stun = tuning.stun
@@ -178,10 +180,9 @@ func _aerial_charged_x(sweet_spot: bool) -> void:
 			return
 	reset_hit_profile()
 
-## Y aereo: cae en diagonal para interceptar. Al impactar (enemigo en el aire o suelo)
-## estalla el cilindro UNA vez y clava/rebota a todos los de adentro (slam_bounce). Si el
-## impacto fue contra un enemigo en el aire, el jugador rebota arriba-y-adelante segun la
-## direccion de la caida ("grados de rebote"), sin gastar el doble salto.
+## Y aereo: cae en diagonal para interceptar. Si impacta el suelo, estalla un cilindro que
+## lanza a los enemigos del area. Si impacta un enemigo airborne, estalla el cilindro,
+## aplica slam_bounce y el jugador rebota arriba-y-adelante, sin gastar doble salto.
 func _aerial_hold_y(id: int) -> void:
 	var t := _t()
 	_set_air_y_fall_velocity()
@@ -225,7 +226,10 @@ func _airborne_enemy_contact() -> bool:
 ## fue en el aire) y prende el hitbox una vez para golpear/rebotar a todos los de adentro.
 func _burst_air_slam(id: int, hit_enemy_in_air: bool) -> void:
 	var t := _t()
+	end_damage_window()
+	end_launcher_window()
 	_air_y_meet_y = _player.global_position.y + t.air_y_meet_height
+	_air_y_hit_enemy_in_air = hit_enemy_in_air
 	if hit_enemy_in_air:
 		# La caida fue abajo+adelante; el rebote sale arriba+adelante. Los dos knobs fijan el
 		# angulo ("grados de rebote"). No gasta el doble salto.
@@ -234,19 +238,23 @@ func _burst_air_slam(id: int, hit_enemy_in_air: bool) -> void:
 		_player.air_state = Player.AirState.AIRBORNE
 	_air_slam_hitbox.begin_swing()
 	await wait_seconds(t.air_y_aoe_duration)
-	if is_routine_current(id):
-		_air_slam_hitbox.end_swing()
+	_air_slam_hitbox.end_swing()
 
 ## Cada enemigo del estallido: alimenta meter/kills y lo clava al suelo -> rebota hasta la
-## altura del jugador (slam_bounce), no un launch hacia arriba.
+## altura del jugador si el impacto fue aereo; si exploto contra el suelo, es launcher puro.
 func _on_air_slam_hit(hurtbox: Hurtbox, died: bool) -> void:
 	register_weapon_hit(hurtbox, died)
 	var target: Node = hurtbox.owner_node
-	if target.has_method("slam_bounce"):
+	if _air_y_hit_enemy_in_air and target.has_method("slam_bounce"):
 		var meet_y := _air_y_meet_y
 		target.call("slam_bounce", _t().air_y_down_speed,
 				func() -> float: return meet_y,
 				_t().air_y_launcher_hang_time)
+	elif target.has_method("launch"):
+		if target is EnemyBase:
+			target.call("launch", _t().air_y_ground_launch_height, _t().air_y_launcher_hang_time, true)
+		else:
+			target.call("launch", _t().air_y_ground_launch_height, _t().air_y_launcher_hang_time)
 
 func _set_hitbox_stun(s: StunSettings) -> void:
 	_blade_hitbox.stun = s

@@ -84,6 +84,8 @@ func _reticle_position(target: EnemyBase) -> Vector3:
 	var combined := AABB()
 	for mesh in target.find_children("*", "MeshInstance3D", true):
 		var mesh_instance := mesh as MeshInstance3D
+		if mesh_instance == null or not mesh_instance.is_visible_in_tree():
+			continue
 		var box: AABB = mesh_instance.global_transform * mesh_instance.get_aabb()
 		combined = box if not found else combined.merge(box)
 		found = true

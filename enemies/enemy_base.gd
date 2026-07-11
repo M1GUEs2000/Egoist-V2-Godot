@@ -241,10 +241,12 @@ func set_armored(enabled: bool) -> void:
 	_reset_stun_reaction()
 	_refresh_visual_state()
 
-func launch(height: float, hang_time: float) -> bool:
+func launch(height: float, hang_time: float, starts_lying := false) -> bool:
 	if not can_receive_hit() or is_armored() or _ragdolling:
 		return false
 	_begin_airborne()
+	if starts_lying:
+		_set_lying(true)
 	_air_gravity = airborne_gravity  # el launcher cae con la gravedad propia del enemigo
 	velocity = Vector3.ZERO
 	_launch_id += 1

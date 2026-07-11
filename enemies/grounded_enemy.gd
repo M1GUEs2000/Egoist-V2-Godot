@@ -40,7 +40,7 @@ const ALL_STATE_FLAGS := (
 )
 
 @export var use_simple_fsm := true
-@export_enum("FSM", "LIMBO") var ai_backend := AIBackend.FSM
+@export_enum("FSM", "LIMBO") var ai_backend: int = AIBackend.FSM
 @export var chase_delay_after_world_switch := 1.0
 @export_flags("IDLE", "ROAM", "ACTIVITY", "ALERT", "CHASE", "GUARD", "SEARCH", "ATTACK_MELEE", "ATTACK_RANGED", "ATTACK_GROUP", "EVADE", "DEFEND", "CALL_HELP", "FLEE", "HIDE") var allowed_state_flags := ALL_STATE_FLAGS
 @export var passive_remembers_attackers := false

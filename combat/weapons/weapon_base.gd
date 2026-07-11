@@ -48,6 +48,8 @@ var _swing_tween: Tween
 var _launcher_id := 0
 var _launcher_height := 0.0
 var _launcher_hang_time := 0.0
+var _launcher_starts_lying := false
+var _active_launcher_hitbox: Hitbox
 ## Pose de mano desde la que arranca la estocada en curso (ver thrust).
 var _thrust_from := Quaternion.IDENTITY
 var _thrust_reach := 0.0
@@ -230,6 +232,20 @@ func begin_damage_window(duration: float) -> void:
 	if _air_disc_hitbox != null:
 		_air_disc_hitbox.end_swing()
 
+func end_damage_window() -> void:
+	_window_id += 1
+	_window_hits.clear()
+	if _blade_hitbox != null:
+		_blade_hitbox.end_swing()
+	if _air_disc_hitbox != null:
+		_air_disc_hitbox.end_swing()
+
+func end_launcher_window() -> void:
+	_launcher_id += 1
+	if _active_launcher_hitbox != null:
+		_active_launcher_hitbox.end_swing()
+	_active_launcher_hitbox = null
+
 ## Arma el push de esta ventana. Tras `delay` segundos empuja a todo lo golpeado hasta
 ## ese momento y queda armado: lo que conecte después se empuja en el instante del hit.
 func arm_push(settings: PushSettings, delay: float) -> void:
@@ -320,11 +336,13 @@ func set_charge_glow(t: float) -> void:
 ## (about_to_hit) así el golpe ya ve is_airborne = true, y alimenta meter/air-hit-stall
 ## al conectar (landed → _on_hit). Cada arma llama esto en su setup() para su propio
 ## hitbox de launcher.
-func setup_launcher_hitbox(hitbox: Hitbox, deals_damage: bool, stun_settings: StunSettings) -> void:
+func setup_launcher_hitbox(hitbox: Hitbox, deals_damage: bool, stun_settings: StunSettings,
+		starts_lying := false) -> void:
 	hitbox.source = _player
 	hitbox.damage = 1.0 if deals_damage else 0.0
 	hitbox.stun = stun_settings
 	hitbox.can_be_parried = false
+	_launcher_starts_lying = starts_lying
 	hitbox.about_to_hit.connect(_on_launcher_about_to_hit)
 	hitbox.landed.connect(_on_hit)
 
@@ -332,7 +350,10 @@ func setup_launcher_hitbox(hitbox: Hitbox, deals_damage: bool, stun_settings: St
 func _on_launcher_about_to_hit(hurtbox: Hurtbox) -> void:
 	var target: Node = hurtbox.owner_node
 	if target.has_method("launch"):
-		target.call("launch", _launcher_height, _launcher_hang_time)
+		if _launcher_starts_lying and target is EnemyBase:
+			target.call("launch", _launcher_height, _launcher_hang_time, true)
+		else:
+			target.call("launch", _launcher_height, _launcher_hang_time)
 
 ## Ventana de daño del launcher con id-guard: espera `delay` (deja arrancar el swing
 ## visual), opcionalmente lanza al player y prende el hitbox `duration` segundos. Arrancar un nuevo
@@ -348,12 +369,15 @@ func run_launcher_window(hitbox: Hitbox, height: float, hang_time: float,
 		return
 	if launches_player:
 		_player.launch(height, hang_time)
+	_active_launcher_hitbox = hitbox
 	hitbox.begin_swing()
 	ComboTracker.register_hit()
 	await wait_seconds(duration)
 	if id != _launcher_id:
 		return
 	hitbox.end_swing()
+	if _active_launcher_hitbox == hitbox:
+		_active_launcher_hitbox = null
 
 # ---- Swings procedurales (tweens de quaternion sobre la Hand, sin AnimationPlayer) ----
 ## Genérico para cualquier arma con Hand/Pivot; la coreografía (qué ángulo, qué step) la
@@ -435,6 +459,8 @@ func _kill_swing_tween() -> void:
 ## rutina vieja sobrevive, sigue pisando el hitbox y el Pivot de la que arrancó recién.
 func begin_routine() -> int:
 	_routine_id += 1
+	end_damage_window()
+	end_launcher_window()
 	_armed_push = null
 	_combo_playing = false
 	_combo_window_open = false

@@ -37,7 +37,7 @@ func execute_intent(blackboard: EnemyAIBlackboard, delta: float) -> void:
 			if blackboard.navigation_speed_profile == EnemyAIBlackboard.SpeedProfile.ROAM:
 				roam(delta)
 			else:
-				move_toward(blackboard.navigation_intent_point, delta)
+				move_to(blackboard.navigation_intent_point, delta)
 		EnemyAIBlackboard.IntentKind.SEARCH_AT:
 			search_last_known(blackboard.navigation_intent_point, delta)
 		EnemyAIBlackboard.IntentKind.FLEE_FROM:
@@ -51,7 +51,7 @@ func execute_intent(blackboard: EnemyAIBlackboard, delta: float) -> void:
 			stop(delta)
 	_update_stuck_timer(blackboard, delta)
 
-func move_toward(world_pos: Vector3, delta: float) -> void:
+func move_to(world_pos: Vector3, delta: float) -> void:
 	if _is_suspended() or _body == null:
 		return
 	var to := world_pos - _body.global_position

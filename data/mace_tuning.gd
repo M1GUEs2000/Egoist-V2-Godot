@@ -76,6 +76,9 @@ class_name MaceTuning extends WeaponTuning
 ## Altura de encuentro tras el rebote, relativa a la altura del jugador al impactar, en metros.
 ## 0 = los enemigos vuelven exactamente a tu altura.
 @export var air_y_meet_height := 0.0
+## Altura minima del rebote cuando el AOE explota contra enemigos en el suelo.
+## Evita que "volver a tu altura" sea altura de piso y termine sin elevarlos.
+@export var air_y_ground_launch_height := 4.5
 ## Tiempo que los enemigos quedan suspendidos a tu altura tras rebotar, en segundos.
 @export var air_y_launcher_hang_time := 1.1
 ## Duracion del AOE aereo una vez impacta enemigo o suelo, en segundos.
