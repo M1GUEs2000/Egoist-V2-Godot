@@ -6,6 +6,8 @@ class_name PlayerDash extends Node3D
 ## quitando la capa enemy del collision_mask (reemplaza el hack de Physics.IgnoreCollision
 ## de v1). El dodge de esquivar choca con enemigos y objetos, no los traspasa.
 
+signal airdash_changed(available: bool)
+
 var is_dashing := false
 
 var _body: Player
@@ -56,7 +58,10 @@ func _tint_particles_from_world() -> void:
 		mat.emission = World.COLOR_TRAVERSAL_DASH_EMISSION
 
 func restore_airdash() -> void:
-	_can_airdash = true
+	_set_airdash_available(true)
+
+func can_airdash() -> bool:
+	return _can_airdash
 
 func cancel() -> void:
 	if is_dashing:
@@ -69,7 +74,7 @@ func dodge() -> void:
 	if not _body.is_on_floor():
 		if not _can_airdash:
 			return
-		_can_airdash = false
+		_set_airdash_available(false)
 	# El dodge golpea SOLO si había barra: spend_dash devuelve si alcanzaba el coste
 	# (igual mueve sin barra, solo que sin daño).
 	var had_bar := _body.meter != null and _body.meter.spend_dash()
@@ -153,3 +158,9 @@ func _boost_bump_momentum() -> void:
 func _on_dash_hit(hurtbox: Hurtbox, _died: bool) -> void:
 	if hurtbox.triggers_air_hit_stall:
 		_register_air_hit_stall.call()
+
+func _set_airdash_available(available: bool) -> void:
+	if _can_airdash == available:
+		return
+	_can_airdash = available
+	airdash_changed.emit(_can_airdash)

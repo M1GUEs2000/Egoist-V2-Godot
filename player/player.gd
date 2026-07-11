@@ -7,6 +7,8 @@ class_name Player extends CharacterBody3D
 
 enum AirState { GROUNDED, AIRBORNE }
 
+signal double_jump_changed(available: bool)
+
 @export var tuning: PlayerTuning
 
 var air_state := AirState.GROUNDED
@@ -115,7 +117,7 @@ func _physics_process(delta: float) -> void:
 		vertical_velocity = -1.0
 		air_state = AirState.GROUNDED
 		dash.restore_airdash()
-		_can_double_jump = true
+		_set_double_jump_available(true)
 		launcher.reset_air_stall()
 		air_kill_reset.reset_air_charge_fall_control()
 		wall_slide.cancel()
@@ -141,7 +143,7 @@ func _on_jump() -> void:
 	elif enemy_bounce.try_bounce(locomotion.camera_relative(locomotion.read_move_input())):
 		air_state = AirState.AIRBORNE
 	elif _can_double_jump:
-		_can_double_jump = false
+		_set_double_jump_available(false)
 		vertical_velocity = tuning.jump_force
 		air_state = AirState.AIRBORNE
 
@@ -157,7 +159,10 @@ func _on_dodge() -> void:
 # ---- API pública (armas, pickups, combate, traversal) ----
 
 func restore_double_jump() -> void:
-	_can_double_jump = true
+	_set_double_jump_available(true)
+
+func has_double_jump() -> bool:
+	return _can_double_jump
 
 func restore_airdash() -> void:
 	dash.restore_airdash()
@@ -323,6 +328,12 @@ func _bleed_momentum_for_scale(delta: float, rate: float, surface_scale: float) 
 func _set_run_dust(active: bool) -> void:
 	if _run_dust != null and _run_dust.emitting != active:
 		_run_dust.emitting = active
+
+func _set_double_jump_available(available: bool) -> void:
+	if _can_double_jump == available:
+		return
+	_can_double_jump = available
+	double_jump_changed.emit(_can_double_jump)
 
 func _effective_stun_threshold() -> float:
 	if is_armored():

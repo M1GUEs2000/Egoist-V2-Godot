@@ -6,9 +6,15 @@ class_name HUD extends CanvasLayer
 @onready var _health_label: Label = $Root/VBox/HealthRow/HealthLabel
 @onready var _health_bar: ProgressBar = $Root/VBox/HealthRow/HealthBar
 @onready var _meter_bars: HBoxContainer = $Root/VBox/MeterBars
+@onready var _double_jump_icon: Label = $Root/VBox/AirResourceRow/DoubleJumpIcon
+@onready var _airdash_icon: Label = $Root/VBox/AirResourceRow/AirDashIcon
 @onready var _state_label: Label = $Root/VBox/StateLabel
 @onready var _loadout_menu: ActionLoadoutMenu = $ActionLoadoutMenu
 
+const AIR_RESOURCE_ACTIVE_ALPHA := 1.0
+const AIR_RESOURCE_INACTIVE_ALPHA := 0.35
+
+var _player: Player
 var _health: Health
 var _meter: PlayerMeter
 var _meter_segments: Array[ProgressBar] = []
@@ -26,6 +32,7 @@ func _bind_player() -> void:
 	if player == null:
 		return
 
+	_player = player
 	_health = player.health
 	_meter = player.meter
 	if not _health.damaged.is_connected(_on_health_damaged):
@@ -34,9 +41,14 @@ func _bind_player() -> void:
 		_health.died.connect(_on_health_died)
 	if not _meter.bars_changed.is_connected(_on_meter_changed):
 		_meter.bars_changed.connect(_on_meter_changed)
+	if not player.double_jump_changed.is_connected(_on_double_jump_changed):
+		player.double_jump_changed.connect(_on_double_jump_changed)
+	if player.dash != null and not player.dash.airdash_changed.is_connected(_on_airdash_changed):
+		player.dash.airdash_changed.connect(_on_airdash_changed)
 
 	_update_health()
 	_on_meter_changed(_meter.meter(), _meter.bars())
+	_update_air_resource_icons()
 	if _loadout_menu != null:
 		_loadout_menu.setup(player)
 
@@ -56,6 +68,12 @@ func _on_health_damaged(_amount: float) -> void:
 
 func _on_health_died() -> void:
 	_update_health()
+
+func _on_double_jump_changed(_available: bool) -> void:
+	_update_air_resource_icons()
+
+func _on_airdash_changed(_available: bool) -> void:
+	_update_air_resource_icons()
 
 func _update_health() -> void:
 	if _health == null:
@@ -88,3 +106,19 @@ func _rebuild_meter(max_bars: int) -> void:
 		segment.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		_meter_bars.add_child(segment)
 		_meter_segments.append(segment)
+
+func _update_air_resource_icons() -> void:
+	if _player == null:
+		_set_air_resource_icon(_double_jump_icon, false, Color(0.45, 0.95, 1.0))
+		_set_air_resource_icon(_airdash_icon, false, World.COLOR_TRAVERSAL_DASH)
+		return
+	_set_air_resource_icon(_double_jump_icon, _player.has_double_jump(), Color(0.45, 0.95, 1.0))
+	_set_air_resource_icon(_airdash_icon, _player.dash != null and _player.dash.can_airdash(),
+			World.COLOR_TRAVERSAL_DASH)
+
+func _set_air_resource_icon(icon: Label, available: bool, active_color: Color) -> void:
+	if icon == null:
+		return
+	var target := active_color
+	target.a = AIR_RESOURCE_ACTIVE_ALPHA if available else AIR_RESOURCE_INACTIVE_ALPHA
+	icon.modulate = target if available else Color(0.32, 0.34, 0.36, target.a)
