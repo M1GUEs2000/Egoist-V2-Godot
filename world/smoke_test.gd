@@ -447,6 +447,31 @@ func _ready() -> void:
 	assert(ranged_dead._attacks[0] is RangedAttack)
 	ranged_dead.queue_free()
 
+	# FlyingEnemy: patrulla a izquierda/derecha y bate ambas alas en sentidos opuestos.
+	var flying_enemy := (load("res://enemies/flying_enemy.tscn") as PackedScene).instantiate() as FlyingEnemy
+	add_child(flying_enemy)
+	var flying_x := flying_enemy.global_position.x
+	await get_tree().physics_frame
+	await get_tree().physics_frame
+	assert(not is_equal_approx(flying_enemy.global_position.x, flying_x))
+	var left_wing := flying_enemy.get_node("Visual/LeftWingPivot") as Node3D
+	var right_wing := flying_enemy.get_node("Visual/RightWingPivot") as Node3D
+	assert(not is_zero_approx(left_wing.rotation.z))
+	assert(is_equal_approx(left_wing.rotation.z, -right_wing.rotation.z))
+	var stunned_x := flying_enemy.global_position.x
+	var wing_before_stun: float = left_wing.rotation.z
+	flying_enemy.apply_stun(0.2)
+	await get_tree().physics_frame
+	assert(is_equal_approx(flying_enemy.global_position.x, stunned_x))
+	assert(not is_equal_approx(left_wing.rotation.z, wing_before_stun))
+	assert(flying_enemy.visual.quaternion.is_equal_approx(Quaternion.IDENTITY))
+	flying_enemy.global_position += Vector3(2.0, -1.0, 0.0)
+	flying_enemy._returning_to_home = true
+	var return_distance_before := flying_enemy.global_position.distance_to(flying_enemy._home_position)
+	flying_enemy._return_to_home(0.1)
+	assert(flying_enemy.global_position.distance_to(flying_enemy._home_position) < return_distance_before)
+	flying_enemy.queue_free()
+
 	# Ragdoll de aterrizaje: un push (o stun aereo) deja al enemigo acostado; al tocar el piso el
 	# cuerpo pasa a RigidBody y se para tras ragdoll_getup_delay. La trayectoria previa no cambia.
 	var lying_enemy := (load("res://enemies/grounded_enemy.tscn") as PackedScene).instantiate() as EnemyBase

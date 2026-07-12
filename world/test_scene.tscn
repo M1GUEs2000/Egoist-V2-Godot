@@ -12,6 +12,7 @@
 [ext_resource type="PackedScene" uid="uid://b3svs3jmxxk1q" path="res://world/blocks/spike_wall.tscn" id="13_spike_wall"]
 [ext_resource type="Script" uid="uid://bpdpihqvparu5" path="res://visual/camera_occlusion_fade.gd" id="14_occlusion"]
 [ext_resource type="PackedScene" path="res://enemies/ranged_dead.tscn" id="15_ranged_dead"]
+[ext_resource type="PackedScene" path="res://enemies/flying_enemy.tscn" id="16_flying_enemy"]
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_floor"]
 size = Vector3(160, 1, 160)
@@ -442,6 +443,9 @@ transform = Transform3D(0.34202, 0, -0.939693, 0, 1, 0, 0.939693, 0, 0.34202, 22
 
 [node name="RangedDead" parent="." instance=ExtResource("15_ranged_dead")]
 transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, -18, 0.1, 34)
+
+[node name="FlyingEnemy" parent="." instance=ExtResource("16_flying_enemy")]
+position = Vector3(-6, 7, -8)
 
 [node name="UltraAggressiveEnemy" parent="." unique_id=9954827 instance=ExtResource("12_enemy")]
 transform = Transform3D(-1, 0, -8.74228e-08, 0, 1, 0, 8.74228e-08, 0, -1, 0, 0.1, 60)

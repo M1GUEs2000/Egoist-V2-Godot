@@ -33,6 +33,7 @@ Los enemigos de Egoist no son solo unidades de combate. Son portadores de mascar
 | [[Roster Enemigos]] | Roster por area y por hito. |
 | [[Melee Living]] | Enemigo melee H1. |
 | [[Ranged Dead]] | Enemigo ranged H1. |
+| [[Flying Enemy]] | Prototipo aereo: patrulla, aleteo y stun suspendido. |
 | [[Armored Enemy]] | Enemigo armored H1. |
 | [[Jefes]] | Jefes por area. |
 

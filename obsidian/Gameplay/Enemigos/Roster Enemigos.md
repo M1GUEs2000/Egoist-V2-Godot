@@ -24,7 +24,7 @@ Roster por hito y area. H1 usa placeholders claros; arte final entra H3.
 
 - Jefe Playa.
 - Enemigos ligados a NPCs/mascaras.
-- Enemigos voladores.
+- [[Flying Enemy]]: prototipo implementado para patrulla horizontal, aleteo y stun suspendido; falta decidir combate, comportamiento reactivo y rol en el roster.
 - Animales como enemigos.
 - Insane que atacan todo.
 - **Enemigo "Rescatista" / cuerda** (idea 2026-07-09): si el jugador tira a un
@@ -55,4 +55,3 @@ Roster por hito y area. H1 usa placeholders claros; arte final entra H3.
 - [[Areas]]
 - [[Mascaras y Cordura]]
 - [[Jefes]]
-
