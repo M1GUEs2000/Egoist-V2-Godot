@@ -353,7 +353,10 @@ func _ready() -> void:
 	assert(mace_tuning.air_y_aoe_radius > 0.0)
 	assert(mace_tuning.air_y_aoe_height > 0.0)
 	assert(mace_tuning.air_y_down_speed > 0.0)
-	assert(mace_tuning.air_y_bounce_up_speed > 0.0)
+	assert(mace_tuning.air_y_bounce_speed > 0.0)
+	assert(mace_tuning.air_y_bounce_angle > 0.0)
+	assert(mace_tuning.air_y_bounce_enemy_up_speed > 0.0)
+	assert(mace_tuning.air_y_bounce_enemy_gravity < 0.0)
 	assert(mace_tuning.air_handle_reach > 0.0)
 
 	var mace := (load("res://combat/weapons/mace/mace.tscn") as PackedScene).instantiate() as Mace

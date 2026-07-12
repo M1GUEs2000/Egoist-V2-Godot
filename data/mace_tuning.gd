@@ -73,9 +73,13 @@ class_name MaceTuning extends WeaponTuning
 ## Velocidad a la que el AOE aereo clava a los enemigos contra el suelo antes de rebotarlos
 ## (verbo slam_bounce), en m/s. Analogo al aerial_charged_down_speed de la Espada.
 @export var air_y_down_speed := 30.0
-## Altura de encuentro tras el rebote, relativa a la altura del jugador al impactar, en metros.
-## 0 = los enemigos vuelven exactamente a tu altura.
-@export var air_y_meet_height := 0.0
+## Pique del enemigo golpeado en el aire (slam_bounce): velocidad hacia ARRIBA del arco, en m/s.
+@export var air_y_bounce_enemy_up_speed := 15.0
+## Pique del enemigo: velocidad hacia ADELANTE del arco (en tu direccion), en m/s. Junto con
+## up_speed y gravity define la forma del rebote (mas forward = mas rasante y lejos).
+@export var air_y_bounce_enemy_forward_speed := 9.0
+## Gravedad del arco del pique del enemigo, en m/s^2 (negativa). Mas fuerte = pique mas corto y seco.
+@export var air_y_bounce_enemy_gravity := -35.0
 ## Altura minima del rebote cuando el AOE explota contra enemigos en el suelo.
 ## Evita que "volver a tu altura" sea altura de piso y termine sin elevarlos.
 @export var air_y_ground_launch_height := 4.5
@@ -85,12 +89,12 @@ class_name MaceTuning extends WeaponTuning
 @export var air_y_aoe_duration := 0.18
 ## Tiempo maximo que puede durar la caida diagonal antes de apagarse sola, en segundos.
 @export var air_y_max_fall_time := 1.2
-## Rebote del jugador al clavar un enemigo en el aire: velocidad hacia adelante (direccion de
-## la caida), en m/s. Junto con air_y_bounce_up_speed fija el angulo del rebote.
-@export var air_y_bounce_forward_speed := 12.0
-## Rebote del jugador al clavar un enemigo en el aire: velocidad hacia arriba, en m/s.
-## No gasta el doble salto. Menor que jump_force (17) para un rebote controlado.
-@export var air_y_bounce_up_speed := 14.0
+## Rebote del jugador al clavar un enemigo en el aire: angulo por encima de la horizontal, en grados.
+## Fijo, independiente del angulo de caida: 45 = sale a 45° arriba-adelante (en la direccion de la caida).
+@export_range(1.0, 89.0) var air_y_bounce_angle := 45.0
+## Rebote del jugador al clavar un enemigo en el aire: velocidad TOTAL del rebote, en m/s. El angulo
+## lo fija air_y_bounce_angle; esto es solo la fuerza. No gasta el doble salto.
+@export var air_y_bounce_speed := 25.0
 ## Sweet spot aéreo (X cargado con vuelta final / Y cargado): congela a los golpeados
 ## y extiende el tiempo airborne del jugador (PlayerLauncher.notify_aerial_attack).
 @export var air_freeze_stun: StunSettings

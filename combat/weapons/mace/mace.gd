@@ -9,7 +9,6 @@ const STEP_COUNT := 3
 const WAIT_BRANCH_EXTRA_STEPS := 2
 const AIR_STEP_COUNT := 2
 
-var _air_y_meet_y := 0.0
 var _air_y_hit_enemy_in_air := false
 
 @onready var _launcher_hitbox: Hitbox = $LauncherHitbox
@@ -130,13 +129,15 @@ func _hold_y() -> void:
 		_aerial_hold_y(id)
 		return
 	var t := _t()
-	_player.force_dash(_player.forward(), t.ground_y_dash_distance, t.ground_y_dash_duration, false)
-	await wait_seconds(t.ground_y_dash_duration)
-	if not is_routine_current(id):
-		return
+	# El paso corto lleva el launcher ARMADO: el hitbox barre hacia adelante con el jugador y lanza
+	# al primer enemigo que toca DURANTE el paso, en vez de esperar a que termine para activarse por
+	# tiempo. El cuerpo atraviesa enemigos (pass_through), pero el LauncherHitbox es un Area3D propio
+	# que detecta hurtboxes igual. La ventana cubre paso + remate, asi que un paso al vacio no cambia:
+	# el final sigue lanzando lo que quede en el area.
 	swing_up(t.strike_angle)
+	_player.force_dash(_player.forward(), t.ground_y_dash_distance, t.ground_y_dash_duration, false)
 	run_launcher_window(_launcher_hitbox, t.ground_y_launcher_height, t.ground_y_launcher_hang_time,
-			t.ground_y_launcher_duration, t.ground_y_launcher_delay, false)
+			t.ground_y_dash_duration + t.ground_y_launcher_duration, t.ground_y_launcher_delay, false)
 
 # ---- Aereo ----
 
@@ -230,19 +231,20 @@ func _contacted_enemy() -> Node:
 			return collider
 	return null
 
-## Estallido del cilindro: fija la altura de encuentro, rebota al jugador (solo si el impacto
-## fue en el aire) y prende el hitbox una vez para golpear/rebotar a todos los de adentro.
+## Estallido del cilindro: rebota al jugador (solo si el impacto fue en el aire) y prende el
+## hitbox una vez para golpear/rebotar a todos los de adentro.
 func _burst_air_slam(id: int, hit_enemy_in_air: bool) -> void:
 	var t := _t()
 	end_damage_window()
 	end_launcher_window()
-	_air_y_meet_y = _player.global_position.y + t.air_y_meet_height
 	_air_y_hit_enemy_in_air = hit_enemy_in_air
 	if hit_enemy_in_air:
-		# La caida fue abajo+adelante; el rebote sale arriba+adelante. Los dos knobs fijan el
-		# angulo ("grados de rebote"). No gasta el doble salto.
-		_player.set_momentum(_player.forward() * t.air_y_bounce_forward_speed)
-		_player.vertical_velocity = t.air_y_bounce_up_speed
+		# La caida fue abajo+adelante; el rebote sale arriba+adelante a un angulo FIJO (no depende
+		# del angulo de caida): air_y_bounce_angle da la inclinacion y air_y_bounce_speed la fuerza.
+		# No gasta el doble salto.
+		var bounce_angle := deg_to_rad(t.air_y_bounce_angle)
+		_player.set_momentum(_player.forward() * (cos(bounce_angle) * t.air_y_bounce_speed))
+		_player.vertical_velocity = sin(bounce_angle) * t.air_y_bounce_speed
 		_player.air_state = Player.AirState.AIRBORNE
 	else:
 		# Impacto contra el suelo: el jugador se planta donde cayo. Corta el momentum
@@ -268,19 +270,21 @@ func _on_air_slam_about_to_hit(hurtbox: Hurtbox) -> void:
 			target.call("launch", _t().air_y_ground_launch_height, _t().air_y_launcher_hang_time)
 
 ## Cada enemigo del estallido: alimenta meter/kills/air-stall. Si el impacto fue aereo, ademas lo
-## clava y rebota hasta tu altura (slam_bounce) DESPUES del daño: slam fija _airborne_until=now para
-## caer y debe ser lo ultimo (si el stun corriera despues volveria a suspenderlo). La rama de suelo
-## ya se aplico en _on_air_slam_about_to_hit.
+## clava y lo hace PICAR en arco balistico (slam_bounce) DESPUES del daño: el slam fija
+## _airborne_until=now para caer y debe ser lo ultimo (si el stun corriera despues volveria a
+## suspenderlo). La rama de suelo (launcher vertical) ya se aplico en _on_air_slam_about_to_hit.
 func _on_air_slam_hit(hurtbox: Hurtbox, died: bool) -> void:
 	register_weapon_hit(hurtbox, died)
 	if not _air_y_hit_enemy_in_air:
 		return
 	var target: Node = hurtbox.owner_node
 	if target.has_method("slam_bounce"):
-		var meet_y := _air_y_meet_y
-		target.call("slam_bounce", _t().air_y_down_speed,
-				func() -> float: return meet_y,
-				_t().air_y_launcher_hang_time)
+		var t := _t()
+		# Pique GENUINO en tu direccion (mismo forward que tu rebote): el enemigo se clava y pica en
+		# arco balistico. No se ata a tu altura; la altura la da el arco (up/forward/gravity).
+		target.call("slam_bounce", t.air_y_down_speed, _player.forward(),
+				t.air_y_bounce_enemy_up_speed, t.air_y_bounce_enemy_forward_speed,
+				t.air_y_bounce_enemy_gravity)
 
 func _set_hitbox_stun(s: StunSettings) -> void:
 	_blade_hitbox.stun = s

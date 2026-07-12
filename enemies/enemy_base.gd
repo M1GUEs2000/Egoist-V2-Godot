@@ -82,8 +82,11 @@ var _stunned_until := -999.0
 var _airborne_until := -999.0
 var _airborne_ground_y := 0.0
 var _slam_bounce := false
-var _bounce_target_y := Callable()
-var _bounce_hang_time := 0.0
+var _bouncing := false
+var _bounce_dir := Vector3.ZERO
+var _bounce_up_speed := 0.0
+var _bounce_forward_speed := 0.0
+var _bounce_gravity := -30.0
 var _launch_id := 0
 var _air_gravity := 0.0  # gravedad del vuelo actual; el push la override con su propio arco
 var _stun_tween: Tween
@@ -272,11 +275,19 @@ func slam(down_speed: float) -> void:
 	_airborne_until = World.now()
 	velocity.y = -absf(down_speed)
 
-func slam_bounce(down_speed: float, target_world_y: Callable, hang_time: float) -> void:
+## Rebote GENUINO del slam del Mazo aereo: clava al enemigo hacia abajo (slam) y, al tocar el piso,
+## pica en un arco balistico (up + forward + su propia gravedad), no un launch lineal a tu altura.
+## bounce_dir = direccion plana del pique; up/forward = velocidades del arco; gravity = su caida.
+func slam_bounce(down_speed: float, bounce_dir: Vector3, bounce_up_speed: float,
+		bounce_forward_speed: float, bounce_gravity: float) -> void:
 	if not can_receive_hit() or is_armored() or _ragdolling:
 		return
-	_bounce_target_y = target_world_y
-	_bounce_hang_time = hang_time
+	_bounce_dir = Vector3(bounce_dir.x, 0.0, bounce_dir.z)
+	if _bounce_dir.length_squared() > 0.0001:
+		_bounce_dir = _bounce_dir.normalized()
+	_bounce_up_speed = absf(bounce_up_speed)
+	_bounce_forward_speed = maxf(0.0, bounce_forward_speed)
+	_bounce_gravity = -absf(bounce_gravity)
 	_slam_bounce = true
 	if not is_airborne():
 		_do_bounce()
@@ -394,7 +405,9 @@ func _begin_airborne() -> void:
 	_left_ground_once = false  # hasta que salga del rango de GroundSense no cuenta como "toco"
 
 func _update_airborne(delta: float) -> void:
-	if is_stunned():
+	# Durante el pique el arco es dueño del horizontal: el decay del stun lo frenaria y mataria el
+	# rebote genuino. Por eso _bouncing lo saltea (sigue stuneado, pero sin comerse la velocidad).
+	if is_stunned() and not _bouncing:
 		_tick_stun_knockback(delta)
 	if World.now() < _airborne_until and velocity.y <= 0.0:
 		velocity.y = 0.0
@@ -417,20 +430,31 @@ func _update_airborne(delta: float) -> void:
 		else:
 			_land()
 
+## Pique genuino al tocar el piso: arco balistico (velocity + su propia gravedad), stuneado todo el
+## arco. No usa el launch lineal ni "tu altura": la altura la da la fisica. Al aterrizar, el cuerpo
+## acostado (_set_lying) arranca el ragdoll, que hereda esta velocidad y rueda.
 func _do_bounce() -> void:
 	_slam_bounce = false
-	var target_y := global_position.y
-	if _bounce_target_y.is_valid():
-		target_y = _bounce_target_y.call()
-	var height := target_y - global_position.y
-	if height <= 0.1:
+	if _bounce_up_speed <= 0.0 and _bounce_forward_speed <= 0.0:
 		_land()
 		return
-	launch(height, _bounce_hang_time)
+	_begin_airborne()
+	_left_ground_once = false  # recien toco el piso; que no dispare el ragdoll hasta despegar del pique
+	_bouncing = true
+	_air_gravity = _bounce_gravity  # el arco cae con la gravedad del pique
+	_airborne_until = World.now()   # sin hang: arco balistico puro
+	velocity = _bounce_dir * _bounce_forward_speed
+	velocity.y = _bounce_up_speed
+	_set_lying(true)
+	# Stuneado todo el vuelo del pique (~2*up/gravedad): extiende el stun para cubrirlo.
+	var airtime := 2.0 * _bounce_up_speed / maxf(0.1, absf(_bounce_gravity))
+	combat_state = CombatState.STUNNED
+	_stunned_until = maxf(_stunned_until, World.now() + airtime)
 
 func _land() -> void:
 	air_state = AirState.GROUNDED
 	velocity = Vector3.ZERO
+	_bouncing = false
 	_air_gravity = airborne_gravity  # limpia el override del push para el proximo vuelo
 
 ## Acuesta al enemigo: la pose horizontal del vuelo (push o stun aereo). Reusa el mismo eje que
@@ -471,6 +495,7 @@ func _rotate_visual_to(target: Quaternion, pivot: Vector3, duration: float) -> v
 ## Aterrizaje de un cuerpo acostado: el CharacterBody se apaga y un RigidBody capsula (el ragdoll)
 ## toma la posta con la velocidad y un giro para rodar. El rigid body SOLO existe aca, en el piso.
 func _start_ragdoll() -> void:
+	_bouncing = false
 	if ragdoll_body == null:
 		# Escena sin nodo Ragdoll: cae al comportamiento normal (fallback defensivo, como el resto
 		# de modulos opcionales por get_node_or_null).
