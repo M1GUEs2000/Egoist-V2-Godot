@@ -82,9 +82,11 @@ func register_air_hit_stall(scale := 1.0) -> void:
 	_last_stall_time = World.now()
 	var duration := minf(t.air_stall_base + t.air_stall_per_hit * (_stall_count - 1), t.air_stall_max) * scale
 	_air_stall_until = maxf(_air_stall_until, World.now() + duration)
-	# Congela la caída (velocity negativa → 0) pero preserva una subida (ej. el hop del
-	# primer spin de la rama espera): así el air-hit no mata el impulso vertical.
-	_body.vertical_velocity = maxf(_body.vertical_velocity, 0.0)
+	# Congela la caída (velocity negativa → 0) pero preserva una subida CHICA (ej. el hop del
+	# primer spin de la rama espera): así el air-hit no mata el impulso vertical. El cap evita
+	# amplificar un salto: sin él, un golpe justo tras un doble salto conservaba toda la velocidad
+	# del salto y con la gravedad baja del stall el jugador salía disparado.
+	_body.vertical_velocity = clampf(_body.vertical_velocity, 0.0, t.air_stall_max_rise)
 	_body.air_state = Player.AirState.AIRBORNE
 
 func reset_air_stall() -> void:

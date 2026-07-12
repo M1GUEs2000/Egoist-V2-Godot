@@ -31,6 +31,9 @@ func setup(player: Player) -> void:
 	_air_slam_hitbox.damage = 1.0
 	_air_slam_hitbox.stun = tuning.stun
 	_air_slam_hitbox.can_be_parried = false
+	# La rama de suelo (launch) se cablea como los demas launchers: lanza en about_to_hit, antes
+	# del daño, para que receive_hit ya vea al enemigo airborne (ver _on_air_slam_about_to_hit).
+	_air_slam_hitbox.about_to_hit.connect(_on_air_slam_about_to_hit)
 	_air_slam_hitbox.landed.connect(_on_air_slam_hit)
 
 func tap(_slot: World.Slot) -> void:
@@ -193,8 +196,12 @@ func _aerial_hold_y(id: int) -> void:
 	while is_routine_current(id) and World.now() < end_at:
 		if _player.is_on_floor():
 			break
-		if _airborne_enemy_contact():
-			hit_enemy_in_air = true
+		var enemy := _contacted_enemy()
+		if enemy != null:
+			# Rebote SOLO si el enemigo esta genuinamente en el aire. Si esta en el piso (o es un
+			# golpeable sin estado aereo) cuenta como impacto de suelo: te plantas donde caes y el
+			# AOE lo lanza, sin salir volando con el. El stun no cambia esto: manda is_airborne().
+			hit_enemy_in_air = enemy.has_method("is_airborne") and bool(enemy.call("is_airborne"))
 			break
 		await get_tree().physics_frame
 	if not is_routine_current(id):
@@ -210,17 +217,18 @@ func _set_air_y_fall_velocity() -> void:
 	_player.vertical_velocity = -absf(vertical_speed)
 	_player.air_state = Player.AirState.AIRBORNE
 
-## Contacto fisico real con un enemigo durante la caida (mismas colisiones de CharacterBody3D
-## que usa PlayerEnemyBounce): un collider en LAYER_ENEMY. Sin Area3D de deteccion aparte.
-func _airborne_enemy_contact() -> bool:
+## Enemigo/golpeable tocado fisicamente durante la caida (mismas colisiones de CharacterBody3D
+## que usa PlayerEnemyBounce): el primer collider en LAYER_ENEMY, o null si no toco ninguno.
+## No distingue aire/piso: eso lo decide quien llama con is_airborne().
+func _contacted_enemy() -> Node:
 	for index in range(_player.get_slide_collision_count()):
 		var collision := _player.get_slide_collision(index)
 		if collision == null:
 			continue
 		var collider := collision.get_collider() as CollisionObject3D
 		if collider != null and (collider.collision_layer & World.LAYER_ENEMY) != 0:
-			return true
-	return false
+			return collider
+	return null
 
 ## Estallido del cilindro: fija la altura de encuentro, rebota al jugador (solo si el impacto
 ## fue en el aire) y prende el hitbox una vez para golpear/rebotar a todos los de adentro.
@@ -236,25 +244,43 @@ func _burst_air_slam(id: int, hit_enemy_in_air: bool) -> void:
 		_player.set_momentum(_player.forward() * t.air_y_bounce_forward_speed)
 		_player.vertical_velocity = t.air_y_bounce_up_speed
 		_player.air_state = Player.AirState.AIRBORNE
+	else:
+		# Impacto contra el suelo: el jugador se planta donde cayo. Corta el momentum
+		# horizontal de la caida diagonal para no seguir deslizandose hacia adelante.
+		_player.set_momentum(Vector3.ZERO)
 	_air_slam_hitbox.begin_swing()
 	await wait_seconds(t.air_y_aoe_duration)
 	_air_slam_hitbox.end_swing()
 
-## Cada enemigo del estallido: alimenta meter/kills y lo clava al suelo -> rebota hasta la
-## altura del jugador si el impacto fue aereo; si exploto contra el suelo, es launcher puro.
-func _on_air_slam_hit(hurtbox: Hurtbox, died: bool) -> void:
-	register_weapon_hit(hurtbox, died)
+## Rama de SUELO del estallido, ANTES del daño (mismo patron que _on_launcher_about_to_hit): lanza
+## al enemigo primero, asi receive_hit lo ve airborne y su stun fija _airborne_until al hang, que lo
+## mantiene suspendido durante la subida. Si el launch corriera despues del stun (en landed), el
+## enemigo comeria el stun en el piso, la gravedad le ganaria al launch y arrancaria el ragdoll sin
+## llegar a subir. La rama aerea (slam_bounce) NO va aca: necesita correr despues del stun.
+func _on_air_slam_about_to_hit(hurtbox: Hurtbox) -> void:
+	if _air_y_hit_enemy_in_air:
+		return
 	var target: Node = hurtbox.owner_node
-	if _air_y_hit_enemy_in_air and target.has_method("slam_bounce"):
-		var meet_y := _air_y_meet_y
-		target.call("slam_bounce", _t().air_y_down_speed,
-				func() -> float: return meet_y,
-				_t().air_y_launcher_hang_time)
-	elif target.has_method("launch"):
+	if target.has_method("launch"):
 		if target is EnemyBase:
 			target.call("launch", _t().air_y_ground_launch_height, _t().air_y_launcher_hang_time, true)
 		else:
 			target.call("launch", _t().air_y_ground_launch_height, _t().air_y_launcher_hang_time)
+
+## Cada enemigo del estallido: alimenta meter/kills/air-stall. Si el impacto fue aereo, ademas lo
+## clava y rebota hasta tu altura (slam_bounce) DESPUES del daño: slam fija _airborne_until=now para
+## caer y debe ser lo ultimo (si el stun corriera despues volveria a suspenderlo). La rama de suelo
+## ya se aplico en _on_air_slam_about_to_hit.
+func _on_air_slam_hit(hurtbox: Hurtbox, died: bool) -> void:
+	register_weapon_hit(hurtbox, died)
+	if not _air_y_hit_enemy_in_air:
+		return
+	var target: Node = hurtbox.owner_node
+	if target.has_method("slam_bounce"):
+		var meet_y := _air_y_meet_y
+		target.call("slam_bounce", _t().air_y_down_speed,
+				func() -> float: return meet_y,
+				_t().air_y_launcher_hang_time)
 
 func _set_hitbox_stun(s: StunSettings) -> void:
 	_blade_hitbox.stun = s

@@ -190,6 +190,12 @@ class_name PlayerTuning extends Resource
 @export var air_stall_combo_window := 0.75
 ## Escala de gravedad durante el stall: conectando golpes en el aire la caída se RALENTIZA.
 @export var air_stall_float_gravity := 0.15
+## Tope de la subida (velocidad vertical positiva) que el stall preserva, en m/s. El stall congela
+## la caída pero NO debe amplificar una subida grande: sin este cap, conectar un golpe justo tras un
+## salto conservaba toda la velocidad del salto (jump_force) y con la gravedad baja del stall el
+## jugador salía disparado. Debe quedar al nivel del hop intencional (air_wait_spin_hop = 5) y por
+## debajo de jump_force (8).
+@export var air_stall_max_rise := 5.0
 ## Escala de gravedad al atacar en el aire SIN conectar: cae MÁS fuerte que lo normal.
 @export var aerial_whiff_fall_gravity := 1.6
 
