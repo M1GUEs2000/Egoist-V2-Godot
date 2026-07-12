@@ -34,6 +34,9 @@ const INDESTRUCTIBLE_HEALTH := 999999.0
 var _last_dash_hit_time := -999.0
 var _segment_materials: Array[StandardMaterial3D] = []
 var _light: OmniLight3D
+var _down_lights: Array[SpotLight3D] = []
+var _down_particles: Array[GPUParticles3D] = []
+var _down_particle_materials: Array[StandardMaterial3D] = []
 
 @onready var _health: Health = $Health
 @onready var _hurtbox: Hurtbox = $Hurtbox
@@ -131,13 +134,87 @@ func _rebuild_glow_segments() -> void:
 		mesh.size = Vector3(1.02 / float(count), 1.02, 1.02)
 		segment.mesh = mesh
 		# Tileado a lo ancho en x; y=0.55 = centro del cuerpo del bloque (Mesh del .tscn).
-		segment.position = Vector3(-0.51 + (float(i) + 0.5) * 1.02 / float(count), 0.55, 0.0)
+		segment.position = Vector3(_segment_x(i, count), 0.55, 0.0)
 		var material := StandardMaterial3D.new()
 		material.emission_enabled = true
 		segment.set_surface_override_material(0, material)
 		_glow_segments.add_child(segment)
 		_segment_materials.append(material)
+	_rebuild_down_emitters(count)
 	_repaint_segments()
+
+## Centro en x del segmento i, con el bloque partido en `count` franjas iguales.
+func _segment_x(i: int, count: int) -> float:
+	return -0.51 + (float(i) + 0.5) * 1.02 / float(count)
+
+## Derrame hacia abajo: un cono de luz + una columna de particulas POR FEATURE, alineados con
+## la franja de color que le toca en el cuerpo. Asi el bloque marca el piso debajo y se lee
+## desde lejos, incluso flotando. La OmniLight del centro sigue existiendo aparte.
+func _rebuild_down_emitters(count: int) -> void:
+	for light in _down_lights:
+		light.queue_free()
+	for particles in _down_particles:
+		particles.queue_free()
+	_down_lights.clear()
+	_down_particles.clear()
+	_down_particle_materials.clear()
+	if count == 0:
+		return
+	var width := 1.02 / float(count)
+	for i in range(count):
+		var x := _segment_x(i, count)
+		_down_lights.append(_make_down_light(x))
+		if tuning.particles_enabled and tuning.particle_amount > 0:
+			_down_particles.append(_make_down_particles(x, width))
+
+func _make_down_light(x: float) -> SpotLight3D:
+	var light := SpotLight3D.new()
+	# Justo debajo del cuerpo (que va de y=0.04 a y=1.06), mirando al piso.
+	light.position = Vector3(x, 0.0, 0.0)
+	light.rotation_degrees = Vector3(-90.0, 0.0, 0.0)
+	light.shadow_enabled = false
+	light.spot_range = tuning.down_light_range
+	light.spot_angle = tuning.down_light_angle_degrees
+	add_child(light)
+	return light
+
+func _make_down_particles(x: float, width: float) -> GPUParticles3D:
+	var particles := GPUParticles3D.new()
+	particles.position = Vector3(x, 0.0, 0.0)
+	particles.amount = tuning.particle_amount
+	particles.lifetime = tuning.particle_lifetime
+	particles.local_coords = false  # las motas quedan atras si el bloque se mueve
+
+	var process := ParticleProcessMaterial.new()
+	process.emission_shape = ParticleProcessMaterial.EMISSION_SHAPE_BOX
+	process.emission_box_extents = Vector3(width * 0.5, 0.01, 0.5)
+	process.direction = Vector3(0.0, -1.0, 0.0)
+	process.spread = 0.0
+	process.gravity = Vector3(0.0, -tuning.particle_fall_speed, 0.0)
+	process.initial_velocity_min = tuning.particle_fall_speed * 0.2
+	process.initial_velocity_max = tuning.particle_fall_speed * 0.5
+	process.scale_min = 0.6
+	process.scale_max = 1.0
+	particles.process_material = process
+
+	var mesh := QuadMesh.new()
+	mesh.size = Vector2(tuning.particle_size, tuning.particle_size)
+	particles.draw_pass_1 = mesh
+
+	# Unshaded + billboard + additive: la mota es puro color, siempre mira a la camara y suma
+	# luz en vez de taparla. El color lo pone _repaint_down_emitters.
+	var material := StandardMaterial3D.new()
+	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	material.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED
+	material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	material.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+	material.emission_enabled = true
+	material.vertex_color_use_as_albedo = true
+	mesh.material = material
+	_down_particle_materials.append(material)
+
+	add_child(particles)
+	return particles
 
 func _repaint_segments() -> void:
 	var colors := _feature_colors()
@@ -151,6 +228,20 @@ func _repaint_segments() -> void:
 		material.albedo_color = colors[i].darkened(0.8)
 		material.emission = emissions[i]
 	_repaint_light(colors)
+	_repaint_down_emitters(colors, emissions)
+
+## Cada cono y cada columna de particulas lleva el color PURO de su feature (no el promedio
+## que usa la omni): el derrame del piso es lo que dice de que tipo es el bloque.
+func _repaint_down_emitters(colors: Array[Color], emissions: Array[Color]) -> void:
+	for i in range(mini(_down_lights.size(), colors.size())):
+		var light := _down_lights[i]
+		light.light_color = colors[i]
+		light.spot_range = tuning.down_light_range
+		light.spot_angle = tuning.down_light_angle_degrees
+	for i in range(mini(_down_particle_materials.size(), emissions.size())):
+		var material := _down_particle_materials[i]
+		material.albedo_color = colors[i]
+		material.emission = emissions[i]
 
 ## Tiñe la luz con el promedio de los colores de las features (una sola luz por bloque,
 ## aunque tenga varias features). Sin features no hay luz.
@@ -179,6 +270,17 @@ func _update_glow() -> void:
 	# La luz real sigue la misma proximidad: apagada de lejos, prende al acercarse.
 	if _light != null:
 		_light.light_energy = lerpf(0.0, tuning.light_energy_max, proximity)
+	# El derrame hacia abajo sigue la MISMA proximidad que la emision y la omni: apagado de
+	# lejos, prende al acercarse. Las particulas dejan de emitir fuera del radio para no
+	# pagar simulacion de bloques que el jugador ni ve.
+	var down_energy := lerpf(tuning.down_light_min_energy, tuning.down_light_max_energy, proximity)
+	for light in _down_lights:
+		light.light_energy = down_energy
+	for material in _down_particle_materials:
+		material.emission_energy_multiplier = energy
+	var emitting := proximity > 0.0
+	for particles in _down_particles:
+		particles.emitting = emitting
 
 func _feature_colors() -> Array[Color]:
 	var colors: Array[Color] = []
