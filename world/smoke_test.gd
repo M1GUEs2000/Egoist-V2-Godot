@@ -240,7 +240,7 @@ func _ready() -> void:
 	# AirKillReset: cargar en aire reduce cada vez menos la caida vertical; una kill aerea
 	# resetea la secuencia junto con doble salto y airdash.
 	player.air_state = Player.AirState.AIRBORNE
-	player.tuning.air_charge_fall_reduction_steps = Array[float]([1.0, 0.8, 0.5, 0.1])
+	player.tuning.air_charge_fall_reduction_steps = [1.0, 0.8, 0.5, 0.1]
 	player.vertical_velocity = -20.0
 	player.apply_air_charge_fall_control()
 	assert(is_equal_approx(player.vertical_velocity, 0.0))
@@ -437,6 +437,15 @@ func _ready() -> void:
 	assert(absf(airborne_enemy.velocity.x) < absf(airborne_x_before))
 	stunned_enemy.queue_free()
 	airborne_enemy.queue_free()
+
+	# Ranged Dead: el prefab Dead conserva la IA comun y equipa solo RangedAttack.
+	var ranged_dead := (load("res://enemies/ranged_dead.tscn") as PackedScene).instantiate() as RangedDead
+	add_child(ranged_dead)
+	await get_tree().process_frame
+	assert(ranged_dead.membership.affiliation == World.Kind.DEAD)
+	assert(ranged_dead._attacks.size() == 1)
+	assert(ranged_dead._attacks[0] is RangedAttack)
+	ranged_dead.queue_free()
 
 	# Ragdoll de aterrizaje: un push (o stun aereo) deja al enemigo acostado; al tocar el piso el
 	# cuerpo pasa a RigidBody y se para tras ragdoll_getup_delay. La trayectoria previa no cambia.

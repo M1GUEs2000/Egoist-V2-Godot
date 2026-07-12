@@ -4,7 +4,7 @@ class_name EnemyLimboTreeBuilder extends RefCounted
 ## El recurso se arma en runtime para no depender de serializacion manual de .tres
 ## sin abrir Godot. Cuando se valide en editor, puede guardarse como .tres.
 
-const TASK_PATH := "res://enemies/ai/tasks/%s.gd"
+const TASK_PATH := "res://enemies/ai/tasks/%s"
 
 static func build_combat_tree() -> Resource:
 	if not ClassDB.class_exists("BehaviorTree"):
