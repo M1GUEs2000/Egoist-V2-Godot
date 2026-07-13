@@ -11,6 +11,12 @@ class_name RangedAttack extends Node3D
 @export var muzzle_forward_offset := 0.8
 @export var muzzle_height := 1.0
 @export var projectile_scene: PackedScene
+## Stun que recibe el objetivo al impactar. El receptor decide si entra por su threshold.
+@export var stun: StunSettings
+## Retroceso horizontal aplicado al player cuando este stun supera su threshold, en m/s.
+@export var player_stun_push_speed := 4.0
+## Impulso vertical aplicado al player durante el stun PUSH, en m/s.
+@export var player_stun_push_vertical_speed := 0.0
 
 var is_attacking := false
 
@@ -70,7 +76,9 @@ func _fire() -> void:
 	if parent == null:
 		parent = _owner.get_parent()
 	parent.add_child(projectile)
-	projectile.launch(origin, dir, _target, _owner, projectile_speed, homing_turn_rate, projectile_damage, projectile_lifetime)
+	projectile.launch(origin, dir, _target, _owner, projectile_speed, homing_turn_rate,
+			projectile_damage, projectile_lifetime, stun, player_stun_push_speed,
+			player_stun_push_vertical_speed)
 
 func _build_projectile() -> Projectile:
 	if projectile_scene != null:

@@ -38,7 +38,7 @@ player/     Player glue + Locomotion, Dash, Launcher, Meter, Combat, LockOn, Swi
 enemies/    EnemyBase, GroundedEnemy, Perception, GroundLocomotion, attacks/
 ui/         HUD, ActionLoadoutMenu
 visual/     CameraRig, CameraOcclusionFade, WorldVisual, LandingIndicator
-world/      test_scene, smoke_test, wall_slide_probe, blocks, pickups
+world/      test_scene, smoke_test (transversal), combat_smoke_test, wall_slide_probe, blocks, pickups
 obsidian/   esta boveda
 ```
 
@@ -143,10 +143,11 @@ $GODOT="C:/Users/Tutupa/Downloads/Godot_v4.7-stable_win64.exe"
 & $GODOT --headless --path . --import
 & $GODOT --headless --path . --quit-after 2
 & $GODOT --headless --path . res://world/smoke_test.tscn
+& $GODOT --headless --path . res://world/combat_smoke_test.tscn
 ```
 
 > [!warning]
-> El smoke test corre **sin** `--quit-after`: tarda mas de 2 frames y ese flag lo mata a mitad de camino, con exit 0 y sin haber probado nada. Solo vale si imprime `SMOKE OK`.
+> Los smokes corren **sin** `--quit-after`: tardan mas de 2 frames y ese flag los mata a mitad de camino, con exit 0 y sin haber probado nada. Cada uno solo vale si imprime su mensaje `... SMOKE OK`.
 
 ## Relacionado
 

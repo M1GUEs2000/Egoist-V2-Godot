@@ -67,7 +67,8 @@ Todo sistema sigue el ciclo **crear → probar → tunear → clasificar**. "Com
 
 ### 1c. Cerrar
 
-1. Si toca lógica core → agregar asserts a `world/smoke_test.gd`.
+1. Si toca lógica core → agregar asserts al smoke del dominio (por ejemplo,
+   `world/combat_smoke_test.gd`). `world/smoke_test.gd` queda para regresiones transversales.
 2. Verificación headless (obligatoria, ver CLAUDE.md): `--import` + `--quit-after 2` con stderr limpio.
 3. Probar el feel en `test_scene` (Tutupa juega y tunea el `.tres`).
 4. **Clasificar**: asignar estado E0–E2 en la tabla *Estado de los sistemas* (E3+ requiere aprobación jugando).

@@ -66,6 +66,13 @@ El criterio es universal (igual que el player, ver [[Combate]]): la fuente manda
 
 Tanto el retroceso como la inclinacion del stun leen esta direccion. *(2026-07-09)*
 
+## Golpes al player
+
+Los ataques melee y proyectiles enemigos llevan su propio `StunSettings`. Si la potencia
+supera `PlayerTuning.stun_threshold`, el player entra en `PUSH`: se aleja del atacante,
+pierde el control y emite amarillo. El impulso se configura por ataque con
+`player_stun_push_speed` y `player_stun_push_vertical_speed`. *(2026-07-12)*
+
 ## Chispas de impacto
 
 `HitSparks` (`GPUParticles3D` one-shot) escupe chispas rojas incandescentes en **todo golpe recibido**, stunee o no. Nacen en la superficie que mira al atacante — `hit_sparks_height` sobre los pies y `hit_sparks_offset` adelantadas hacia el — no en el centro del cuerpo. *(2026-07-09)*

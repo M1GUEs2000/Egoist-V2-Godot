@@ -4,6 +4,9 @@ class_name Projectile extends Area3D
 var _speed := 0.0
 var _turn_rate := 0.0
 var _damage := 0.0
+var _stun: StunSettings
+var _player_stun_push_speed := 0.0
+var _player_stun_push_vertical_speed := 0.0
 var _die_at := -999.0
 var _velocity := Vector3.ZERO
 var _target: Node3D
@@ -17,13 +20,17 @@ func _ready() -> void:
 	area_entered.connect(_on_area_entered)
 
 func launch(origin: Vector3, direction: Vector3, target: Node3D, shooter: Node3D,
-		speed: float, turn_rate: float, damage: float, lifetime: float) -> void:
+		speed: float, turn_rate: float, damage: float, lifetime: float, stun: StunSettings = null,
+		player_stun_push_speed := 0.0, player_stun_push_vertical_speed := 0.0) -> void:
 	global_position = origin
 	_target = target
 	_shooter = shooter
 	_speed = speed
 	_turn_rate = turn_rate
 	_damage = damage
+	_stun = stun
+	_player_stun_push_speed = player_stun_push_speed
+	_player_stun_push_vertical_speed = player_stun_push_vertical_speed
 	_velocity = direction.normalized() * speed
 	_die_at = World.now() + lifetime
 	if _velocity.length_squared() > 0.0001:
@@ -47,9 +54,21 @@ func _on_body_entered(body: Node3D) -> void:
 		return
 	if body.has_method("take_damage"):
 		body.call("take_damage", _damage)
+		if _stun != null and body.has_method("receive_stun"):
+			if body is Player:
+				var away := body.global_position - global_position
+				away.y = 0.0
+				body.receive_stun(
+						_stun,
+						PlayerStun.Mode.PUSH,
+						away.normalized() if away.length_squared() > 0.0001 else _velocity.normalized(),
+						_player_stun_push_speed,
+						_player_stun_push_vertical_speed)
+			else:
+				body.call("receive_stun", _stun)
 		queue_free()
 	elif body is EnemyBase:
-		(body as EnemyBase).take_hit_from_enemy(1.0, _velocity.normalized())
+		(body as EnemyBase).take_hit_from_enemy(1.0, _velocity.normalized(), _stun)
 		queue_free()
 	else:
 		var collider := body as CollisionObject3D
@@ -63,7 +82,7 @@ func _on_area_entered(area: Area3D) -> void:
 	if hurtbox == null:
 		return
 	var amount := 1.0 if hurtbox.owner_node is EnemyBase else _damage
-	hurtbox.receive_hit(_shooter, amount, _velocity.normalized(), null)
+	hurtbox.receive_hit(_shooter, amount, _velocity.normalized(), _stun)
 	queue_free()
 
 func _is_shooter(node: Node) -> bool:

@@ -7,6 +7,8 @@
 [ext_resource type="Script" uid="uid://cttyioaixbthw" path="res://enemies/perception.gd" id="5_perception"]
 [ext_resource type="Script" uid="uid://bomqo1j8a12ug" path="res://enemies/ground_locomotion.gd" id="6_locomotion"]
 [ext_resource type="Script" uid="uid://d0abkkwvpxf51" path="res://enemies/attacks/melee_attack.gd" id="7_melee"]
+[ext_resource type="Script" uid="uid://w0b3i18w442a" path="res://data/stun_settings.gd" id="8_stun"]
+[ext_resource type="Script" uid="uid://dr1ehd335mg06" path="res://combat/hitbox.gd" id="9_hitbox"]
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_body"]
 radius = 0.45
@@ -62,9 +64,6 @@ particles_anim_loop = false
 material = SubResource("Mat_sparks")
 size = Vector2(0.28, 0.28)
 
-[sub_resource type="BoxMesh" id="BoxMesh_weapon"]
-size = Vector3(0.25, 0.25, 1.1)
-
 [sub_resource type="Gradient" id="Gradient_dust"]
 offsets = PackedFloat32Array(0, 0.25, 1)
 colors = PackedColorArray(0.72, 0.68, 0.58, 0, 0.7, 0.66, 0.56, 0.5, 0.6, 0.56, 0.47, 0)
@@ -102,6 +101,9 @@ vertex_color_use_as_albedo = true
 albedo_color = Color(0.7, 0.66, 0.56, 1)
 billboard_mode = 3
 billboard_keep_scale = true
+particles_anim_h_frames = 1
+particles_anim_v_frames = 1
+particles_anim_loop = false
 
 [sub_resource type="QuadMesh" id="QuadMesh_dust"]
 material = SubResource("Mat_dust")
@@ -112,6 +114,19 @@ radius = 0.6
 
 [sub_resource type="StandardMaterial3D" id="Mat_ragdoll"]
 albedo_color = Color(0.9, 0.2, 0.2, 1)
+
+[sub_resource type="BlackboardPlan" id="BlackboardPlan_qymcn"]
+
+[sub_resource type="BoxMesh" id="BoxMesh_weapon"]
+size = Vector3(0.25, 0.25, 1.1)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_blade"]
+size = Vector3(0.35, 0.35, 1.15)
+
+[sub_resource type="Resource" id="Resource_melee_stun"]
+script = ExtResource("8_stun")
+grounded = 0.35
+airborne = 0.5
 
 [node name="GroundedEnemy" type="CharacterBody3D" unique_id=1176923943]
 script = ExtResource("1_enemy")
@@ -131,8 +146,10 @@ surface_material_override/0 = SubResource("Mat_body")
 [node name="StunLight" type="OmniLight3D" parent="." unique_id=915778972]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.1, 0)
 visible = false
-light_color = Color(0.91764706, 0.75686276, 0, 1)
-light_energy = 1.63
+light_color = Color(0.91764706, 0.43137255, 0, 1)
+light_energy = 0.5
+light_indirect_energy = 0.591
+light_volumetric_fog_energy = 0.93
 omni_range = 3.0
 
 [node name="HitSparks" type="GPUParticles3D" parent="." unique_id=1766602801]
@@ -147,31 +164,32 @@ fixed_fps = 0
 process_material = SubResource("ParticleProcessMaterial_sparks")
 draw_pass_1 = SubResource("QuadMesh_sparks")
 
-[node name="RunDust" type="GPUParticles3D" parent="."]
+[node name="RunDust" type="GPUParticles3D" parent="." unique_id=480126016]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.12, 0)
 emitting = false
 amount = 18
 lifetime = 0.55
-local_coords = false
 randomness = 0.4
 process_material = SubResource("PPM_run_dust")
 draw_pass_1 = SubResource("QuadMesh_dust")
 
-[node name="GroundSense" type="Area3D" parent="."]
+[node name="GroundSense" type="Area3D" parent="." unique_id=433909482]
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="GroundSense"]
+[node name="CollisionShape3D" type="CollisionShape3D" parent="GroundSense" unique_id=784105808]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
 shape = SubResource("SphereShape3D_groundsense")
 
-[node name="Ragdoll" type="RigidBody3D" parent="."]
+[node name="Ragdoll" type="RigidBody3D" parent="." unique_id=223542423]
+transform = Transform3D(1.405, 0, 0, 0, 1.405, 0, 0, 0, 1.405, 0, 0.9436518, 0)
 top_level = true
 visible = false
 freeze = true
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="Ragdoll"]
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Ragdoll" unique_id=535134710]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.99240315, 0)
 shape = SubResource("CapsuleShape3D_body")
 
-[node name="Mesh" type="MeshInstance3D" parent="Ragdoll"]
+[node name="Mesh" type="MeshInstance3D" parent="Ragdoll" unique_id=1114347772]
 mesh = SubResource("CapsuleMesh_body")
 surface_material_override/0 = SubResource("Mat_ragdoll")
 
@@ -199,13 +217,27 @@ script = ExtResource("5_perception")
 [node name="GroundLocomotion" type="Node" parent="." unique_id=1424312942]
 script = ExtResource("6_locomotion")
 
-[node name="BTPlayer" type="BTPlayer" parent="."]
-active = false
+[node name="BTPlayer" type="BTPlayer" parent="." unique_id=128661082]
 update_mode = 2
+active = false
+blackboard_plan = SubResource("BlackboardPlan_qymcn")
 
 [node name="MeleeAttack" type="Node3D" parent="." unique_id=2066280899]
 script = ExtResource("7_melee")
+stun = SubResource("Resource_melee_stun")
 
-[node name="Weapon" type="MeshInstance3D" parent="MeleeAttack" unique_id=1729610825]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.55, 0.9, -0.55)
+[node name="Hand" type="Node3D" parent="MeleeAttack" unique_id=1729610825]
+
+[node name="Pivot" type="Node3D" parent="MeleeAttack/Hand"]
+position = Vector3(0, 0, -1)
+
+[node name="BladeMesh" type="MeshInstance3D" parent="MeleeAttack/Hand/Pivot"]
+position = Vector3(0, 0, -0.55)
 mesh = SubResource("BoxMesh_weapon")
+
+[node name="BladeHitbox" type="Area3D" parent="MeleeAttack/Hand/Pivot"]
+position = Vector3(0, 0, -0.55)
+script = ExtResource("9_hitbox")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="MeleeAttack/Hand/Pivot/BladeHitbox"]
+shape = SubResource("BoxShape3D_blade")

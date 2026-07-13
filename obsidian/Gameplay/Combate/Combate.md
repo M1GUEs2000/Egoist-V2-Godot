@@ -84,7 +84,7 @@ La fuente del stun define potencia, duracion y tipo; el receptor decide si entra
 - `StunSettings` lleva `power` (y `beats_threshold`).
 - Entrada normal: `receive_stun` / `try_apply_stun` (respetan resistencia). `apply_stun` queda como aplicacion directa.
 - La armadura no da inmunidad al stun: sube el threshold requerido (`armor_stun_threshold`).
-- El player puede ser stunned: `PlayerStun` mantiene duracion/modo y emite `stunned_started` / `stunned_ended`. Durante el stun se bloquea input y se cancelan locomotion, wall slide, launcher, dash y el buffer de combate (`PlayerCombat.cancel_input`).
+- El player puede ser stunned: `PlayerStun` mantiene duracion/modo y emite `stunned_started` / `stunned_ended`. Durante el stun se bloquea input y se cancelan locomotion, wall slide, launcher, dash y el buffer de combate (`PlayerCombat.cancel_input`). Mientras dura, su mesh emite amarillo (`stun_color` / `stun_emission_energy` en `PlayerTuning`).
 - Modos del player (`PlayerStun.Mode`): `STILL` (quieto, sin input) y `PUSH` (sin input + empuje horizontal + velocidad vertical; para pinchos, rebotes y golpes que desplazan).
 - Tuning en `PlayerTuning` grupo Stun: `default_stun_duration`, `stun_threshold`, `armor_stun_threshold`, `stun_gravity_scale`, `stun_bump_decay`.
 

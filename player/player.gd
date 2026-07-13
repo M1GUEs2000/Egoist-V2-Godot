@@ -32,6 +32,9 @@ var _dodge_queued := false  # dodge pedido tarde en un golpe: sale al terminarlo
 @onready var action_world_switch: ActionWorldSwitchModifier = $ActionWorldSwitchModifier
 @onready var lock_on: LockOn = $LockOn
 @onready var _run_dust: GPUParticles3D = get_node_or_null("RunDust") as GPUParticles3D
+@onready var _mesh: MeshInstance3D = get_node_or_null("Mesh") as MeshInstance3D
+
+var _stun_material: StandardMaterial3D
 
 func _ready() -> void:
 	add_to_group("player")  # la cámara y los enemigos me encuentran por grupo
@@ -49,6 +52,8 @@ func _ready() -> void:
 	air_kill_reset.setup(self)
 	dash.setup(self, locomotion, launcher.register_air_hit_stall, launcher.cancel)
 	combat.setup(self)
+	stun.stunned_started.connect(_on_stunned_started)
+	stun.stunned_ended.connect(_on_stunned_ended)
 
 func is_grounded() -> bool:
 	return air_state == AirState.GROUNDED
@@ -339,3 +344,18 @@ func _effective_stun_threshold() -> float:
 	if is_armored():
 		return tuning.armor_stun_threshold
 	return tuning.stun_threshold
+
+func _on_stunned_started(_duration: float, _mode: PlayerStun.Mode) -> void:
+	if _mesh == null:
+		return
+	if _stun_material == null:
+		_stun_material = StandardMaterial3D.new()
+		_stun_material.emission_enabled = true
+	_stun_material.albedo_color = tuning.stun_color
+	_stun_material.emission = tuning.stun_color
+	_stun_material.emission_energy_multiplier = tuning.stun_emission_energy
+	_mesh.set_surface_override_material(0, _stun_material)
+
+func _on_stunned_ended() -> void:
+	if _mesh != null:
+		_mesh.set_surface_override_material(0, null)

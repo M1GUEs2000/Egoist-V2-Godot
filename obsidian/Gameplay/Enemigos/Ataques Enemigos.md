@@ -19,6 +19,14 @@ Los ataques son componentes. Un enemigo puede no tener ataques, tener melee, ran
 | `RangedAttack` | Windup, proyectil, homing, cadencia y dano. |
 | `Projectile` | Viaja, gira hacia objetivo si hay homing, impacta y expira. |
 
+## Melee fisico
+
+`MeleeAttack` usa el mismo contrato de arma procedural que la Espada: `Hand` orbita el
+enemigo, `Pivot` mantiene la hoja rigida y `BladeHitbox` barre con la trayectoria real.
+El combo base es **swing, swing, estocada, estocada**. `attack_range` solo decide cuando
+la IA inicia el ataque; nunca aplica dano a distancia. Dano, stun y empuje del player solo
+ocurren cuando `BladeHitbox` toca su `Hurtbox`.
+
 ## Hibridos
 
 Si un enemigo tiene melee y ranged, `GroundedEnemy` elige por distancia:
@@ -37,4 +45,3 @@ Si un enemigo tiene melee y ranged, `GroundedEnemy` elige por distancia:
 - [[IA]]
 - [[Melee Living]]
 - [[Ranged Dead]]
-

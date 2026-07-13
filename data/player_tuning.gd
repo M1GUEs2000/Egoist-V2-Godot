@@ -93,6 +93,10 @@ class_name PlayerTuning extends Resource
 @export_range(0.0, 2.0) var stun_gravity_scale := 1.0
 ## Frenado del empuje horizontal del stun PUSH (m/s²): qué tan rápido muere el rebote.
 @export var stun_bump_decay := 3.5
+## Color y emisión del mesh mientras el player está stuneado.
+@export var stun_color := Color(1.0, 0.9, 0.15, 1.0)
+## Intensidad de la emisión de stun. Requiere glow del WorldEnvironment para bloom.
+@export var stun_emission_energy := 1.8
 
 @export_group("Dodge")
 ## Si el golpe en curso ya pasó esta fracción (0-1), el dodge NO lo corta: se buferea
