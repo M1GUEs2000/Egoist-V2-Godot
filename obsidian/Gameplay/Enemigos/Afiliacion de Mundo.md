@@ -24,7 +24,20 @@ La afiliacion de mundo define donde existe y actua un enemigo.
 
 ## Trigger global
 
-`WorldSwitchTrigger` es ortogonal: un enemigo puede cambiar el mundo global al morir sin que eso cambie su propio modo de afiliacion.
+`WorldSwitchTrigger` es ortogonal a la afiliacion: dice que le hace este enemigo al mundo de TODOS, no donde vive el. Como nodo hijo, con `when = ON_HIT` (voltea el mundo en cada golpe) o `ON_DEATH` (al morir).
+
+## Enemigo de world switch
+
+`world_switch_enemy.tscn` (hereda `grounded_enemy.tscn`, con un `WorldSwitchTrigger` hijo en `ON_DEATH`): matarlo voltea el mundo de todos. Es la fuente de world switch que se gana peleando, ver [[World Switch]]. Aguanta mas que el enemigo comun (`Health.max_health = 25`) y cuesta mas de stunear (`stun_threshold = 2.0`): el cambio de mundo se paga.
+
+Se lee distinto del resto sin necesidad de HUD:
+
+- **Color del mundo opuesto**: no usa el rojo de `normal_color`, sino `World.world_color(World.opposite_world(...))` — anuncia el mundo al que te va a mandar, y se repinta solo cuando el mundo cambia. Es el mismo criterio de color de los bloques de world switch (ver [[Bloques]]); el gesto, en cambio, es propio.
+- **Latido**: su emision pulsa sola mientras esta vivo y entero.
+- **Fogonazo al morir**: el cuerpo se enciende de golpe con el color que venia anunciando y se apaga. Es el acuse de recibo del cambio de mundo.
+- El stun manda por encima: mientras dura, gana el amarillo de [[Stun]].
+
+Tuneables (exports de `EnemyBase`, excepcion de enemigos): `world_switch_pulse_min_energy` (0.3), `world_switch_pulse_max_energy` (2.0), `world_switch_pulse_speed` (1.2 pulsos/s), `world_switch_death_flash_energy` (6.0), `world_switch_death_flash_time` (0.3 s). *(2026-07-12, pendiente de probar jugando)*
 
 ## Activarse / desactivarse al cambiar de mundo
 

@@ -33,6 +33,7 @@ Etapas (casilla → estado del ciclo E0-E4): `[ ]` Por implementar (E0) · `[/]`
 - [t] Movimiento del player: tunear player_tuning (momentum, dash, wall slide/jump, gracia) — [[Movimiento Base]]
 - [t] IA por hostilidad + port LimboAI: probar FSM/percepcion/FLEE-HIDE, validar carga v1.1.1, revisar port code-only y equivalencia, decidir fallback dual — [[IA]]
 - [t] Stun universal + spike wall: probar en player y enemigos — [[Stun]] [[Combate]]
+- [t] Enemigo de world switch: probar latido, fogonazo de muerte y su costo (vida/stun) jugando — [[Afiliacion de Mundo]] [[World Switch]]
 - [t] Combo entre dos armas: verificar sin daño fantasma por cancel_routines — [[Combate]]
 - [t] Occlusion fade de camara: tunear feel/valores — [[Occlusion Fade de Camara]]
 - [t] Tunear el bloom del glow (WorldEnvironment) jugando — [[Combate]]
