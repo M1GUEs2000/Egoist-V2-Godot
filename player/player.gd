@@ -14,6 +14,7 @@ signal double_jump_changed(available: bool)
 var air_state := AirState.GROUNDED
 var vertical_velocity := 0.0
 var bump_velocity := Vector3.ZERO
+var poise := Poise.new()
 
 var _can_double_jump := true
 var _dodge_queued := false  # dodge pedido tarde en un golpe: sale al terminarlo
@@ -36,6 +37,8 @@ var _dodge_queued := false  # dodge pedido tarde en un golpe: sale al terminarlo
 
 var _stun_material: StandardMaterial3D
 var _stun_feedback_color := Color.WHITE
+var _chip_material: StandardMaterial3D
+var _chip_tween: Tween
 
 func _ready() -> void:
 	add_to_group("player")  # la cámara y los enemigos me encuentran por grupo
@@ -43,6 +46,7 @@ func _ready() -> void:
 		tuning = PlayerTuning.new()
 	collision_layer = World.LAYER_PLAYER
 	collision_mask = World.LAYER_WORLD | World.LAYER_ENEMY
+	setup_poise()
 	player_health.setup(self)
 	meter.setup(self)
 	lock_on.setup(self)
@@ -194,16 +198,19 @@ func receive_stun(stun_settings: StunSettings, mode := PlayerStun.Mode.STILL,
 		return false
 	return try_apply_stun(
 			stun_settings.duration_for(is_airborne()),
-			stun_settings.power,
+			stun_settings.poise_damage,
 			mode,
 			push_direction,
 			horizontal_speed,
 			vertical_speed)
 
-func try_apply_stun(duration: float, power: float, mode := PlayerStun.Mode.STILL,
+## Gate del stun: el golpe come poise y solo stunea si quiebra la reserva. Ya stuneado no hay
+## poise que romper (está quebrado): el golpe entra directo y extiende.
+func try_apply_stun(duration: float, poise_damage: float, mode := PlayerStun.Mode.STILL,
 		push_direction := Vector3.ZERO, horizontal_speed := 0.0, vertical_speed := 0.0,
 		feedback_color := Color.TRANSPARENT) -> bool:
-	if power < _effective_stun_threshold():
+	if not is_stunned() and not poise.take_poise_damage(poise_damage, is_armored()):
+		_play_poise_chip_flash()  # aguanté: fogonazo blanco, sin stun
 		return false
 	apply_stun(duration, mode, push_direction, horizontal_speed, vertical_speed, feedback_color)
 	return true
@@ -344,14 +351,45 @@ func _set_double_jump_available(available: bool) -> void:
 	_can_double_jump = available
 	double_jump_changed.emit(_can_double_jump)
 
-func _effective_stun_threshold() -> float:
-	if is_armored():
-		return tuning.armor_stun_threshold
-	return tuning.stun_threshold
+## Carga el medidor de poise desde el tuning. Publico: cambiar el .tres en caliente (o el smoke)
+## necesita re-aplicarlo, porque Poise guarda los valores, no lee el Resource cada golpe.
+func setup_poise() -> void:
+	poise.poise_max = tuning.poise_max
+	poise.armor_bonus = tuning.armor_poise_bonus
+	poise.decay_per_second = tuning.poise_decay_per_second
+	poise.break_levels = tuning.poise_break_levels
+	poise.recovery_time = tuning.poise_recovery_time
+	poise.reset()
+
+## Fogonazo blanco del golpe que comió poise sin quebrarme. Solo emisión: el material vuelve a
+## null al apagarse, así que no deja rastro ni compite con el amarillo del stun.
+func _play_poise_chip_flash() -> void:
+	if _mesh == null or is_stunned():
+		return
+	if _chip_tween != null and _chip_tween.is_valid():
+		_chip_tween.kill()
+	if _chip_material == null:
+		_chip_material = StandardMaterial3D.new()
+		_chip_material.emission_enabled = true
+	_chip_material.albedo_color = tuning.poise_chip_color
+	_chip_material.emission = tuning.poise_chip_color
+	_chip_material.emission_energy_multiplier = tuning.poise_chip_emission_energy
+	_mesh.set_surface_override_material(0, _chip_material)
+	_chip_tween = create_tween()
+	_chip_tween.tween_property(_chip_material, "emission_energy_multiplier", 0.0,
+			tuning.poise_chip_time)
+	_chip_tween.tween_callback(_clear_poise_chip_flash)
+
+# Si el stun entró durante el destello, el material amarillo ya está puesto: no lo pisamos.
+func _clear_poise_chip_flash() -> void:
+	if _mesh != null and not is_stunned():
+		_mesh.set_surface_override_material(0, null)
 
 func _on_stunned_started(_duration: float, _mode: PlayerStun.Mode) -> void:
 	if _mesh == null:
 		return
+	if _chip_tween != null and _chip_tween.is_valid():
+		_chip_tween.kill()  # manda el stun: el fogonazo blanco no le pelea la emisión al amarillo
 	if _stun_material == null:
 		_stun_material = StandardMaterial3D.new()
 		_stun_material.emission_enabled = true

@@ -10,7 +10,8 @@ class_name SpikeWall extends StaticBody3D
 @export var world := World.Kind.LIVING
 
 @export var stun_duration := 0.45
-@export var stun_power := 2.0
+## Poise que come el pinche. Alto: un hazard debe quebrar en pocos toques, no solo raspar.
+@export var stun_poise_damage := 6.0
 @export var damage := 10.0
 @export var push_horizontal_speed := 9.0
 @export var push_vertical_speed := 5.5
@@ -82,7 +83,7 @@ func _on_body_entered(body: Node3D) -> void:
 		player.take_damage(damage)
 		player.try_apply_stun(
 				stun_duration,
-				stun_power,
+				stun_poise_damage,
 				PlayerStun.Mode.PUSH,
 				push_dir,
 				push_horizontal_speed,
@@ -92,7 +93,7 @@ func _on_body_entered(body: Node3D) -> void:
 		player.restore_airdash()
 		return
 	var hazard_stun := StunSettings.new()
-	hazard_stun.power = stun_power
+	hazard_stun.poise_damage = stun_poise_damage
 	hazard_stun.grounded = stun_duration
 	hazard_stun.airborne = stun_duration
 	var enemy_push := PushSettings.new()

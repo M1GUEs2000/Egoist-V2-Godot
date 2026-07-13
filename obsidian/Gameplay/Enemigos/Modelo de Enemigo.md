@@ -36,7 +36,7 @@ En Godot V2 no hay una subclase por cada comportamiento de mundo o ataque. Hay u
 | `slam_bounce(down_speed, target_world_y, hang_time)` | Spike + rebote vertical hasta una altura objetivo (lo usa la [[Espada]]). |
 | `slam_arc(down_speed, bounce_dir, up_speed, forward_speed, gravity)` | Spike + pique balistico en arco propio, sin altura objetivo (lo usa el [[Mazo]]). |
 | `try_parry(player, hit_direction)` | Parry si el ataque enemigo esta en ventana. |
-| `receive_stun` / `try_apply_stun` | Entrada normal de stun: solo entra si la potencia supera `_effective_stun_threshold()` (`stun_threshold` o `armor_stun_threshold` si esta armado). Mismo criterio que el player. *(2026-07-07)* |
+| `receive_stun` / `try_apply_stun` | Entrada normal de stun: el golpe come poise y solo stunea si **quiebra la reserva** (`poise_max`, + `armor_poise_bonus` si esta armado). Si no quiebra, fogonazo blanco y nada mas. Mismo medidor que el player, ver [[Stun]]. *(2026-07-13)* |
 
 ## Regla
 

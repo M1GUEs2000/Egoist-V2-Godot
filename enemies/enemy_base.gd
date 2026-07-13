@@ -11,8 +11,33 @@ enum AirState { GROUNDED, AIRBORNE }
 @export var initial_combat_state := CombatState.NORMAL
 @export var armored := false
 @export var armor_hits_to_break := 3
-@export var stun_threshold := 1.0
-@export var armor_stun_threshold := 2.0
+
+# --- Poise (stagger) ---
+# El stun no entra golpe a golpe: cada ataque come poise y el stun llega cuando el acumulado
+# supera la reserva. Ver combat/poise.gd. La armadura SUMA reserva (no es un umbral aparte):
+# al romperse, el bonus se pierde solo.
+## Reserva de poise a romper para stunear a este enemigo.
+@export var poise_max := 6.0
+## Poise extra mientras esta armado. Se pierde al romperse la armadura.
+@export var armor_poise_bonus := 6.0
+## Drenaje del poise acumulado, en puntos por segundo. Alto = hay que encadenar golpes rapido.
+@export var poise_decay_per_second := 1.5
+## Escalera de degradacion: multiplicador de la reserva tras cada quiebre. Cada stun lo deja mas
+## fragil; en el ultimo escalon (0.0) cualquier golpe lo stunea. Se reinicia solo (ver abajo).
+@export var poise_break_levels: Array[float] = [1.0, 0.8, 0.6, 0.4, 0.2, 0.0]
+## Segundos sin recibir golpes tras los que su reserva vuelve al 100%. Silencioso: no se muestra.
+@export var poise_recovery_time := 20.0
+
+# Fogonazo BLANCO del golpe que come poise sin quebrarlo: "te di, pero aguanto". Es el tercer
+# color del lenguaje de impacto — amarillo = stuneado, rojo = hazard (SpikeWall), blanco = absorbido.
+# Solo emision, sin tocar el albedo: el enemigo no cambia de color, se enciende un instante.
+## Color del fogonazo del golpe absorbido.
+@export var poise_chip_color := Color(1.0, 1.0, 1.0, 1.0)
+## Emision del fogonazo absorbido. Requiere el glow del WorldEnvironment para el bloom.
+@export var poise_chip_energy := 2.0
+## Segundos que tarda en apagarse el fogonazo. Corto: es un destello, no un estado.
+@export var poise_chip_time := 0.12
+
 @export var airborne_gravity := -20.0
 @export var airborne_max_time := 4.0
 @export var death_destroy_delay := 0.4
@@ -89,6 +114,7 @@ enum AirState { GROUNDED, AIRBORNE }
 
 var air_state := AirState.GROUNDED
 var combat_state := CombatState.NORMAL
+var poise := Poise.new()
 
 var _armor_hits_taken := 0
 var _dead := false
@@ -117,6 +143,7 @@ var _left_ground_once := false  # dejo el rango de GroundSense una vez: recien a
 var _ragdoll_until := -999.0
 var _world_switch: WorldSwitchTrigger  # null = enemigo normal; presente = voltea el mundo al morir
 var _death_flash_tween: Tween
+var _chip_tween: Tween
 var _announced_color := Color.WHITE  # ultimo color de mundo que mostro; lo hereda el fogonazo
 # Los materiales de la escena son SubResources: Godot los comparte entre instancias, asi que
 # pintarlos directo tine a TODOS los enemigos. Cada instancia se queda con su copia propia.
@@ -138,6 +165,12 @@ func _ready() -> void:
 	collision_layer = World.LAYER_ENEMY
 	collision_mask = World.LAYER_WORLD | World.LAYER_PLAYER | World.LAYER_ENEMY
 	_air_gravity = airborne_gravity
+	poise.poise_max = poise_max
+	poise.armor_bonus = armor_poise_bonus
+	poise.decay_per_second = poise_decay_per_second
+	poise.break_levels = poise_break_levels
+	poise.recovery_time = poise_recovery_time
+	poise.reset()
 
 	if health != null and not health.died.is_connected(_die):
 		health.died.connect(_die)
@@ -208,6 +241,8 @@ func _process(_delta: float) -> void:
 ## cambio — recalcular daria el color del mundo viejo, justo el que no queremos.
 func _play_death_flash() -> void:
 	var color := _announced_color
+	if _chip_tween != null and _chip_tween.is_valid():
+		_chip_tween.kill()
 	if _death_flash_tween != null and _death_flash_tween.is_valid():
 		_death_flash_tween.kill()
 	_death_flash_tween = create_tween().set_parallel(true)
@@ -217,6 +252,24 @@ func _play_death_flash() -> void:
 		material.emission_energy_multiplier = world_switch_death_flash_energy
 		_death_flash_tween.tween_property(material, "emission_energy_multiplier", 0.0,
 				world_switch_death_flash_time)
+
+## Fogonazo blanco del golpe que comio poise sin quebrarlo. Solo enciende la emision y la apaga:
+## el albedo no se toca, asi que no compite con el amarillo del stun ni con el color del enemigo.
+## Si el golpe SI quiebra, nunca se llama — manda el stun.
+func _play_poise_chip_flash() -> void:
+	if _dead or not _is_active or is_stunned() or _own_materials.is_empty():
+		return
+	if _chip_tween != null and _chip_tween.is_valid():
+		_chip_tween.kill()
+	_chip_tween = create_tween().set_parallel(true)
+	for material in _own_materials.values():
+		material.emission_enabled = true
+		material.emission = poise_chip_color
+		material.emission_energy_multiplier = poise_chip_energy
+		_chip_tween.tween_property(material, "emission_energy_multiplier", 0.0, poise_chip_time)
+	# Devuelve el material al estado que corresponda (apaga la emision, o la deja si el de world
+	# switch esta latiendo). Sin esto el enemigo queda con emission_enabled y energia 0.
+	_chip_tween.chain().tween_callback(_refresh_visual_state)
 
 func is_dead() -> bool:
 	return _dead
@@ -283,6 +336,10 @@ func apply_stun(duration: float, feedback_color := Color.TRANSPARENT) -> void:
 	# combate: un impacto al cuerpo caido lo puede congelar y extender su recuperacion.
 	if duration <= 0.0 or _dead:
 		return
+	# Un golpe anterior pudo dejar el fogonazo blanco a medio apagar: si sigue corriendo, le
+	# pelearia la emision al amarillo del stun. Manda el stun.
+	if _chip_tween != null and _chip_tween.is_valid():
+		_chip_tween.kill()
 	_stun_feedback_color = feedback_color if feedback_color.a > 0.0 else Color(1.0, 0.9, 0.15, 1.0)
 	combat_state = CombatState.STUNNED
 	_stunned_until = maxf(_stunned_until, World.now() + duration)
@@ -418,15 +475,19 @@ func apply_parry_stun(duration: float) -> void:
 func receive_stun(stun: StunSettings, feedback_color := Color.TRANSPARENT) -> bool:
 	if stun == null:
 		return false
-	return try_apply_stun(stun.duration_for(is_airborne()), stun.power, feedback_color)
+	return try_apply_stun(stun.duration_for(is_airborne()), stun.poise_damage, feedback_color)
 
-func try_apply_stun(duration: float, power: float, feedback_color := Color.TRANSPARENT) -> bool:
-	if power < _effective_stun_threshold():
+## Gate del stun: el golpe come poise y solo stunea si quiebra la reserva. Ya stuneado no hay
+## poise que romper (esta quebrado): el golpe entra directo y extiende — eso sostiene el juggle.
+func try_apply_stun(duration: float, poise_damage: float,
+		feedback_color := Color.TRANSPARENT) -> bool:
+	if not is_stunned() and not poise.take_poise_damage(poise_damage, is_armored()):
+		_play_poise_chip_flash()  # aguanto: fogonazo blanco, sin stun
 		return false
 	apply_stun(duration, feedback_color)
 	return true
 
-## Impacto de hazard: daÃ±o, stun por threshold y empuje en una sola reacciÃ³n.
+## Impacto de hazard: daÃ±o, stun por poise y empuje en una sola reacciÃ³n.
 func apply_spike_hit(damage: float, push_direction: Vector3, stun: StunSettings,
 		push_settings: PushSettings, feedback_color: Color) -> bool:
 	if not can_receive_hit() or health == null:
@@ -440,7 +501,7 @@ func apply_spike_hit(damage: float, push_direction: Vector3, stun: StunSettings,
 	if is_armored():
 		_damage_armor(int(ceil(damage)))
 	if stun != null:
-		try_apply_stun(stun.duration_for(is_airborne()), stun.power, feedback_color)
+		try_apply_stun(stun.duration_for(is_airborne()), stun.poise_damage, feedback_color)
 	if push_settings != null:
 		push(push_direction, push_settings)
 	return false
@@ -504,11 +565,6 @@ func _update_combat_state() -> void:
 		combat_state = CombatState.NORMAL
 		_reset_stun_reaction()
 		_refresh_visual_state()
-
-func _effective_stun_threshold() -> float:
-	if is_armored():
-		return armor_stun_threshold
-	return stun_threshold
 
 func _begin_airborne() -> void:
 	if air_state == AirState.AIRBORNE:

@@ -32,7 +32,7 @@ Godot V2 es la version activa. Unity V1 solo se usa como referencia de comportam
 ```text
 autoload/   WorldManager, GameManager, ComboTracker
 core/       World, WorldMembership, WorldSwitchTrigger, ActionWorldSwitchModifier
-combat/     Health, Hurtbox, Hitbox, InputBuffer, weapons/
+combat/     Health, Hurtbox, Hitbox, InputBuffer, Poise, weapons/
 data/       PlayerTuning, SwordTuning, MaceTuning, WeaponTuning, StunSettings, PushSettings, GameTuning, TraversalBlockTuning, WorldScanTuning
 player/     Player glue + Locomotion, Dash, Launcher, Meter, Combat, LockOn, Swing, WallSlide, EnemyBounce, AirKillReset, Stun
 enemies/    EnemyBase, GroundedEnemy, Perception, GroundLocomotion, attacks/
@@ -116,6 +116,7 @@ Los custom statuses del plugin viven en la config local (`.obsidian/`, no versio
 | Eventos | Senales tipadas |
 | Contratos opcionales | `has_method()` + grupos |
 | Golpeables | `Hitbox`/`Hurtbox`, grupo `hurtbox`, no interfaces C# |
+| Gate del stun | `Poise`: el golpe come poise, el stun entra al quebrar la reserva (ver [[Stun]]) |
 | Swing de arma | Nodo `Hand` que orbita al player + `Pivot` rigido que sostiene la hoja (ver [[Combate]]) |
 | Direccion de un golpe recibido | Se calcula desde el ATACANTE, nunca desde la hitbox (ver [[Stun]]) |
 | UI | `CanvasLayer`/Control que escucha senales |

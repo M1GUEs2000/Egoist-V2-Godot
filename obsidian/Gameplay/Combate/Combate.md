@@ -79,14 +79,16 @@ Overlay para asignar armas a los slots X/Y sin pausar el juego (`ui/action_loado
 
 ## Stun universal
 
-La fuente del stun define potencia, duracion y tipo; el receptor decide si entra segun su threshold: `stun_power >= threshold efectivo`. Player y enemigos comparten el mismo criterio. *(2026-07-07, pendiente de probar; valores de primer pase)*
+El stun se gana por **poise** (stagger acumulado), no golpe a golpe. La fuente define cuanto poise come y cuanto dura; el receptor se quiebra cuando el acumulado alcanza su reserva. Player y enemigos comparten el mismo medidor (`combat/poise.gd`). El detalle completo — ciclo, degradacion, armadura y tuning — vive en [[Stun]]. *(2026-07-13, reemplaza el umbral instantaneo; pendiente de tunear jugando)*
 
-- `StunSettings` lleva `power` (y `beats_threshold`).
-- Entrada normal: `receive_stun` / `try_apply_stun` (respetan resistencia). `apply_stun` queda como aplicacion directa.
-- La armadura no da inmunidad al stun: sube el threshold requerido (`armor_stun_threshold`).
+- `StunSettings` lleva `poise_damage` (cuanto poise come) + `grounded` / `airborne` (cuanto dura si quiebra).
+- Entrada normal: `receive_stun` / `try_apply_stun` (comen poise y stunean solo si quiebran). `apply_stun` queda como aplicacion directa, ignorando el poise (ej. parry).
+- La armadura no da inmunidad: **suma reserva** (`armor_poise_bonus`), y la pierde al romperse.
+- Cada quiebre degrada la reserva del enemigo un escalon (`poise_break_levels`); el player **no degrada**. Sin golpes por 20 s, la reserva vuelve al 100%.
+- Tres colores de impacto: **blanco** = poise absorbido (no quebro), **amarillo** = stuneado, **rojo** = hazard.
 - El player puede ser stunned: `PlayerStun` mantiene duracion/modo y emite `stunned_started` / `stunned_ended`. Durante el stun se bloquea input y se cancelan locomotion, wall slide, launcher, dash y el buffer de combate (`PlayerCombat.cancel_input`). Mientras dura, su mesh emite amarillo (`stun_color` / `stun_emission_energy` en `PlayerTuning`).
 - Modos del player (`PlayerStun.Mode`): `STILL` (quieto, sin input) y `PUSH` (sin input + empuje horizontal + velocidad vertical; para pinchos, rebotes y golpes que desplazan).
-- Tuning en `PlayerTuning` grupo Stun: `default_stun_duration`, `stun_threshold`, `armor_stun_threshold`, `stun_gravity_scale`, `stun_bump_decay`.
+- Tuning en `PlayerTuning` grupo Stun: `default_stun_duration`, `stun_gravity_scale`, `stun_bump_decay`, mas el subgrupo Poise (`poise_max`, `armor_poise_bonus`, `poise_decay_per_second`, `poise_break_levels`, `poise_recovery_time`) y el fogonazo blanco (`poise_chip_color` / `poise_chip_emission_energy` / `poise_chip_time`).
 
 ## Momentos de gravedad (regla de correlacion)
 

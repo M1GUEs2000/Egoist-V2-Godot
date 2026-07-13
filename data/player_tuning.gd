@@ -85,10 +85,30 @@ class_name PlayerTuning extends Resource
 @export_group("Stun")
 ## Duración del stun si la fuente no manda una propia, en segundos.
 @export var default_stun_duration := 0.45
-## Potencia mínima que debe traer un stun para afectar al player (stun_power >= threshold).
-@export var stun_threshold := 1.0
-## Threshold usado en lugar del normal mientras el player esté armado (armadura = más resistencia).
-@export var armor_stun_threshold := 2.0
+
+@export_subgroup("Poise")
+# Mismo medidor que los enemigos (combat/poise.gd): los golpes comen poise y el stun entra
+# cuando el acumulado supera la reserva. Diferencia clave: el player NO degrada — su escalera
+# es un solo escalón, así que cada quiebre le vuelve a costar lo mismo al enemigo.
+## Reserva de poise a romper para stunear al player. Subirla = aguanta más presión enemiga.
+@export var poise_max := 6.0
+## Poise extra mientras el player esté armado (hoy is_armored() es stub: queda listo para cuando exista).
+@export var armor_poise_bonus := 6.0
+## Drenaje del poise acumulado, en puntos por segundo. Alto = perdona más los golpes espaciados.
+@export var poise_decay_per_second := 1.5
+## Escalera de degradación tras cada quiebre. [1.0] = el player nunca degrada (siempre al 100%).
+@export var poise_break_levels: Array[float] = [1.0]
+## Segundos sin recibir golpes tras los que la reserva vuelve al 100%.
+@export var poise_recovery_time := 20.0
+
+# Fogonazo BLANCO del golpe que come poise sin quebrarlo: "me dieron, pero aguanté". Tercer color
+# del lenguaje de impacto — amarillo = stuneado, rojo = hazard (SpikeWall), blanco = absorbido.
+## Color del fogonazo del golpe absorbido.
+@export var poise_chip_color := Color(1.0, 1.0, 1.0, 1.0)
+## Emisión del fogonazo absorbido. Requiere el glow del WorldEnvironment para el bloom.
+@export var poise_chip_emission_energy := 2.0
+## Segundos que tarda en apagarse el fogonazo. Corto: es un destello, no un estado.
+@export var poise_chip_time := 0.12
 ## Escala de gravedad durante el stun (1 = normal; menos = flota más en stuns aéreos).
 @export_range(0.0, 2.0) var stun_gravity_scale := 1.0
 ## Frenado del empuje horizontal del stun PUSH (m/s²): qué tan rápido muere el rebote.

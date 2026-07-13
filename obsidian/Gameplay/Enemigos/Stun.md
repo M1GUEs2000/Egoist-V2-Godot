@@ -13,29 +13,72 @@ hito: H1
 
 Sistema de stun y armadura de `EnemyBase`. Vive separado de [[Estados de Combate Enemigo]] porque tiene su propio criterio de entrada, independiente del resto de `combat_state`. *(2026-07-08)*
 
-## Umbral efectivo
+## Poise: el gate del stun
 
-El criterio es universal (igual que el player, ver [[Combate]]): la fuente manda `StunSettings` con un `power`; el receptor solo queda `STUNNED` si `power >= _effective_stun_threshold()`.
+> [!important] El stun NO se decide golpe a golpe
+> El criterio es universal (igual que el player, ver [[Combate]]): cada ataque trae un `poise_damage` en su `StunSettings`, ese poise **se acumula** en el receptor y el stun entra recien cuando el acumulado **alcanza la reserva** (`poise_max`). El acumulado **decae solo**: presion sostenida quiebra, golpes espaciados no. *(2026-07-13, reemplaza el umbral instantaneo `power >= threshold`)*
 
-- `_effective_stun_threshold()` devuelve `armor_stun_threshold` si el enemigo esta `ARMORED`, o `stun_threshold` si no.
-- La armadura es **resistencia** al stun, no inmunidad: un golpe suficientemente fuerte igual puede stunear a un enemigo armado.
+El medidor vive en `combat/poise.gd` (`Poise`), compartido por `EnemyBase` y `Player`. No es un `Node`: el decaimiento y la recuperacion se calculan al vuelo contra `World.now()`, asi que no hay trabajo por frame ni nodo que agregar a las escenas.
+
+Ciclo completo:
+
+1. Un golpe suma su `poise_damage` al acumulado (antes drena lo que corresponda al tiempo transcurrido).
+2. Si el acumulado **no** llega a la reserva → **no hay stun**, solo daño a vida. El enemigo tira un **fogonazo blanco** (ver *Lenguaje de color*).
+3. Si **llega** → entra el stun con la duracion que define la fuente (`grounded`/`airborne`), el acumulado vuelve a 0 y la reserva **baja un escalon**.
+4. Ya `STUNNED` **no hay poise que romper** (esta quebrado): los golpes entran directo y extienden el stun. Eso es lo que sostiene el juggle y los combos.
+5. Sin recibir golpes por `poise_recovery_time` (20 s), la reserva vuelve al **100%**. Es silencioso: el jugador no lo ve.
+
+### Degradacion: cada quiebre lo deja mas fragil
+
+`poise_break_levels` es la escalera de multiplicadores de la reserva tras cada quiebre. Default: `[1.0, 0.8, 0.6, 0.4, 0.2, 0.0]` — editable **por enemigo**. En el ultimo escalon (`0.0`) la reserva es nula: **cualquier golpe lo stunea**. Castigar sin pausa es progresivamente mas facil; soltarlo 20 s lo devuelve a cero.
+
+El **player NO degrada**: su escalera es `[1.0]` (un solo escalon), asi que su reserva siempre vuelve al 100%. Mismo componente, sin ninguna rama especial en el codigo.
+
+Un golpe con `poise_damage = 0` **nunca** staggerea, ni con la reserva en cero: hace daño y nada mas.
 
 ## Entradas
 
 | Metodo | Que hace |
 |---|---|
-| `receive_stun(stun: StunSettings)` | Entrada normal: llama `try_apply_stun` con `duration_for(is_airborne())` y `power` del `StunSettings`. |
-| `try_apply_stun(duration, power)` | Compara `power` contra el threshold efectivo; si no alcanza, no hace nada. |
-| `apply_stun(duration)` | Aplicacion directa que **ignora** la resistencia — solo para casos que ya decidieron que el stun aplica (ej. `apply_parry_stun`). |
+| `receive_stun(stun: StunSettings)` | Entrada normal: llama `try_apply_stun` con `duration_for(is_airborne())` y el `poise_damage` del `StunSettings`. |
+| `try_apply_stun(duration, poise_damage)` | **El gate**: come poise y stunea solo si quiebra la reserva. Si ya esta stuneado, entra directo. |
+| `apply_stun(duration)` | Aplicacion directa que **ignora el poise** — solo para casos que ya decidieron que el stun aplica (ej. `apply_parry_stun`: un parry siempre stunea). |
 
 `MeleeAttack` llama `receive_stun` en su target cuando el `StunSettings` del ataque no es null (`_deal_damage`); si el target no tiene `receive_stun` pero es otro `EnemyBase`, usa `take_hit_from_enemy` que aplica stun via `_apply_stun_from_settings`.
 
 ## Armadura
 
+La armadura **SUMA reserva de poise**, no es un umbral aparte:
+
 - `armored` (export) define si el enemigo inicia armado (`combat_state = ARMORED` en `_ready` si `armored` esta activo).
-- `armor_hits_to_break` define cuantos golpes aguanta antes de romperse (`_damage_armor` cuenta hits, no dano bruto).
-- Al romperse: `combat_state` vuelve a `NORMAL` y se resetea `_armor_hits_taken`.
+- Mientras esta `ARMORED`, su reserva es `poise_max + armor_poise_bonus` (6 + 6 = 12 por default). Es **resistencia, nunca inmunidad**: un golpe con suficiente poise (el sweet spot del [[Mazo]], 12) lo quiebra igual de un solo impacto.
+- `armor_hits_to_break` define cuantos **golpes** aguanta la armadura antes de romperse (`_damage_armor` cuenta hits, no daño bruto ni poise). Corre **en paralelo** al poise: son dos medidores independientes sobre el mismo golpe.
+- Al romperse: `combat_state` vuelve a `NORMAL`, se resetea `_armor_hits_taken` y **pierde el `armor_poise_bonus`** — la reserva cae al base sola, sin avisarle nada al `Poise`.
 - `apply_armor(duration)` reactiva la armadura por tiempo limitado (usado por ataques que la re-arman) y la revierte a `NORMAL` sola si nadie la cambio antes.
+
+## Tuning del poise
+
+Exports por escena en `EnemyBase` (excepcion de enemigos); en `PlayerTuning` grupo Stun > Poise para el player.
+
+| Knob | Default | Que hace |
+|---|---|---|
+| `poise_max` | 6.0 | Reserva a romper. `WorldSwitchEnemy` e `HybridEnemy` usan 12 (cuesta mas), el ultra agresivo 9. |
+| `armor_poise_bonus` | 6.0 | Reserva extra mientras esta armado. Se pierde al romperse la armadura. |
+| `poise_decay_per_second` | 1.5 | Drenaje lineal del acumulado. Alto = hay que encadenar rapido. |
+| `poise_break_levels` | `[1.0, 0.8, 0.6, 0.4, 0.2, 0.0]` | Escalera de degradacion. El player usa `[1.0]`. |
+| `poise_recovery_time` | 20.0 | Segundos sin golpes tras los que la reserva vuelve al 100%. |
+
+Poise por fuente (primer pase, **pendiente de tunear jugando**):
+
+| Fuente | `poise_damage` | Lectura |
+|---|---|---|
+| [[Espada]] base | 2.0 | 3 golpes seguidos quiebran a un enemigo comun. No rompe a un armado sola. |
+| [[Espada]] dash cargado | 4.0 | — |
+| [[Mazo]] base | 6.0 | **Quiebra de un golpe**, siempre. |
+| [[Mazo]] freeze (sweet spot cargado) | 12.0 | Quiebra de un golpe **incluso armado**. |
+| Dash del player | 2.0 | Suma al stagger como un golpe de espada. |
+| Melee / ranged enemigo | 2.0 | Tienen que insistir para quebrar al player (reserva 6, drenaje 1.5/s). |
+| `SpikeWall` | 6.0 | Un hazard quiebra rapido: `stun_poise_damage`. |
 
 ## Interaccion con el aire (juggle)
 
@@ -68,14 +111,23 @@ Tanto el retroceso como la inclinacion del stun leen esta direccion. *(2026-07-0
 
 ## Golpes al player
 
-Los ataques melee y proyectiles enemigos llevan su propio `StunSettings`. Si la potencia
-supera `PlayerTuning.stun_threshold`, el player entra en `PUSH`: se aleja del atacante,
-pierde el control y emite amarillo. El impulso se configura por ataque con
-`player_stun_push_speed` y `player_stun_push_vertical_speed`. *(2026-07-12)*
+Los ataques melee y proyectiles enemigos llevan su propio `StunSettings`. Si su poise **quiebra
+la reserva** del player, este entra en `PUSH`: se aleja del atacante, pierde el control y emite
+amarillo. Si no la quiebra, come el daño, tira el fogonazo blanco y sigue jugando. El impulso se
+configura por ataque con `player_stun_push_speed` y `player_stun_push_vertical_speed`. *(2026-07-13)*
 
-`SpikeWall` usa la misma entrada de stun para player y enemigos, pero con feedback rojo:
-ademas del stun aplica daÃ±o y push. El color rojo distingue el hazard del impacto amarillo
-de combate. *(2026-07-12)*
+## Lenguaje de color del impacto
+
+Tres colores, tres cosas distintas. Se leen sin HUD:
+
+| Color | Que significa | Donde vive |
+|---|---|---|
+| **Blanco** | El golpe **comio poise pero no quebro**: "te di, aguanto". Solo emision, un destello — el albedo no se toca, asi que no cambia el color del cuerpo. | `poise_chip_color` / `poise_chip_energy` / `poise_chip_time` (`EnemyBase`); mismos knobs en `PlayerTuning`. *(2026-07-13)* |
+| **Amarillo** | **Stuneado**: la reserva se quebro. Pinta albedo + emision + `StunLight`. | `_stun_feedback_color` (`EnemyBase`), `stun_color` (`PlayerTuning`). |
+| **Rojo** | **Hazard** (`SpikeWall`): stun + daño + push. El rojo distingue el peligro del entorno del impacto de combate. | `hazard_stun_color` (`SpikeWall`). *(2026-07-12)* |
+
+Manda siempre el estado mas fuerte: si el golpe quiebra, el fogonazo blanco no se dispara, y si un
+stun entra a mitad de un destello, este se cancela para no pelearle la emision al amarillo.
 
 ## Chispas de impacto
 
