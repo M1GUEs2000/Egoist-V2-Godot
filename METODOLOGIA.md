@@ -160,20 +160,21 @@ Escala E0–E4 (ver *Ciclo de vida*). Se actualiza en el mismo commit que cambia
 
 | Sistema | Módulos | Estado | Qué falta |
 |---|---|---|---|
-| Mundos duales | `WorldManager` · `WorldMembership` · `WorldSwitchTrigger` | **E2** | Iterar tiempos (TIMED) y validar feel del switch |
-| Presencia del otro mundo | `WorldMembership` (cáscara + humo + afterimages) · `other_world_shell.gdshader` | **E2** | El cuerpo fuera de mundo ya no desaparece: queda su contorno encendido latiendo, con el humo enganchado al pulso y estela al moverse. Verificación headless + smokes pendientes; falta iterar jugando tiempos/intensidades (y ver el costo de las afterimages con varios enemigos en pantalla) |
+| Mundos duales | `WorldManager` · `WorldMembership` · `WorldSwitchTrigger` | **E3** | Aprobado jugando; faltan juice y edge cases del scan/switch |
+| Presencia del otro mundo | `WorldMembership` (cáscara + humo + afterimages) · `other_world_shell.gdshader` | **E2** | Verificación headless + smokes pendientes; falta iterar jugando tiempos e intensidades del contorno, el humo y la estela, y medir el costo de las afterimages con varios enemigos en pantalla |
 | Player — movimiento | `Player` · `PlayerLocomotion` · `PlayerDash` · `PlayerLauncher` · `PlayerWallSlide` · `PlayerEnemyBounce` | **E1** | Validar jugando drenaje de momentum y rebote en enemigos; retunear pared/dash/gracia si hace falta |
 | Player — reset aereo por kill/carga | `PlayerAirKillReset` · `PlayerCombat` · `WeaponBase` | **E1** | Correr headless/smoke; probar jugando reset de doble salto/airdash por kill aerea y reduccion de caida por cargas |
-| Player — meter | `PlayerMeter` | **E2** | Iterar costes/ganancias; mejoras (5 barras, esquive perfecto) son diseño futuro |
-| Player — vida | `Health` · `PlayerHealth` | **E2** | Definir qué pasa tras morir (hoy solo estado global) |
-| Combate base | `Hitbox` · `Hurtbox` · `InputBuffer` · `StunSettings` | **E2** | Iterar ventanas de feel (`input_buffer_time` / `hold_threshold`) |
+| Player — meter | `PlayerMeter` | **E2** | Iterar jugando costes y ganancias; mejoras futuras (5 barras, esquive perfecto) quedan como diseño pendiente |
+| Player — vida | `Health` · `PlayerHealth` | **E2** | Definir qué pasa tras la muerte del player (hoy solo cambia un estado global) |
+| Combate base | `Hitbox` · `Hurtbox` · `InputBuffer` · `StunSettings` | **E2** | Iterar jugando las ventanas de feel (`input_buffer_time` / `hold_threshold`) |
 | Poise (stagger) | `Poise` · `StunSettings` · `EnemyBase` · `Player` | **E1** | Recién construido: correr headless/smoke y tunear jugando reservas, poise por arma, drenaje y escalera de degradación. Los knobs existen pero la dirección del feel es desconocida |
-| Espada | `WeaponBase` · `Sword` · `SwordTuning` | **E2** | Iterar combos/ángulos/ventanas jugando; tunear la mano orbital (`hand_radius`, `thrust_reach`); clash mid-swing pendiente (ponytail) |
-| Mazo | `WeaponBase` · `Mace` · `MaceTuning` | **E2** | Combos completos y knobs en `mace_tuning.tres`, sobre el mismo motor que la Espada. Falta probarse jugando (E2→E3 lo decide Tutupa) |
-| Enemigo de suelo | `EnemyBase` · `GroundedEnemy` · `Perception` · `GroundLocomotion` · ataques | **E2** | Iterar rangos/cooldowns por escena (excepción tuning); tunear la reacción de stun (retroceso, inclinación, luz) y el nuevo ragdoll de aterrizaje (pose acostada, radio de `GroundSense`, `ragdoll_getup_delay`/`spin`/`gravity_scale`) — pendiente de probar jugando |
+| Espada | `WeaponBase` · `Sword` · `SwordTuning` | **E3** | Aprobado jugando; clash mid-swing pendiente (ponytail) y ultimos detalles de mano orbital |
+| Mazo | `WeaponBase` · `Mace` · `MaceTuning` | **E2** | Combos completos y knobs en `mace_tuning.tres`, sobre el mismo motor que la Espada; falta probarse jugando (E2→E3 lo decide Tutupa) |
+| Enemigo de suelo | `EnemyBase` · `GroundedEnemy` · `Perception` · `GroundLocomotion` · ataques | **E2** | Iterar jugando rangos y cooldowns por escena (excepción tuning) y la reacción de stun (retroceso, inclinación, luz) |
+| Ragdoll de aterrizaje | `GroundedEnemy` (pose acostada, radio `GroundSense`, `ragdoll_getup_delay`/`spin`/`gravity_scale`) | **E3** | Aprobado jugando; faltan últimos detalles de pulido |
 | Enemigo ultra agresivo | `UltraAggressiveEnemy` (prefab) · target scoring por utility en `GroundedEnemy` · stuck-check en `GroundLocomotion` | **E2** | Prefab berserker con histéresis de target (proximidad + compromiso) y rodeo al trabarse; los knobs ya existen como exports. Verificación headless + smokes pendientes; falta iterar jugando el infighting (`UltraPreyA`/`B` en `test_scene`), los pesos de scoring y los stats de primer pase |
 | Loadout de ataques (melee/ranged/híbrido) | `AttackLoadout` · `GroundedEnemy._collect_attacks` · `HybridEnemy` (prefab) | **E2** | Módulo inyectable que elige qué familias equipa un enemigo; reemplaza la subclase-por-enemigo (se borró `RangedDead`). Verificación headless + smokes pendientes; falta iterar jugando rangos/cadencia del híbrido y ver si la transición melee↔ranged pide histéresis |
-| Bloques traversal | `TraversalBlock` · `BreakOnDeath` · `SpikeWall` | **E2** | Probar combinaciones de features, glow por proximidad e impulsos jugando |
+| Bloques traversal | `TraversalBlock` · `BreakOnDeath` · `SpikeWall` | **E3** | Aprobado jugando; faltan últimos detalles de glow e impulsos |
 | Pickups de mundo | `TraversalBlock` · `ActionWorldSwitchModifier` | **E2** | Validar maldicion de accion y pickups combinados jugando |
 | HUD | `HUD` | **E1** | Es placeholder funcional (labels/barras); rediseño visual pendiente |
 | Cámara | `CameraRig` | **E2** | Iterar pitch/yaw/distance/damping jugando |
