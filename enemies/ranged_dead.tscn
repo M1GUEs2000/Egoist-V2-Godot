@@ -1,12 +1,13 @@
 [gd_scene format=3 uid="uid://ddiwctuct5igd"]
 
 [ext_resource type="PackedScene" uid="uid://cfhiggial63t4" path="res://enemies/grounded_enemy.tscn" id="1_base"]
-[ext_resource type="Script" uid="uid://bvodbb18ylrfg" path="res://enemies/ranged_dead.gd" id="2_ranged_dead"]
 [ext_resource type="Script" uid="uid://x7i4wts0xmt5" path="res://enemies/attacks/ranged_attack.gd" id="3_ranged_attack"]
 [ext_resource type="Script" uid="uid://w0b3i18w442a" path="res://data/stun_settings.gd" id="4_stun"]
+[ext_resource type="Script" path="res://enemies/attacks/attack_loadout.gd" id="5_loadout"]
 
 [sub_resource type="Resource" id="Resource_ranged_stun"]
 script = ExtResource("4_stun")
+poise_damage = 2.0
 grounded = 0.35
 
 [sub_resource type="StandardMaterial3D" id="Mat_staff"]
@@ -25,11 +26,9 @@ radius = 0.18
 height = 0.36
 
 [node name="RangedDead" unique_id=1701038744 instance=ExtResource("1_base")]
-script = ExtResource("2_ranged_dead")
 normal_color = Color(0.38, 0.16, 0.68, 1)
 
 [node name="MeleeAttack" parent="." index="13" unique_id=2066280899]
-visible = false
 
 [node name="Pivot" parent="MeleeAttack/Hand" parent_id_path=PackedInt32Array(1729610825) index="0"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -1)
@@ -61,3 +60,7 @@ mesh = SubResource("CylinderMesh_staff")
 [node name="Focus" type="MeshInstance3D" parent="RangedAttack" index="1" unique_id=456643582]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.5, 1.1328055, -1.1379817)
 mesh = SubResource("SphereMesh_focus")
+
+[node name="AttackLoadout" type="Node" parent="." index="15" unique_id=1284915007]
+script = ExtResource("5_loadout")
+enabled_kinds = 2

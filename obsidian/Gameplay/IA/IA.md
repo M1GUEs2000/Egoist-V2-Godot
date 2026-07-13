@@ -91,8 +91,8 @@ La intencion por nivel (`PASSIVE`, `REACTIVE`, `AGGRESSIVE`, `ULTRA_AGGRESSIVE`)
 - **Validar backend LimboAI en Godot**: import, carga de `BTPlayer`, tareas custom y equivalencia de comportamiento contra FSM en `test_scene`. *(2026-07-10)*
 - **Retirar fallback FSM** solo despues de validacion runtime jugando/headless. *(2026-07-10)*
 - **Validar LimboAI en Godot editor/headless** tras import: confirmar que `addons/limboai/bin/limboai.gdextension` carga sin errores en Windows y que no hay DLL temporal abierta antes de commitear. *(2026-07-09)*
-- **Target scoring por utility** (proximidad + compromiso) para arreglar el flip-flop de target de [[Ultra Agresivo]]. Ver `leaf_tasks.yaml#target_selection`. *(2026-07-08)*
-- **Stuck-check** en `GroundLocomotion` (no-negociable): sin esto los enemigos muelen contra muros del greybox. *(2026-07-08)*
+- ~~**Target scoring por utility**~~ → **implementado** (2026-07-13): `_acquire_target` usa score de proximidad + compromiso; el compromiso es la histeresis que mata el flip-flop de [[Ultra Agresivo]]. Pesos tuneables (`target_proximity_weight`, `target_commitment_weight`). *Pendiente de probar jugando.*
+- ~~**Stuck-check**~~ → **implementado** (2026-07-13): `GroundLocomotion` compara desplazamiento real vs esperado y dispara un rodeo lateral al trabarse. Antes el `navigation_stuck_timer` se escribia pero **nadie lo leia**. *Pendiente de probar jugando.*
 - Implementar (o borrar del enum si se descartan) `ATTACK_GROUP` (coord/director, H3+), `EVADE` (steer, H2), `DEFEND` (decide + receptor del telegraph, H2), `CALL_HELP` (coord ligera, H2). Ver [[Comportamientos]]. *(2026-07-08)*
 
 ## Pendiente diferido

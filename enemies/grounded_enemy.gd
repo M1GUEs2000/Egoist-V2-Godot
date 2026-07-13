@@ -48,6 +48,12 @@ const ALL_STATE_FLAGS := (
 @export_range(0.0, 1.0) var passive_flee_chance := 0.50
 @export_range(0.0, 1.0) var reactive_flee_chance := 0.25
 @export_range(0.0, 1.0) var aggressive_flee_chance := 0.05
+## Peso de la cercania en el score de target del ULTRA_AGGRESSIVE (el unico que retargetea).
+@export var target_proximity_weight := 1.0
+## Peso del compromiso: bonus que el target ACTUAL recibe solo por serlo. Es la histeresis, en
+## unidades de cercania — 0.25 significa que para robarle el foco hay que estar un 25% mas cerca.
+## En 0 vuelve el flip-flop: dos candidatos a distancia similar se turnan el target cada frame.
+@export var target_commitment_weight := 0.25
 
 var ai_state := AIState.IDLE
 var blackboard := EnemyAIBlackboard.new()
@@ -56,6 +62,7 @@ var _player: Player
 var _attacks: Array[Node] = []
 var _base_hostility := Hostility.AGGRESSIVE
 var _forced_target: Node3D
+var _current_target: Node3D
 var _can_chase_at := 0.0
 var _passive_provoked_until := -999.0
 var _low_health_checked := false
@@ -65,6 +72,8 @@ var _limbo_ready := false
 
 @onready var perception: Perception = get_node_or_null("Perception") as Perception
 @onready var locomotion: GroundLocomotion = get_node_or_null("GroundLocomotion") as GroundLocomotion
+## Opcional: sin el, el enemigo usa todos sus ataques (comportamiento historico).
+@onready var attack_loadout: AttackLoadout = get_node_or_null("AttackLoadout") as AttackLoadout
 @onready var _bt_player: Node = get_node_or_null("BTPlayer")
 
 func _ready() -> void:
@@ -251,12 +260,20 @@ func _update_fsm(delta: float, effective_hostility: int) -> void:
 	else:
 		_process_no_target(delta, effective_hostility)
 
+## Registra los ataques que la IA puede usar. `AttackLoadout` (si existe) filtra por familia: un
+## ataque no registrado nunca recibe `try_attack`, asi que su Hitbox jamas prende (queda inerte).
+## Ademas se le apaga la malla — un enemigo solo-ranged no pasea con una espada colgando.
 func _collect_attacks() -> void:
 	_attacks.clear()
 	for child in get_children():
 		if child.has_method("setup") and (child.has_method("try_attack") or child.has_method("try_parry")):
 			child.call("setup", self)
-		if child.has_method("try_attack"):
+		if not child.has_method("try_attack"):
+			continue
+		var equipped := attack_loadout == null or attack_loadout.allows(child)
+		if child is Node3D:
+			(child as Node3D).visible = equipped
+		if equipped:
 			_attacks.append(child)
 
 func _select_attack(distance: float, preferred_state := AIState.ATTACK_MELEE) -> Node:
@@ -294,19 +311,46 @@ func _acquire_target() -> Node3D:
 		return null
 	if hostility != Hostility.ULTRA_AGGRESSIVE:
 		return _player
-	var best: Node3D = _player
-	var best_sqr := INF
+	_current_target = _best_target_by_utility()
+	return _current_target
+
+## Target del ULTRA_AGGRESSIVE por score de utility: proximidad + compromiso (ver
+## ai_spec/leaf_tasks.yaml#target_selection). El termino de compromiso ES la histeresis — el
+## target actual arranca con ventaja, asi que solo lo desbanca alguien claramente mas cercano,
+## no un empate. Sin el, comparar distancias crudas cada tick hacia oscilar el target frame a
+## frame entre dos candidatos equidistantes. Es la semilla de la capa utility que ATTACK_GROUP
+## reusara; no crece a mas consideraciones hasta que haya un segundo caso real (regla de 2).
+func _best_target_by_utility() -> Node3D:
+	if not is_instance_valid(_current_target):
+		_current_target = null
+	var vision_range := perception.vision_range if perception != null else 12.0
+	var best: Node3D = null
+	var best_score := -INF
+	for candidate in _target_candidates():
+		var score := _target_score(candidate, vision_range)
+		if score > best_score:
+			best = candidate
+			best_score = score
+	return best
+
+## Todo lo que este berserker considera golpeable: el jugador y cualquier otro enemigo vivo del
+## mundo actual. Los muertos ya salieron del grupo "enemy" (EnemyBase._die), asi que no aparecen.
+func _target_candidates() -> Array[Node3D]:
+	var candidates: Array[Node3D] = []
 	if _player != null:
-		best_sqr = global_position.distance_squared_to(_player.global_position)
+		candidates.append(_player)
 	for node in get_tree().get_nodes_in_group("enemy"):
 		var enemy := node as EnemyBase
 		if enemy == null or enemy == self or not enemy.is_active_in_current_world():
 			continue
-		var sqr := global_position.distance_squared_to(enemy.global_position)
-		if sqr < best_sqr:
-			best = enemy
-			best_sqr = sqr
-	return best
+		candidates.append(enemy)
+	return candidates
+
+func _target_score(candidate: Node3D, vision_range: float) -> float:
+	var proximity := 1.0 - clampf(
+			_flat_distance_to(candidate.global_position) / maxf(0.01, vision_range), 0.0, 1.0)
+	var commitment := 1.0 if candidate == _current_target else 0.0
+	return target_proximity_weight * proximity + target_commitment_weight * commitment
 
 func _flat_distance_to(world_pos: Vector3) -> float:
 	var to := world_pos - global_position

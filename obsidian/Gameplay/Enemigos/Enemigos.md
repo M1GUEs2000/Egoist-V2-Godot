@@ -41,6 +41,7 @@ Los enemigos de Egoist no son solo unidades de combate. Son portadores de mascar
 
 - Todos los enemigos reales componen `Health`, `Hurtbox` y `WorldMembership`.
 - La vida del enemigo se configura en `Health.max_health`.
+- **Con que pega** se decide componiendo, no heredando: los ataques son nodos hijos y `AttackLoadout` elige que familias equipa (solo melee, solo ranged o hibrido). Ningun enemigo necesita un script propio para eso — ver [[Ataques Enemigos]].
 - Las armas golpean via `Hurtbox`; los verbos opcionales (`launch`, `slam`, `push`, `try_parry`) se llaman con duck typing.
 - Un enemigo tambien puede ser terreno de traversal: `PlayerEnemyBounce` permite rebotar manualmente desde su colision fisica. Es una decision de diseno, no un accidente de la fisica.
 - Un enemigo puede existir en un mundo, ambos mundos, seguir el mundo actual o alternar por tiempo.
@@ -56,6 +57,7 @@ Los enemigos de Egoist no son solo unidades de combate. Son portadores de mascar
 | Enemigo de suelo | `GroundedEnemy` | E2 |
 | Percepcion/locomocion | `Perception`, `GroundLocomotion` | E2 |
 | Ataques | `MeleeAttack`, `RangedAttack`, `Projectile` | E2 |
+| Loadout de ataques | `AttackLoadout` (melee / ranged / hibrido) | E2 |
 | Mundo | `WorldMembership`, `WorldSwitchTrigger` | E2 |
 | Roster H1 | Melee, ranged, armored | Diseno/prefab pendiente |
 

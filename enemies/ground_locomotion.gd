@@ -6,6 +6,13 @@ class_name GroundLocomotion extends Node
 @export var roam_speed := 1.5
 @export var roam_radius := 5.0
 @export var gravity := -25.0
+## Segundos moliendo contra geometria antes de dar por trabado al agente y disparar el rodeo.
+@export var stuck_time_threshold := 0.5
+## Fraccion de la velocidad esperada por debajo de la cual el frame cuenta como trabado. Trabado
+## no es "quieto": un cuerpo que resbala contra un muro en diagonal igual avanza un poco.
+@export_range(0.0, 1.0) var stuck_speed_fraction := 0.25
+## Segundos que dura el rodeo lateral una vez disparado el stuck-check.
+@export var stuck_sidestep_time := 0.6
 
 var is_busy := false
 
@@ -15,6 +22,9 @@ var _spawn_position := Vector3.ZERO
 var _roam_target := Vector3.ZERO
 var _roam_timer := 0.0
 var _last_position := Vector3.ZERO
+var _sidestep_until := -999.0
+var _sidestep_dir := Vector3.ZERO
+var _attempted_move := false  # este frame el agente EMPUJO hacia algun lado (no llego y freno)
 
 func setup(body: CharacterBody3D, suspended: Callable) -> void:
 	_body = body
@@ -111,6 +121,8 @@ func face_target(world_pos: Vector3) -> void:
 		_body.look_at(_body.global_position + to.normalized(), Vector3.UP)
 
 func _apply_move(dir: Vector3, speed: float, delta: float) -> void:
+	_attempted_move = true
+	dir = _detour_direction(dir)
 	face_target(_body.global_position + dir)
 	_body.velocity.x = dir.x * speed
 	_body.velocity.z = dir.z * speed
@@ -137,17 +149,50 @@ func _approach(value: float, target: float, amount: float) -> float:
 		return minf(value + amount, target)
 	return maxf(value - amount, target)
 
+## Stuck-check (no-negociable de H1, ver ai_spec/leaf_tasks.yaml#locomotion_contract): en linea
+## recta, sin navmesh, un agente que empuja un muro del greybox lo empuja para siempre. Se compara
+## lo que recorrio contra lo que ESPERABA recorrer; si se queda corto el tiempo suficiente, dispara
+## el rodeo. El dia que entre navmesh, esto pasa a ser un repath sin tocar la decision.
 func _update_stuck_timer(blackboard: EnemyAIBlackboard, delta: float) -> void:
 	if _body == null:
 		return
 	var moved := _body.global_position.distance_to(_last_position)
 	_last_position = _body.global_position
-	var moving_intent := blackboard.navigation_intent_kind in [
-		EnemyAIBlackboard.IntentKind.MOVE_TO,
-		EnemyAIBlackboard.IntentKind.SEARCH_AT,
-		EnemyAIBlackboard.IntentKind.FLEE_FROM,
-	]
-	if moving_intent and moved < 0.01:
+	var attempted := _attempted_move
+	_attempted_move = false
+	# Solo cuenta como trabado el que EMPUJA y no avanza. Mirar el intent no alcanza: los handlers
+	# frenan solos al llegar a destino (cada uno con su umbral), y un agente parado sobre su punto
+	# se leeria como trabado y haria un rodeo espurio. `_apply_move` es el unico movimiento real.
+	if not attempted:
+		blackboard.navigation_stuck_timer = 0.0
+		return
+	if moved < _intent_speed(blackboard) * delta * stuck_speed_fraction:
 		blackboard.navigation_stuck_timer += delta
 	else:
 		blackboard.navigation_stuck_timer = 0.0
+	if blackboard.navigation_stuck_timer >= stuck_time_threshold:
+		_begin_sidestep(blackboard)
+
+## Rodeo: elige un costado y lo mantiene `stuck_sidestep_time`. El costado se sortea una vez y se
+## sostiene — reelegirlo cada frame lo dejaria vibrando contra el muro en vez de bordearlo.
+func _begin_sidestep(blackboard: EnemyAIBlackboard) -> void:
+	blackboard.navigation_stuck_timer = 0.0
+	var forward := -_body.global_basis.z
+	forward.y = 0.0
+	if forward.length_squared() < 0.0001:
+		forward = Vector3.FORWARD
+	var side := Vector3.UP.cross(forward.normalized())
+	_sidestep_dir = side if randf() < 0.5 else -side
+	_sidestep_until = World.now() + stuck_sidestep_time
+
+## Mientras dura el rodeo, la direccion deseada se mezcla con la perpendicular: el agente bordea
+## el obstaculo sin dejar de progresar hacia su intent (una perpendicular pura lo haria orbitar).
+func _detour_direction(dir: Vector3) -> Vector3:
+	if World.now() >= _sidestep_until:
+		return dir
+	return (dir + _sidestep_dir).normalized()
+
+func _intent_speed(blackboard: EnemyAIBlackboard) -> float:
+	if blackboard.navigation_speed_profile == EnemyAIBlackboard.SpeedProfile.ROAM:
+		return roam_speed
+	return chase_speed

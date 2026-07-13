@@ -1,0 +1,55 @@
+[gd_scene format=3]
+
+[ext_resource type="PackedScene" uid="uid://cfhiggial63t4" path="res://enemies/grounded_enemy.tscn" id="1_base"]
+[ext_resource type="Script" uid="uid://x7i4wts0xmt5" path="res://enemies/attacks/ranged_attack.gd" id="2_ranged_attack"]
+[ext_resource type="Script" uid="uid://w0b3i18w442a" path="res://data/stun_settings.gd" id="3_stun"]
+[ext_resource type="Script" path="res://enemies/attacks/attack_loadout.gd" id="4_loadout"]
+[ext_resource type="Script" uid="uid://c5j5y0rw1hbxp" path="res://core/world_switch_trigger.gd" id="5_trigger"]
+
+[sub_resource type="Resource" id="Resource_ranged_stun"]
+script = ExtResource("3_stun")
+grounded = 0.35
+
+[sub_resource type="StandardMaterial3D" id="Mat_focus"]
+albedo_color = Color(0.2, 0.5, 0.55, 1)
+emission_enabled = true
+emission = Color(0.05, 0.35, 0.4, 1)
+
+[sub_resource type="SphereMesh" id="SphereMesh_focus"]
+material = SubResource("Mat_focus")
+radius = 0.14
+height = 0.28
+
+[node name="HybridEnemy" unique_id=1073219845 instance=ExtResource("1_base")]
+poise_max = 12.0
+
+[node name="Health" parent="." index="7" unique_id=1832183654]
+max_health = 25.0
+
+[node name="MeleeAttack" parent="." index="13" unique_id=2066280899]
+attack_range = 2.6
+
+[node name="RangedAttack" type="Node3D" parent="." index="14" unique_id=1930447712]
+script = ExtResource("2_ranged_attack")
+attack_range = 13.0
+attack_cooldown = 1.6
+windup = 0.55
+projectile_speed = 60.0
+homing_turn_rate = 90.0
+projectile_damage = 8.0
+projectile_lifetime = 2.5
+stun = SubResource("Resource_ranged_stun")
+player_stun_push_speed = 12.0
+player_stun_push_vertical_speed = 6.0
+
+[node name="Focus" type="MeshInstance3D" parent="RangedAttack" index="0" unique_id=1930447713]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.5, 1.15, -0.5)
+mesh = SubResource("SphereMesh_focus")
+
+[node name="AttackLoadout" type="Node" parent="." index="15" unique_id=1930447714]
+script = ExtResource("4_loadout")
+enabled_kinds = 3
+
+[node name="WorldSwitchTrigger" type="Node" parent="." index="16" unique_id=1930447715]
+script = ExtResource("5_trigger")
+when = 1

@@ -40,8 +40,10 @@ func _ready() -> void:
 	body.add_child(membership)
 	await get_tree().process_frame
 	assert(not membership.is_active)
-	assert(not body.visible)
+	# Fuera de mundo el cuerpo NO desaparece: queda visible como cascara (contorno encendido).
+	assert(body.visible)
 	membership._update_other_world_echo(0.1)
+	assert(membership.is_shell_active())
 	var echo_smoke := membership._other_world_echo
 	var echo_light := membership._other_world_echo_light
 	assert(echo_smoke != null and echo_smoke.visible and echo_smoke.emitting)
@@ -54,6 +56,8 @@ func _ready() -> void:
 	assert(membership.is_active)
 	assert(body.visible)
 	assert(not echo_smoke.visible and not echo_light.visible)
+	membership._update_other_world_echo(0.1)
+	assert(not membership.is_shell_active())  # de vuelta en su mundo recupera su material real
 
 	# Health: daño, muerte, señales
 	var health := Health.new()
@@ -439,14 +443,26 @@ func _ready() -> void:
 	stunned_enemy.queue_free()
 	airborne_enemy.queue_free()
 
-	# Ranged Dead: el prefab Dead conserva la IA comun y equipa solo RangedAttack.
-	var ranged_dead := (load("res://enemies/ranged_dead.tscn") as PackedScene).instantiate() as RangedDead
+	# Ranged Dead: el prefab Dead conserva la IA comun y equipa solo RangedAttack. Ya no lo logra
+	# una subclase propia sino su AttackLoadout — el mismo modulo que hace hibrido a cualquier otro.
+	var ranged_dead := (load("res://enemies/ranged_dead.tscn") as PackedScene).instantiate() as GroundedEnemy
 	add_child(ranged_dead)
 	await get_tree().process_frame
 	assert(ranged_dead.membership.affiliation == World.Kind.DEAD)
 	assert(ranged_dead._attacks.size() == 1)
 	assert(ranged_dead._attacks[0] is RangedAttack)
 	ranged_dead.queue_free()
+
+	# Hibrido: el mismo cuerpo con las DOS familias equipadas. La IA elige por distancia, y su
+	# WorldSwitchTrigger (hijo, ortogonal al loadout) voltea el mundo de todos al morir.
+	var hybrid := (load("res://enemies/hybrid_enemy.tscn") as PackedScene).instantiate() as GroundedEnemy
+	add_child(hybrid)
+	await get_tree().process_frame
+	assert(hybrid._attacks.size() == 2)
+	assert(hybrid.attack_loadout.allows(hybrid.get_node("MeleeAttack")))
+	assert(hybrid.attack_loadout.allows(hybrid.get_node("RangedAttack")))
+	assert(hybrid.is_world_switch())
+	hybrid.queue_free()
 
 	# FlyingEnemy: patrulla a izquierda/derecha y bate ambas alas en sentidos opuestos.
 	var flying_enemy := (load("res://enemies/flying_enemy.tscn") as PackedScene).instantiate() as FlyingEnemy

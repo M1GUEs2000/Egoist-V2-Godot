@@ -15,6 +15,8 @@
 [ext_resource type="PackedScene" path="res://enemies/flying_enemy.tscn" id="16_flying_enemy"]
 [ext_resource type="PackedScene" uid="uid://b6jcfprab47c1" path="res://enemies/world_switch_enemy.tscn" id="16_world_switch_enemy"]
 [ext_resource type="Script" uid="uid://da7tt4qincebu" path="res://visual/world_scan.gd" id="17_world_scan"]
+[ext_resource type="PackedScene" path="res://enemies/ultra_aggressive_enemy.tscn" id="18_ultra_aggressive"]
+[ext_resource type="PackedScene" path="res://enemies/hybrid_enemy.tscn" id="19_hybrid_enemy"]
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_floor"]
 size = Vector3(160, 1, 160)
@@ -438,7 +440,7 @@ transform = Transform3D(0.7112188, 0, -1.4902995, 0, 2.7046368, 0, 3.4735, 0, 0.
 [node name="WorldSwitchEnemy" parent="." unique_id=674481333 instance=ExtResource("16_world_switch_enemy")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6, 0.1, -4)
 ai_backend = 1
-stun_threshold = 2.0
+poise_max = 12.0
 
 [node name="GroundedEnemy" parent="." unique_id=295057239 instance=ExtResource("12_enemy")]
 transform = Transform3D(0.866025, 0, 0.5, 0, 1, 0, -0.5, 0, 0.866025, 43.880486, 0.1, 3.0812721)
@@ -485,14 +487,24 @@ transform = Transform3D(0.34202, 0, -0.939693, 0, 1, 0, 0.939693, 0, 0.34202, 22
 [node name="RangedDead" parent="." unique_id=677148263 instance=ExtResource("15_ranged_dead")]
 transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, -18, 0.1, 34)
 
+[node name="HybridEnemy" parent="." unique_id=1073219846 instance=ExtResource("19_hybrid_enemy")]
+transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, -30, 0.1, 20)
+
 [node name="FlyingEnemy" parent="." unique_id=279043693 instance=ExtResource("16_flying_enemy")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6, 7, -8)
 
-[node name="UltraAggressiveEnemy" parent="." unique_id=9954827 instance=ExtResource("12_enemy")]
+[node name="UltraAggressiveEnemy" parent="." unique_id=9954827 instance=ExtResource("18_ultra_aggressive")]
 transform = Transform3D(-1, 0, -8.74228e-08, 0, 1, 0, 8.74228e-08, 0, -1, 0, 0.1, 60)
-allowed_state_flags = 7647
-hostility = 3
-normal_color = Color(0.55, 0.1, 0.85, 1)
+
+[node name="UltraPreyA" parent="." unique_id=1470338205 instance=ExtResource("12_enemy")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5, 0.1, 66)
+hostility = 0
+normal_color = Color(0.25, 0.75, 0.35, 1)
+
+[node name="UltraPreyB" parent="." unique_id=1470338206 instance=ExtResource("12_enemy")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5, 0.1, 66)
+hostility = 0
+normal_color = Color(0.25, 0.75, 0.35, 1)
 
 [node name="CameraRig" type="Node3D" parent="." unique_id=845519878]
 script = ExtResource("3_camrig")

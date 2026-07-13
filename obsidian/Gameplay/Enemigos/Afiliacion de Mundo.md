@@ -22,9 +22,30 @@ La afiliacion de mundo define donde existe y actua un enemigo.
 | `TIMED` | Alterna su afiliacion cada `shift_interval`. |
 | `FOLLOWS` | Sigue el mundo actual del jugador, con posible delay de persecucion. |
 
-## Eco del otro mundo
+## Eco del otro mundo — presencia en dos capas
 
-Todo dueño de `WorldMembership` (enemigo, plataforma, bloque o estructura) deja una lectura abstracta cuando esta inactivo por pertenecer al otro mundo: humo sobre su contorno y una luz tenue con el color de su afiliacion. La emision crece con el movimiento, pero no revela su mesh ni una silueta exacta. El eco vive como hermano de la estructura en la escena para seguir visible aunque `hide_when_inactive` oculte el objeto real. `BOTH` y `FOLLOWS` no lo muestran porque nunca estan fuera del mundo actual.
+Todo dueño de `WorldMembership` (enemigo, plataforma, bloque o estructura) lo hereda gratis. Lo que esta en el mundo opuesto **ya no desaparece**: deja de ser solido y pasa a leerse en **dos capas**. *(reescrito 2026-07-13)*
+
+### Capa CONSTANTE — "aca hay algo, y va para alla"
+
+- **Humo** alrededor del contorno + luz tenue, con el color de su afiliacion (naranja vivo, morado muerto). Su brillo crece con la velocidad. Sigue siendo continuo, como siempre.
+- **Afterimages**: copias del mesh que quedan clavadas donde paso el cuerpo y se apagan solas. Solo aparecen por encima de `afterimage_min_speed` — un fantasma quieto no arrastra nada.
+
+### Capa POR PULSOS — el latido
+
+El cuerpo fuera de mundo se muestra como **cascara**: interior vacio, **contorno encendido** (fresnel, `visual/other_world_shell.gdshader`). Ese borde **late**, y el latido es el **reloj de toda la presencia**: cuando el borde late, el humo tambien sube un poco de brillo (`other_world_smoke_pulse_boost`). No son dos efectos sueltos corriendo en paralelo — el pulso manda y el humo lo acompaña.
+
+> [!important] El cuerpo ya NO se esconde
+> `hide_when_inactive` **dejo de apagar `visible`**; ahora solo apaga la colision. La lectura visual la resuelve la cascara. Es lo que permite que un bloque/plataforma del otro mundo tenga un borde donde brillar — antes desaparecia entero y solo quedaba el humo flotando. Si se apaga `other_world_echo_enabled` no hay cascara, y ahi si el objeto vuelve a esconderse (un cuerpo solido del otro mundo se confundiria con algo golpeable).
+
+> [!warning] Decision: las afterimages SI son siluetas exactas
+> La regla vieja del eco era "nunca revelar el mesh ni una silueta exacta". Las afterimages la rompen **a proposito** (decision de 2026-07-13): son copias del mesh, porque la estela *es* el dato — se quiere leer que forma tiene y por donde paso. La cascara, en cambio, sigue respetando el espiritu: da contorno, no volumen solido.
+
+La cascara y el humo se aplican via `material_override`, que **pisa el material real sin destruirlo**: al volver a este mundo se pone en `null` y el objeto recupera su look intacto (incluido el color que `EnemyBase` pinta en `surface_override_material`, que ocupa otro slot). El humo y las afterimages viven como **hermanos** en la escena, no como hijos — el humo para no depender de la visibilidad del dueño, y las afterimages porque tienen que quedarse quietas donde nacieron (si colgaran del dueño lo seguirian y no habria estela).
+
+`BOTH` y `FOLLOWS` no muestran nada de esto: nunca estan fuera del mundo actual.
+
+Tuneables (exports de `WorldMembership`): humo (`other_world_echo_*`), latido del borde (`other_world_rim_min_energy`/`max_energy`, `other_world_pulse_speed`, `other_world_rim_sharpness`, `other_world_fill_energy`), contagio al humo (`other_world_smoke_pulse_boost`) y estela (`afterimages_enabled`, `afterimage_interval`, `afterimage_lifetime`, `afterimage_min_speed`, `afterimage_rim_energy`). *(pendiente de tunear jugando)*
 
 ## Trigger global
 
@@ -32,7 +53,7 @@ Todo dueño de `WorldMembership` (enemigo, plataforma, bloque o estructura) deja
 
 ## Enemigo de world switch
 
-`world_switch_enemy.tscn` (hereda `grounded_enemy.tscn`, con un `WorldSwitchTrigger` hijo en `ON_DEATH`): matarlo voltea el mundo de todos. Es la fuente de world switch que se gana peleando, ver [[World Switch]]. Aguanta mas que el enemigo comun (`Health.max_health = 25`) y cuesta mas de stunear (`stun_threshold = 2.0`): el cambio de mundo se paga.
+`world_switch_enemy.tscn` (hereda `grounded_enemy.tscn`, con un `WorldSwitchTrigger` hijo en `ON_DEATH`): matarlo voltea el mundo de todos. Es la fuente de world switch que se gana peleando, ver [[World Switch]]. Aguanta mas que el enemigo comun (`Health.max_health = 25`) y cuesta mas de stunear (`poise_max = 12.0`, el doble de reserva): el cambio de mundo se paga.
 
 Se lee distinto del resto sin necesidad de HUD:
 

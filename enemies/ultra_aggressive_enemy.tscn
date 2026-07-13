@@ -1,0 +1,41 @@
+[gd_scene format=3]
+
+[ext_resource type="PackedScene" uid="uid://cfhiggial63t4" path="res://enemies/grounded_enemy.tscn" id="1_base"]
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_horn"]
+top_radius = 0.0
+bottom_radius = 0.09
+height = 0.5
+radial_segments = 6
+rings = 1
+
+[node name="UltraAggressiveEnemy" unique_id=1990427731 instance=ExtResource("1_base")]
+hostility = 3
+allowed_state_flags = 7647
+poise_max = 9.0
+normal_color = Color(0.42, 0.03, 0.06, 1)
+
+[node name="Visual" parent="." index="1" unique_id=1306028843]
+
+[node name="HornL" type="MeshInstance3D" parent="Visual" index="1" unique_id=1157340882]
+transform = Transform3D(0.9397, 0.342, 0, -0.342, 0.9397, 0, 0, 0, 1, -0.28, 1.5, 0)
+mesh = SubResource("CylinderMesh_horn")
+
+[node name="HornR" type="MeshInstance3D" parent="Visual" index="2" unique_id=1157340883]
+transform = Transform3D(0.9397, -0.342, 0, 0.342, 0.9397, 0, 0, 0, 1, 0.28, 1.5, 0)
+mesh = SubResource("CylinderMesh_horn")
+
+[node name="Health" parent="." index="7" unique_id=1832183654]
+max_health = 140.0
+
+[node name="Perception" parent="." index="10" unique_id=380815442]
+vision_range = 16.0
+vision_half_angle = 100.0
+
+[node name="GroundLocomotion" parent="." index="11" unique_id=1424312942]
+chase_speed = 4.2
+roam_speed = 2.0
+
+[node name="MeleeAttack" parent="." index="13" unique_id=2066280899]
+attack_damage = 14.0
+attack_cooldown = 0.6
