@@ -19,7 +19,7 @@ Etapas (casilla → estado del ciclo E0-E4): `[ ]` Por implementar (E0) · `[/]`
 - [ ] Decidir el knockback de golpes normales — [[Combate]]
 - [ ] Implementar el columpio de cadenas (PlayerSwing, batch 6) — [[Cadenas]]
 - [ ] Implementar Visual de mundos (WorldVisual: 2 Environments + lerp) — [[Colores de mundo]]
-- [ ] Diseñar e implementar el scanner de cambio de mundo — [[World Switch]]
+- [t] Scan de cambio de mundo: tunear world_scan_tuning (velocidad, radio, brillo/trama, luz) y validar que la revelacion barrida no rompa el feel del switch — [[World Switch]]
 - [ ] Crear prefabs/escenas: player, melee, ranged, armored, bloques y pickups — [[Enemigos]] [[Arquitectura Godot]]
 - [ ] Greybox del primer tramo de Playa — [[Playa]]
 - [ ] Playtest externo con 2-3 personas — [[Playa]]

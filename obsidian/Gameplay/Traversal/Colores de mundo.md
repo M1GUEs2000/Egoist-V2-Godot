@@ -73,6 +73,7 @@ World.world_emission(kind) -> Color   # glow
 |---|---|---|
 | `TraversalBlock` | Neutro / destino | `World` + `TraversalBlockTuning` |
 | `SpikeWall` | Ambos (`world`) | `World.world_color()` |
+| `WorldScan` (onda del switch) | Destino | `World.world_emission()` (ver [[World Switch]]) |
 
 ## WorldEnvironment con glow
 

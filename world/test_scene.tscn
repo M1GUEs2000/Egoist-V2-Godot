@@ -1,6 +1,7 @@
 [gd_scene format=3 uid="uid://crrg4ksomcwea"]
 
 [ext_resource type="Script" uid="uid://7jtuoxscym8d" path="res://world/test_scene.gd" id="1_scene"]
+[ext_resource type="Script" path="res://visual/world_scan.gd" id="17_world_scan"]
 [ext_resource type="PackedScene" uid="uid://bf1ikbdvqburt" path="res://player/player.tscn" id="2_player"]
 [ext_resource type="Script" uid="uid://bm6520nqu8q3f" path="res://visual/camera_rig.gd" id="3_camrig"]
 [ext_resource type="Script" uid="uid://cr2mf5ypgksws" path="res://core/world_membership.gd" id="4_membership"]
@@ -404,7 +405,7 @@ ai_backend = 1
 stun_threshold = 2.0
 
 [node name="GroundedEnemy" parent="." unique_id=295057239 instance=ExtResource("12_enemy")]
-transform = Transform3D(0.866025, 0, 0.5, 0, 1, 0, -0.5, 0, 0.866025, 8.785327, 0.1, -0.57565784)
+transform = Transform3D(0.866025, 0, 0.5, 0, 1, 0, -0.5, 0, 0.866025, 43.880486, 0.1, 3.0812721)
 armored = true
 
 [node name="PassiveEnemyA" parent="." unique_id=1104888586 instance=ExtResource("12_enemy")]
@@ -424,6 +425,8 @@ normal_color = Color(0.25, 0.75, 0.35, 1)
 
 [node name="PassiveEnemyD" parent="." unique_id=864359544 instance=ExtResource("12_enemy")]
 transform = Transform3D(0.5, 0, 0.866025, 0, 1, 0, -0.866025, 0, 0.5, 0, 0.1, 9)
+ai_backend = 1
+allowed_state_flags = 32766
 hostility = 0
 normal_color = Color(0.25, 0.75, 0.35, 1)
 
@@ -474,3 +477,6 @@ shadow_enabled = true
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=1572025474]
 environment = SubResource("Env_world")
+
+[node name="WorldScan" type="Node3D" parent="."]
+script = ExtResource("17_world_scan")

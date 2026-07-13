@@ -33,11 +33,11 @@ Godot V2 es la version activa. Unity V1 solo se usa como referencia de comportam
 autoload/   WorldManager, GameManager, ComboTracker
 core/       World, WorldMembership, WorldSwitchTrigger, ActionWorldSwitchModifier
 combat/     Health, Hurtbox, Hitbox, InputBuffer, weapons/
-data/       PlayerTuning, SwordTuning, MaceTuning, WeaponTuning, StunSettings, PushSettings, GameTuning, TraversalBlockTuning
+data/       PlayerTuning, SwordTuning, MaceTuning, WeaponTuning, StunSettings, PushSettings, GameTuning, TraversalBlockTuning, WorldScanTuning
 player/     Player glue + Locomotion, Dash, Launcher, Meter, Combat, LockOn, Swing, WallSlide, EnemyBounce, AirKillReset, Stun
 enemies/    EnemyBase, GroundedEnemy, Perception, GroundLocomotion, attacks/
 ui/         HUD, ActionLoadoutMenu
-visual/     CameraRig, CameraOcclusionFade, WorldVisual, LandingIndicator
+visual/     CameraRig, CameraOcclusionFade, WorldVisual, LandingIndicator, WorldScan (+ world_scan.gdshader)
 world/      test_scene, smoke_test (transversal), combat_smoke_test, wall_slide_probe, blocks, pickups
 obsidian/   esta boveda
 ```

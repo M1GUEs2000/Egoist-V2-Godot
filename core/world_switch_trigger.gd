@@ -21,7 +21,16 @@ func _ready() -> void:
 	else:
 		var health := World.find_sibling(self, Health) as Health
 		if health != null:
-			health.died.connect(WorldManager.switch_world)
+			health.died.connect(_on_death)
 
 func _on_hit(_from: Node, _damage: float) -> void:
-	WorldManager.switch_world()
+	WorldManager.switch_world(_origin())
+
+func _on_death() -> void:
+	WorldManager.switch_world(_origin())
+
+## De dónde sale la onda del scan: de este objeto (el bloque golpeado, el enemigo que murió). Si el
+## dueño no es un Node3D, sin origen: WorldManager cae al jugador.
+func _origin() -> Vector3:
+	var owner_3d := get_parent() as Node3D
+	return owner_3d.global_position if owner_3d != null else WorldManager.NO_ORIGIN

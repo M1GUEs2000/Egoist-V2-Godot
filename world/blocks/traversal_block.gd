@@ -75,7 +75,7 @@ func _configure_health() -> void:
 
 func _on_hit(from: Node, _damage: float) -> void:
 	if enable_world_switch:
-		WorldManager.switch_world()
+		WorldManager.switch_world(global_position)  # la onda del scan nace en el bloque golpeado
 	var player := _resolve_player(from)
 	if player == null:
 		return

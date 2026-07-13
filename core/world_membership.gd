@@ -48,7 +48,25 @@ func _process(delta: float) -> void:
 	affiliation = World.Kind.DEAD if affiliation == World.Kind.LIVING else World.Kind.LIVING
 	_on_world_changed(WorldManager.current)
 
+## No se voltea en el frame del switch: espera a que la onda del scan lo alcance (delay =
+## distancia al origen / velocidad, ver WorldManager). Por eso el mundo destino "aparece" barrido
+## por el frente en vez de todo junto. Sin onda el delay es 0 y esto es sincrónico, como antes.
 func _on_world_changed(world: World.Kind) -> void:
+	var delay := 0.0
+	if _target != null:
+		delay = WorldManager.scan_delay_for(_target.global_position)
+	if delay <= 0.0:
+		_apply_world(world)
+		return
+	var token := WorldManager.switch_count
+	await get_tree().create_timer(delay).timeout
+	# Mientras la onda venía en camino el mundo volvió a cambiar: esta onda quedó vieja y la
+	# nueva ya trae su propio turno para este objeto.
+	if WorldManager.switch_count != token or not is_instance_valid(_target):
+		return
+	_apply_world(world)
+
+func _apply_world(world: World.Kind) -> void:
 	if mode == Mode.FOLLOWS:
 		affiliation = world
 	is_active = mode == Mode.BOTH or world == affiliation
