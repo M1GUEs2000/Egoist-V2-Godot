@@ -34,6 +34,7 @@ Combate del jugador: slots X/Y, espada, hitboxes, parry, meter, combo aereo e in
 - Las armas son procedurales hasta H3: no dependen de animaciones de combate.
 - El golpe nace de mover la **mano** alrededor del jugador, no de girar la hoja sobre un punto fijo (ver seccion Mano orbital). *(2026-07-09)*
 - El stun es universal: la fuente define potencia/duracion/tipo (`StunSettings`), pero el receptor decide si entra con su threshold (ver seccion Stun universal). *(2026-07-07)*
+- El dodge tiene i-frames: mientras dura la ventana (`PlayerTuning.dodge_iframe_duration`) el player no puede ser stuneado (gate en `Player.try_apply_stun`, ver [[Stun]] > I-frames del dodge). No aplica al `force_dash` ofensivo. El esquive enemigo (`EVADE`) todavia no existe (planeado H2). *(2026-07-13, pendiente de tunear jugando)*
 - Cada golpe de un combo, en tierra o en aire, avanza al jugador hacia el enemigo lockeado (o hacia su frente) con `Player.attack_step`. Distancia en `PlayerTuning.attack_step_distance`. *(2026-07-09)*
 - El golpe aereo flota solo si conecta; si falla, cae mas fuerte.
 - Un move puede pedir un **hang propio** con `Player.hover(duration)`: frena la caida en seco y sostiene al jugador un tiempo exacto, sin depender del contador de combo ni de `air_stall_scale`, y sin gastarle el doble salto. Es distinto del air-hit-stall generico, que ralentiza segun cuantos golpes lleve encadenados. Capacidad generica disponible; hoy ningun move la usa (el Y aereo del [[Mazo]] rebota al jugador en vez de sostenerlo). *(2026-07-10)*

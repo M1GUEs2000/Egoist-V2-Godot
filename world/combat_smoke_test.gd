@@ -62,6 +62,23 @@ func _ready() -> void:
 	assert(is_equal_approx(player.bump_velocity.length(), melee.player_stun_push_speed))
 	player.stun.cancel()
 
+	# I-frames del dodge: mientras dura la ventana ni el stun conecta (try_apply_stun, no
+	# Hurtbox.can_receive_hit: el melee/ranged enemigo llama receive_stun directo). Pasada
+	# la ventana, el mismo golpe stunea normal.
+	player.tuning.dodge_iframe_duration = 0.05
+	player.dash.dodge()
+	assert(player.dash.is_invulnerable())
+	blade.begin_swing()
+	blade._on_area_entered(player.get_node("Hurtbox") as Hurtbox)
+	assert(not player.is_stunned())
+	await get_tree().create_timer(0.08).timeout
+	assert(not player.dash.is_invulnerable())
+	blade.begin_swing()
+	blade._on_area_entered(player.get_node("Hurtbox") as Hurtbox)
+	assert(player.is_stunned())
+	player.stun.cancel()
+	player.dash.cancel()
+
 	var ranged_enemy := (load("res://enemies/ranged_dead.tscn") as PackedScene).instantiate() as GroundedEnemy
 	add_child(ranged_enemy)
 	await get_tree().physics_frame

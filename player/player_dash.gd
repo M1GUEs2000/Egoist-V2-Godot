@@ -19,6 +19,7 @@ var _dash_dir := Vector3.ZERO
 var _timer := 0.0
 var _active_distance := 0.01
 var _active_duration := 0.01
+var _iframe_timer := 0.0
 
 @onready var _hitbox: Hitbox = $DashHitbox
 @onready var _hitbox_shape: CollisionShape3D = $DashHitbox/CollisionShape3D
@@ -88,6 +89,9 @@ func dodge() -> void:
 	# Dodge: choca con enemigos y objetos (pass_through_enemies = false).
 	_start_dash(_dash_dir, _body.tuning.dash_distance, _body.tuning.dash_duration, true, false,
 			had_bar and _body.tuning.dash_deals_damage, false)
+	# Clampeado a _active_duration: el timer de tick() solo corre mientras is_dashing, así que
+	# un i-frame más largo que el dash nunca se apagaría solo.
+	_iframe_timer = minf(_body.tuning.dodge_iframe_duration, _active_duration)
 
 ## Dash dirigido por otra mecánica (dash cargado de la espada, paso del Mazo, bloque verde).
 ## Por defecto SOLO movimiento; con `deals_damage` prende el DashHitbox propio del player y
@@ -101,8 +105,13 @@ func force_dash(dir: Vector3, distance: float, duration: float, boost_bump_momen
 	# Dash ofensivo: atraviesa enemigos, choca con objetos (pass_through_enemies = true).
 	_start_dash(dir.normalized(), distance, duration, boost_bump_momentum, true, deals_damage, true)
 
+## I-frames del dodge de esquiva. force_dash (dash ofensivo) nunca los pide.
+func is_invulnerable() -> bool:
+	return _iframe_timer > 0.0
+
 func tick(delta: float) -> void:
 	_timer -= delta
+	_iframe_timer -= delta
 	var speed := _active_distance / _active_duration
 	# El hitbox acompaña el dash: offset vertical + adelante en la dirección del dash (local).
 	_hitbox.position = Vector3.UP * _body.tuning.dash_hit_vertical_offset \
@@ -134,6 +143,7 @@ func _start_dash(dir: Vector3, distance: float, duration: float, boost_bump_mome
 
 func _end_dash() -> void:
 	is_dashing = false
+	_iframe_timer = 0.0
 	_hitbox.end_swing()
 	_body.collision_mask |= World.LAYER_ENEMY
 	_set_particles(false)

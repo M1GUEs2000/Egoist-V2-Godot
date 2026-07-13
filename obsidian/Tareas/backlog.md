@@ -38,7 +38,7 @@ Etapas (casilla → estado del ciclo E0-E4): `[ ]` Por implementar (E0) · `[/]`
 - [t] Occlusion fade de camara: tunear feel/valores — [[Occlusion Fade de Camara]]
 - [t] Tunear el bloom del glow (WorldEnvironment) jugando — [[Combate]]
 - [t] Verificacion headless del batch (--import, --quit-after 2, smoke = SMOKE OK) — [[Arquitectura Godot]]
-- [ ] Contrato de esquive e i-frames: auditar si el dodge del player ya tiene i-frames y extender un esquive enemigo con la misma regla/base si aplica — [[Combate]] [[IA]] [[Stun]]
+- [t] I-frames del dodge del player: implementados (dodge_iframe_duration, gate en Player.try_apply_stun + Hurtbox.can_receive_hit vía dash.is_invulnerable). Falta tunear el valor jugando; el esquive enemigo no existe todavia (EVADE, planeado H2) asi que no hay nada que extender por ahora — [[Combate]] [[Stun]]
 - [x] Entender y documentar el stun threshold efectivo: el umbral instantaneo (`power >= threshold`) se reemplazo por el medidor de poise — [[Stun]] [[Combate]]
 - [/] Poise (stagger): correr headless + smoke del medidor nuevo — [[Stun]] [[Combate]]
 - [t] Poise: tunear reservas por enemigo, poise por arma/ataque, drenaje, escalera de degradacion y el fogonazo blanco del golpe absorbido — [[Stun]] [[Combate]] [[Espada]] [[Mazo]]

@@ -116,6 +116,22 @@ la reserva** del player, este entra en `PUSH`: se aleja del atacante, pierde el 
 amarillo. Si no la quiebra, come el daño, tira el fogonazo blanco y sigue jugando. El impulso se
 configura por ataque con `player_stun_push_speed` y `player_stun_push_vertical_speed`. *(2026-07-13)*
 
+## I-frames del dodge
+
+> [!important] El gate vive en `try_apply_stun`, no en el Hurtbox
+> El daño (HP) del player pasa por `Hurtbox.can_receive_hit()` — ahí `Player.can_receive_hit()`
+> bloquea via duck-typing. Pero el stun de melee/ranged enemigo **no pasa por el Hurtbox**:
+> `MeleeAttack._on_blade_landed` y `Projectile._on_body_entered` llaman directo a
+> `player.receive_stun()` / `try_apply_stun()`. Por eso los i-frames se cortan ahí, el embudo
+> real de TODO stun del player (tambien lo usa `SpikeWall`). Cortar solo en `can_receive_hit`
+> hubiera bloqueado el daño pero dejado pasar el stun. *(2026-07-13)*
+
+Durante el dodge (`PlayerDash.dodge()`, nunca en `force_dash`), `PlayerDash._iframe_timer` corre
+en paralelo al timer del dash y expone `is_invulnerable()`. Clampeado a la duracion del dash
+(el timer solo tickea mientras `is_dashing`). `Player.try_apply_stun` devuelve `false` de entrada
+si `dash.is_invulnerable()`, sin tocar poise. Tuning: `PlayerTuning.dodge_iframe_duration`
+(grupo Dodge, default 0.1s) — **pendiente de tunear jugando**.
+
 ## Lenguaje de color del impacto
 
 Tres colores, tres cosas distintas. Se leen sin HUD:

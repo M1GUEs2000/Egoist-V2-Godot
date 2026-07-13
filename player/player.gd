@@ -72,6 +72,10 @@ func is_stunned() -> bool:
 func is_armored() -> bool:
 	return false
 
+## Duck typing que consulta Hurtbox.can_receive_hit(): i-frames del dodge de esquiva.
+func can_receive_hit() -> bool:
+	return not dash.is_invulnerable()
+
 func forward() -> Vector3:
 	return -global_basis.z
 
@@ -206,9 +210,14 @@ func receive_stun(stun_settings: StunSettings, mode := PlayerStun.Mode.STILL,
 
 ## Gate del stun: el golpe come poise y solo stunea si quiebra la reserva. Ya stuneado no hay
 ## poise que romper (está quebrado): el golpe entra directo y extiende.
+## Único embudo de stun del player (melee/ranged enemigo y spike_wall llaman esto o receive_stun,
+## que redirige aquí) — por eso los i-frames del dodge se cortan ACÁ, no en Hurtbox.can_receive_hit:
+## el stun de los ataques enemigos llega directo por este método, sin pasar por el Hurtbox.
 func try_apply_stun(duration: float, poise_damage: float, mode := PlayerStun.Mode.STILL,
 		push_direction := Vector3.ZERO, horizontal_speed := 0.0, vertical_speed := 0.0,
 		feedback_color := Color.TRANSPARENT) -> bool:
+	if dash.is_invulnerable():
+		return false
 	if not is_stunned() and not poise.take_poise_damage(poise_damage, is_armored()):
 		_play_poise_chip_flash()  # aguanté: fogonazo blanco, sin stun
 		return false

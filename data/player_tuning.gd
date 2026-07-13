@@ -122,6 +122,9 @@ class_name PlayerTuning extends Resource
 ## Si el golpe en curso ya pasó esta fracción (0-1), el dodge NO lo corta: se buferea
 ## y sale apenas termina. Antes del umbral, cancela el ataque y dashea ya.
 @export_range(0.0, 1.0) var dodge_cancel_attack_threshold := 0.5
+## Ventana de invulnerabilidad al empezar el dodge (i-frames), en segundos. Independiente
+## de dash_duration: 0 = sin i-frames. No aplica a force_dash (dash ofensivo).
+@export var dodge_iframe_duration := 0.1
 
 @export_group("Dash")
 ## Distancia recorrida por el dash/dodge, en metros.
@@ -180,10 +183,12 @@ class_name PlayerTuning extends Resource
 @export var input_hold_threshold := 0.18
 
 @export_group("Lock-on")
-## Rango máximo para adquirir target (ex LockOnTargeting.maxRange).
+## Rango máximo 3D para adquirir target (ex LockOnTargeting.maxRange).
 @export var lock_max_range := 12.0
-## Tolerancia respecto a la mira, en grados (ex LockOnTargeting.lockHalfAngle).
+## Tolerancia respecto a la mira, en grados, medida en el plano horizontal (ex LockOnTargeting.lockHalfAngle).
 @export var lock_half_angle := 45.0
+## Tolerancia vertical del lock-on por encima/debajo del plano horizontal, en grados (enemigos aereos/GroundLocomotion en distinto nivel).
+@export var lock_vertical_half_angle := 35.0
 ## Si es true, el reticle solo se muestra con armas afuera (el auto-aim del golpe
 ## y el snap de movimiento funcionan igual, tengan armas afuera o no).
 @export var lock_require_weapons_out := true
