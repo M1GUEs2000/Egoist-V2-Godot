@@ -48,6 +48,23 @@ Ya no son huecos "a ciegas": cada uno tiene su capa y diseno destino en `enemies
 
 Mientras no se implementen, dejarlos fuera de `allowed_state_flags` en las escenas no cambia nada — nunca se llegan a producir de todas formas.
 
+## EVADE — diseño acordado (pendiente de implementar)
+
+Plan cerrado en sesion, **se implementa despues** (H2). Cinco principios de IA de esquive humana, mapeados a los sistemas que ya existen. *(2026-07-13)*
+
+1. **Leer el mundo fisico, no el control.** El sensor NO es un raycast a la hoja: la mano orbita al player y a mitad de swing la hoja esta a un costado del enemigo — su posicion no representa el ataque (misma regla que la direccion del golpe, ver [[Stun]]). El estimulo fisico es `PlayerCombat.attack_telegraphed(origin, direction)` (ya existe, emitido al press, **sin receptor**), filtrado por `Perception` (cono + LOS, ya existe): **solo se esquiva lo que se percibe** — por la espalda o fuera del cono no hay evade. Con `origin`/`direction` se chequea ademas que el enemigo este en rango y en la trayectoria real del golpe.
+2. **Retraso humano simulado.** El telegraph escribe `blackboard.combat_incoming_attack_until`; el evade se ejecuta recien pasado `evade_reaction_time` (~0.2 s). Los swings procedurales tardan en llegar, asi que la ventana es real sin tocar el feel del player.
+3. **Cooldown estricto.** `evade_cooldown` (3–5 s) bloquea el comportamiento tras un esquive. La **estamina invisible queda diferida** (regla de 2): si jugando el cooldown no alcanza, se agrega.
+4. **Dado invisible.** `evade_chance` (~0.3), un roll por telegraph recibido. Es ademas el knob por-enemigo: 0.0 = nunca esquiva (off natural del pasivo), mas alto para enemigos agiles futuros.
+5. **Ventanas de estado.** Solo puede rolear si: no esta atacando (`combat_attacking`), no esta stuneado/ragdoll, no esta en FLEE/HIDE y `EVADE` esta en sus `allowed_state_flags`. En recovery de su propio ataque tiene prohibido esquivar — ataca en la ventana correcta y el golpe entra.
+
+Tuberia: receptor del telegraph en `GroundedEnemy` → gates (percepcion, rango/trayectoria, estado, cooldown, dado) → `combat_incoming_attack_until` + evade agendado → pasado el delay, `AIState.EVADE` emite un intent `STRAFE` nuevo en `EnemyAIBlackboard` → `GroundLocomotion.strafe()` perpendicular al atacante durante `evade_duration`.
+
+- Exports por escena (excepcion de enemigos): `evade_chance`, `evade_reaction_time`, `evade_cooldown`, `evade_speed`, `evade_duration`, `evade_range`.
+- **Sin i-frames para el enemigo** en el primer pase: su esquive es moverse fuera de la trayectoria, no invulnerabilidad. Si jugando la hoja lo alcanza igual y se siente injusto, el gate `EnemyBase.can_receive_hit` ya quedo facil de extender (mismo patron que los i-frames del dodge del player, ver [[Stun]]).
+- Gatillo **solo reactivo** al telegraph por ahora; el reposicionamiento proactivo (en rango + cooldown propio) es otra feature y se evalua despues.
+- Al implementarse nace en **E1** y el receptor del telegraph deja servida la condicion `IncomingAttack` que `DEFEND` tambien consume.
+
 ## Relacionado
 
 - [[IA]]

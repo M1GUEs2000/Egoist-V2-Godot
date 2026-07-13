@@ -167,7 +167,11 @@ states:
     diseno: >
       NO es peer de CHASE a nivel decision: es un MODO DE MOVIMIENTO (capa steer).
       Un steering behavior de strafe + una condicion que lo selecciona. El mas barato
-      de los 4. H2.
+      de los 4. H2. Diseno detallado cerrado (2026-07-13) en
+      obsidian/Gameplay/IA/Comportamientos.md > "EVADE - diseno acordado": gatillo
+      reactivo al telegraph filtrado por Perception (no raycast a la hoja: orbita),
+      delay de reaccion ~0.2s, cooldown 3-5s, evade_chance por enemigo, ventanas de
+      estado (no atacando/stun/flee). Sin i-frames enemigos en el primer pase.
 
   DEFEND:
     implemented: false
