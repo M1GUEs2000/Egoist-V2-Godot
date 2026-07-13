@@ -246,6 +246,7 @@ func tick_base(delta: float) -> bool:
 	if _dead:
 		return false
 	if _ragdolling:
+		_update_combat_state()
 		_set_run_dust(false)
 		_update_ragdoll()
 		return false
@@ -278,13 +279,17 @@ func take_hit_from_enemy(hits: float = 1.0, hit_direction: Vector3 = Vector3.ZER
 	return died
 
 func apply_stun(duration: float, feedback_color := Color.TRANSPARENT) -> void:
-	# Mientras el ragdoll manda (ya toco el piso), el golpe no re-stunea: la fisica es la dueña
-	# del cuerpo hasta que se para. El daño igual entra por Hurtbox.receive_hit → Health.
-	if duration <= 0.0 or _dead or _ragdolling:
+	# El ragdoll conserva la representacion fisica, pero el stun sigue siendo la autoridad de
+	# combate: un impacto al cuerpo caido lo puede congelar y extender su recuperacion.
+	if duration <= 0.0 or _dead:
 		return
 	_stun_feedback_color = feedback_color if feedback_color.a > 0.0 else Color(1.0, 0.9, 0.15, 1.0)
 	combat_state = CombatState.STUNNED
 	_stunned_until = maxf(_stunned_until, World.now() + duration)
+	if _ragdolling:
+		_freeze_ragdoll_for_stun()
+		_refresh_visual_state()
+		return
 	# El golpe cancela el push (u otro impulso) en curso y lo reemplaza por un retroceso
 	# corto propio del stun, sin acumular momentum previo.
 	_apply_stun_knockback()
@@ -629,9 +634,8 @@ func _start_ragdoll() -> void:
 		return
 	_ragdolling = true
 	air_state = AirState.GROUNDED
-	combat_state = CombatState.NORMAL
 	_airborne_until = -999.0
-	_ragdoll_until = World.now() + ragdoll_getup_delay
+	_ragdoll_until = maxf(World.now() + ragdoll_getup_delay, _stunned_until)
 	if _stun_tween != null:
 		_stun_tween.kill()
 	if _squash_tween != null:
@@ -641,8 +645,6 @@ func _start_ragdoll() -> void:
 		_body_shape.set_deferred("disabled", true)
 	if visual != null:
 		visual.visible = false
-	if stun_light != null:
-		stun_light.visible = false
 	# Arranca donde estaba el cuerpo (capsula centrada), ya acostado, heredando su velocidad.
 	var center := global_position + Vector3.UP * _body_center_height()
 	ragdoll_body.global_transform = Transform3D(Basis(_tilt_quaternion(lie_angle)), center)
@@ -651,6 +653,7 @@ func _start_ragdoll() -> void:
 	ragdoll_body.linear_velocity = velocity
 	ragdoll_body.angular_velocity = _ragdoll_spin_axis() * ragdoll_spin
 	velocity = Vector3.ZERO
+	_refresh_visual_state()
 
 func _update_ragdoll() -> void:
 	if ragdoll_body != null:
@@ -659,6 +662,14 @@ func _update_ragdoll() -> void:
 		global_position.z = ragdoll_body.global_position.z
 	if World.now() >= _ragdoll_until:
 		_end_ragdoll()
+
+func _freeze_ragdoll_for_stun() -> void:
+	if ragdoll_body == null:
+		return
+	ragdoll_body.linear_velocity = Vector3.ZERO
+	ragdoll_body.angular_velocity = Vector3.ZERO
+	ragdoll_body.freeze = true
+	_ragdoll_until = maxf(_ragdoll_until, _stunned_until)
 
 ## Se para: congela y esconde el ragdoll, reubica el cuerpo donde se asento y lo endereza.
 func _end_ragdoll() -> void:
@@ -671,7 +682,6 @@ func _end_ragdoll() -> void:
 	_ragdolling = false
 	_lying = false
 	air_state = AirState.GROUNDED
-	combat_state = CombatState.NORMAL
 	velocity = Vector3.ZERO
 	# Reubica el cuerpo donde rodo el ragdoll; los pies al piso. Greybox plano: usa la altura de
 	# despegue. H3: raycast al piso real para terreno con desnivel.
@@ -859,18 +869,24 @@ func _refresh_visual_state() -> void:
 		stun_light.light_color = _stun_feedback_color if stunned else Color.WHITE
 		stun_light.light_energy = stun_light_energy if stunned else 0.0
 		stun_light.omni_range = stun_light_range
-	var mesh_root := visual if visual != null else self
-	var recursive := visual != null
-	for mesh in mesh_root.find_children("*", "MeshInstance3D", recursive):
-		var mesh_instance := mesh as MeshInstance3D
-		var material := _own_material_for(mesh_instance)
-		material.albedo_color = color
-		material.emission_enabled = stunned or pulsing
-		if stunned:
-			material.emission = color
-			material.emission_energy_multiplier = stun_emission_energy
-		elif pulsing:
-			material.emission = color  # la energia la mueve el latido en _process
+	var mesh_roots: Array[Node] = []
+	if visual != null:
+		mesh_roots.append(visual)
+	if ragdoll_body != null:
+		mesh_roots.append(ragdoll_body)
+	if mesh_roots.is_empty():
+		mesh_roots.append(self)
+	for mesh_root in mesh_roots:
+		for mesh in mesh_root.find_children("*", "MeshInstance3D", true):
+			var mesh_instance := mesh as MeshInstance3D
+			var material := _own_material_for(mesh_instance)
+			material.albedo_color = color
+			material.emission_enabled = stunned or pulsing
+			if stunned:
+				material.emission = color
+				material.emission_energy_multiplier = stun_emission_energy
+			elif pulsing:
+				material.emission = color
 
 ## Material exclusivo de ESTE enemigo. El de la escena es un SubResource compartido por todas
 ## las instancias: si se pinta directo, un solo stun tine a todo el roster. Se duplica una vez

@@ -476,10 +476,19 @@ func _ready() -> void:
 	assert(lying_enemy._ragdolling)
 	assert(lying_enemy.ragdoll_body != null and lying_enemy.ragdoll_body.visible)
 	assert(not lying_enemy.visual.visible)  # el cuerpo cede la vista al ragdoll
+	lying_enemy.apply_stun(0.5)
+	assert(lying_enemy.is_stunned())
+	assert(lying_enemy.ragdoll_body.freeze)
+	var ragdoll_mesh := lying_enemy.ragdoll_body.get_node("Mesh") as MeshInstance3D
+	var ragdoll_material := ragdoll_mesh.get_surface_override_material(0) as StandardMaterial3D
+	assert(ragdoll_material.emission_enabled)
+	assert(lying_enemy.stun_light != null and lying_enemy.stun_light.visible)
 	lying_enemy._ragdoll_until = World.now() - 0.1  # vencido: el proximo tick lo para
+	lying_enemy._stunned_until = World.now() - 0.1
 	lying_enemy.tick_base(0.1)
 	assert(not lying_enemy._ragdolling)     # se paro
 	assert(not lying_enemy._lying)
+	assert(not lying_enemy.is_stunned())
 	assert(lying_enemy.visual.visible)
 	lying_enemy.queue_free()
 

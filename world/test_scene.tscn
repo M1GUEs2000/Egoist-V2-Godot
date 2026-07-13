@@ -11,7 +11,7 @@
 [ext_resource type="PackedScene" uid="uid://cfhiggial63t4" path="res://enemies/grounded_enemy.tscn" id="12_enemy"]
 [ext_resource type="PackedScene" uid="uid://b3svs3jmxxk1q" path="res://world/blocks/spike_wall.tscn" id="13_spike_wall"]
 [ext_resource type="Script" uid="uid://bpdpihqvparu5" path="res://visual/camera_occlusion_fade.gd" id="14_occlusion"]
-[ext_resource type="PackedScene" path="res://enemies/ranged_dead.tscn" id="15_ranged_dead"]
+[ext_resource type="PackedScene" uid="uid://ddiwctuct5igd" path="res://enemies/ranged_dead.tscn" id="15_ranged_dead"]
 [ext_resource type="PackedScene" path="res://enemies/flying_enemy.tscn" id="16_flying_enemy"]
 [ext_resource type="PackedScene" uid="uid://b6jcfprab47c1" path="res://enemies/world_switch_enemy.tscn" id="16_world_switch_enemy"]
 [ext_resource type="Script" uid="uid://da7tt4qincebu" path="res://visual/world_scan.gd" id="17_world_scan"]
@@ -379,7 +379,7 @@ dash_duration = 0.35
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -4.5)
 
 [node name="DeadSpikeWall" parent="." unique_id=1147645952 instance=ExtResource("13_spike_wall")]
-transform = Transform3D(0.5035216, -0.1502886, -1.5693644, -0.35196367, 1.5951672, -0.2656851, 1.536754, 0.41458455, 0.45335647, 14.331601, 0.47619557, 7.1676216)
+transform = Transform3D(0.5035216, -0.1502886, -1.5693644, -0.35196367, 1.5951672, -0.2656851, 1.536754, 0.41458455, 0.45335647, 14.331601, 3.6532032, 7.1676216)
 world = 1
 
 [node name="DeadSpikeWall2" parent="." unique_id=457786635 instance=ExtResource("13_spike_wall")]
