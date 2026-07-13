@@ -28,6 +28,7 @@ static func build_combat_tree() -> Resource:
 			_script_task("limbo_flee_from_target.gd"),
 		]),
 	]))
+	_add(root, _script_task("limbo_evade_window.gd"))
 	_add(root, _sequence([
 		_script_task("limbo_has_no_target.gd"),
 		_script_task("limbo_no_target_by_hostility.gd"),
@@ -41,7 +42,7 @@ static func build_combat_tree() -> Resource:
 		_selector([
 			_sequence([
 				_script_task("limbo_in_attack_range.gd"),
-				_script_task("limbo_start_attack.gd"),
+				_script_task("limbo_engage_target.gd"),
 			]),
 			_script_task("limbo_chase_target.gd"),
 		]),

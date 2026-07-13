@@ -28,9 +28,10 @@ intent_contract:
     intent; la locomocion lo ejecuta y decide internamente linea-recta-vs-path.
     Este es el seam que permite enchufar navmesh despues sin tocar la decision.
   Intent:
-    kind: {type: enum, values: [NONE, MOVE_TO, FLEE_FROM, SEARCH_AT, HOLD, FACE], desc: verbo de movimiento}
+    kind: {type: enum, values: [NONE, MOVE_TO, FLEE_FROM, SEARCH_AT, HOLD, FACE, STRAFE], desc: verbo de movimiento}
     point: {type: Vector3, desc: destino o punto de referencia (segun kind)}
-    speed_profile: {type: enum, values: [chase, roam, search, flee], desc: que velocidad usa la locomocion}
+    speed_profile: {type: enum, values: [chase, roam, search, flee], desc: que velocidad usa la locomocion (STRAFE usa strafe_speed propia)}
+    strafe_distance: {type: float, desc: solo STRAFE; ring deseado al orbitar (0 = mantener distancia actual, el esquive puro)}
   ejecutado_por: GroundLocomotion  # lee intent cada physics frame y lo realiza
 
 sections:
@@ -59,8 +60,8 @@ sections:
       attack_cooldown_until: {type: float, desc: proximo instante en que puede volver a atacar}
       incoming_attack_until: {type: float, desc: >
         telegraph recibido del player (ver Integraciones/telegraph). World.now hasta
-        cuando dura la amenaza percibida. HOY lo escribe el receptor del telegraph;
-        el estado DEFEND que lo CONSUME esta pendiente (ver ai_states.yaml).}
+        cuando dura la amenaza percibida. Lo escribe _on_player_attack_telegraphed
+        (receptor con gates, 2026-07-13); lo consume EVADE y DEFEND lo reusara.}
 
   coordination:
     written_by: decision

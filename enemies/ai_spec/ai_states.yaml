@@ -155,23 +155,26 @@ states:
       de leaf_tasks. Es H3+.
 
   EVADE:
-    implemented: false
-    playable: false
+    implemented: true
+    playable: pending_runtime_validation
     layer: steer
-    category: planned
-    summary: Reposicionamiento o esquiva lateral (strafe/dodge).
-    exists_as: [enum_value, allowed_state_flag]
-    missing:
-      - metodo de strafe/dodge en GroundLocomotion
-      - condicion productora (IncomingAttack / en rango y en cooldown)
+    category: implemented
+    summary: Reposicionamiento en combate (engage ring) y esquiva reactiva al telegraph.
+    modules:
+      - GroundedEnemy._process_engage        # proactivo: orbita al target esperando su ventana de ataque
+      - GroundedEnemy._on_player_attack_telegraphed  # reactivo: receptor + gates + agenda con delay
+      - GroundLocomotion.strafe              # steering: perpendicular + correccion de ring opcional
+      - EnemyAIBlackboard.strafe_around      # intent STRAFE
+    limbo_task: EngageTarget / EvadeWindow
     diseno: >
-      NO es peer de CHASE a nivel decision: es un MODO DE MOVIMIENTO (capa steer).
-      Un steering behavior de strafe + una condicion que lo selecciona. El mas barato
-      de los 4. H2. Diseno detallado cerrado (2026-07-13) en
-      obsidian/Gameplay/IA/Comportamientos.md > "EVADE - diseno acordado": gatillo
-      reactivo al telegraph filtrado por Perception (no raycast a la hoja: orbita),
-      delay de reaccion ~0.2s, cooldown 3-5s, evade_chance por enemigo, ventanas de
-      estado (no atacando/stun/flee). Sin i-frames enemigos en el primer pase.
+      Implementado 2026-07-13 segun obsidian/Gameplay/IA/Comportamientos.md >
+      "EVADE - diseno acordado", con dos partes: (1) PROACTIVO - en rango de ataque,
+      mientras la cadencia (attack_pause_min..max) o el cooldown del arma no habilitan
+      el golpe, orbita al target a attack_range*strafe_ring_fraction; (2) REACTIVO -
+      telegraph del player filtrado por gates (flags, cooldown, estado, percepcion,
+      rango/trayectoria, dado con extremos deterministas), delay evade_reaction_time,
+      strafe sin ring durante evade_duration. Sin i-frames enemigos. evade_speed
+      comparte GroundLocomotion.strafe_speed con el engage (regla de 2).
 
   DEFEND:
     implemented: false

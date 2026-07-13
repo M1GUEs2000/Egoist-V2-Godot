@@ -5,6 +5,11 @@ class_name GroundLocomotion extends Node
 @export var chase_speed := 3.0
 @export var roam_speed := 1.5
 @export var roam_radius := 5.0
+## Velocidad del strafe: orbitar al target en combate o salir de la trayectoria de un golpe.
+@export var strafe_speed := 2.2
+## Segundos sin recibir intent STRAFE tras los cuales el proximo strafe re-sortea el costado.
+## Mientras el strafe es continuo el costado se sostiene — re-elegirlo por frame lo haria vibrar.
+@export var strafe_side_memory := 0.4
 @export var gravity := -25.0
 ## Segundos moliendo contra geometria antes de dar por trabado al agente y disparar el rodeo.
 @export var stuck_time_threshold := 0.5
@@ -24,6 +29,8 @@ var _roam_timer := 0.0
 var _last_position := Vector3.ZERO
 var _sidestep_until := -999.0
 var _sidestep_dir := Vector3.ZERO
+var _strafe_sign := 1.0
+var _last_strafe_time := -999.0
 var _attempted_move := false  # este frame el agente EMPUJO hacia algun lado (no llego y freno)
 
 func setup(body: CharacterBody3D, suspended: Callable) -> void:
@@ -52,6 +59,8 @@ func execute_intent(blackboard: EnemyAIBlackboard, delta: float) -> void:
 			search_last_known(blackboard.navigation_intent_point, delta)
 		EnemyAIBlackboard.IntentKind.FLEE_FROM:
 			flee_from(blackboard.navigation_intent_point, delta)
+		EnemyAIBlackboard.IntentKind.STRAFE:
+			strafe(blackboard.navigation_intent_point, blackboard.navigation_strafe_distance, delta)
 		EnemyAIBlackboard.IntentKind.HOLD:
 			stop(delta)
 		EnemyAIBlackboard.IntentKind.FACE:
@@ -106,6 +115,29 @@ func flee_from(world_pos: Vector3, delta: float) -> void:
 	if away.length_squared() < 0.01:
 		away = _body.global_basis.z
 	_apply_move(away.normalized(), chase_speed, delta)
+
+## Rodea `around` moviendose perpendicular a el, mirando siempre al punto (no hacia donde
+## camina). Con `desired_distance` > 0 mezcla una correccion radial hacia ese ring: mas lejos
+## que el ring se acerca, mas cerca retrocede. El costado se sortea al arrancar un strafe y se
+## sostiene mientras el intent sea continuo (ver strafe_side_memory).
+func strafe(around: Vector3, desired_distance: float, delta: float) -> void:
+	if _is_suspended() or _body == null:
+		return
+	var to_center := around - _body.global_position
+	to_center.y = 0.0
+	if to_center.length_squared() < 0.01:
+		_stop_horizontal(delta)
+		return
+	if World.now() - _last_strafe_time > strafe_side_memory:
+		_strafe_sign = 1.0 if randf() < 0.5 else -1.0
+	_last_strafe_time = World.now()
+	var radial := to_center.normalized()
+	var dir := Vector3.UP.cross(radial) * _strafe_sign
+	if desired_distance > 0.0:
+		var ring_error := clampf((to_center.length() - desired_distance) / desired_distance, -1.0, 1.0)
+		dir = (dir + radial * ring_error).normalized()
+	_apply_move(dir, strafe_speed, delta)
+	face_target(around)
 
 func stop(delta: float) -> void:
 	if _body == null:
@@ -193,6 +225,8 @@ func _detour_direction(dir: Vector3) -> Vector3:
 	return (dir + _sidestep_dir).normalized()
 
 func _intent_speed(blackboard: EnemyAIBlackboard) -> float:
+	if blackboard.navigation_intent_kind == EnemyAIBlackboard.IntentKind.STRAFE:
+		return strafe_speed
 	if blackboard.navigation_speed_profile == EnemyAIBlackboard.SpeedProfile.ROAM:
 		return roam_speed
 	return chase_speed

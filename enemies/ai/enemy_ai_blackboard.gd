@@ -2,7 +2,7 @@ class_name EnemyAIBlackboard extends RefCounted
 ## Estado compartido de IA del enemigo: percepcion escribe, decision emite intent,
 ## locomocion ejecuta.
 
-enum IntentKind { NONE, MOVE_TO, FLEE_FROM, SEARCH_AT, HOLD, FACE }
+enum IntentKind { NONE, MOVE_TO, FLEE_FROM, SEARCH_AT, HOLD, FACE, STRAFE }
 enum SpeedProfile { CHASE, ROAM, SEARCH, FLEE }
 
 var perception_target: Node3D
@@ -16,6 +16,7 @@ var navigation_intent_point := Vector3.ZERO
 var navigation_speed_profile := SpeedProfile.CHASE
 var navigation_home_position := Vector3.ZERO
 var navigation_stuck_timer := 0.0
+var navigation_strafe_distance := 0.0
 
 var combat_attacking := false
 var combat_incoming_attack_until := -999.0
@@ -53,6 +54,13 @@ func search_at(point: Vector3) -> void:
 
 func flee_from(point: Vector3) -> void:
 	set_intent(IntentKind.FLEE_FROM, point, SpeedProfile.FLEE)
+
+## Rodea un punto (target en combate, atacante en EVADE) moviendose perpendicular a el.
+## `keep_distance` > 0 corrige el radio hacia ese ring mientras orbita; en 0 mantiene
+## la distancia que tenga (util para el esquive puro, que solo sale de la trayectoria).
+func strafe_around(point: Vector3, keep_distance := 0.0) -> void:
+	navigation_strafe_distance = keep_distance
+	set_intent(IntentKind.STRAFE, point, SpeedProfile.CHASE)
 
 func set_intent(kind: int, point: Vector3, profile: int) -> void:
 	navigation_intent_kind = kind

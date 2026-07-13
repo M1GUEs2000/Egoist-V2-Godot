@@ -21,6 +21,10 @@ enum AIState {
 
 enum AIBackend { FSM, LIMBO }
 
+## Cono de trayectoria del telegraph: dot minimo entre la direccion del swing y la direccion
+## hacia el enemigo. Generoso porque la mano orbita al player y el arco del swing es ancho.
+const EVADE_TRAJECTORY_DOT := 0.25
+
 const ALL_STATE_FLAGS := (
 	(1 << AIState.IDLE)
 	| (1 << AIState.ROAM)
@@ -54,6 +58,27 @@ const ALL_STATE_FLAGS := (
 ## unidades de cercania — 0.25 significa que para robarle el foco hay que estar un 25% mas cerca.
 ## En 0 vuelve el flip-flop: dos candidatos a distancia similar se turnan el target cada frame.
 @export var target_commitment_weight := 0.25
+## Pausa entre combos (segundos, minimo): al terminar un ataque el enemigo rodea al target
+## en vez de re-atacar apenas el cooldown del arma lo deja. Con min y max en 0 ataca apenas puede.
+@export var attack_pause_min := 0.8
+## Pausa entre combos (segundos, maximo); la pausa real se sortea entre min y max por combo.
+@export var attack_pause_max := 1.6
+## Fraccion del rango de ataque a la que orbita mientras espera su ventana (ring del engage).
+## Menor a 1 para quedar dentro del rango y poder cometer el ataque sin re-acercarse.
+@export_range(0.1, 1.0) var strafe_ring_fraction := 0.75
+## Probabilidad (0-1) de esquivar cada telegraph percibido del player. Un roll por telegraph.
+## 0 = nunca esquiva (off natural del pasivo); mas alto para enemigos agiles futuros.
+@export_range(0.0, 1.0) var evade_chance := 0.3
+## Segundos entre el telegraph y el inicio del esquive: retraso humano simulado. Los swings
+## procedurales tardan en llegar, asi que la ventana es real sin tocar el feel del player.
+@export var evade_reaction_time := 0.2
+## Segundos que el esquive queda bloqueado tras un roll exitoso (la estamina invisible queda
+## diferida por regla de 2: si jugando este cooldown no alcanza, se agrega).
+@export var evade_cooldown := 4.0
+## Segundos que dura el strafe del esquive una vez arrancado.
+@export var evade_duration := 0.35
+## Distancia maxima (m) al origen del telegraph para considerarse amenazado por el golpe.
+@export var evade_range := 3.5
 
 var ai_state := AIState.IDLE
 var blackboard := EnemyAIBlackboard.new()
@@ -69,6 +94,12 @@ var _low_health_checked := false
 var _flee_requested := false
 var _hide_unlocked := false
 var _limbo_ready := false
+var _next_attack_at := 0.0
+var _was_attacking := false
+var _evade_starts_at := INF
+var _evade_ends_at := -999.0
+var _last_evade_at := -999.0
+var _evade_from := Vector3.ZERO
 
 @onready var perception: Perception = get_node_or_null("Perception") as Perception
 @onready var locomotion: GroundLocomotion = get_node_or_null("GroundLocomotion") as GroundLocomotion
@@ -87,6 +118,7 @@ func _ready() -> void:
 	if health != null and not health.damaged.is_connected(_on_damaged):
 		health.damaged.connect(_on_damaged)
 	_collect_attacks()
+	_connect_player_telegraph()
 	_setup_limbo_backend()
 
 func _physics_process(delta: float) -> void:
@@ -99,6 +131,7 @@ func _physics_process(delta: float) -> void:
 	var effective_hostility := _effective_hostility()
 	perception.tick(_acquire_target(), effective_hostility, World.now() >= _can_chase_at)
 	_sync_blackboard()
+	_update_attack_cadence()
 	if ai_backend == AIBackend.LIMBO:
 		if _tick_limbo(delta):
 			return
@@ -192,13 +225,19 @@ func limbo_in_attack_range() -> bool:
 	var attack_range := _max_attack_range()
 	return attack_range > 0.0 and perception != null and perception.within(attack_range)
 
-func limbo_start_attack() -> bool:
+func limbo_engage_target(delta: float) -> bool:
 	var target := blackboard.perception_target
 	if target == null:
 		return false
-	var attack_state := _best_attack_state_for_range(_flat_distance_to(target.global_position))
-	_change_state(_fallback_state(attack_state))
-	start_combo_attack(ai_state)
+	_process_engage(delta, target, _max_attack_range())
+	return true
+
+func limbo_evade_window(delta: float) -> bool:
+	if not _evade_window_active():
+		return false
+	_change_state(AIState.EVADE)
+	blackboard.strafe_around(_evade_from)
+	execute_ai_intent(delta)
 	return true
 
 func limbo_chase_target(delta: float) -> bool:
@@ -240,6 +279,12 @@ func _update_fsm(delta: float, effective_hostility: int) -> void:
 	if _should_flee(target, effective_hostility):
 		_process_flee(delta, target)
 		return
+	if _evade_window_active():
+		_change_state(AIState.EVADE)
+		# keep_distance 0: el esquive es salir de la trayectoria, no orbitar un ring.
+		blackboard.strafe_around(_evade_from)
+		execute_ai_intent(delta)
+		return
 	if target == null:
 		_process_no_target(delta, effective_hostility)
 		return
@@ -249,9 +294,7 @@ func _update_fsm(delta: float, effective_hostility: int) -> void:
 		return
 	if perception.can_see_target:
 		if attack_range > 0.0 and perception.within(attack_range):
-			var attack_state := _best_attack_state_for_range(_flat_distance_to(target.global_position))
-			_change_state(_fallback_state(attack_state))
-			start_combo_attack(ai_state)
+			_process_engage(delta, target, attack_range)
 		else:
 			_process_chase(delta, target, effective_hostility)
 		return
@@ -413,6 +456,83 @@ func _process_no_target(delta: float, effective_hostility: int) -> void:
 			else:
 				blackboard.roam()
 			execute_ai_intent(delta)
+
+## Combate en rango: comete el ataque solo cuando la cadencia lo habilita; mientras espera
+## (pausa entre combos o cooldown interno del arma) orbita al target a distancia de ataque en
+## vez de plantarse enfrente. Sin EVADE en allowed_state_flags cae al comportamiento historico:
+## esperar quieto mirando al target.
+func _process_engage(delta: float, target: Node3D, attack_range: float) -> void:
+	if World.now() >= _next_attack_at:
+		var attack_state := _best_attack_state_for_range(_flat_distance_to(target.global_position))
+		_change_state(_fallback_state(attack_state))
+		start_combo_attack(ai_state)
+		if _any_attacking():
+			return
+	if not _state_allowed(AIState.EVADE):
+		face_current_target()
+		return
+	_change_state(AIState.EVADE)
+	blackboard.strafe_around(target.global_position, attack_range * strafe_ring_fraction)
+	execute_ai_intent(delta)
+
+func _connect_player_telegraph() -> void:
+	if _player == null:
+		return
+	var player_combat := _player.get_node_or_null("Combat") as PlayerCombat
+	if player_combat != null and not player_combat.attack_telegraphed.is_connected(_on_player_attack_telegraphed):
+		player_combat.attack_telegraphed.connect(_on_player_attack_telegraphed)
+
+## Receptor del telegraph del player (ver Comportamientos > "EVADE — diseño acordado"): corre
+## los gates en orden barato→caro y, si todos pasan, agenda el esquive con retraso humano.
+## Escribe combat_incoming_attack_until, la condicion que DEFEND tambien consumira.
+## Sin i-frames: el esquive es moverse fuera de la trayectoria, no invulnerabilidad.
+func _on_player_attack_telegraphed(origin: Vector3, direction: Vector3) -> void:
+	if not _state_allowed(AIState.EVADE):
+		return
+	if World.now() - _last_evade_at < evade_cooldown:
+		return
+	# En recovery o mitad de su propio ataque tiene prohibido esquivar: ataca en la
+	# ventana correcta y el golpe del player entra.
+	if _any_attacking() or is_stunned() or is_ragdolling():
+		return
+	if ai_state == AIState.FLEE or ai_state == AIState.HIDE:
+		return
+	# Solo se esquiva lo que se percibe: por la espalda o fuera del cono no hay evade.
+	if perception == null or perception.target != _player or not perception.can_see_target:
+		return
+	var to_me := global_position - origin
+	to_me.y = 0.0
+	if to_me.length() > evade_range or to_me.length_squared() < 0.0001:
+		return
+	var flat_dir := direction
+	flat_dir.y = 0.0
+	if flat_dir.length_squared() < 0.0001:
+		return
+	if flat_dir.normalized().dot(to_me.normalized()) < EVADE_TRAJECTORY_DOT:
+		return
+	# Extremos deterministas: 0 nunca esquiva (off del pasivo), 1 siempre (el smoke depende de ambos).
+	if evade_chance < 1.0 and randf() >= evade_chance:
+		return
+	_last_evade_at = World.now()
+	_evade_starts_at = World.now() + evade_reaction_time
+	_evade_ends_at = _evade_starts_at + evade_duration
+	_evade_from = origin
+	blackboard.combat_incoming_attack_until = _evade_ends_at
+
+## Ventana de ejecucion del esquive agendado. Antes de _evade_starts_at el enemigo sigue en lo
+## suyo (todavia "no reacciono"); entre starts y ends produce EVADE con intent STRAFE.
+func _evade_window_active() -> bool:
+	var now := World.now()
+	return now >= _evade_starts_at and now < _evade_ends_at
+
+## Al cerrar un combo sortea la pausa antes del proximo: la ventana en la que el enemigo rodea
+## en vez de re-atacar. La transicion true→false de _any_attacking se detecta en el tick (no en
+## _update_fsm) para que la cadencia valga igual con el backend LIMBO.
+func _update_attack_cadence() -> void:
+	var attacking := _any_attacking()
+	if _was_attacking and not attacking:
+		_next_attack_at = World.now() + randf_range(attack_pause_min, attack_pause_max)
+	_was_attacking = attacking
 
 func _process_chase(delta: float, target: Node3D, effective_hostility: int) -> void:
 	if effective_hostility == Hostility.PASSIVE and not _is_passive_provoked():

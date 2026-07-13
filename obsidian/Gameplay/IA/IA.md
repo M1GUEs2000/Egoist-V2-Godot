@@ -42,7 +42,7 @@ El plano construible vive **en el codigo**, en `enemies/ai_spec/*.yaml` (no en l
 
 ## Telegraph del ataque del player
 
-`PlayerCombat.attack_telegraphed(origin, direction)` se emite al arrancar un ataque (en el press). Es el estimulo que DEFEND/EVADE percibiran. **Implementado el emisor** (2026-07-08); no agrega delay al ataque (los swings son procedurales, la hoja tarda en barrer). El receptor enemigo que escribe `combat.incoming_attack_until` y el estado DEFEND que lo consume estan pendientes. Ver `enemies/ai_spec/leaf_tasks.yaml` (condicion `IncomingAttack`).
+`PlayerCombat.attack_telegraphed(origin, direction)` se emite al arrancar un ataque (en el press). **Emisor implementado** (2026-07-08); no agrega delay al ataque (los swings son procedurales, la hoja tarda en barrer). **Receptor implementado** (2026-07-13): `GroundedEnemy._on_player_attack_telegraphed` corre los gates de EVADE, escribe `combat.incoming_attack_until` y agenda el esquive — ver [[Comportamientos]]. El estado DEFEND que reusa esa condicion sigue pendiente. Ver `enemies/ai_spec/leaf_tasks.yaml` (condicion `IncomingAttack`).
 
 ## Estados FSM
 
@@ -51,7 +51,7 @@ El enum `AIState` de `GroundedEnemy` es un catalogo comun a todos los enemigos. 
 Catalogo completo, que hace cada uno en general y cuales tienen logica real implementada: [[Comportamientos]]. *(2026-07-08)*
 
 > [!warning]
-> `ATTACK_GROUP`, `EVADE`, `DEFEND` y `CALL_HELP` son solo enum/flag hoy — ningun `_process_*` los produce ni los maneja. Ver detalle y que falta en [[Comportamientos]]. *(2026-07-08)*
+> `ATTACK_GROUP`, `DEFEND` y `CALL_HELP` son solo enum/flag hoy — ningun `_process_*` los produce ni los maneja. `EVADE` se implemento el 2026-07-13 (engage proactivo + esquive reactivo al telegraph). Ver detalle en [[Comportamientos]].
 
 ## Percepcion y memoria
 
@@ -71,7 +71,7 @@ Memoria por hostilidad (default): pasivo `10s`, reactivo `20s`, agresivo `40s`, 
 | Bloque | Responsabilidad |
 |---|---|
 | `Perception` | Rango, angulo, raycast, ultima posicion conocida y memoria por hostilidad. |
-| `GroundLocomotion` | Chase, roam, search, huida (`flee_from`) y `stop` para estados pasivos/guard/hide. |
+| `GroundLocomotion` | Chase, roam, search, huida (`flee_from`), strafe (orbita/esquive, intent `STRAFE`) y `stop` para estados pasivos/guard/hide. |
 | `MeleeAttack` | Combo melee y ventana de parry; aplica `receive_stun` si el ataque trae `StunSettings`. |
 | `RangedAttack` | Windup, proyectil y homing. |
 
@@ -93,7 +93,8 @@ La intencion por nivel (`PASSIVE`, `REACTIVE`, `AGGRESSIVE`, `ULTRA_AGGRESSIVE`)
 - **Validar LimboAI en Godot editor/headless** tras import: confirmar que `addons/limboai/bin/limboai.gdextension` carga sin errores en Windows y que no hay DLL temporal abierta antes de commitear. *(2026-07-09)*
 - ~~**Target scoring por utility**~~ → **implementado** (2026-07-13): `_acquire_target` usa score de proximidad + compromiso; el compromiso es la histeresis que mata el flip-flop de [[Ultra Agresivo]]. Pesos tuneables (`target_proximity_weight`, `target_commitment_weight`). *Pendiente de probar jugando.*
 - ~~**Stuck-check**~~ → **implementado** (2026-07-13): `GroundLocomotion` compara desplazamiento real vs esperado y dispara un rodeo lateral al trabarse. Antes el `navigation_stuck_timer` se escribia pero **nadie lo leia**. *Pendiente de probar jugando.*
-- Implementar (o borrar del enum si se descartan) `ATTACK_GROUP` (coord/director, H3+), `EVADE` (steer, H2), `DEFEND` (decide + receptor del telegraph, H2), `CALL_HELP` (coord ligera, H2). Ver [[Comportamientos]]. *(2026-07-08)*
+- ~~`EVADE`~~ → **implementado** (2026-07-13): engage proactivo (cadencia + orbita en rango) + esquive reactivo al telegraph con gates. *Pendiente de headless y de probar jugando (nace E1).* Ver [[Comportamientos]].
+- Implementar (o borrar del enum si se descartan) `ATTACK_GROUP` (coord/director, H3+), `DEFEND` (decide; el receptor del telegraph ya existe y escribe `incoming_attack_until`, H2), `CALL_HELP` (coord ligera, H2). Ver [[Comportamientos]]. *(2026-07-08)*
 
 ## Pendiente diferido
 

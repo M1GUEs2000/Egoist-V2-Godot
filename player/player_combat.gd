@@ -14,7 +14,7 @@ signal slots_changed(slot_x_weapon: WeaponBase, slot_y_weapon: WeaponBase)
 ## condicion IncomingAttack lee combat.incoming_attack_until, que un receptor escribe con
 ## esto). NO agrega delay al ataque: los swings son procedurales y la hoja tarda en llegar,
 ## asi que emitir en el press ya da ventana de reaccion sin tocar el feel del player.
-## El estado enemigo que lo CONSUME (DEFEND) esta pendiente; aca vive el emisor.
+## Lo consume EVADE (GroundedEnemy._on_player_attack_telegraphed); DEFEND lo reusara.
 signal attack_telegraphed(origin: Vector3, direction: Vector3)
 
 var _body: Player

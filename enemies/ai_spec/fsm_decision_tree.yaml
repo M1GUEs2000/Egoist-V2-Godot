@@ -1,5 +1,5 @@
 schema: egoist.fsm_decision_tree.v2
-updated: 2026-07-08
+updated: 2026-07-13
 purpose: >
   Arbol de decision actual de GroundedEnemy._update_fsm en YAML, MAS la forma
   destino como Behavior Tree de LimboAI. v2 marca la frontera decision/ejecucion
@@ -29,6 +29,7 @@ pre_tick_pipeline:
   - {step: compute_effective_hostility, code: GroundedEnemy._effective_hostility}
   - {step: acquire_target, code: GroundedEnemy._acquire_target, escribe: perception.target}
   - {step: perception_tick, code: Perception.tick, escribe: [perception.can_see_target, last_known_position, memory_until]}
+  - {step: update_attack_cadence, code: GroundedEnemy._update_attack_cadence, escribe: _next_attack_at, nota: al cerrar un combo sortea la pausa attack_pause_min..max; corre para ambos backends}
 
 decision_tree:
   type: priority_selector
@@ -43,13 +44,24 @@ decision_tree:
         children:
           - {when: [HIDE allowed, _hide_unlocked, "can_see_target == false"], set_state: HIDE, intent: HOLD}
           - {otherwise: true, set_state: FLEE, intent: "FLEE_FROM target.pos"}
+    - {id: evade_window, when: _evade_window_active, set_state: EVADE, intent: "STRAFE _evade_from (keep_distance 0: salir de la trayectoria)", returns: true, emits_intent: true, nota: la ventana la agenda _on_player_attack_telegraphed tras pasar sus gates}
     - {id: no_target, when: "perception.target == null", set_state: depends_on_hostility, actions: [_process_no_target], returns: true, emits_intent: true}
     - {id: alert_beat, when: perception.is_alerted, set_state: ALERT, fallback: _fallback_state, actions: [face_current_target], returns: true, emits_intent: false}
     - id: visible_target_attack_or_chase
       when: perception.can_see_target
       type: selector
       children:
-        - {id: attack_if_inside_max_attack_range, when: [_max_attack_range > 0.0, "perception.within(_max_attack_range)"], set_state: _best_attack_state_for_range, fallback: _fallback_state, actions: ["start_combo_attack(ai_state)"], returns: true, emits_intent: false}
+        - id: engage_if_inside_max_attack_range
+          when: [_max_attack_range > 0.0, "perception.within(_max_attack_range)"]
+          actions: [_process_engage]
+          returns: true
+          emits_intent: true
+          expands_to:
+            type: selector
+            children:
+              - {when: "now >= _next_attack_at y el ataque arranca", set_state: _best_attack_state_for_range, fallback: _fallback_state, actions: ["start_combo_attack(ai_state)"], emits_intent: false}
+              - {when: EVADE allowed, set_state: EVADE, intent: "STRAFE target.pos ring attack_range*strafe_ring_fraction", nota: orbita mientras espera la pausa entre combos o el cooldown del arma}
+              - {otherwise: true, actions: [face_current_target], nota: comportamiento historico sin EVADE en allowed_state_flags}
         - {id: chase_visible_target, otherwise: true, actions: [_process_chase], returns: true, emits_intent: true}
     - {id: search_last_known, when: perception.is_searching, actions: [_process_search], returns: true, emits_intent: true}
     - {id: final_no_target, otherwise: true, actions: [_process_no_target], returns: true, emits_intent: true}
@@ -79,14 +91,15 @@ target_bt_shape:
     children:
       - "Sequence[ IsAttacking?, FaceTarget, KeepAttackState ]"
       - "Sequence[ ShouldFlee?, Selector[ Sequence[CanHide?, StopMoving(HIDE)], FleeFrom ] ]"
+      - "EvadeWindow  # esquive reactivo agendado por el telegraph"
       - "Sequence[ Invert(HasTarget)?, NoTargetByHostility ]"
       - "Sequence[ IsAlerted?, FaceTarget ]"
-      - "Sequence[ CanSeeTarget?, Selector[ Sequence[InAttackRange?, StartAttack], MoveToIntent(chase) ] ]"
+      - "Sequence[ CanSeeTarget?, Selector[ Sequence[InAttackRange?, EngageTarget], MoveToIntent(chase) ] ]"
       - "Sequence[ IsSearching?, MoveToIntent(SEARCH_AT) ]"
       - "NoTargetByHostility  # fallback"
     nota: >
       Selector de LimboAI = mismo OR/fallback del priority_selector actual. Las hojas
-      (IsAttacking, FaceTarget, MoveToIntent, StartAttack...) estan en leaf_tasks.yaml.
+      (IsAttacking, FaceTarget, MoveToIntent, EngageTarget...) estan en leaf_tasks.yaml.
 
 no_target_by_hostility:
   PASSIVE: {desired_state: ACTIVITY, movement: {when_ai_state_activity_or_idle: StopMoving, otherwise: roam}, note: si provocado effective_hostility pasa a AGGRESSIVE}
@@ -118,4 +131,4 @@ fallback_state:
     - else IDLE
   fallback_order: [ROAM, GUARD, IDLE]
 
-not_currently_produced_or_handled: [ATTACK_GROUP, EVADE, DEFEND, CALL_HELP]
+not_currently_produced_or_handled: [ATTACK_GROUP, DEFEND, CALL_HELP]

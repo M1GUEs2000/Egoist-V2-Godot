@@ -106,6 +106,64 @@ func _ready() -> void:
 	assert(player.stun.mode == PlayerStun.Mode.PUSH)
 	assert(is_equal_approx(player.bump_velocity.length(), ranged.player_stun_push_speed))
 
+	# EVADE reactivo: los gates del receptor del telegraph (ver Comportamientos > EVADE). Se
+	# prueba el contrato llamando al handler directo; los extremos del dado (0 y 1) son
+	# deterministas por diseño. FSM apagada: el smoke controla percepcion y estado a mano.
+	var evader := (load("res://enemies/grounded_enemy.tscn") as PackedScene).instantiate() as GroundedEnemy
+	evader.use_simple_fsm = false
+	add_child(evader)
+	await get_tree().physics_frame
+	evader.global_position = Vector3(2.0, 0.0, 0.0)
+	evader.perception.target = player
+	evader.perception.can_see_target = true
+	var swing_origin := Vector3.ZERO
+	var toward_evader := Vector3.RIGHT
+
+	# Dado en 0: nunca esquiva (off natural del pasivo), con todos los demas gates pasando.
+	evader.evade_chance = 0.0
+	evader._on_player_attack_telegraphed(swing_origin, toward_evader)
+	assert(evader.blackboard.combat_incoming_attack_until < World.now())
+
+	# Todos los gates pasan: agenda el esquive y escribe la condicion IncomingAttack.
+	evader.evade_chance = 1.0
+	evader._on_player_attack_telegraphed(swing_origin, toward_evader)
+	assert(evader.blackboard.combat_incoming_attack_until > World.now())
+
+	# Cooldown estricto: el telegraph siguiente no re-agenda hasta que venza.
+	evader.blackboard.combat_incoming_attack_until = -999.0
+	evader._on_player_attack_telegraphed(swing_origin, toward_evader)
+	assert(evader.blackboard.combat_incoming_attack_until < World.now())
+	evader.evade_cooldown = 0.0  # abre el cooldown para probar el resto de los gates
+
+	# Fuera de la trayectoria del swing (golpe alejandose) no hay esquive, aunque este en rango.
+	evader._on_player_attack_telegraphed(swing_origin, Vector3.LEFT)
+	assert(evader.blackboard.combat_incoming_attack_until < World.now())
+
+	# Solo se esquiva lo que se percibe: sin ver al player no hay evade.
+	evader.perception.can_see_target = false
+	evader._on_player_attack_telegraphed(swing_origin, toward_evader)
+	assert(evader.blackboard.combat_incoming_attack_until < World.now())
+	evader.perception.can_see_target = true
+
+	# Fuera de evade_range el golpe no amenaza.
+	evader._on_player_attack_telegraphed(Vector3(50.0, 0.0, 0.0), Vector3.LEFT)
+	assert(evader.blackboard.combat_incoming_attack_until < World.now())
+
+	# Huyendo no rolea.
+	evader.ai_state = GroundedEnemy.AIState.FLEE
+	evader._on_player_attack_telegraphed(swing_origin, toward_evader)
+	assert(evader.blackboard.combat_incoming_attack_until < World.now())
+	evader.ai_state = GroundedEnemy.AIState.IDLE
+
+	# Con la ventana activa, la FSM produce EVADE con intent STRAFE (reaccion 0 para el smoke).
+	evader.evade_reaction_time = 0.0
+	evader.evade_duration = 999.0
+	evader._on_player_attack_telegraphed(swing_origin, toward_evader)
+	assert(evader._evade_window_active())
+	evader._update_fsm(0.016, evader.hostility)
+	assert(evader.ai_state == GroundedEnemy.AIState.EVADE)
+	assert(evader.blackboard.navigation_intent_kind == EnemyAIBlackboard.IntentKind.STRAFE)
+
 	print("COMBAT SMOKE OK")
 	get_tree().quit()
 

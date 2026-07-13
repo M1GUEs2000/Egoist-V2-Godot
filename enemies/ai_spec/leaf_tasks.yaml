@@ -55,8 +55,8 @@ conditions:
   IncomingAttack:
     reads: [combat.incoming_attack_until]
     returns: SUCCESS si World.now < incoming_attack_until
-    consumido_por: DEFEND (PENDIENTE — la condicion se puede escribir hoy; el estado que la usa no)
-    maps_to_hoy: "no existe (telegraph nuevo; ver Integraciones)"
+    consumido_por: EVADE (implementado 2026-07-13); DEFEND la reusara
+    maps_to_hoy: "GroundedEnemy._on_player_attack_telegraphed escribe incoming_attack_until y agenda la ventana"
 
 actions:
   # -- Locomocion: TODAS reciben su destino via blackboard.navigation.intent --
@@ -77,12 +77,17 @@ actions:
   StopMoving:
     layer: steer
     maps_to_hoy: GroundLocomotion.stop
-  StartAttack:
+  EngageTarget:
     layer: decide
-    reads: [perception.target, combat.attack_cooldown_until]
-    writes: [combat.attacking, combat.attack_cooldown_until]
-    param: preferred_state
-    maps_to_hoy: start_combo_attack / _best_attack_state_for_range
+    reads: [perception.target, _next_attack_at]
+    writes: [combat.attacking, navigation.intent]
+    maps_to_hoy: _process_engage (start_combo_attack cuando la cadencia habilita; STRAFE ring mientras espera)
+    nota: reemplazo 2026-07-13 de StartAttack — comete el ataque O orbita, nunca se planta
+  EvadeWindow:
+    layer: steer
+    reads: [_evade_starts_at, _evade_ends_at, _evade_from]
+    writes: [navigation.intent]
+    maps_to_hoy: _evade_window_active + strafe_around(_evade_from) (esquive reactivo agendado por el telegraph)
   AcquireTarget:
     layer: decide
     writes: [perception.target]
