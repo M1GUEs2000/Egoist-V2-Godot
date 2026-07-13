@@ -1,7 +1,9 @@
 class_name LockOn extends Node3D
 ## Lock-on direccional tipo Hades + reticle (ex LockOnTargeting.cs): sin cono físico ni
-## raycasts, solo math en el plano XZ sobre el grupo "enemy". La mira se cuantiza a 16
-## direcciones (cada 22.5°) para que el apuntado se sienta discreto.
+## raycasts, solo math sobre el grupo "enemy". La mira (direccion + cuantizado a 16
+## direcciones cada 22.5°) vive en el plano XZ para que el apuntado se sienta discreto;
+## la elevacion se filtra aparte con `lock_vertical_half_angle` para permitir enemigos
+## aereos sin lockear objetivos a cualquier altura.
 ## El target se recalcula siempre (para que el ataque oriente desde el primer golpe);
 ## el reticle solo se muestra cuando el jugador tiene las armas afuera.
 
@@ -13,11 +15,15 @@ var _body: Player
 var _aim_direction := Vector3.FORWARD
 
 @onready var _reticle: MeshInstance3D = $Reticle
+@onready var _reticle_material: ShaderMaterial = _reticle.get_surface_override_material(0)
+@onready var _target_landing: LandingIndicator = $TargetLandingIndicator
 
 func setup(body: Player) -> void:
 	_body = body
 	_aim_direction = body.forward()
 	_reticle.visible = false
+	_reticle_material.set_shader_parameter("fill", 1.0)
+	_target_landing.enabled = false
 
 ## Target visible (reticle sobre cabeza) solo con armas afuera, si el tuning lo exige.
 func has_visible_target() -> bool:
@@ -41,8 +47,20 @@ func _process(_delta: float) -> void:
 	acquire_target(_aim_direction)
 	var show := has_visible_target()
 	_reticle.visible = show
+	# El ring de aterrizaje del target reusa LandingIndicator: solo se muestra mientras
+	# hay lock-on activo (el propio LandingIndicator filtra si el target no esta en el aire).
+	_target_landing.enabled = show
+	_target_landing.source = current_target
 	if show:
 		_reticle.global_position = _reticle_position(current_target)
+		_reticle_material.set_shader_parameter("fill", _target_health_ratio(current_target))
+
+## Fraccion de vida restante del target (1 = intacto, 0 = a punto de morir). El shader del
+## reticle usa esto para "vaciar" la dona a medida que se le pega (ver reticle_fill.gdshader).
+func _target_health_ratio(target: EnemyBase) -> float:
+	if target.health == null or target.health.max_health <= 0.0:
+		return 1.0
+	return clampf(target.health.current / target.health.max_health, 0.0, 1.0)
 
 func _is_weapons_out() -> bool:
 	return not _body.tuning.lock_require_weapons_out or _body.combat.weapons_out()
@@ -56,11 +74,20 @@ func _find_best_target(aim_direction: Vector3) -> EnemyBase:
 		if enemy == null or not enemy.can_receive_hit():
 			continue
 		var to := enemy.global_position - _body.global_position
-		to.y = 0.0
-		var dist := to.length()
-		if dist > _body.tuning.lock_max_range or dist < 0.01:
+		var to_horizontal := to
+		to_horizontal.y = 0.0
+		var horiz_dist := to_horizontal.length()
+		if horiz_dist < 0.01:
 			continue
-		if rad_to_deg(aim.angle_to(to)) > _body.tuning.lock_half_angle:
+		var dist := to.length()
+		if dist > _body.tuning.lock_max_range:
+			continue
+		if rad_to_deg(aim.angle_to(to_horizontal)) > _body.tuning.lock_half_angle:
+			continue
+		# Elevacion respecto al plano horizontal: sin esto un enemigo aereo se lockea a
+		# cualquier altura (el resto del calculo solo mira la direccion en XZ).
+		var vertical_angle := rad_to_deg(atan2(to.y, horiz_dist))
+		if absf(vertical_angle) > _body.tuning.lock_vertical_half_angle:
 			continue
 		if dist < best_dist:
 			best_dist = dist

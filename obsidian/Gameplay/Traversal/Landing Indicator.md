@@ -18,6 +18,8 @@ Circulo (anillo) azul que aparece en el suelo, bajo el jugador, cuando esta en e
 
 - `LandingIndicator`
 - Nodo `Node3D` hijo del Player con `top_level = true`
+- Componente reusable: sigue a `source` (por defecto el padre; [[Lock On]] lo reasigna al
+  target lockeado en su propio `TargetLandingIndicator`) y solo corre si `enabled` es true.
 
 ## Comportamiento
 
@@ -45,3 +47,4 @@ Malla (`TorusMesh`) y material (azul unshaded, emisivo, sin sombra) se generan p
 - [[Launcher y Aire]]
 - [[Movimiento Base]]
 - [[Traversal]]
+- [[Lock On]]

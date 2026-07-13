@@ -1,8 +1,9 @@
 class_name LandingIndicator extends Node3D
-## Circulo azul de aterrizaje bajo el jugador cuando esta en el aire (ex LandingIndicator.cs).
-## Raycast hacia abajo contra LAYER_WORLD: aparece en el punto del suelo, sigue su normal,
-## y solo se muestra si el jugador esta por encima de `min_air_height`. Malla y material se
-## generan por codigo (no hay .tres que tunear; los numeros son @export en este nodo).
+## Circulo azul de aterrizaje bajo una fuente (jugador o, via `source`, el target del
+## lock-on) cuando esta en el aire (ex LandingIndicator.cs). Raycast hacia abajo contra
+## LAYER_WORLD: aparece en el punto del suelo, sigue su normal, y solo se muestra si la
+## fuente esta por encima de `min_air_height`. Malla y material se generan por codigo
+## (no hay .tres que tunear; los numeros son @export en este nodo).
 
 @export var min_air_height := 0.5      ## altura minima sobre el suelo para mostrarlo (m)
 @export var max_ray_distance := 60.0   ## alcance del raycast hacia abajo (m)
@@ -11,16 +12,23 @@ class_name LandingIndicator extends Node3D
 @export var surface_offset := 0.03     ## separacion del suelo para evitar z-fighting
 @export var color := Color(0.25, 0.6, 1.0, 0.85)  ## azul del circulo
 
-var _player: Node3D
+## Si false, nunca se muestra aunque `source` este en el aire (lo controla, por ejemplo,
+## LockOn: el ring del target solo debe verse mientras hay lock-on activo).
+var enabled := true
+## Nodo a seguir. Por defecto el padre (uso original: colgado del Player); LockOn lo
+## reasigna cada frame al target actual para reusar este mismo componente.
+var source: Node3D
+
 var _ring: MeshInstance3D
 
 func _ready() -> void:
-	# Cuelga del Player en la escena, pero se posiciona en coordenadas globales propias:
-	# top_level corta la herencia del transform del padre.
+	# Se posiciona en coordenadas globales propias: top_level corta la herencia del
+	# transform del padre (necesario para seguir un target que no es el padre).
 	top_level = true
-	# Cuelga del Player, asi que el padre ES el jugador. No usar el grupo "player" aca:
-	# el _ready del hijo corre antes que el del padre, y el grupo todavia no existe.
-	_player = get_parent() as Node3D
+	if source == null:
+		# Cuelga del Player en la escena original. No usar el grupo "player" aca: el
+		# _ready del hijo corre antes que el del padre, y el grupo todavia no existe.
+		source = get_parent() as Node3D
 	_build_ring()
 	visible = false
 
@@ -43,20 +51,20 @@ func _build_ring() -> void:
 	add_child(_ring)  # TorusMesh ya nace plano en XZ: no necesita rotacion
 
 func _physics_process(_delta: float) -> void:
-	if _player == null:
+	if not enabled or source == null:
 		visible = false
 		return
 	var space := get_world_3d().direct_space_state
-	var from := _player.global_position + Vector3.UP * 0.2
+	var from := source.global_position + Vector3.UP * 0.2
 	var to := from + Vector3.DOWN * max_ray_distance
 	var query := PhysicsRayQueryParameters3D.create(from, to, World.LAYER_WORLD)
-	query.exclude = [_player.get_rid()]
+	query.exclude = [source.get_rid()] if source is CollisionObject3D else []
 	var hit := space.intersect_ray(query)
 	if hit.is_empty():
 		visible = false
 		return
 	var ground: Vector3 = hit.position
-	if _player.global_position.y - ground.y < min_air_height:
+	if source.global_position.y - ground.y < min_air_height:
 		visible = false
 		return
 	visible = true

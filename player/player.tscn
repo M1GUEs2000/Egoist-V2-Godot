@@ -21,6 +21,7 @@
 [ext_resource type="Script" uid="uid://cvgrnt0knmbdg" path="res://visual/landing_indicator.gd" id="19_landing"]
 [ext_resource type="Script" uid="uid://qxrrdrbwfak1" path="res://player/player_enemy_bounce.gd" id="20_enemy_bounce"]
 [ext_resource type="Script" uid="uid://clt0r7s6l4m2q" path="res://player/player_air_kill_reset.gd" id="21_air_kill"]
+[ext_resource type="Shader" path="res://player/reticle_fill.gdshader" id="22_reticle_fill"]
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_body"]
 radius = 0.4
@@ -133,9 +134,11 @@ radius = 0.8
 
 [sub_resource type="TorusMesh" id="TorusMesh_qymcn"]
 
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_reticle"]
-shading_mode = 0
-albedo_color = Color(1, 0, 0, 1)
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_reticle"]
+shader = ExtResource("22_reticle_fill")
+shader_parameter/color = Color(1, 0, 0, 1)
+shader_parameter/fill = 1.0
+shader_parameter/emission_energy = 1.0
 
 [node name="Player" type="CharacterBody3D" unique_id=1407604159]
 script = ExtResource("1_player")
@@ -247,7 +250,10 @@ script = ExtResource("18_lock_on")
 visible = false
 cast_shadow = 0
 mesh = SubResource("TorusMesh_qymcn")
-surface_material_override/0 = SubResource("StandardMaterial3D_reticle")
+surface_material_override/0 = SubResource("ShaderMaterial_reticle")
+
+[node name="TargetLandingIndicator" type="Node3D" parent="LockOn" unique_id=3721904558]
+script = ExtResource("19_landing")
 
 [node name="LandingIndicator" type="Node3D" parent="." unique_id=1513841959]
 script = ExtResource("19_landing")

@@ -531,11 +531,67 @@ func _ready() -> void:
 	enemy_far.global_position = lock_origin + lock_fwd * (3.0 + player.tuning.lock_max_range * 2.0)  # fuera de rango
 	await get_tree().process_frame
 	assert(player.lock_on.acquire_target(lock_fwd) == enemy_near)
-	player.tuning.lock_require_weapons_out = true
-	player.combat._last_attack_time = World.now() - player.tuning.weapons_out_duration * 2.0
-	assert(not player.lock_on.has_visible_target())  # sin ataques recientes, sin reticle
+
+	# El target landing indicator reusa LandingIndicator: se enciende junto con el reticle
+	# y sigue al target actual del lock-on.
+	await get_tree().process_frame  # deja correr un _process para que reticle/target_landing se asienten
+	assert(player.lock_on._target_landing.enabled)
+	assert(player.lock_on._target_landing.source == enemy_near)
 	enemy_near.queue_free()
 	enemy_far.queue_free()
+	await get_tree().process_frame  # confirma el free antes de la siguiente ronda de targets
+
+	# Lock-on vertical: el rango/angulo ahora es 3D, asi que un enemigo aereo dentro del
+	# cono vertical se lockea igual que uno a ras de piso.
+	var vertical_half_angle := maxf(player.tuning.lock_vertical_half_angle - 10.0, 1.0)
+	var enemy_aerial_ok := EnemyBase.new()
+	add_child(enemy_aerial_ok)
+	enemy_aerial_ok.global_position = lock_origin + lock_fwd * 3.0 + Vector3.UP * (3.0 * tan(deg_to_rad(vertical_half_angle)))
+	await get_tree().process_frame
+	assert(player.lock_on.acquire_target(lock_fwd) == enemy_aerial_ok)
+	enemy_aerial_ok.queue_free()
+	await get_tree().process_frame
+
+	# Un enemigo demasiado arriba queda fuera del cono vertical: el lock-on no lo toma.
+	var too_high_angle := player.tuning.lock_vertical_half_angle + 15.0
+	var enemy_aerial_too_high := EnemyBase.new()
+	add_child(enemy_aerial_too_high)
+	enemy_aerial_too_high.global_position = lock_origin + lock_fwd * 3.0 + Vector3.UP * (3.0 * tan(deg_to_rad(too_high_angle)))
+	await get_tree().process_frame
+	assert(player.lock_on.acquire_target(lock_fwd) == null)
+	enemy_aerial_too_high.queue_free()
+	await get_tree().process_frame
+
+	# El reticle es una dona (shader) que se vacia con la vida del target: fill sigue a
+	# health.current / health.max_health en tiempo real.
+	var enemy_hit := EnemyBase.new()
+	var hit_health := Health.new()
+	hit_health.name = "Health"  # el @onready de EnemyBase busca el hijo por este nombre
+	hit_health.max_health = 10.0
+	enemy_hit.add_child(hit_health)  # hijo agregado ANTES de entrar al arbol: el onready de
+	# EnemyBase corre al entrar al arbol y necesita encontrar "Health" ya presente.
+	add_child(enemy_hit)
+	enemy_hit.global_position = lock_origin + lock_fwd * 3.0
+	await get_tree().process_frame
+	assert(player.lock_on.acquire_target(lock_fwd) == enemy_hit)
+	await get_tree().process_frame
+	assert(is_equal_approx(player.lock_on._reticle_material.get_shader_parameter("fill"), 1.0))
+	hit_health.take_damage(6.0)  # 40% de vida restante
+	await get_tree().process_frame
+	assert(is_equal_approx(player.lock_on._reticle_material.get_shader_parameter("fill"), 0.4))
+	enemy_hit.queue_free()
+	await get_tree().process_frame
+
+	# Sin reticle (armas guardadas, sin ataques recientes) el ring del target tampoco se muestra.
+	var enemy_gate := EnemyBase.new()
+	add_child(enemy_gate)
+	enemy_gate.global_position = lock_origin + lock_fwd * 3.0
+	player.tuning.lock_require_weapons_out = true
+	player.combat._last_attack_time = World.now() - player.tuning.weapons_out_duration * 2.0
+	await get_tree().process_frame
+	assert(not player.lock_on.has_visible_target())
+	assert(not player.lock_on._target_landing.enabled)
+	enemy_gate.queue_free()
 
 	print("SMOKE OK")
 	get_tree().quit()
