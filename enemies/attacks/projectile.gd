@@ -1,6 +1,9 @@
 class_name Projectile extends Area3D
 ## Proyectil aislado: viaja, homing opcional, ignora al tirador y aplica dano.
 
+## Variante de world switch: si pega al jugador, voltea el mundo de todos ademas del dano.
+@export var world_switch_on_player_hit := false
+
 var _speed := 0.0
 var _turn_rate := 0.0
 var _damage := 0.0
@@ -66,6 +69,8 @@ func _on_body_entered(body: Node3D) -> void:
 						_player_stun_push_vertical_speed)
 			else:
 				body.call("receive_stun", _stun)
+		if world_switch_on_player_hit and body is Player:
+			WorldManager.switch_world(global_position)
 		queue_free()
 	elif body is EnemyBase:
 		(body as EnemyBase).take_hit_from_enemy(1.0, _velocity.normalized(), _stun)

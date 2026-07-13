@@ -17,7 +17,7 @@ Los ataques son componentes. Un enemigo puede no tener ataques, tener melee, ran
 |---|---|
 | `MeleeAttack` | Combo de swings, dano, cooldown, ventana de parry. |
 | `RangedAttack` | Windup, proyectil, homing, cadencia y dano. |
-| `Projectile` | Viaja, gira hacia objetivo si hay homing, impacta y expira. |
+| `Projectile` | Viaja, gira hacia objetivo si hay homing, impacta y expira. Export `world_switch_on_player_hit` opcional: si pega al jugador, ademas de dano voltea el mundo. |
 | `AttackLoadout` | **Que familias tiene equipadas**: solo melee, solo ranged o ambas. |
 
 ## AttackLoadout — el modulo inyectable
@@ -50,6 +50,15 @@ Prefab de ejemplo: `enemies/hybrid_enemy.tscn` — melee + ranged + un `WorldSwi
 
 > [!warning] Un enemigo de world switch NO usa su `normal_color`
 > `EnemyBase._refresh_visual_state` se lo pisa con el color del mundo OPUESTO (mas el latido): anuncia a donde te manda. Setear `normal_color` en un enemigo con `WorldSwitchTrigger` es letra muerta — su identidad visual tiene que salir de la silueta (mallas propias), no del color.
+
+## Proyectil de world switch
+
+`Projectile` trae un export `world_switch_on_player_hit` (default `false`): si el proyectil impacta
+al `Player` (no a otro enemigo ni al mundo), llama `WorldManager.switch_world(global_position)`
+ademas del dano normal. Es un flag por **escena de proyectil**, no un modulo nuevo ni una subclase de
+`RangedAttack`: se activa marcando el `projectile_scene` de ese enemigo con el flag en `true`. Cada
+enemigo ranged decide por su cuenta si su variante de proyectil cambia de mundo o no — el resto del
+ataque (windup, homing, cadencia, dano) es identico. Ver [[World Switch]].
 
 ## Pendiente
 
