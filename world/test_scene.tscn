@@ -17,6 +17,7 @@
 [ext_resource type="Script" uid="uid://da7tt4qincebu" path="res://visual/world_scan.gd" id="17_world_scan"]
 [ext_resource type="PackedScene" path="res://enemies/ultra_aggressive_enemy.tscn" id="18_ultra_aggressive"]
 [ext_resource type="PackedScene" path="res://enemies/hybrid_enemy.tscn" id="19_hybrid_enemy"]
+[ext_resource type="Resource" path="res://data/camera_tuning.tres" id="20_camtuning"]
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_floor"]
 size = Vector3(160, 1, 160)
@@ -508,7 +509,7 @@ normal_color = Color(0.25, 0.75, 0.35, 1)
 
 [node name="CameraRig" type="Node3D" parent="." unique_id=845519878]
 script = ExtResource("3_camrig")
-pitch = 40.0
+tuning = ExtResource("20_camtuning")
 
 [node name="Camera3D" type="Camera3D" parent="CameraRig" unique_id=1307362112]
 fov = 60.0

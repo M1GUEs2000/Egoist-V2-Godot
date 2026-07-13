@@ -42,6 +42,7 @@ La boveda se navega por nodos. Primero se lee este README, despues [[Arquitectur
 | [[Matriz Vault Unity Godot]] | Matriz de migracion por sistema: diseno viejo, referencia Unity y modulo Godot. |
 | [[Combate]] | Slots X/Y, espada, hitbox/hurtbox, meter, parry, input feel. |
 | [[Traversal]] | World switch, dash, salto, airdash, bloques, cadenas y momentum. |
+| [[Camara]] | Follow isometrico y rotacion horizontal por stick (CameraRig). |
 | [[Brazo]] | Habilidad permanente: puño remoto con lock-on pasivo para combate y traversal. |
 | [[Enemigos]] | Identidad, estados, salud, armadura, mundo y objetos golpeables. |
 | [[IA]] | FSM, percepcion, persecucion, ataques y ecosistema vivo. |

@@ -177,7 +177,7 @@ Escala E0–E4 (ver *Ciclo de vida*). Se actualiza en el mismo commit que cambia
 | Bloques traversal | `TraversalBlock` · `BreakOnDeath` · `SpikeWall` | **E3** | Aprobado jugando; faltan últimos detalles de glow e impulsos |
 | Pickups de mundo | `TraversalBlock` · `ActionWorldSwitchModifier` | **E2** | Validar maldicion de accion y pickups combinados jugando |
 | HUD | `HUD` | **E1** | Es placeholder funcional (labels/barras); rediseño visual pendiente |
-| Cámara | `CameraRig` | **E2** | Iterar pitch/yaw/distance/damping jugando |
+| Cámara | `CameraRig` · `CameraTuning` | **E1** | Rotacion horizontal por stick recien agregada (offset clamped ±30°, recentrado tras 1-2s idle); falta headless + tunear jugando follow y rotacion; falta definir centro por area |
 | Lock-on | `LockOn` | **E3** | Ultimos detalles de rango/angulo/reticle jugando |
 | Columpio de cadenas | `PlayerSwing` | **E0** | Stub — batch 6 |
 | Visual de mundos | `WorldVisual` | **E0** | Stub — 2 Environments + lerp |

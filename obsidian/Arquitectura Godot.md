@@ -95,6 +95,7 @@ Los custom statuses del plugin viven en la config local (`.obsidian/`, no versio
 | [[Brazo]] | `Gameplay/Brazo/` | [[brazo-combate|Brazo Combate]], [[brazo-traversal|Brazo Traversal]] |
 | [[Enemigos]] | `Gameplay/Enemigos/` | [[Modelo de Enemigo]], [[Mascaras y Cordura]], [[Hostilidad]], [[Afiliacion de Mundo]], [[Estados de Combate Enemigo]], [[Stun]], [[Ataques Enemigos]], [[Ecosistema Vivo]], [[Objetos Golpeables]], [[Roster Enemigos]], [[Melee Living]], [[Ranged Dead]], [[Armored Enemy]], [[Jefes]] |
 | [[IA]] | `Gameplay/IA/` | Indice de FSM, percepcion, locomocion y ataques. |
+| [[Camara]] | `Gameplay/Camara/` | Sin subnotas — nota unica. |
 | [[Armas]] | `Gameplay/Armas/` | [[Espada]], [[Mazo]], [[Dagas]], [[Punos]] |
 | [[Areas]] | `Gameplay/Areas/` | [[Playa]], [[Castillo]], [[Averno]], [[Final]] |
 | [[Historia]] | `Gameplay/Historia/` | Lore, mascaras, NPCs y final. |
