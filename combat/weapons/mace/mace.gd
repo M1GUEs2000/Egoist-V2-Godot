@@ -2,7 +2,7 @@ class_name Mace extends WeaponBase
 ## Mazo (boveda: Armas/Mazo): tap = combo de 3 + rama espera (2 smashes extra);
 ## X cargado = 3 niveles con sweet spot congelante; Y cargado = continuidad de combo:
 ## paso corto + launcher en tierra, caida diagonal + AOE con dos ramas: launcher si
-## impacta suelo, slam_bounce + rebote del jugador si impacta un enemigo en aire.
+## impacta suelo, slam_arc + rebote del jugador si impacta un enemigo en aire.
 ## Coreografia sobre el motor generico de WeaponBase; aca vive solo la personalidad.
 
 const STEP_COUNT := 3
@@ -24,7 +24,7 @@ func setup(player: Player) -> void:
 	air_slam_cylinder.radius = t.air_y_aoe_radius
 	air_slam_cylinder.height = t.air_y_aoe_height
 	setup_launcher_hitbox(_launcher_hitbox, t.ground_y_launcher_deals_damage, tuning.stun, true)
-	# El AOE aereo usa dos respuestas: launcher si explota en suelo, slam_bounce si la caida
+	# El AOE aereo usa dos respuestas: launcher si explota en suelo, slam_arc si la caida
 	# conecto con un enemigo airborne.
 	_air_slam_hitbox.source = player
 	_air_slam_hitbox.damage = 1.0
@@ -186,7 +186,7 @@ func _aerial_charged_x(sweet_spot: bool) -> void:
 
 ## Y aereo: cae en diagonal para interceptar. Si impacta el suelo, estalla un cilindro que
 ## lanza a los enemigos del area. Si impacta un enemigo airborne, estalla el cilindro,
-## aplica slam_bounce y el jugador rebota arriba-y-adelante, sin gastar doble salto.
+## aplica slam_arc y el jugador rebota arriba-y-adelante, sin gastar doble salto.
 func _aerial_hold_y(id: int) -> void:
 	var t := _t()
 	_set_air_y_fall_velocity()
@@ -258,7 +258,7 @@ func _burst_air_slam(id: int, hit_enemy_in_air: bool) -> void:
 ## al enemigo primero, asi receive_hit lo ve airborne y su stun fija _airborne_until al hang, que lo
 ## mantiene suspendido durante la subida. Si el launch corriera despues del stun (en landed), el
 ## enemigo comeria el stun en el piso, la gravedad le ganaria al launch y arrancaria el ragdoll sin
-## llegar a subir. La rama aerea (slam_bounce) NO va aca: necesita correr despues del stun.
+## llegar a subir. La rama aerea (slam_arc) NO va aca: necesita correr despues del stun.
 func _on_air_slam_about_to_hit(hurtbox: Hurtbox) -> void:
 	if _air_y_hit_enemy_in_air:
 		return
@@ -270,7 +270,7 @@ func _on_air_slam_about_to_hit(hurtbox: Hurtbox) -> void:
 			target.call("launch", _t().air_y_ground_launch_height, _t().air_y_launcher_hang_time)
 
 ## Cada enemigo del estallido: alimenta meter/kills/air-stall. Si el impacto fue aereo, ademas lo
-## clava y lo hace PICAR en arco balistico (slam_bounce) DESPUES del daño: el slam fija
+## clava y lo hace PICAR en arco balistico (slam_arc) DESPUES del daño: el slam fija
 ## _airborne_until=now para caer y debe ser lo ultimo (si el stun corriera despues volveria a
 ## suspenderlo). La rama de suelo (launcher vertical) ya se aplico en _on_air_slam_about_to_hit.
 func _on_air_slam_hit(hurtbox: Hurtbox, died: bool) -> void:
@@ -278,11 +278,12 @@ func _on_air_slam_hit(hurtbox: Hurtbox, died: bool) -> void:
 	if not _air_y_hit_enemy_in_air:
 		return
 	var target: Node = hurtbox.owner_node
-	if target.has_method("slam_bounce"):
+	if target.has_method("slam_arc"):
 		var t := _t()
 		# Pique GENUINO en tu direccion (mismo forward que tu rebote): el enemigo se clava y pica en
-		# arco balistico. No se ata a tu altura; la altura la da el arco (up/forward/gravity).
-		target.call("slam_bounce", t.air_y_down_speed, _player.forward(),
+		# arco balistico. No se ata a tu altura; la altura la da el arco (up/forward/gravity). Es un
+		# verbo aparte del slam_arc vertical que usa la Espada.
+		target.call("slam_arc", t.air_y_down_speed, _player.forward(),
 				t.air_y_bounce_enemy_up_speed, t.air_y_bounce_enemy_forward_speed,
 				t.air_y_bounce_enemy_gravity)
 

@@ -82,6 +82,9 @@ var _stunned_until := -999.0
 var _airborne_until := -999.0
 var _airborne_ground_y := 0.0
 var _slam_bounce := false
+var _bounce_ballistic := false
+var _bounce_target_y := Callable()
+var _bounce_hang_time := 0.0
 var _bouncing := false
 var _bounce_dir := Vector3.ZERO
 var _bounce_up_speed := 0.0
@@ -275,10 +278,23 @@ func slam(down_speed: float) -> void:
 	_airborne_until = World.now()
 	velocity.y = -absf(down_speed)
 
-## Rebote GENUINO del slam del Mazo aereo: clava al enemigo hacia abajo (slam) y, al tocar el piso,
-## pica en un arco balistico (up + forward + su propia gravedad), no un launch lineal a tu altura.
-## bounce_dir = direccion plana del pique; up/forward = velocidades del arco; gravity = su caida.
-func slam_bounce(down_speed: float, bounce_dir: Vector3, bounce_up_speed: float,
+## Rebote VERTICAL: baja y, al tocar el piso, sube a una altura objetivo con hang. Lo usa el Y
+## cargado aereo de la Espada (spike + rebote hasta tu altura).
+func slam_bounce(down_speed: float, target_world_y: Callable, hang_time: float) -> void:
+	if not can_receive_hit() or is_armored() or _ragdolling:
+		return
+	_bounce_target_y = target_world_y
+	_bounce_hang_time = hang_time
+	_bounce_ballistic = false
+	_slam_bounce = true
+	if not is_airborne():
+		_do_bounce()
+	else:
+		slam(down_speed)
+
+## Pique BALISTICO: baja y, al tocar el piso, pica en un arco propio (up + forward + su gravedad) en
+## bounce_dir, sin atarse a una altura. Lo usa el Y cargado aereo del Mazo (rebote genuino).
+func slam_arc(down_speed: float, bounce_dir: Vector3, bounce_up_speed: float,
 		bounce_forward_speed: float, bounce_gravity: float) -> void:
 	if not can_receive_hit() or is_armored() or _ragdolling:
 		return
@@ -288,6 +304,7 @@ func slam_bounce(down_speed: float, bounce_dir: Vector3, bounce_up_speed: float,
 	_bounce_up_speed = absf(bounce_up_speed)
 	_bounce_forward_speed = maxf(0.0, bounce_forward_speed)
 	_bounce_gravity = -absf(bounce_gravity)
+	_bounce_ballistic = true
 	_slam_bounce = true
 	if not is_airborne():
 		_do_bounce()
@@ -430,11 +447,28 @@ func _update_airborne(delta: float) -> void:
 		else:
 			_land()
 
-## Pique genuino al tocar el piso: arco balistico (velocity + su propia gravedad), stuneado todo el
-## arco. No usa el launch lineal ni "tu altura": la altura la da la fisica. Al aterrizar, el cuerpo
-## acostado (_set_lying) arranca el ragdoll, que hereda esta velocidad y rueda.
 func _do_bounce() -> void:
 	_slam_bounce = false
+	if _bounce_ballistic:
+		_do_bounce_arc()
+	else:
+		_do_bounce_vertical()
+
+## Rebote vertical (Espada): sube a la altura objetivo con el launcher lineal.
+func _do_bounce_vertical() -> void:
+	var target_y := global_position.y
+	if _bounce_target_y.is_valid():
+		target_y = _bounce_target_y.call()
+	var height := target_y - global_position.y
+	if height <= 0.1:
+		_land()
+		return
+	launch(height, _bounce_hang_time)
+
+## Pique balistico (Mazo): arco propio (velocity + gravedad del pique), stuneado todo el arco. No se
+## ata a una altura: la da la fisica. Al aterrizar, el cuerpo acostado (_set_lying) arranca el ragdoll,
+## que hereda esta velocidad y rueda.
+func _do_bounce_arc() -> void:
 	if _bounce_up_speed <= 0.0 and _bounce_forward_speed <= 0.0:
 		_land()
 		return

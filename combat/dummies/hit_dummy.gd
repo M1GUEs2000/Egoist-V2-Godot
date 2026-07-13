@@ -40,6 +40,19 @@ func slam_bounce(down_speed: float, target_world_y: Callable, hang_time: float) 
 	if height > 0.1:
 		launch(height, hang_time)
 
+## Pique balistico (Mazo): baja y, al tocar el piso, pica en un arco propio (up + forward + gravedad).
+func slam_arc(down_speed: float, bounce_dir: Vector3, bounce_up_speed: float,
+		bounce_forward_speed: float, bounce_gravity: float) -> void:
+	slam(down_speed)
+	await _landed()
+	if not is_inside_tree():
+		return
+	var dir := Vector3(bounce_dir.x, 0.0, bounce_dir.z)
+	_horizontal_velocity = dir.normalized() * maxf(0.0, bounce_forward_speed) if dir.length_squared() > 0.0001 else Vector3.ZERO
+	_vertical_velocity = absf(bounce_up_speed)
+	gravity = -absf(bounce_gravity)
+	_airborne_until = World.now()
+
 func _physics_process(delta: float) -> void:
 	if World.now() >= _airborne_until and global_position.y <= ground_y:
 		_horizontal_velocity = Vector3.ZERO
