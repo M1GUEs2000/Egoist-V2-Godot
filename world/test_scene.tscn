@@ -13,6 +13,7 @@
 [ext_resource type="Script" uid="uid://bpdpihqvparu5" path="res://visual/camera_occlusion_fade.gd" id="14_occlusion"]
 [ext_resource type="PackedScene" path="res://enemies/ranged_dead.tscn" id="15_ranged_dead"]
 [ext_resource type="PackedScene" path="res://enemies/flying_enemy.tscn" id="16_flying_enemy"]
+[ext_resource type="PackedScene" uid="uid://b6jcfprab47c1" path="res://enemies/world_switch_enemy.tscn" id="16_world_switch_enemy"]
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_floor"]
 size = Vector3(160, 1, 160)
@@ -49,17 +50,13 @@ background_mode = 1
 background_color = Color(0.09, 0.09, 0.12, 1)
 ambient_light_source = 2
 ambient_light_color = Color(0.36, 0.38, 0.45, 1)
-ambient_light_energy = 1.0
 tonemap_mode = 2
 glow_enabled = true
 glow_levels/3 = 1.0
 glow_levels/4 = 1.0
 glow_levels/5 = 1.0
 glow_intensity = 0.9
-glow_strength = 1.0
 glow_bloom = 0.1
-glow_blend_mode = 1
-glow_hdr_threshold = 1.0
 
 [node name="TestScene" type="Node3D" unique_id=1118309263]
 script = ExtResource("1_scene")
@@ -401,6 +398,11 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8.5, 0, 5)
 [node name="LivingSpikeWall3" parent="." unique_id=1050733178 instance=ExtResource("13_spike_wall")]
 transform = Transform3D(0.7112188, 0, -1.4902995, 0, 2.7046368, 0, 3.4735, 0, 0.30514723, 48.62185, 7.354654, -135.6075)
 
+[node name="WorldSwitchEnemy" parent="." unique_id=674481333 instance=ExtResource("16_world_switch_enemy")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6, 0.1, -4)
+ai_backend = 1
+stun_threshold = 2.0
+
 [node name="GroundedEnemy" parent="." unique_id=295057239 instance=ExtResource("12_enemy")]
 transform = Transform3D(0.866025, 0, 0.5, 0, 1, 0, -0.5, 0, 0.866025, 8.785327, 0.1, -0.57565784)
 armored = true
@@ -441,11 +443,11 @@ transform = Transform3D(0.34202, 0, 0.939693, 0, 1, 0, -0.939693, 0, 0.34202, -2
 [node name="AggressiveEnemyB" parent="." unique_id=895648067 instance=ExtResource("12_enemy")]
 transform = Transform3D(0.34202, 0, -0.939693, 0, 1, 0, 0.939693, 0, 0.34202, 22, 0.1, 42)
 
-[node name="RangedDead" parent="." instance=ExtResource("15_ranged_dead")]
+[node name="RangedDead" parent="." unique_id=677148263 instance=ExtResource("15_ranged_dead")]
 transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, -18, 0.1, 34)
 
-[node name="FlyingEnemy" parent="." instance=ExtResource("16_flying_enemy")]
-position = Vector3(-6, 7, -8)
+[node name="FlyingEnemy" parent="." unique_id=279043693 instance=ExtResource("16_flying_enemy")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6, 7, -8)
 
 [node name="UltraAggressiveEnemy" parent="." unique_id=9954827 instance=ExtResource("12_enemy")]
 transform = Transform3D(-1, 0, -8.74228e-08, 0, 1, 0, 8.74228e-08, 0, -1, 0, 0.1, 60)

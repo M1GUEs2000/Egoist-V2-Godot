@@ -52,6 +52,22 @@ enum AirState { GROUNDED, AIRBORNE }
 ## Solo en el suelo, activo y sin stun. El look del polvo vive en el emisor RunDust de la escena.
 @export var run_dust_min_speed := 1.0
 
+# --- Enemigo de world switch ---
+# Un enemigo con un WorldSwitchTrigger hijo (when = ON_DEATH) voltea el mundo de todos al morir.
+# Se lee distinto del resto: en vez del rojo normal lleva el color del mundo OPUESTO (el mundo al
+# que te va a mandar, igual criterio que los bloques de world switch) y su cuerpo LATE — la
+# emision pulsa sola. Del bloque comparte solo el color; el gesto es propio.
+## Emision minima del latido (el valle del pulso).
+@export var world_switch_pulse_min_energy := 0.3
+## Emision maxima del latido (la cresta del pulso).
+@export var world_switch_pulse_max_energy := 2.0
+## Velocidad del latido, en pulsos por segundo.
+@export var world_switch_pulse_speed := 1.2
+## Emision del fogonazo al morir (el golpe de luz que acompaña al cambio de mundo).
+@export var world_switch_death_flash_energy := 6.0
+## Segundos que tarda el fogonazo de muerte en apagarse.
+@export var world_switch_death_flash_time := 0.3
+
 # --- Acostado + ragdoll de aterrizaje ---
 # Un enemigo empujado (push) o stuneado EN EL AIRE cae ACOSTADO (pose horizontal), siguiendo su
 # trayectoria scripteada normal (arco del push o hang del stun). El rigid body NO existe en el
@@ -98,6 +114,12 @@ var _lying := false          # cae acostado (push o stun aereo); la pose horizon
 var _ragdolling := false     # el RigidBody tomo la posta en el piso; el CharacterBody espera
 var _left_ground_once := false  # dejo el rango de GroundSense una vez: recien ahi vale re-tocar
 var _ragdoll_until := -999.0
+var _world_switch: WorldSwitchTrigger  # null = enemigo normal; presente = voltea el mundo al morir
+var _death_flash_tween: Tween
+var _announced_color := Color.WHITE  # ultimo color de mundo que mostro; lo hereda el fogonazo
+# Los materiales de la escena son SubResources: Godot los comparte entre instancias, asi que
+# pintarlos directo tine a TODOS los enemigos. Cada instancia se queda con su copia propia.
+var _own_materials: Dictionary[MeshInstance3D, StandardMaterial3D] = {}
 
 @onready var health: Health = get_node_or_null("Health") as Health
 @onready var membership: WorldMembership = get_node_or_null("WorldMembership") as WorldMembership
@@ -144,8 +166,56 @@ func _ready() -> void:
 			membership.changed.connect(_on_membership_changed)
 		_on_membership_changed(membership.is_active)
 
+	for child in get_children():
+		if child is WorldSwitchTrigger:
+			_world_switch = child as WorldSwitchTrigger
+			break
+	if is_world_switch():
+		# Su color es el del mundo OPUESTO: al voltear el mundo, el color que anuncia cambia.
+		WorldManager.world_changed.connect(_on_world_switched)
+
 	combat_state = CombatState.ARMORED if armored else initial_combat_state
 	_refresh_visual_state()
+
+## Este enemigo voltea el mundo de todos al morir (lleva un WorldSwitchTrigger hijo).
+func is_world_switch() -> bool:
+	return _world_switch != null
+
+func _on_world_switched(_world: World.Kind) -> void:
+	_refresh_visual_state()
+
+## Color que este enemigo anuncia: el del mundo al que manda al jugador (el opuesto al actual),
+## el mismo criterio que los bloques de world switch. Es lo unico que comparte con ellos.
+func _world_switch_color() -> Color:
+	return World.world_color(World.opposite_world(WorldManager.current))
+
+## El latido: la emision del cuerpo sube y baja sola mientras el enemigo esta vivo y entero.
+## Se corta durante el stun (ahi manda el amarillo) y al morir (ahi manda el fogonazo).
+func _process(_delta: float) -> void:
+	if not is_world_switch() or _dead or not _is_active or is_stunned():
+		return
+	var wave := 0.5 + 0.5 * sin(World.now() * world_switch_pulse_speed * TAU)
+	var energy := lerpf(world_switch_pulse_min_energy, world_switch_pulse_max_energy, wave)
+	for material in _own_materials.values():
+		material.emission_energy_multiplier = energy
+
+## Fogonazo de muerte: el cuerpo se enciende de golpe con el color que el enemigo venia
+## anunciando y se apaga. Es el acuse de recibo del cambio de mundo.
+##
+## Usa el color GUARDADO, no `_world_switch_color()`: el WorldSwitchTrigger es hijo, asi que su
+## _ready conecta a `Health.died` antes que el nuestro y para cuando corre `_die` el mundo YA
+## cambio — recalcular daria el color del mundo viejo, justo el que no queremos.
+func _play_death_flash() -> void:
+	var color := _announced_color
+	if _death_flash_tween != null and _death_flash_tween.is_valid():
+		_death_flash_tween.kill()
+	_death_flash_tween = create_tween().set_parallel(true)
+	for material in _own_materials.values():
+		material.emission_enabled = true
+		material.emission = color
+		material.emission_energy_multiplier = world_switch_death_flash_energy
+		_death_flash_tween.tween_property(material, "emission_energy_multiplier", 0.0,
+				world_switch_death_flash_time)
 
 func is_dead() -> bool:
 	return _dead
@@ -739,12 +809,18 @@ func _die() -> void:
 	if hurtbox != null:
 		hurtbox.monitorable = false
 	_refresh_visual_state()
+	if is_world_switch():
+		_play_death_flash()
 	await get_tree().create_timer(death_destroy_delay).timeout
 	if is_instance_valid(self):
 		queue_free()
 
 func _refresh_visual_state() -> void:
 	var color := normal_color
+	if is_world_switch():
+		# El enemigo de world switch no usa el rojo comun: anuncia el mundo al que manda.
+		_announced_color = _world_switch_color()
+		color = _announced_color
 	if _dead:
 		color = Color(0.2, 0.2, 0.2, 1.0)
 	elif not _is_active:
@@ -754,6 +830,9 @@ func _refresh_visual_state() -> void:
 	elif is_stunned():
 		color = Color(1.0, 0.9, 0.15, 1.0)
 	var stunned := is_stunned() and not _dead and _is_active
+	# El de world switch late siempre que este vivo y entero: su emision queda prendida y la
+	# energia la mueve _process. El stun sigue mandando (amarillo) mientras dura.
+	var pulsing := is_world_switch() and not stunned and not _dead and _is_active
 	if stun_light != null:
 		stun_light.visible = stunned
 		stun_light.light_energy = stun_light_energy if stunned else 0.0
@@ -762,12 +841,24 @@ func _refresh_visual_state() -> void:
 	var recursive := visual != null
 	for mesh in mesh_root.find_children("*", "MeshInstance3D", recursive):
 		var mesh_instance := mesh as MeshInstance3D
-		var material := mesh_instance.get_surface_override_material(0) as StandardMaterial3D
-		if material == null:
-			material = StandardMaterial3D.new()
-			mesh_instance.set_surface_override_material(0, material)
+		var material := _own_material_for(mesh_instance)
 		material.albedo_color = color
-		material.emission_enabled = stunned
+		material.emission_enabled = stunned or pulsing
 		if stunned:
 			material.emission = color
 			material.emission_energy_multiplier = stun_emission_energy
+		elif pulsing:
+			material.emission = color  # la energia la mueve el latido en _process
+
+## Material exclusivo de ESTE enemigo. El de la escena es un SubResource compartido por todas
+## las instancias: si se pinta directo, un solo stun tine a todo el roster. Se duplica una vez
+## por mesh y se cachea; el original queda intacto como plantilla.
+func _own_material_for(mesh_instance: MeshInstance3D) -> StandardMaterial3D:
+	var cached: StandardMaterial3D = _own_materials.get(mesh_instance)
+	if cached != null:
+		return cached
+	var scene_material := mesh_instance.get_surface_override_material(0) as StandardMaterial3D
+	var material: StandardMaterial3D = scene_material.duplicate() if scene_material != null else StandardMaterial3D.new()
+	mesh_instance.set_surface_override_material(0, material)
+	_own_materials[mesh_instance] = material
+	return material
