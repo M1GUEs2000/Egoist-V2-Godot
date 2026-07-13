@@ -13,7 +13,10 @@ class_name MaceTuning extends WeaponTuning
 @export_group("Swings (ángulos)")
 ## Medio arco de los swings 1-2 del combo terrestre.
 @export var combo_swing_angle := 65.0
-## Medio arco de cada smash vertical (finisher terrestre y sus repeticiones en la rama espera).
+## Cuanto arranca el martillazo por ENCIMA del punto de impacto, en grados (finisher terrestre
+## y sus repeticiones en la rama espera). El smash baja desde -smash_angle (arriba-atras) y
+## remata clavando abajo-al-frente; mas alto = mas recorrido/telegraph, el impacto siempre
+## termina en el punto bajo.
 @export var smash_angle := 100.0
 ## Barrido del golpe Y básico (tap y launcher).
 @export var strike_angle := 130.0

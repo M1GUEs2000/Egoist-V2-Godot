@@ -10,6 +10,9 @@ const WAIT_BRANCH_EXTRA_STEPS := 2
 const AIR_STEP_COUNT := 2
 
 var _air_y_hit_enemy_in_air := false
+# Move de compromiso en curso (vueltas del X cargado terrestre): mientras esta activo,
+# tap/hold se ignoran para que pegar NO cancele las vueltas a mitad. Ver boveda Armas/Mazo.
+var _uninterruptible := false
 
 @onready var _launcher_hitbox: Hitbox = $LauncherHitbox
 @onready var _air_slam_hitbox: Hitbox = $AirSlamHitbox
@@ -36,9 +39,13 @@ func setup(player: Player) -> void:
 	_air_slam_hitbox.landed.connect(_on_air_slam_hit)
 
 func tap(_slot: World.Slot) -> void:
+	if _uninterruptible:
+		return
 	_tap_combo()
 
 func hold(slot: World.Slot, level: int) -> void:
+	if _uninterruptible:
+		return
 	if slot == World.Slot.X:
 		_hold_x(level)
 	else:
@@ -79,8 +86,12 @@ func _begin_ground_step(step: int, _finisher: bool, _wait_branch: bool) -> void:
 	_player.hold_airborne_for_attack()
 
 func _play_smash() -> void:
-	var half := _t().smash_angle
-	_play_swing(Quaternion(Vector3.RIGHT, deg_to_rad(-half)), Quaternion(Vector3.RIGHT, deg_to_rad(half)))
+	# Martillazo DESCENDENTE: arranca arriba-atras (-smash_angle) y remata clavando en el punto
+	# bajo-al-frente (0). Antes era un pendulo simetrico (-x..+x): el punto mas bajo caia a MITAD
+	# del swing y el mazo volvia a subir proyectandose arriba-adelante, por eso no parecia un
+	# smash (verificado en world/mace_smash_trace: puntaY -0.14 -> -1.32 -> -0.57, puntaZ -2.28).
+	var up := _t().smash_angle
+	_play_swing(Quaternion(Vector3.RIGHT, deg_to_rad(-up)), Quaternion.IDENTITY)
 
 # ---- Personalidad X: cargado (vueltas, 3 niveles) ----
 
@@ -104,6 +115,9 @@ func _run_charged_spins(level: int) -> void:
 	var t := _t()
 	var id := begin_routine()
 	reset_hit_profile()
+	# Las vueltas son un move de compromiso: pegar durante ellas ya no arranca otro combo
+	# (que las cancelaria via begin_routine). El dodge/dash siguen siendo escape: no pasan por aca.
+	_uninterruptible = true
 	var sweet_spot := level >= t.max_charge_level
 	_player.hold_airborne_for_attack()
 	for spin in range(1, level + 1):
@@ -117,8 +131,11 @@ func _run_charged_spins(level: int) -> void:
 		ComboTracker.register_hit()
 		await wait_seconds(t.charged_spin_time)
 		if not is_routine_current(id):
+			# Algo externo (stun, etc.) tomo control: soltamos el candado y salimos.
+			_uninterruptible = false
 			return
 	reset_hit_profile()
+	_uninterruptible = false
 
 # ---- Personalidad Y: continuidad de combo ----
 
