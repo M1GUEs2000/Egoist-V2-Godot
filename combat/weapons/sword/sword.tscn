@@ -26,7 +26,7 @@ radius = 1.1
 script = ExtResource("1_sword")
 tuning = ExtResource("2_tuning")
 
-[node name="Hand" type="Node3D" parent="."]
+[node name="Hand" type="Node3D" parent="." unique_id=326557496]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
 
 [node name="Pivot" type="Node3D" parent="Hand" unique_id=1623413767]

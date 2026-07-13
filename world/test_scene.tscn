@@ -1,7 +1,6 @@
 [gd_scene format=3 uid="uid://crrg4ksomcwea"]
 
 [ext_resource type="Script" uid="uid://7jtuoxscym8d" path="res://world/test_scene.gd" id="1_scene"]
-[ext_resource type="Script" path="res://visual/world_scan.gd" id="17_world_scan"]
 [ext_resource type="PackedScene" uid="uid://bf1ikbdvqburt" path="res://player/player.tscn" id="2_player"]
 [ext_resource type="Script" uid="uid://bm6520nqu8q3f" path="res://visual/camera_rig.gd" id="3_camrig"]
 [ext_resource type="Script" uid="uid://cr2mf5ypgksws" path="res://core/world_membership.gd" id="4_membership"]
@@ -15,6 +14,7 @@
 [ext_resource type="PackedScene" path="res://enemies/ranged_dead.tscn" id="15_ranged_dead"]
 [ext_resource type="PackedScene" path="res://enemies/flying_enemy.tscn" id="16_flying_enemy"]
 [ext_resource type="PackedScene" uid="uid://b6jcfprab47c1" path="res://enemies/world_switch_enemy.tscn" id="16_world_switch_enemy"]
+[ext_resource type="Script" uid="uid://da7tt4qincebu" path="res://visual/world_scan.gd" id="17_world_scan"]
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_floor"]
 size = Vector3(160, 1, 160)
@@ -379,7 +379,7 @@ dash_duration = 0.35
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -4.5)
 
 [node name="DeadSpikeWall" parent="." unique_id=1147645952 instance=ExtResource("13_spike_wall")]
-transform = Transform3D(0.3365483, -0.8794717, -0.3365483, 0.15660828, 0.4046937, -0.9009425, 0.9285525, 0.25050426, 0.27393153, 11.759314, 0.47619557, 7.1672754)
+transform = Transform3D(0.5035216, -0.1502886, -1.5693644, -0.35196367, 1.5951672, -0.2656851, 1.536754, 0.41458455, 0.45335647, 14.331601, 0.47619557, 7.1676216)
 world = 1
 
 [node name="DeadSpikeWall2" parent="." unique_id=457786635 instance=ExtResource("13_spike_wall")]
@@ -478,5 +478,5 @@ shadow_enabled = true
 [node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=1572025474]
 environment = SubResource("Env_world")
 
-[node name="WorldScan" type="Node3D" parent="."]
+[node name="WorldScan" type="Node3D" parent="." unique_id=1559279475]
 script = ExtResource("17_world_scan")

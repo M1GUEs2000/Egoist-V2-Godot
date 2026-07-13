@@ -10,9 +10,8 @@ grounded = 0.35
 
 [sub_resource type="Resource" id="Resource_bouncepush"]
 script = ExtResource("3_push")
-horizontal_speed = 10.0
-up_speed = 4.0
-gravity = -40.0
+horizontal_speed = 14.0
+up_speed = 10.0
 
 [resource]
 script = ExtResource("1_tuning")
@@ -21,10 +20,13 @@ jump_force = 17.0
 wall_slide_stick_fall_speed = 20.0
 wall_slide_max_fall_speed = 20.0
 wall_slide_momentum_decay = 8.0
-wall_slide_wall_jump_up_speed = 19.0
-wall_slide_wall_jump_away_speed = 17.0
-enemy_bounce_up_speed = 11.21
-enemy_bounce_away_speed = 15.0
+wall_slide_wall_jump_up_speed = 17.0
+wall_slide_wall_jump_away_speed = 15.0
+wall_slide_wall_jump_along_speed = 5.0
+wall_slide_wall_jump_lock_time = 0.5
+enemy_bounce_up_speed = 12.0
+enemy_bounce_away_speed = 17.0
+enemy_bounce_momentum_keep = 0.274
 enemy_bounce_push = SubResource("Resource_bouncepush")
 gravity = -40.0
 momentum_bleed_seconds_per_unit = 0.4
@@ -39,8 +41,9 @@ dash_deals_damage = false
 dash_stun = SubResource("Resource_dashstun")
 launcher_float_gravity = 0.15
 launcher_fall_gravity = 0.43
-meter_max_bars = 5
-meter_start_bars = 5.0
+meter_max_bars = 10
+meter_start_bars = 10.0
+meter_gain_on_hit = 1.0
 lock_half_angle = 25.0
 lock_require_weapons_out = false
 lock_reticle_height = 0.425
@@ -50,4 +53,3 @@ air_stall_base = 10.0
 air_stall_per_hit = 0.01
 air_stall_float_gravity = 0.1
 aerial_whiff_fall_gravity = 0.8
-air_charge_fall_reduction_steps = Array[float]([1.0, 0.8, 0.5, 0.1])

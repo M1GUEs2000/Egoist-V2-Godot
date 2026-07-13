@@ -23,11 +23,15 @@ func _ready() -> void:
 	assert(player.is_stunned())
 	player.stun.cancel()
 
+	# Los ataques reales deben stunear pase lo que pase con su power tuneado: bajamos el
+	# threshold para probar el PIPELINE (hitbox -> hurtbox -> stun en modo PUSH), no el valor.
+	player.tuning.stun_threshold = 0.0
+
 	var melee_enemy := (load("res://enemies/grounded_enemy.tscn") as PackedScene).instantiate() as EnemyBase
 	add_child(melee_enemy)
 	await get_tree().physics_frame
 	var melee := melee_enemy.get_node("MeleeAttack") as MeleeAttack
-	assert(melee.stun != null and is_equal_approx(melee.stun.power, 1.0))
+	assert(melee.stun != null)
 	assert(not melee.has_method("_deal_damage"))  # no queda ningun impacto por rango/target
 	var blade := melee.get_node("Hand/Pivot/BladeHitbox") as Hitbox
 	assert(blade.source == melee_enemy)
@@ -42,7 +46,7 @@ func _ready() -> void:
 	add_child(ranged_enemy)
 	await get_tree().physics_frame
 	var ranged := ranged_enemy.get_node("RangedAttack") as RangedAttack
-	assert(ranged.stun != null and is_equal_approx(ranged.stun.power, 1.0))
+	assert(ranged.stun != null)
 	var projectile := Projectile.new()
 	projectile.position = Vector3.UP * 100.0  # fuera del player antes de activar su Area3D
 	add_child(projectile)

@@ -1,52 +1,63 @@
-[gd_scene load_steps=6 format=3]
+[gd_scene format=3 uid="uid://ddiwctuct5igd"]
 
-[ext_resource type="PackedScene" path="res://enemies/grounded_enemy.tscn" id="1_base"]
-[ext_resource type="Script" path="res://enemies/ranged_dead.gd" id="2_ranged_dead"]
-[ext_resource type="Script" path="res://enemies/attacks/ranged_attack.gd" id="3_ranged_attack"]
-[ext_resource type="Script" path="res://data/stun_settings.gd" id="4_stun"]
+[ext_resource type="PackedScene" uid="uid://cfhiggial63t4" path="res://enemies/grounded_enemy.tscn" id="1_base"]
+[ext_resource type="Script" uid="uid://bvodbb18ylrfg" path="res://enemies/ranged_dead.gd" id="2_ranged_dead"]
+[ext_resource type="Script" uid="uid://x7i4wts0xmt5" path="res://enemies/attacks/ranged_attack.gd" id="3_ranged_attack"]
+[ext_resource type="Script" uid="uid://w0b3i18w442a" path="res://data/stun_settings.gd" id="4_stun"]
 
-[sub_resource type="CylinderMesh" id="CylinderMesh_staff"]
-top_radius = 0.06
-bottom_radius = 0.06
-height = 1.8
+[sub_resource type="Resource" id="Resource_ranged_stun"]
+script = ExtResource("4_stun")
+grounded = 0.35
 
 [sub_resource type="StandardMaterial3D" id="Mat_staff"]
 albedo_color = Color(0.32, 0.16, 0.5, 1)
 emission_enabled = true
 emission = Color(0.14, 0.03, 0.3, 1)
 
+[sub_resource type="CylinderMesh" id="CylinderMesh_staff"]
+top_radius = 0.06
+bottom_radius = 0.06
+height = 1.8
+
 [sub_resource type="SphereMesh" id="SphereMesh_focus"]
+material = SubResource("Mat_staff")
 radius = 0.18
 height = 0.36
-material = SubResource("Mat_staff")
 
-[sub_resource type="Resource" id="Resource_ranged_stun"]
-script = ExtResource("4_stun")
-grounded = 0.35
-airborne = 0.5
-
-[node name="RangedDead" instance=ExtResource("1_base")]
+[node name="RangedDead" unique_id=1701038744 instance=ExtResource("1_base")]
 script = ExtResource("2_ranged_dead")
 normal_color = Color(0.38, 0.16, 0.68, 1)
 
-[node name="MeleeAttack" parent="." index="9"]
+[node name="MeleeAttack" parent="." index="13" unique_id=2066280899]
 visible = false
 
-[node name="RangedAttack" type="Node3D" parent="."]
+[node name="Pivot" parent="MeleeAttack/Hand" parent_id_path=PackedInt32Array(1729610825) index="0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -1)
+
+[node name="BladeMesh" parent="MeleeAttack/Hand/Pivot" index="0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.55)
+
+[node name="BladeHitbox" parent="MeleeAttack/Hand/Pivot" index="1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.55)
+
+[node name="RangedAttack" type="Node3D" parent="." index="14" unique_id=384031004]
 script = ExtResource("3_ranged_attack")
 attack_range = 13.0
-attack_cooldown = 1.8
+attack_cooldown = 1.0
 windup = 0.55
-projectile_speed = 12.0
+projectile_speed = 100.0
 homing_turn_rate = 105.0
 projectile_damage = 8.0
+projectile_lifetime = 2.0
 stun = SubResource("Resource_ranged_stun")
+player_stun_push_speed = 20.0
+player_stun_push_vertical_speed = 10.0
 
-[node name="Staff" type="MeshInstance3D" parent="RangedAttack"]
+[node name="Staff" type="MeshInstance3D" parent="RangedAttack" index="0" unique_id=1336176788]
 transform = Transform3D(1, 0, 0, 0, -4.37114e-08, -1, 0, 1, -4.37114e-08, 0.5, 1.15, -0.3)
-mesh = SubResource("CylinderMesh_staff")
 material_override = SubResource("Mat_staff")
+mesh = SubResource("CylinderMesh_staff")
 
-[node name="Focus" type="MeshInstance3D" parent="RangedAttack"]
-position = Vector3(0.5, 2.05, -0.3)
+[node name="Focus" type="MeshInstance3D" parent="RangedAttack" index="1" unique_id=456643582]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.5, 1.1328055, -1.1379817)
 mesh = SubResource("SphereMesh_focus")

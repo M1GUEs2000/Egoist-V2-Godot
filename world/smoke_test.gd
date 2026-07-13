@@ -335,29 +335,17 @@ func _ready() -> void:
 	sword._on_hit(_make_hurtbox(leak_probe), false)
 	assert(leak_probe.pushes == 0)
 
-	# Enemy stun: las fuentes de golpe reducen solo grounded; airborne conserva el juggle.
+	# Enemy stun: INVARIANTE de diseño, no valores de feel (esos se tunean y no van al smoke,
+	# ver obsidian/Smoke Test). Toda fuente de golpe conserva MÁS juggle en el aire que en el
+	# suelo (airborne >= grounded); el freeze del sweet spot del Mazo dura más que su stun normal.
 	var sword_tuning := load("res://data/sword_tuning.tres") as SwordTuning
-	assert(is_equal_approx(sword_tuning.stun.grounded, 0.35))
-	assert(is_equal_approx(sword_tuning.stun.airborne, 1.0))
-	assert(is_equal_approx(sword_tuning.charged_dash_stun.grounded, 0.35))
-	assert(is_equal_approx(sword_tuning.charged_dash_stun.airborne, 1.0))
-	assert(is_equal_approx(player.tuning.dash_stun.grounded, 0.35))
-	assert(is_equal_approx(player.tuning.dash_stun.airborne, 1.0))
+	assert(sword_tuning.stun.airborne >= sword_tuning.stun.grounded)
+	assert(sword_tuning.charged_dash_stun.airborne >= sword_tuning.charged_dash_stun.grounded)
+	assert(player.tuning.dash_stun.airborne >= player.tuning.dash_stun.grounded)
 	var mace_tuning := load("res://data/mace_tuning.tres") as MaceTuning
-	assert(is_equal_approx(mace_tuning.stun.grounded, 0.35))
-	assert(is_equal_approx(mace_tuning.stun.airborne, 0.9))
-	assert(is_equal_approx(mace_tuning.charged_freeze_stun.grounded, 1.4))
-	assert(is_equal_approx(mace_tuning.air_freeze_stun.grounded, 1.2))
-	assert(mace_tuning.ground_y_dash_distance > 0.0)
-	assert(mace_tuning.ground_y_launcher_size.length() > 0.0)
-	assert(mace_tuning.air_y_aoe_radius > 0.0)
-	assert(mace_tuning.air_y_aoe_height > 0.0)
-	assert(mace_tuning.air_y_down_speed > 0.0)
-	assert(mace_tuning.air_y_bounce_speed > 0.0)
-	assert(mace_tuning.air_y_bounce_angle > 0.0)
-	assert(mace_tuning.air_y_bounce_enemy_up_speed > 0.0)
-	assert(mace_tuning.air_y_bounce_enemy_gravity < 0.0)
-	assert(mace_tuning.air_handle_reach > 0.0)
+	assert(mace_tuning.stun.airborne >= mace_tuning.stun.grounded)
+	assert(mace_tuning.charged_freeze_stun.grounded > mace_tuning.stun.grounded)
+	assert(mace_tuning.air_freeze_stun.grounded > mace_tuning.stun.grounded)
 
 	var mace := (load("res://combat/weapons/mace/mace.tscn") as PackedScene).instantiate() as Mace
 	add_child(mace)
@@ -495,15 +483,19 @@ func _ready() -> void:
 	assert(lying_enemy.visual.visible)
 	lying_enemy.queue_free()
 
-	# LockOn (batch 6): adquiere el enemigo más cercano dentro de rango/ángulo, ignora el lejano
+	# LockOn (batch 6): adquiere el enemigo más cercano dentro de rango/ángulo, ignora el lejano.
+	# Los enemigos van RELATIVOS a la posición/forward actuales del player: los tests previos lo
+	# dejan desplazado del origen, y un enemigo en coordenadas absolutas caería detrás del cono.
+	var lock_origin := player.global_position
+	var lock_fwd := player.forward()
 	var enemy_near := EnemyBase.new()
 	add_child(enemy_near)
-	enemy_near.global_position = Vector3(0.0, 0.0, -3.0)  # adelante (forward = -Z), cerca
+	enemy_near.global_position = lock_origin + lock_fwd * 3.0  # adelante, cerca
 	var enemy_far := EnemyBase.new()
 	add_child(enemy_far)
-	enemy_far.global_position = Vector3(0.0, 0.0, -(3.0 + player.tuning.lock_max_range * 2.0))  # fuera de rango
+	enemy_far.global_position = lock_origin + lock_fwd * (3.0 + player.tuning.lock_max_range * 2.0)  # fuera de rango
 	await get_tree().process_frame
-	assert(player.lock_on.acquire_target(Vector3.FORWARD) == enemy_near)
+	assert(player.lock_on.acquire_target(lock_fwd) == enemy_near)
 	player.tuning.lock_require_weapons_out = true
 	player.combat._last_attack_time = World.now() - player.tuning.weapons_out_duration * 2.0
 	assert(not player.lock_on.has_visible_target())  # sin ataques recientes, sin reticle

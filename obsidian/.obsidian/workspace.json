@@ -25,14 +25,13 @@
             "id": "98dbec3731a6bae9",
             "type": "leaf",
             "state": {
-              "type": "markdown",
+              "type": "bases",
               "state": {
-                "file": "tareas.md",
-                "mode": "source",
-                "source": false
+                "file": "Bases/Sistemas.base",
+                "viewName": "Sistemas por estado"
               },
-              "icon": "lucide-file",
-              "title": "tareas"
+              "icon": "lucide-table",
+              "title": "Sistemas"
             }
           }
         ],
@@ -197,10 +196,15 @@
   },
   "active": "98dbec3731a6bae9",
   "lastOpenFiles": [
+    "Bases/Hitos.base",
+    "tareas.md",
+    "README.md",
+    "Metodologia V2.md",
+    "Integraciones.md",
+    "Arquitectura Godot.md",
     "Tareas/ideas.md",
     "Tareas/hitos.md",
     "Tareas/backlog.md",
-    "tareas.md",
     "Gameplay/Traversal/World Switch.md.tmp.5296.e46a2468c20c",
     "Tareas/hitos.md.tmp.5296.a413011cb96e",
     "tareas.md.tmp.5296.d08a683132ce",
@@ -215,10 +219,8 @@
     "Tareas/hitos.md.tmp.5296.d749bf9bac94",
     "Bases/Tareas.base",
     "Bases/Sistemas.base",
-    "Bases/Hitos.base",
     "Tareas/Pendientes e Ideas.md",
     "Tareas/Roadmap Futuro.md",
-    "Metodologia V2.md",
     "Gameplay/Brazo/brazo-combate.md",
     "Gameplay/Brazo/brazo-traversal.md",
     "Gameplay/Brazo/Brazo Traversal.md",
@@ -228,9 +230,6 @@
     "Gameplay/Traversal/Traversal.md",
     "Gameplay/Traversal/Colores de mundo.md",
     "Gameplay/Traversal/Landing Indicator.md",
-    "Gameplay/Traversal/Occlusion Fade de Camara.md",
-    "Gameplay/Traversal/Wall Slide y Wall Jump.md",
-    "Gameplay/Traversal/Momentum y Bump.md",
-    "Gameplay/Traversal/Launcher y Aire.md"
+    "Gameplay/Traversal/Occlusion Fade de Camara.md"
   ]
 }
