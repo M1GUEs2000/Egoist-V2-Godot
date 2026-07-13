@@ -41,9 +41,19 @@ func _ready() -> void:
 	await get_tree().process_frame
 	assert(not membership.is_active)
 	assert(not body.visible)
+	membership._update_other_world_echo(0.1)
+	var echo_smoke := membership._other_world_echo
+	var echo_light := membership._other_world_echo_light
+	assert(echo_smoke != null and echo_smoke.visible and echo_smoke.emitting)
+	assert(echo_light != null and echo_light.visible)
+	var echo_energy_at_rest := echo_light.light_energy
+	body.global_position += Vector3.RIGHT * 0.4
+	membership._update_other_world_echo(0.1)
+	assert(echo_light.light_energy > echo_energy_at_rest)
 	WorldManager.switch_world()  # de vuelta a LIVING
 	assert(membership.is_active)
 	assert(body.visible)
+	assert(not echo_smoke.visible and not echo_light.visible)
 
 	# Health: daño, muerte, señales
 	var health := Health.new()

@@ -117,16 +117,16 @@ albedo_color = Color(0.9, 0.2, 0.2, 1)
 
 [sub_resource type="BlackboardPlan" id="BlackboardPlan_qymcn"]
 
+[sub_resource type="Resource" id="Resource_melee_stun"]
+script = ExtResource("8_stun")
+grounded = 0.35
+airborne = 0.5
+
 [sub_resource type="BoxMesh" id="BoxMesh_weapon"]
 size = Vector3(0.25, 0.25, 1.1)
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_blade"]
 size = Vector3(0.35, 0.35, 1.15)
-
-[sub_resource type="Resource" id="Resource_melee_stun"]
-script = ExtResource("8_stun")
-grounded = 0.35
-airborne = 0.5
 
 [node name="GroundedEnemy" type="CharacterBody3D" unique_id=1176923943]
 script = ExtResource("1_enemy")
@@ -199,9 +199,6 @@ max_health = 101.45
 
 [node name="WorldMembership" type="Node" parent="." unique_id=345613920]
 script = ExtResource("4_membership")
-mode = 1
-affiliation = 1
-hide_when_inactive = false
 
 [node name="Hurtbox" type="Area3D" parent="." unique_id=606287432]
 script = ExtResource("3_hurtbox")
@@ -228,16 +225,16 @@ stun = SubResource("Resource_melee_stun")
 
 [node name="Hand" type="Node3D" parent="MeleeAttack" unique_id=1729610825]
 
-[node name="Pivot" type="Node3D" parent="MeleeAttack/Hand"]
-position = Vector3(0, 0, -1)
+[node name="Pivot" type="Node3D" parent="MeleeAttack/Hand" unique_id=691455168]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -1)
 
-[node name="BladeMesh" type="MeshInstance3D" parent="MeleeAttack/Hand/Pivot"]
-position = Vector3(0, 0, -0.55)
+[node name="BladeMesh" type="MeshInstance3D" parent="MeleeAttack/Hand/Pivot" unique_id=307906946]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.55)
 mesh = SubResource("BoxMesh_weapon")
 
-[node name="BladeHitbox" type="Area3D" parent="MeleeAttack/Hand/Pivot"]
-position = Vector3(0, 0, -0.55)
+[node name="BladeHitbox" type="Area3D" parent="MeleeAttack/Hand/Pivot" unique_id=2060167217]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.55)
 script = ExtResource("9_hitbox")
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="MeleeAttack/Hand/Pivot/BladeHitbox"]
+[node name="CollisionShape3D" type="CollisionShape3D" parent="MeleeAttack/Hand/Pivot/BladeHitbox" unique_id=2091237449]
 shape = SubResource("BoxShape3D_blade")

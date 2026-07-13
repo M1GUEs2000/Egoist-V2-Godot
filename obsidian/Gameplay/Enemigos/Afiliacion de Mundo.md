@@ -22,6 +22,10 @@ La afiliacion de mundo define donde existe y actua un enemigo.
 | `TIMED` | Alterna su afiliacion cada `shift_interval`. |
 | `FOLLOWS` | Sigue el mundo actual del jugador, con posible delay de persecucion. |
 
+## Eco del otro mundo
+
+Todo dueño de `WorldMembership` (enemigo, plataforma, bloque o estructura) deja una lectura abstracta cuando esta inactivo por pertenecer al otro mundo: humo sobre su contorno y una luz tenue con el color de su afiliacion. La emision crece con el movimiento, pero no revela su mesh ni una silueta exacta. El eco vive como hermano de la estructura en la escena para seguir visible aunque `hide_when_inactive` oculte el objeto real. `BOTH` y `FOLLOWS` no lo muestran porque nunca estan fuera del mundo actual.
+
 ## Trigger global
 
 `WorldSwitchTrigger` es ortogonal a la afiliacion: dice que le hace este enemigo al mundo de TODOS, no donde vive el. Como nodo hijo, con `when = ON_HIT` (voltea el mundo en cada golpe) o `ON_DEATH` (al morir).
@@ -63,4 +67,3 @@ Cuando `WorldMembership` emite `changed`, `EnemyBase._on_membership_changed` sin
 
 - [[World Switch]]
 - [[Enemigos]]
-
