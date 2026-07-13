@@ -56,12 +56,12 @@ func _on_body_entered(body: Node3D) -> void:
 		body.call("take_damage", _damage)
 		if _stun != null and body.has_method("receive_stun"):
 			if body is Player:
-				var away := body.global_position - global_position
-				away.y = 0.0
+				var impact_dir := _velocity
+				impact_dir.y = 0.0
 				body.receive_stun(
 						_stun,
 						PlayerStun.Mode.PUSH,
-						away.normalized() if away.length_squared() > 0.0001 else _velocity.normalized(),
+						impact_dir.normalized() if impact_dir.length_squared() > 0.0001 else _velocity.normalized(),
 						_player_stun_push_speed,
 						_player_stun_push_vertical_speed)
 			else:
