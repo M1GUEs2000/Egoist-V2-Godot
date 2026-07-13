@@ -38,6 +38,7 @@ La boveda se navega por nodos. Primero se lee este README, despues [[Arquitectur
 | [[Arquitectura Godot]] | Estructura real del repo, mapa Unity V1 a Godot V2 y contratos tecnicos. |
 | [[Integraciones]] | Dependencias externas: Godot, Blender, LimboAI, Claude, Codex. |
 | [[Metodologia V2]] | Flujo para crear, modificar, borrar y clasificar sistemas E0-E4. |
+| [[Smoke Test]] | Qué verifica el smoke test y qué no: lógica invariante sí, valores de tuning no. |
 | [[Matriz Vault Unity Godot]] | Matriz de migracion por sistema: diseno viejo, referencia Unity y modulo Godot. |
 | [[Combate]] | Slots X/Y, espada, hitbox/hurtbox, meter, parry, input feel. |
 | [[Traversal]] | World switch, dash, salto, airdash, bloques, cadenas y momentum. |
@@ -61,6 +62,9 @@ La boveda se navega por nodos. Primero se lee este README, despues [[Arquitectur
 
 > [!warning]
 > Cero arte final antes de H3. H1 se gana con feel, greybox y claridad mecanica.
+
+> [!important]
+> Antes de tocar logica core se lee [[Smoke Test]]: el smoke se corre en casi toda peticion que cambia comportamiento. Verifica logica invariante, nunca valores de tuning (esos se validan jugando).
 
 ## Bases
 

@@ -8,7 +8,7 @@ tags:
   - arma
   - combate
 status: active
-system_status: E2
+system_status: E3
 hito: H2
 ---
 
@@ -37,13 +37,9 @@ Arma de mas dano. Controla masas. Tiene bastante knockback. Tumba a los enemigos
 
 ## Estado Godot
 
-*(2026-07-09)* En desarrollo activo. Combos codificados sobre el mismo motor que la
-[[Espada]]; knobs en `mace_tuning.tres` y direccion de diseño clara (`system_status: E2`).
-
-> [!warning] Pendiente de playtest
-> La tabla de combos de arriba describe la **intención** de diseño, no un
-> comportamiento validado jugando. El feel real (ventanas, daños, sweet spots) todavia
-> no se probó — el salto E2→E3 solo lo decide Tutupa jugando (ver `METODOLOGIA.md`).
+*(2026-07-12)* `system_status: E3`: probado en engine, falta el tuning final del feel
+(ventanas, daños, ángulos, sweet spots). Combos sobre el mismo motor que la [[Espada]];
+knobs en `mace_tuning.tres`.
 
 - `combat/weapons/mace/mace.gd` define `Mace extends WeaponBase` (no hereda de
   `Sword`): coreografía propia sobre el motor genérico de `WeaponBase`.
