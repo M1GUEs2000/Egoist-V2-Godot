@@ -31,7 +31,8 @@ El sistema completo de umbral de stun, resistencia por armadura y su interaccion
 - `launch`: sube y queda suspendido por el hang time del golpe; cae al terminar. La suspension la manda el hang/stun, no `airborne_max_time` (ese es solo el tope de seguridad de caida). *(2026-07-06)*
 - `slam`: cae fuerte.
 - `push`: arco balistico. Velocidad, altura y cierre del arco los define QUIEN ataca via `PushSettings`, no el enemigo: cada arma/ataque empuja distinto. *(2026-07-06)*
-- `slam_bounce`: baja y rebota hasta una altura objetivo.
+- `slam_bounce`: baja y rebota vertical hasta una altura objetivo (Espada).
+- `slam_arc`: baja y, al tocar el piso, pica en un arco balistico propio (up + forward + su gravedad) en una direccion dada, sin altura objetivo; stuneado todo el arco, ragdoll al aterrizar (Mazo). *(2026-07-12)*
 
 > [!important] El golpe frena el momentum
 > Un golpe que aplica stun mientras el enemigo vuela (por `launch` o `push`) cancela su `velocity`: queda quieto, suspendido durante el stun, y cae al terminar. *(2026-07-06)*

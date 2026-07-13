@@ -24,7 +24,7 @@ Arma de mas dano. Controla masas. Tiene bastante knockback. Tumba a los enemigos
 | X X espera X X | Swing horizontal, swing horizontal, tres smash verticales. Todos con AOE. |
 | X cargado (3 niveles) | Das vueltas y golpeas. 1 carga = 1 vuelta, 2 cargas = 2 vueltas, 3 cargas = 3 vueltas. Gasta 1 barra por nivel; si no alcanza el meter, degrada al nivel maximo pagable. |
 | X cargado sweet spot | Los enemigos que pega quedan congelados hasta la ultima vuelta, que siempre los manda a volar. |
-| Y cargado | Paso corto hacia adelante; al terminar, launcher de area grande que eleva enemigos pero no al jugador. No tiene niveles ni sweet spot por ahora. |
+| Y cargado | Paso corto hacia adelante con el launcher armado durante el paso: si el paso choca con un enemigo, se activa ahi; si no toca a nadie, cubre igual el final. Eleva enemigos pero no al jugador. No tiene niveles ni sweet spot por ahora. |
 
 ## Aereo
 
@@ -33,7 +33,7 @@ Arma de mas dano. Controla masas. Tiene bastante knockback. Tumba a los enemigos
 | X | Combo de 2: golpe con el mango (sin push) y luego cabezazo con knockback hacia adelante. |
 | X cargado | Caes con un ataque AOE. |
 | X cargado sweet spot | Caes con un ataque y al final das una vuelta. Los mantiene en el aire. |
-| Y cargado | Caida diagonal con angulo tuneable; al impactar enemigo o suelo estalla un AOE cilindrico en la zona. Todos los enemigos del cilindro son clavados al suelo y rebotan hasta tu altura (`slam_bounce`), no lanzados hacia arriba. Conectar contra un enemigo **en el aire** hace que el jugador rebote arriba-y-adelante (segun la direccion de la caida), sin gastarle el doble salto: esa es la ventana para perseguir a los enemigos que quedan a tu altura. No tiene niveles ni sweet spot por ahora. |
+| Y cargado | Caida diagonal con angulo tuneable; al impactar estalla un AOE cilindrico. Si estalla contra el suelo, los enemigos del cilindro salen por launcher (hacia arriba). Si conectas contra un enemigo **en el aire**, esos enemigos hacen un pique balistico genuino en tu direccion (se clavan al suelo y rebotan en arco, no vuelven a tu altura) y el jugador rebota en diagonal (45°) arriba-adelante sin gastar el doble salto: esa es la ventana para perseguirlos. No tiene niveles ni sweet spot por ahora. |
 
 ## Estado Godot
 
@@ -61,23 +61,28 @@ Arma de mas dano. Controla masas. Tiene bastante knockback. Tumba a los enemigos
   el daño real y siempre arma un `charged_final_push` propio, mas fuerte que el `push`
   base del arma. *(2026-07-09)*
 - Terrestre Y cargado: paso corto hacia adelante (`ground_y_dash_distance` /
-  `ground_y_dash_duration`) y luego launcher de area grande. El launcher lanza enemigos
-  pero no lanza al jugador: el salto para perseguirlos es manual. No gasta meter por
-  ahora y no tiene niveles ni sweet spot. *(2026-07-09)*
+  `ground_y_dash_duration`) con el `LauncherHitbox` armado durante el paso, asi se activa al
+  chocar con un enemigo durante el dash; si no toca a nadie, la ventana cubre igual el final.
+  Lanza enemigos pero no al jugador: el salto para perseguirlos es manual. No gasta meter por
+  ahora y no tiene niveles ni sweet spot. *(2026-07-12)*
 - Aéreo: tap X sin carga es un **combo de 2** (un tap por golpe, corre a `swing_time` porque
   el Mazo es pesado) — golpe 1 jab con el mango (`thrust`, `air_handle_reach`, sin push) y
   golpe 2 cabezazo horizontal que arma el `push` a mitad del swing (`push_at`);
   X cargado cae con AOE (ground pound) y gasta 1 barra fija; sweet spot agrega una
   vuelta final que congela. Y cargado cae en diagonal (`air_y_fall_angle` /
-  `air_y_fall_speed`); al impactar estalla `AirSlamHitbox` (cilindro) una vez y todos los
-  enemigos de adentro reciben `slam_bounce` (bajan, rebotan en el piso y vuelven a tu
-  altura, `air_y_down_speed` / `air_y_meet_height` / `air_y_launcher_hang_time`). No gasta
-  meter por ahora y no tiene niveles ni sweet spot. *(2026-07-10)*
-- El Y aereo hace **rebotar al jugador**: al clavar un enemigo en el aire, el jugador sale
-  arriba-y-adelante (`air_y_bounce_forward_speed` / `air_y_bounce_up_speed`, que juntos fijan
-  el angulo del rebote segun la direccion de la caida), sin gastar el doble salto. Reemplaza
-  el hover previo. Contra el suelo (sin enemigo en el aire) el jugador no rebota: solo estalla
-  el AOE. Esa es la ventana para perseguir a los enemigos que quedan a tu altura. *(2026-07-10)*
+  `air_y_fall_speed`); al impactar estalla `AirSlamHitbox` (cilindro) una vez. Si estalla
+  contra el suelo, los enemigos de adentro salen por launcher vertical
+  (`air_y_ground_launch_height` / `air_y_launcher_hang_time`). Si el impacto fue contra un
+  enemigo en el aire, esos enemigos hacen un pique balistico (`slam_bounce`): se clavan al
+  suelo (`air_y_down_speed`) y rebotan en un arco propio en tu direccion
+  (`air_y_bounce_enemy_up_speed` / `air_y_bounce_enemy_forward_speed` /
+  `air_y_bounce_enemy_gravity`), stuneados todo el arco, con ragdoll al aterrizar — no vuelven
+  a tu altura. No gasta meter por ahora y no tiene niveles ni sweet spot. *(2026-07-12)*
+- El Y aereo hace **rebotar al jugador** en diagonal: al clavar un enemigo en el aire, el
+  jugador sale arriba-y-adelante en su direccion a un angulo fijo (`air_y_bounce_angle`, 45° =
+  diagonal) y velocidad propia (`air_y_bounce_speed`), sin gastar el doble salto. Contra el
+  suelo (sin enemigo en el aire) el jugador no rebota: se planta donde cae y solo estalla el
+  AOE. *(2026-07-12)*
 - `AirSlamHitbox` es un **cilindro** (`air_y_aoe_radius` / `air_y_aoe_height`) que se prende
   **una sola vez en el impacto** (estallido), no durante toda la caida. El impacto se detecta
   por contacto fisico con el suelo o con un enemigo (mismas colisiones de `CharacterBody3D`
