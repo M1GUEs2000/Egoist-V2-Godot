@@ -23,6 +23,7 @@ Switch por triggers ganados, no dodge gratis.
 - `WorldMembership`
 - `WorldSwitchTrigger` (modulo componible ON_HIT/ON_DEATH; lo usa `world_switch_enemy.tscn`. El switch de los bloques no pasa por el: corre inline en `TraversalBlock.enable_world_switch`)
 - `ActionWorldSwitchModifier`
+- `WorldRift` + `RiftSpawner` (ver [[Grieta]])
 - `WorldScan` + `WorldScanTuning`
 
 ## Triggers
@@ -30,6 +31,7 @@ Switch por triggers ganados, no dodge gratis.
 - `TraversalBlock` con world switch OnHit: brilla con el color del mundo destino. Implementacion inline en `traversal_block.gd`, no usa `WorldSwitchTrigger`.
 - Enemigo OnDeath: `world_switch_enemy.tscn` voltea el mundo al morir y late con el color del mundo destino (ver [[Afiliacion de Mundo]]). Es el switch que se gana peleando.
 - Proyectil enemigo OnHit al jugador: `Projectile.world_switch_on_player_hit` (export, default `false`). Si un proyectil con el flag activo pega al `Player` (no a otro enemigo ni al mundo), llama `WorldManager.switch_world(global_position)` ademas del dano normal. Vive en el proyectil, no en `WorldSwitchTrigger`: es un flag por `projectile_scene`, asi que cada enemigo ranged decide con que variante dispara (ver [[Ataques Enemigos]]).
+- [[Grieta]]: una puerta temporal que alguien dejo abierta. Cruzarla voltea el mundo; es de un solo uso y se cierra sola si nadie llega a tiempo. Es el switch que se gana **llegando**, no peleando. La abre cualquier sistema via `WorldRift.spawn()`; hoy la deja el enemigo del `RiftSpawner` al irse (ver [[Afiliacion de Mundo]]).
 - Maldicion amarilla + proxima accion.
 - Boton/HUD o especiales futuros.
 

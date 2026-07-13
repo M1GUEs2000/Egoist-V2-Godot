@@ -176,6 +176,7 @@ Escala E0–E4 (ver *Ciclo de vida*). Se actualiza en el mismo commit que cambia
 | Loadout de ataques (melee/ranged/híbrido) | `AttackLoadout` · `GroundedEnemy._collect_attacks` · `HybridEnemy` (prefab) | **E2** | Módulo inyectable que elige qué familias equipa un enemigo; reemplaza la subclase-por-enemigo (se borró `RangedDead`). Verificación headless + smokes pendientes; falta iterar jugando rangos/cadencia del híbrido y ver si la transición melee↔ranged pide histéresis |
 | Bloques traversal | `TraversalBlock` · `BreakOnDeath` · `SpikeWall` | **E3** | Aprobado jugando; faltan últimos detalles de glow e impulsos |
 | Pickups de mundo | `TraversalBlock` · `ActionWorldSwitchModifier` | **E2** | Validar maldicion de accion y pickups combinados jugando |
+| Grieta | `WorldRift` · `WorldRiftTuning` · `RiftSpawner` · `rift_enemy.tscn` | **E0** | Recién construida: puerta temporal de un solo uso que voltea el mundo al cruzarla; la abre `WorldRift.spawn()` (hoy la deja el enemigo al huir tras el primer golpe). Falta verificación headless + smoke y tunear jugando el `delay` del enemigo contra el `lifetime` de la grieta |
 | HUD | `HUD` | **E1** | Es placeholder funcional (labels/barras); rediseño visual pendiente |
 | Cámara | `CameraRig` · `CameraTuning` | **E1** | Rotacion horizontal por stick recien agregada (offset clamped ±30°, recentrado tras 1-2s idle); falta headless + tunear jugando follow y rotacion; falta definir centro por area |
 | Lock-on | `LockOn` | **E3** | Ultimos detalles de rango/angulo/reticle jugando |

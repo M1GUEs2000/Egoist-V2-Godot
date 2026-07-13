@@ -21,6 +21,7 @@ Roster por hito y area. H1 usa placeholders claros; arte final entra H3.
 | [[Armored Enemy]] | Living o Dead | Estado existe; falta lectura y tuning. |
 | Enemigo de world switch | Sigue el default de `grounded_enemy.tscn` | Escena `world_switch_enemy.tscn` lista: al morir voltea el mundo de todos. Late con el color del mundo opuesto (ver [[Afiliacion de Mundo]]). Falta tunear jugando. |
 | [[Ultra Agresivo]] | Sigue el default de `grounded_enemy.tscn` (Dead) | Prefab `ultra_aggressive_enemy.tscn` listo: berserker carmesi con cuernos, ataca al jugador Y a otros enemigos con histeresis de target. Es el motor de [[Ecosistema Vivo]]. Stats de primer pase, falta tunear jugando. *(2026-07-13)* |
+| Enemigo de la grieta | Sigue el default de `grounded_enemy.tscn` | Prefab `rift_enemy.tscn` listo: el primer golpe recibido arranca su reloj y, al cumplirse, se va al otro mundo dejando una [[Grieta]] cruzable. Irse no voltea el mundo — cruzar la grieta si. Modulo `RiftSpawner`, ver [[Afiliacion de Mundo]]. Falta headless y tunear jugando. *(2026-07-13)* |
 | Enemigo hibrido | Sigue el default de `grounded_enemy.tscn` (Dead) | Prefab `hybrid_enemy.tscn` listo: melee + ranged por `AttackLoadout` (elige por distancia) y `WorldSwitchTrigger` en `ON_DEATH` — matarlo voltea el mundo. Ver [[Ataques Enemigos]]. Stats de primer pase, falta tunear jugando. *(2026-07-13)* |
 
 ## H2+

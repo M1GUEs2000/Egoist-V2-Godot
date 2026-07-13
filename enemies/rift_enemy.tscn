@@ -1,0 +1,15 @@
+[gd_scene format=3]
+
+[ext_resource type="PackedScene" uid="uid://cfhiggial63t4" path="res://enemies/grounded_enemy.tscn" id="1_base"]
+[ext_resource type="Script" path="res://core/rift_spawner.gd" id="2_spawner"]
+[ext_resource type="Resource" path="res://data/world_rift_tuning.tres" id="3_rift_tuning"]
+
+[node name="RiftEnemy" instance=ExtResource("1_base")]
+
+[node name="Health" parent="." index="7"]
+max_health = 25.0
+
+[node name="RiftSpawner" type="Node" parent="." index="14"]
+script = ExtResource("2_spawner")
+delay = 3.0
+rift_tuning = ExtResource("3_rift_tuning")

@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="WorldRiftTuning" format=3]
+
+[ext_resource type="Script" path="res://data/world_rift_tuning.gd" id="1_tuning"]
+
+[resource]
+script = ExtResource("1_tuning")
+lifetime = 6.0
+trigger_radius = 1.1
+close_time = 0.25
+warning_time = 2.0
+warning_pulse_speed = 4.0
+glow_energy = 2.2
+light_energy = 2.5
+light_range = 5.0

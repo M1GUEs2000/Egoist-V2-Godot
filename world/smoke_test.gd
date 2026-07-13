@@ -593,6 +593,53 @@ func _ready() -> void:
 	assert(not player.lock_on._target_landing.enabled)
 	enemy_gate.queue_free()
 
+	# Enemigo de la grieta: el primer golpe arranca su reloj; al cumplirse se va al otro mundo
+	# (voltea SU afiliacion, no la de nadie mas) y deja una grieta. Irse NO cambia el mundo.
+	var rift_enemy := (load("res://enemies/rift_enemy.tscn") as PackedScene).instantiate() as GroundedEnemy
+	# Afiliado al mundo actual ANTES de entrar al arbol: los tests de arriba dejan a WorldManager en
+	# un mundo cualquiera, y un enemigo fuera de mundo es intocable (su hurtbox rechaza el golpe).
+	(rift_enemy.get_node("WorldMembership") as WorldMembership).affiliation = WorldManager.current
+	add_child(rift_enemy)
+	await get_tree().process_frame
+	var spawner := rift_enemy.get_node("RiftSpawner") as RiftSpawner
+	spawner.delay = 0.05  # el smoke no espera los 3s reales del prefab
+	assert(not spawner.is_armed())  # sin golpes el reloj no corre
+	var enemy_world_before := rift_enemy.membership.affiliation
+	var world_before_shift := WorldManager.current
+	var dropped: Array[WorldRift] = []
+	spawner.shifted.connect(func(r: WorldRift) -> void: dropped.append(r))
+	rift_enemy.hurtbox.receive_hit(self, 1.0, Vector3.FORWARD, null)
+	assert(spawner.is_armed())
+	# Segundo golpe antes de que venza: NO reinicia el reloj (si lo reiniciara, el await de abajo
+	# encontraria al enemigo todavia sin irse).
+	rift_enemy.hurtbox.receive_hit(self, 1.0, Vector3.FORWARD, null)
+	assert(not spawner.has_shifted())
+	await get_tree().create_timer(spawner.delay + 0.05).timeout
+	assert(spawner.has_shifted())
+	assert(rift_enemy.membership.affiliation == World.opposite_world(enemy_world_before))
+	assert(WorldManager.current == world_before_shift)  # irse al otro mundo no voltea el de todos
+	assert(dropped.size() == 1)
+
+	# La grieta: cruzarla voltea el mundo de todos. Es de UN SOLO uso — cruzarla de nuevo no hace nada.
+	var rift := dropped[0]
+	assert(not rift.is_consumed())
+	rift._on_body_entered(player)
+	assert(rift.is_consumed())
+	assert(WorldManager.current != world_before_shift)
+	var world_after_cross := WorldManager.current
+	rift._on_body_entered(player)
+	assert(WorldManager.current == world_after_cross)  # ya gastada: no vuelve a voltear
+	rift_enemy.queue_free()
+
+	# Grieta vencida: si nadie la cruza dentro de su ventana se cierra sola y NO cambia el mundo.
+	var short_tuning := WorldRiftTuning.new()
+	short_tuning.lifetime = 0.05
+	var stale_rift := WorldRift.spawn(Vector3.ZERO, self, short_tuning)
+	assert(not stale_rift.is_consumed())
+	await get_tree().create_timer(short_tuning.lifetime + 0.05).timeout
+	assert(stale_rift.is_consumed())               # se cerro sola
+	assert(WorldManager.current == world_after_cross)  # sin tocar el mundo de nadie
+
 	print("SMOKE OK")
 	get_tree().quit()
 

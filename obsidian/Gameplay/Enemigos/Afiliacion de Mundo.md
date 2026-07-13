@@ -64,6 +64,29 @@ Se lee distinto del resto sin necesidad de HUD:
 
 Tuneables (exports de `EnemyBase`, excepcion de enemigos): `world_switch_pulse_min_energy` (0.3), `world_switch_pulse_max_energy` (2.0), `world_switch_pulse_speed` (1.2 pulsos/s), `world_switch_death_flash_energy` (6.0), `world_switch_death_flash_time` (0.3 s). *(2026-07-12, pendiente de probar jugando)*
 
+## Enemigo de la grieta *(2026-07-13)*
+
+`rift_enemy.tscn` (hereda `grounded_enemy.tscn`, con un `RiftSpawner` hijo): pelea normal hasta que
+lo tocan. **El primer golpe recibido arranca su reloj** (`delay`, 3 s por defecto); al cumplirse se
+va al otro mundo y deja una [[Grieta]] donde estaba.
+
+- El reloj arranca **una sola vez**: los golpes siguientes no lo reinician ni lo adelantan. Pegarle
+  mas rapido no acelera su huida — la ventana para matarlo es la misma desde que lo tocaste.
+- **Irse no voltea el mundo de nadie.** El `RiftSpawner` solo voltea la `affiliation` de su propio
+  `WorldMembership`: el enemigo queda intangible y pasa a leerse como cascara + humo (el mismo eco
+  de arriba, gratis). El unico que decide el cambio de mundo es el jugador, cruzando o no la grieta.
+- La grieta cuelga de la escena, no del enemigo: se queda donde el cuerpo cruzo aunque el enemigo
+  despues se mueva o muera.
+
+> [!info] Es otro eje que `WorldSwitchTrigger`
+> `WorldSwitchTrigger` voltea el mundo **directo** (ON_HIT/ON_DEATH): el enemigo decide. `RiftSpawner`
+> no cambia el mundo de nadie: **abre una oportunidad** y el jugador decide. Son modulos distintos y
+> conviven — el enemigo de world switch (arriba) sigue existiendo tal cual.
+
+`RiftSpawner` (`core/rift_spawner.gd`) es componible en cualquier cosa que tenga `Hurtbox` y
+`WorldMembership` hermanos, no solo en este enemigo. Tuneables: `delay` (export) y `rift_tuning`
+(el `.tres` de la grieta). *(pendiente de probar jugando)*
+
 ## Activarse / desactivarse al cambiar de mundo
 
 Cuando `WorldMembership` emite `changed`, `EnemyBase._on_membership_changed` sincroniza tres cosas segun el enemigo este activo o no: `collision_layer` (ENEMY o 0), la visual, y `hurtbox.monitorable` (si otros hitbox pueden detectar su hurtbox).
