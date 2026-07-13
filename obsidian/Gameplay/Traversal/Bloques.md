@@ -45,7 +45,7 @@ Pared de pinchos reusable (`world/blocks/spike_wall.tscn`). **Una sola escena pa
 
 - Root `StaticBody3D` con colision fisica contra el jugador y un `WorldMembership` hijo. `SpikeWall._ready` escribe `world` en `membership.affiliation` y llama `membership.refresh()` — el `_ready` del modulo hijo ya corrio con la afiliacion vieja. Si el mundo actual no coincide, apaga visual, colision y trigger.
 - El color NO vive en el `.tscn`: `_paint_world_colors()` genera los materiales de rayas y pinchos desde `World.world_color(world)` (ver [[Colores de mundo]]). Los materiales del `.tscn` son solo preview de editor. Cuerpo siempre negro; pinchos traseros al 40% de brillo.
-- Un `Area3D` (`Trigger`) detecta el contacto. Al tocarla: calcula la normal perpendicular hacia afuera, aplica `PlayerStun.Mode.PUSH` via `try_apply_stun` del player (respeta su threshold, ver [[Combate]]), empuja horizontal + vertical, y restaura doble salto y airdash.
+- Un `Area3D` (`Trigger`) detecta player y enemigos. Al tocarla: calcula la normal perpendicular hacia afuera, aplica **daÃ±o + stun PUSH + empuje**; el stun es rojo para distinguir el hazard del stun amarillo de combate. El player conserva doble salto y airdash tras el rebote; el enemigo recibe el mismo impacto y arco de push. El stun respeta el threshold efectivo del receptor (ver [[Combate]]).
 - Cooldown `hit_cooldown` para evitar multiples rebotes por frame.
 - Exports: `world`, `stun_duration`, `stun_power`, `push_horizontal_speed`, `push_vertical_speed`, `hit_cooldown`.
 - Como el `Trigger` es un nodo hijo separado, la spike wall lo apaga manualmente escuchando `WorldMembership.changed` (ver [[Afiliacion de Mundo]]).

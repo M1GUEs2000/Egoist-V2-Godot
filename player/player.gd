@@ -35,6 +35,7 @@ var _dodge_queued := false  # dodge pedido tarde en un golpe: sale al terminarlo
 @onready var _mesh: MeshInstance3D = get_node_or_null("Mesh") as MeshInstance3D
 
 var _stun_material: StandardMaterial3D
+var _stun_feedback_color := Color.WHITE
 
 func _ready() -> void:
 	add_to_group("player")  # la cámara y los enemigos me encuentran por grupo
@@ -200,15 +201,18 @@ func receive_stun(stun_settings: StunSettings, mode := PlayerStun.Mode.STILL,
 			vertical_speed)
 
 func try_apply_stun(duration: float, power: float, mode := PlayerStun.Mode.STILL,
-		push_direction := Vector3.ZERO, horizontal_speed := 0.0, vertical_speed := 0.0) -> bool:
+		push_direction := Vector3.ZERO, horizontal_speed := 0.0, vertical_speed := 0.0,
+		feedback_color := Color.TRANSPARENT) -> bool:
 	if power < _effective_stun_threshold():
 		return false
-	apply_stun(duration, mode, push_direction, horizontal_speed, vertical_speed)
+	apply_stun(duration, mode, push_direction, horizontal_speed, vertical_speed, feedback_color)
 	return true
 
 func apply_stun(duration: float = -1.0, mode := PlayerStun.Mode.STILL,
-		push_direction := Vector3.ZERO, horizontal_speed := 0.0, vertical_speed := 0.0) -> void:
+		push_direction := Vector3.ZERO, horizontal_speed := 0.0, vertical_speed := 0.0,
+		feedback_color := Color.TRANSPARENT) -> void:
 	var stun_duration := tuning.default_stun_duration if duration < 0.0 else duration
+	_stun_feedback_color = feedback_color if feedback_color.a > 0.0 else tuning.stun_color
 	_dodge_queued = false
 	locomotion.cancel_lunge()
 	wall_slide.cancel()
@@ -351,8 +355,8 @@ func _on_stunned_started(_duration: float, _mode: PlayerStun.Mode) -> void:
 	if _stun_material == null:
 		_stun_material = StandardMaterial3D.new()
 		_stun_material.emission_enabled = true
-	_stun_material.albedo_color = tuning.stun_color
-	_stun_material.emission = tuning.stun_color
+	_stun_material.albedo_color = _stun_feedback_color
+	_stun_material.emission = _stun_feedback_color
 	_stun_material.emission_energy_multiplier = tuning.stun_emission_energy
 	_mesh.set_surface_override_material(0, _stun_material)
 

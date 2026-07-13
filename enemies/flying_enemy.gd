@@ -49,8 +49,8 @@ func _physics_process(delta: float) -> void:
 	_update_patrol(delta)
 	_update_wings()
 
-func apply_stun(duration: float) -> void:
-	super.apply_stun(duration)
+func apply_stun(duration: float, feedback_color := Color.TRANSPARENT) -> void:
+	super.apply_stun(duration, feedback_color)
 	if not is_stunned():
 		return
 	# El enemigo volador se queda suspendido: no usa el retroceso ni la inclinacion de suelo.

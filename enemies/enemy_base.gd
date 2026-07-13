@@ -95,6 +95,7 @@ var _dead := false
 var _is_active := true
 var _last_hit_direction := Vector3.FORWARD
 var _stunned_until := -999.0
+var _stun_feedback_color := Color(1.0, 0.9, 0.15, 1.0)
 var _airborne_until := -999.0
 var _airborne_ground_y := 0.0
 var _slam_bounce := false
@@ -276,11 +277,12 @@ func take_hit_from_enemy(hits: float = 1.0, hit_direction: Vector3 = Vector3.ZER
 		_apply_stun_from_settings(stun)
 	return died
 
-func apply_stun(duration: float) -> void:
+func apply_stun(duration: float, feedback_color := Color.TRANSPARENT) -> void:
 	# Mientras el ragdoll manda (ya toco el piso), el golpe no re-stunea: la fisica es la dueña
 	# del cuerpo hasta que se para. El daño igual entra por Hurtbox.receive_hit → Health.
 	if duration <= 0.0 or _dead or _ragdolling:
 		return
+	_stun_feedback_color = feedback_color if feedback_color.a > 0.0 else Color(1.0, 0.9, 0.15, 1.0)
 	combat_state = CombatState.STUNNED
 	_stunned_until = maxf(_stunned_until, World.now() + duration)
 	# El golpe cancela el push (u otro impulso) en curso y lo reemplaza por un retroceso
@@ -408,16 +410,35 @@ func try_parry(_player: Player, _hit_direction: Vector3 = Vector3.ZERO) -> bool:
 func apply_parry_stun(duration: float) -> void:
 	apply_stun(duration)
 
-func receive_stun(stun: StunSettings) -> bool:
+func receive_stun(stun: StunSettings, feedback_color := Color.TRANSPARENT) -> bool:
 	if stun == null:
 		return false
-	return try_apply_stun(stun.duration_for(is_airborne()), stun.power)
+	return try_apply_stun(stun.duration_for(is_airborne()), stun.power, feedback_color)
 
-func try_apply_stun(duration: float, power: float) -> bool:
+func try_apply_stun(duration: float, power: float, feedback_color := Color.TRANSPARENT) -> bool:
 	if power < _effective_stun_threshold():
 		return false
-	apply_stun(duration)
+	apply_stun(duration, feedback_color)
 	return true
+
+## Impacto de hazard: daÃ±o, stun por threshold y empuje en una sola reacciÃ³n.
+func apply_spike_hit(damage: float, push_direction: Vector3, stun: StunSettings,
+		push_settings: PushSettings, feedback_color: Color) -> bool:
+	if not can_receive_hit() or health == null:
+		return false
+	push_direction.y = 0.0
+	if push_direction.length_squared() > 0.0001:
+		_last_hit_direction = push_direction.normalized()
+	var died := health.take_damage(damage)
+	if died:
+		return true
+	if is_armored():
+		_damage_armor(int(ceil(damage)))
+	if stun != null:
+		try_apply_stun(stun.duration_for(is_airborne()), stun.power, feedback_color)
+	if push_settings != null:
+		push(push_direction, push_settings)
+	return false
 
 func _on_membership_changed(active_now: bool) -> void:
 	_is_active = active_now
@@ -828,13 +849,14 @@ func _refresh_visual_state() -> void:
 	elif is_armored():
 		color = Color(0.6, 0.2, 0.9, 1.0)
 	elif is_stunned():
-		color = Color(1.0, 0.9, 0.15, 1.0)
+		color = _stun_feedback_color
 	var stunned := is_stunned() and not _dead and _is_active
 	# El de world switch late siempre que este vivo y entero: su emision queda prendida y la
 	# energia la mueve _process. El stun sigue mandando (amarillo) mientras dura.
 	var pulsing := is_world_switch() and not stunned and not _dead and _is_active
 	if stun_light != null:
 		stun_light.visible = stunned
+		stun_light.light_color = _stun_feedback_color if stunned else Color.WHITE
 		stun_light.light_energy = stun_light_energy if stunned else 0.0
 		stun_light.omni_range = stun_light_range
 	var mesh_root := visual if visual != null else self

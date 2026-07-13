@@ -73,6 +73,10 @@ supera `PlayerTuning.stun_threshold`, el player entra en `PUSH`: se aleja del at
 pierde el control y emite amarillo. El impulso se configura por ataque con
 `player_stun_push_speed` y `player_stun_push_vertical_speed`. *(2026-07-12)*
 
+`SpikeWall` usa la misma entrada de stun para player y enemigos, pero con feedback rojo:
+ademas del stun aplica daÃ±o y push. El color rojo distingue el hazard del impacto amarillo
+de combate. *(2026-07-12)*
+
 ## Chispas de impacto
 
 `HitSparks` (`GPUParticles3D` one-shot) escupe chispas rojas incandescentes en **todo golpe recibido**, stunee o no. Nacen en la superficie que mira al atacante — `hit_sparks_height` sobre los pies y `hit_sparks_offset` adelantadas hacia el — no en el centro del cuerpo. *(2026-07-09)*

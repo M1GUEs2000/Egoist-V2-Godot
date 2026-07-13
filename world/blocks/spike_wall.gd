@@ -1,5 +1,5 @@
 class_name SpikeWall extends StaticBody3D
-## Pared de pinchos: al tocarla stunea, rebota perpendicularmente y restaura recursos aereos.
+## Pared de pinchos: al tocarla hace daÃ±o, aplica stun PUSH rojo y rebota perpendicularmente.
 ## La misma escena sirve para los dos mundos: `world` decide en cuál aparece y de qué color
 ## se pinta (naranja = vivo, morado = muerto — la convención vive en World.world_color).
 ## Se instancia una vez por mundo en test_scene; no hay dos .tscn.
@@ -11,15 +11,18 @@ class_name SpikeWall extends StaticBody3D
 
 @export var stun_duration := 0.45
 @export var stun_power := 2.0
+@export var damage := 10.0
 @export var push_horizontal_speed := 9.0
 @export var push_vertical_speed := 5.5
+@export var enemy_push_gravity := -25.0
 @export var hit_cooldown := 0.35
+@export var hazard_stun_color := Color(1.0, 0.08, 0.12, 1.0)
 
 ## Cuánto más oscuros son los pinchos traseros respecto de los delanteros.
 const BACK_SPIKE_DIM := 0.4
 const STRIPE_EMISSION_ENERGY := 0.35
 
-var _last_hit_time := -999.0
+var _last_hit_times: Dictionary[int, float] = {}
 
 @onready var _trigger: Area3D = $Trigger
 @onready var _membership: WorldMembership = $WorldMembership
@@ -28,7 +31,7 @@ func _ready() -> void:
 	collision_layer = World.LAYER_WORLD
 	collision_mask = 0
 	_trigger.collision_layer = 0
-	_trigger.collision_mask = World.LAYER_PLAYER
+	_trigger.collision_mask = World.LAYER_PLAYER | World.LAYER_ENEMY
 	_trigger.body_entered.connect(_on_body_entered)
 	_paint_world_colors()
 	if _membership != null:
@@ -65,25 +68,38 @@ func _on_body_entered(body: Node3D) -> void:
 	if _membership != null and not _membership.is_active:
 		return
 	var player := body as Player
-	if player == null:
+	var enemy := body as EnemyBase
+	if player == null and enemy == null:
 		return
-	if World.now() - _last_hit_time < hit_cooldown:
+	var body_id := body.get_instance_id()
+	var last_hit := float(_last_hit_times.get(body_id, -999.0))
+	if World.now() - last_hit < hit_cooldown:
 		return
-	_last_hit_time = World.now()
+	_last_hit_times[body_id] = World.now()
 
-	var push_dir := _normal_away_from(player.global_position)
-	if player.has_method("try_apply_stun"):
+	var push_dir := _normal_away_from(body.global_position)
+	if player != null:
+		player.take_damage(damage)
 		player.try_apply_stun(
 				stun_duration,
 				stun_power,
 				PlayerStun.Mode.PUSH,
 				push_dir,
 				push_horizontal_speed,
-				push_vertical_speed)
-	else:
-		player.apply_stun(stun_duration, PlayerStun.Mode.PUSH, push_dir, push_horizontal_speed, push_vertical_speed)
-	player.restore_double_jump()
-	player.restore_airdash()
+				push_vertical_speed,
+				hazard_stun_color)
+		player.restore_double_jump()
+		player.restore_airdash()
+		return
+	var hazard_stun := StunSettings.new()
+	hazard_stun.power = stun_power
+	hazard_stun.grounded = stun_duration
+	hazard_stun.airborne = stun_duration
+	var enemy_push := PushSettings.new()
+	enemy_push.horizontal_speed = push_horizontal_speed
+	enemy_push.up_speed = push_vertical_speed
+	enemy_push.gravity = enemy_push_gravity
+	enemy.apply_spike_hit(damage, push_dir, hazard_stun, enemy_push, hazard_stun_color)
 
 func _normal_away_from(world_position: Vector3) -> Vector3:
 	var normal := global_basis.z.normalized()
