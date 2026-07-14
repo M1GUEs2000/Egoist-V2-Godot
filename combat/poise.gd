@@ -53,6 +53,15 @@ func take_poise_damage(amount: float, armored := false) -> bool:
 	_break()
 	return true
 
+## Consulta si un golpe de este poise QUEBRARIA la reserva, sin consumirlo. La necesitan los
+## desplazamientos que se deciden ANTES de que el golpe cobre el poise (el launcher corre en
+## about_to_hit, ver EnemyBase.launch): si consumieran aca, el golpe lo cobraria dos veces.
+func would_break(amount: float, armored := false) -> bool:
+	if amount <= 0.0:
+		return false  # un golpe sin poise nunca stunea, ni con la reserva en cero
+	_settle(World.now())
+	return _accumulated + amount >= effective_max(armored)
+
 ## Cuanto lleva acumulado ahora mismo (ya decaido). Para el smoke y un futuro HUD de stagger.
 func accumulated() -> float:
 	_settle(World.now())

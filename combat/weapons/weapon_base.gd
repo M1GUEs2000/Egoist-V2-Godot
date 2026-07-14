@@ -49,6 +49,9 @@ var _launcher_id := 0
 var _launcher_height := 0.0
 var _launcher_hang_time := 0.0
 var _launcher_starts_lying := false
+# El stun del launcher: el enemigo lo necesita para consultar su poise y decidir si el launch
+# entra (no se lo puede mover si le queda reserva). Ver EnemyBase.launch.
+var _launcher_stun: StunSettings
 var _active_launcher_hitbox: Hitbox
 ## Pose de mano desde la que arranca la estocada en curso (ver thrust).
 var _thrust_from := Quaternion.IDENTITY
@@ -342,18 +345,18 @@ func setup_launcher_hitbox(hitbox: Hitbox, deals_damage: bool, stun_settings: St
 	hitbox.damage = 1.0 if deals_damage else 0.0
 	hitbox.stun = stun_settings
 	hitbox.can_be_parried = false
+	_launcher_stun = stun_settings
 	_launcher_starts_lying = starts_lying
 	hitbox.about_to_hit.connect(_on_launcher_about_to_hit)
 	hitbox.landed.connect(_on_hit)
 
-## Solo lanza lo lanzable (has_method): una pared o un pickup no salen volando.
+## Solo lanza lo lanzable (has_method): una pared o un pickup no salen volando. El enemigo decide
+## si el launch entra: con poise de sobra lo aguanta y no se mueve (EnemyBase.launch).
 func _on_launcher_about_to_hit(hurtbox: Hurtbox) -> void:
 	var target: Node = hurtbox.owner_node
 	if target.has_method("launch"):
-		if _launcher_starts_lying and target is EnemyBase:
-			target.call("launch", _launcher_height, _launcher_hang_time, true)
-		else:
-			target.call("launch", _launcher_height, _launcher_hang_time)
+		target.call("launch", _launcher_height, _launcher_hang_time, _launcher_stun,
+				_launcher_starts_lying and target is EnemyBase)
 
 ## Ventana de daño del launcher con id-guard: espera `delay` (deja arrancar el swing
 ## visual), opcionalmente lanza al player y prende el hitbox `duration` segundos. Arrancar un nuevo

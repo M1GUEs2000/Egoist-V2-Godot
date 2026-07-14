@@ -443,6 +443,27 @@ func _ready() -> void:
 	stunned_enemy.queue_free()
 	airborne_enemy.queue_free()
 
+	# INVARIANTE: con poise de sobra NO se lo mueve de ninguna forma. El gate es la reserva
+	# quebrada, no la armadura: un armado con reserva rota SI se mueve (resistencia, no inmunidad).
+	var poise_enemy := (load("res://enemies/grounded_enemy.tscn") as PackedScene).instantiate() as EnemyBase
+	add_child(poise_enemy)
+	await get_tree().process_frame
+	poise_enemy._last_hit_direction = Vector3.RIGHT
+	var weak_stun := StunSettings.new()
+	weak_stun.poise_damage = 1.0  # muy por debajo de poise_max: nunca quiebra de un golpe
+	assert(not poise_enemy.is_stunned())
+	assert(not poise_enemy.launch(3.0, 0.5, weak_stun))  # aguanta: no se lo lanza
+	assert(not poise_enemy.is_airborne())
+	poise_enemy.push(Vector3.RIGHT, PushSettings.new())
+	assert(not poise_enemy.is_airborne())                # aguanta: no se lo empuja
+	assert(not poise_enemy._lying)
+	# El mismo golpe con poise suficiente para quebrar la reserva SI lo lanza.
+	var breaking_stun := StunSettings.new()
+	breaking_stun.poise_damage = poise_enemy.poise_max + poise_enemy.armor_poise_bonus
+	assert(poise_enemy.launch(3.0, 0.5, breaking_stun))
+	assert(poise_enemy.is_airborne())
+	poise_enemy.queue_free()
+
 	# Ranged Dead: el prefab Dead conserva la IA comun y equipa solo RangedAttack. Ya no lo logra
 	# una subclase propia sino su AttackLoadout — el mismo modulo que hace hibrido a cualquier otro.
 	var ranged_dead := (load("res://enemies/ranged_dead.tscn") as PackedScene).instantiate() as GroundedEnemy
@@ -495,6 +516,7 @@ func _ready() -> void:
 	add_child(lying_enemy)
 	await get_tree().process_frame
 	lying_enemy._last_hit_direction = Vector3.RIGHT
+	lying_enemy.apply_stun(0.5)         # sin la reserva quebrada no se lo mueve (ver bloque de poise)
 	lying_enemy.push(Vector3.RIGHT, PushSettings.new())
 	assert(lying_enemy._lying)          # el push lo acuesta
 	assert(lying_enemy.is_airborne())   # sigue su arco en el aire (rigid body solo en el piso)

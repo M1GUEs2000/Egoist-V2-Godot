@@ -281,10 +281,10 @@ func _on_air_slam_about_to_hit(hurtbox: Hurtbox) -> void:
 		return
 	var target: Node = hurtbox.owner_node
 	if target.has_method("launch"):
-		if target is EnemyBase:
-			target.call("launch", _t().air_y_ground_launch_height, _t().air_y_launcher_hang_time, true)
-		else:
-			target.call("launch", _t().air_y_ground_launch_height, _t().air_y_launcher_hang_time)
+		# El stun del hitbox va como consulta de poise: si al enemigo le queda reserva, aguanta el
+		# estallido en el piso y no se lo lanza (EnemyBase.launch).
+		target.call("launch", _t().air_y_ground_launch_height, _t().air_y_launcher_hang_time,
+				_air_slam_hitbox.stun, target is EnemyBase)
 
 ## Cada enemigo del estallido: alimenta meter/kills/air-stall. Si el impacto fue aereo, ademas lo
 ## clava y lo hace PICAR en arco balistico (slam_arc) DESPUES del daño: el slam fija

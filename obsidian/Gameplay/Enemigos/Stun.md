@@ -80,6 +80,37 @@ Poise por fuente (primer pase, **pendiente de tunear jugando**):
 | Melee / ranged enemigo | 2.0 | Tienen que insistir para quebrar al player (reserva 6, drenaje 1.5/s). |
 | `SpikeWall` | 6.0 | Un hazard quiebra rapido: `stun_poise_damage`. |
 
+## El poise es el gate de TODO desplazamiento
+
+> [!important] Con poise de sobra, al enemigo no se lo mueve de ninguna forma
+> `launch`, `push`, `slam`, `slam_bounce` y `slam_arc` comparten un unico gate en `EnemyBase`
+> (`_breaks_poise`): el desplazamiento entra **solo** si la reserva ya esta quebrada (`STUNNED`)
+> o si el golpe que lo trae la quiebra ahora mismo. Un enemigo que aguanta come el daño, tira el
+> fogonazo blanco y **no se mueve**. *(2026-07-13, reemplaza el viejo guard `is_armored()`)*
+
+Antes cada verbo se gateaba con `is_armored()` — el vestigio del modelo de umbral instantaneo.
+Eso producia la incoherencia: un enemigo **sin** armadura salia lanzado aunque tuviera la reserva
+intacta, y uno **con** armadura era inmune aunque el golpe se la quebrara. Ahora manda el poise y
+la armadura deja de ser un caso aparte: es reserva extra (`armor_poise_bonus`), o sea
+**resistencia, nunca inmunidad** — el sweet spot del [[Mazo]] (12) mueve a un armado igual.
+
+### El launcher consulta el poise, no lo consume
+
+El launcher corre en `about_to_hit`, **antes** de que el golpe cobre el poise (asi el stun
+posterior ve al enemigo ya `AIRBORNE` y le da la duracion aerea). Por eso `launch()` recibe el
+`StunSettings` del golpe y usa `Poise.would_break()`: **consulta** si esa reserva se va a quebrar,
+sin consumirla. El golpe la consume despues, en `on_hurtbox_hit`. Consumirla en el launch la
+cobraria dos veces.
+
+Los demas verbos corren **despues** del golpe (en `landed`, o tras el `try_apply_stun` de
+`apply_spike_hit`), asi que les alcanza con `is_stunned()`.
+
+### El rebote del jugador no mueve al enemigo
+
+`PlayerEnemyBounce` no trae `poise_damage` propio (no figura en la tabla de fuentes de arriba):
+rebotar sobre un enemigo **no lo desplaza** salvo que ya este stuneado. El jugador rebota igual
+—su impulso es suyo—, pero el enemigo aguanta plantado. *(2026-07-13)*
+
 ## Interaccion con el aire (juggle)
 
 > [!important]

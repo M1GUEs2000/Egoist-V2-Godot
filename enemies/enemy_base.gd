@@ -289,6 +289,25 @@ func is_armored() -> bool:
 func is_ragdolling() -> bool:
 	return _ragdolling
 
+## GATE UNIVERSAL DE DESPLAZAMIENTO: mientras al enemigo le quede poise NO se lo mueve de ninguna
+## forma (launch, push, slam, bounce). Solo entra si la reserva ya esta quebrada (STUNNED) o si el
+## golpe que trae el desplazamiento la va a quebrar ahora mismo.
+##
+## La armadura NO es un caso aparte: es reserva extra (ver Poise.effective_max), asi que un armado
+## aguanta mas golpes, pero uno que le quiebre la reserva (el sweet spot del Mazo) lo mueve igual.
+## Resistencia, nunca inmunidad.
+##
+## `stun` solo se pasa desde los desplazamientos que corren ANTES de que el golpe cobre el poise
+## (el launcher, en about_to_hit): ahi la reserva se CONSULTA (would_break, no consume) porque el
+## golpe la va a cobrar despues en on_hurtbox_hit. Los que corren DESPUES del golpe (push, slam,
+## slam_arc, en landed) no lo pasan: para entonces el stun ya entro y alcanza con is_stunned().
+func _breaks_poise(stun: StunSettings = null) -> bool:
+	if is_stunned():
+		return true  # la reserva ya esta quebrada: el juggle y los combos entran directo
+	if stun == null or poise == null:
+		return false
+	return poise.would_break(stun.poise_damage, is_armored())
+
 func can_attack() -> bool:
 	return _is_active and not _dead and not is_stunned() and not is_airborne() and not _ragdolling
 
@@ -381,8 +400,12 @@ func set_armored(enabled: bool) -> void:
 	_reset_stun_reaction()
 	_refresh_visual_state()
 
-func launch(height: float, hang_time: float, starts_lying := false) -> bool:
-	if not can_receive_hit() or is_armored() or _ragdolling:
+## Lanza al aire. Corre en about_to_hit (ANTES del daño) para que el stun del golpe lo vea ya
+## airborne y le de la duracion aerea, asi que recibe el `stun` del golpe para consultar el poise:
+## solo lanza si esa reserva se quiebra. Ver _breaks_poise.
+func launch(height: float, hang_time: float, stun: StunSettings = null,
+		starts_lying := false) -> bool:
+	if not can_receive_hit() or _ragdolling or not _breaks_poise(stun):
 		return false
 	_begin_airborne()
 	if starts_lying:
@@ -407,7 +430,7 @@ func _launch_routine(id: int, height: float, hang_time: float) -> void:
 	_airborne_until = World.now() + hang_time
 
 func slam(down_speed: float) -> void:
-	if not can_receive_hit() or is_armored() or not is_airborne() or _ragdolling:
+	if not can_receive_hit() or not is_stunned() or not is_airborne() or _ragdolling:
 		return
 	_airborne_until = World.now()
 	velocity.y = -absf(down_speed)
@@ -415,7 +438,7 @@ func slam(down_speed: float) -> void:
 ## Rebote VERTICAL: baja y, al tocar el piso, sube a una altura objetivo con hang. Lo usa el Y
 ## cargado aereo de la Espada (spike + rebote hasta tu altura).
 func slam_bounce(down_speed: float, target_world_y: Callable, hang_time: float) -> void:
-	if not can_receive_hit() or is_armored() or _ragdolling:
+	if not can_receive_hit() or not is_stunned() or _ragdolling:
 		return
 	_bounce_target_y = target_world_y
 	_bounce_hang_time = hang_time
@@ -430,7 +453,7 @@ func slam_bounce(down_speed: float, target_world_y: Callable, hang_time: float) 
 ## bounce_dir, sin atarse a una altura. Lo usa el Y cargado aereo del Mazo (rebote genuino).
 func slam_arc(down_speed: float, bounce_dir: Vector3, bounce_up_speed: float,
 		bounce_forward_speed: float, bounce_gravity: float) -> void:
-	if not can_receive_hit() or is_armored() or _ragdolling:
+	if not can_receive_hit() or not is_stunned() or _ragdolling:
 		return
 	_bounce_dir = Vector3(bounce_dir.x, 0.0, bounce_dir.z)
 	if _bounce_dir.length_squared() > 0.0001:
@@ -447,8 +470,13 @@ func slam_arc(down_speed: float, bounce_dir: Vector3, bounce_up_speed: float,
 
 ## Empujon en arco. El arco (velocidad + altura + cierre) lo define quien ataca via
 ## PushSettings, no el enemigo: asi cada arma/ataque empuja distinto (inyectable).
+##
+## Todos los pushes corren DESPUES de que el golpe cobro el poise (en landed, o tras el
+## try_apply_stun de apply_spike_hit), asi que alcanza con is_stunned(): si el enemigo aguanto la
+## reserva, no se mueve. El rebote del jugador (PlayerEnemyBounce) no trae poise propio, asi que
+## solo empuja a un enemigo ya stuneado.
 func push(direction: Vector3, settings: PushSettings) -> void:
-	if not can_receive_hit() or is_armored() or _ragdolling:
+	if not can_receive_hit() or not is_stunned() or _ragdolling:
 		return
 	direction.y = 0.0
 	if direction.length_squared() < 0.0001:
@@ -500,6 +528,8 @@ func apply_spike_hit(damage: float, push_direction: Vector3, stun: StunSettings,
 		return true
 	if is_armored():
 		_damage_armor(int(ceil(damage)))
+	# El stun corre ANTES del push a proposito: push() solo empuja si la reserva quedo quebrada
+	# (ver su gate). Un enemigo que aguanta el hazard come el daño y el fogonazo blanco, y no se mueve.
 	if stun != null:
 		try_apply_stun(stun.duration_for(is_airborne()), stun.poise_damage, feedback_color)
 	if push_settings != null:
