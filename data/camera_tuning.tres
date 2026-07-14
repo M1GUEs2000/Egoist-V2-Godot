@@ -1,15 +1,9 @@
-[gd_resource type="Resource" script_class="CameraTuning" format=3]
+[gd_resource type="Resource" script_class="CameraTuning" format=3 uid="uid://ddmumqevh7gg8"]
 
-[ext_resource type="Script" path="res://data/camera_tuning.gd" id="1_tuning"]
+[ext_resource type="Script" uid="uid://bur5g6y2gogb2" path="res://data/camera_tuning.gd" id="1_tuning"]
 
 [resource]
 script = ExtResource("1_tuning")
 pitch = 40.0
-center_yaw = 45.0
-distance = 18.0
-damping = 5.0
-max_yaw_offset = 30.0
-yaw_speed = 90.0
-recenter_delay = 1.2
-recenter_speed = 4.0
-input_deadzone = 0.2
+yaw_speed = 194.0
+recenter_delay = 5.0

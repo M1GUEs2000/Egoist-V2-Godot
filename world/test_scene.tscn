@@ -17,8 +17,8 @@
 [ext_resource type="Script" uid="uid://da7tt4qincebu" path="res://visual/world_scan.gd" id="17_world_scan"]
 [ext_resource type="PackedScene" path="res://enemies/ultra_aggressive_enemy.tscn" id="18_ultra_aggressive"]
 [ext_resource type="PackedScene" path="res://enemies/hybrid_enemy.tscn" id="19_hybrid_enemy"]
+[ext_resource type="Resource" uid="uid://ddmumqevh7gg8" path="res://data/camera_tuning.tres" id="20_camtuning"]
 [ext_resource type="PackedScene" path="res://enemies/rift_enemy.tscn" id="21_rift_enemy"]
-[ext_resource type="Resource" path="res://data/camera_tuning.tres" id="20_camtuning"]
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_floor"]
 size = Vector3(160, 1, 160)
@@ -49,6 +49,8 @@ albedo_color = Color(0.85, 0.55, 0.25, 1)
 
 [sub_resource type="StandardMaterial3D" id="Mat_dead"]
 albedo_color = Color(0.5, 0.3, 0.75, 1)
+
+[sub_resource type="Environment" id="Environment_m478f"]
 
 [sub_resource type="Environment" id="Env_world"]
 background_mode = 1
@@ -195,7 +197,7 @@ collision_mask = 0
 script = ExtResource("4_membership")
 
 [node name="LivingPlatform3" type="StaticBody3D" parent="." unique_id=1896626281]
-transform = Transform3D(4.5980473, 0.029133607, 0, -0.13401459, 0.99957556, 0, 0, 0, 5.005, 30.914867, -1.6487465, -173.5273)
+transform = Transform3D(4.5980473, 0.029133607, 0, -0.13401459, 0.99957556, 0, 0, 0, 5.005, 30.275337, -1.6487465, -165.41785)
 collision_mask = 0
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="LivingPlatform3" unique_id=1239432844]
@@ -286,7 +288,7 @@ script = ExtResource("4_membership")
 affiliation = 1
 
 [node name="DeadPlatform7" type="StaticBody3D" parent="." unique_id=415911114]
-transform = Transform3D(-2.425681, 1.023297, 0.6967189, -4.323122, -0.0068709333, -3.8929775, -7.0849385, -0.3461551, 2.1368995, 50.98105, 11.416581, -155.35323)
+transform = Transform3D(-4.664585, 0.8475662, 1.3740258, -4.3231215, -0.006870913, -3.8929777, -5.8584914, -0.6697698, 1.7787099, 47.732307, 11.416581, -154.08118)
 collision_mask = 0
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="DeadPlatform7" unique_id=1749269711]
@@ -308,41 +310,37 @@ collision_mask = 0
 script = ExtResource("4_membership")
 affiliation = 1
 
-[node name="EchoLivingPlatformPreview" type="StaticBody3D" parent="."]
+[node name="EchoLivingPlatformPreview" type="StaticBody3D" parent="." unique_id=942086279]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3, 0.5, -4)
 collision_mask = 0
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="EchoLivingPlatformPreview"]
+[node name="CollisionShape3D" type="CollisionShape3D" parent="EchoLivingPlatformPreview" unique_id=1476151367]
 shape = SubResource("BoxShape3D_platform")
 
-[node name="Mesh" type="MeshInstance3D" parent="EchoLivingPlatformPreview"]
+[node name="Mesh" type="MeshInstance3D" parent="EchoLivingPlatformPreview" unique_id=1739822225]
 mesh = SubResource("BoxMesh_platform")
 surface_material_override/0 = SubResource("Mat_living")
 
-[node name="WorldMembership" type="Node" parent="EchoLivingPlatformPreview"]
+[node name="WorldMembership" type="Node" parent="EchoLivingPlatformPreview" unique_id=1613964366]
 script = ExtResource("4_membership")
 
-[node name="EchoDeadPlatformPreview" type="StaticBody3D" parent="."]
+[node name="EchoDeadPlatformPreview" type="StaticBody3D" parent="." unique_id=268405721]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3, 0.5, -4)
 collision_mask = 0
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="EchoDeadPlatformPreview"]
+[node name="CollisionShape3D" type="CollisionShape3D" parent="EchoDeadPlatformPreview" unique_id=1657480941]
 shape = SubResource("BoxShape3D_platform")
 
-[node name="Mesh" type="MeshInstance3D" parent="EchoDeadPlatformPreview"]
+[node name="Mesh" type="MeshInstance3D" parent="EchoDeadPlatformPreview" unique_id=1838677380]
 mesh = SubResource("BoxMesh_platform")
 surface_material_override/0 = SubResource("Mat_dead")
 
-[node name="WorldMembership" type="Node" parent="EchoDeadPlatformPreview"]
+[node name="WorldMembership" type="Node" parent="EchoDeadPlatformPreview" unique_id=1260292758]
 script = ExtResource("4_membership")
 affiliation = 1
 
-[node name="EchoDeadEnemyPreview" parent="." instance=ExtResource("12_enemy")]
+[node name="EchoDeadEnemyPreview" parent="." unique_id=970469046 instance=ExtResource("12_enemy")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, -7)
-
-[node name="WorldMembership" parent="EchoDeadEnemyPreview" index="8"]
-mode = 0
-affiliation = 1
 
 [node name="Player" parent="." unique_id=30112187 instance=ExtResource("2_player")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.1, 0)
@@ -376,10 +374,6 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.5, 0, -2)
 enable_action_curse = true
 hits_to_break = 1
 
-[node name="LaunchBlock" parent="." unique_id=715488028 instance=ExtResource("6_traversal")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5, 0, -2)
-enable_launch = true
-
 [node name="LaunchBlock2" parent="." unique_id=766683590 instance=ExtResource("6_traversal")]
 transform = Transform3D(1.515, 0, 0, 0, 1.515, 0, 0, 0, 1.515, 29.119005, 3.003882, -60.043007)
 enable_launch = true
@@ -392,7 +386,7 @@ enable_world_switch = true
 hits_to_break = 50
 
 [node name="WorldSwitchPickup6" parent="." unique_id=791179567 instance=ExtResource("6_traversal")]
-transform = Transform3D(1.985, 0, 0, 0, 1.985, 0, 0, 0, 1.985, 29.949001, 6.635212, -170.72615)
+transform = Transform3D(1.985, 0, 0, 0, 1.985, 0, 0, 0, 1.985, 29.309471, 6.635212, -162.6167)
 enable_world_switch = true
 hits_to_break = 50
 
@@ -441,7 +435,12 @@ transform = Transform3D(0.7112188, 0, -1.4902995, 0, 2.7046368, 0, 3.4735, 0, 0.
 
 [node name="WorldSwitchEnemy" parent="." unique_id=674481333 instance=ExtResource("16_world_switch_enemy")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6, 0.1, -4)
-ai_backend = 1
+passive_remembers_attackers = false
+evade_chance = 0.3
+evade_reaction_time = 0.2
+evade_cooldown = 4.0
+evade_duration = 0.45
+evade_range = 3.5
 poise_max = 12.0
 
 [node name="GroundedEnemy" parent="." unique_id=295057239 instance=ExtResource("12_enemy")]
@@ -449,7 +448,8 @@ transform = Transform3D(0.866025, 0, 0.5, 0, 1, 0, -0.5, 0, 0.866025, 43.880486,
 armored = true
 
 [node name="PassiveEnemyA" parent="." unique_id=1104888586 instance=ExtResource("12_enemy")]
-transform = Transform3D(0.866025, 0, 0.5, 0, 1, 0, -0.5, 0, 0.866025, 3, 0.1, 12)
+transform = Transform3D(0.866025, 0, 0.5, 0, 1, 0, -0.5, 0, 0.866025, 9.702585, 0.1, 13.062069)
+evade_cooldown = 0.1
 hostility = 0
 normal_color = Color(0.25, 0.75, 0.35, 1)
 
@@ -461,11 +461,11 @@ normal_color = Color(0.25, 0.75, 0.35, 1)
 [node name="PassiveEnemyC" parent="." unique_id=128610227 instance=ExtResource("12_enemy")]
 transform = Transform3D(-0.5, 0, 0.866025, 0, 1, 0, -0.866025, 0, -0.5, 0, 0.1, 15)
 hostility = 0
+armored = true
 normal_color = Color(0.25, 0.75, 0.35, 1)
 
 [node name="PassiveEnemyD" parent="." unique_id=864359544 instance=ExtResource("12_enemy")]
 transform = Transform3D(0.5, 0, 0.866025, 0, 1, 0, -0.866025, 0, 0.5, 0, 0.1, 9)
-ai_backend = 1
 allowed_state_flags = 32766
 hostility = 0
 normal_color = Color(0.25, 0.75, 0.35, 1)
@@ -477,7 +477,7 @@ normal_color = Color(0.95, 0.7, 0.2, 1)
 
 [node name="ReactiveEnemyB" parent="." unique_id=1034304538 instance=ExtResource("12_enemy")]
 transform = Transform3D(0.707107, 0, -0.707107, 0, 1, 0, 0.707107, 0, 0.707107, 12, 0.1, 25)
-hostility = 1
+hostility = 0
 normal_color = Color(0.95, 0.7, 0.2, 1)
 
 [node name="AggressiveEnemyA" parent="." unique_id=397802682 instance=ExtResource("12_enemy")]
@@ -488,18 +488,45 @@ transform = Transform3D(0.34202, 0, -0.939693, 0, 1, 0, 0.939693, 0, 0.34202, 22
 
 [node name="RangedDead" parent="." unique_id=677148263 instance=ExtResource("15_ranged_dead")]
 transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, -18, 0.1, 34)
+passive_remembers_attackers = false
+evade_chance = 0.3
+evade_reaction_time = 0.2
+evade_cooldown = 4.0
+evade_duration = 0.45
+evade_range = 3.5
+
+[node name="WorldEnvironment2" type="WorldEnvironment" parent="." unique_id=1934163491]
+environment = SubResource("Environment_m478f")
 
 [node name="HybridEnemy" parent="." unique_id=1073219846 instance=ExtResource("19_hybrid_enemy")]
 transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, -30, 0.1, 20)
+passive_remembers_attackers = false
+evade_chance = 0.3
+evade_reaction_time = 0.2
+evade_cooldown = 4.0
+evade_duration = 0.45
+evade_range = 3.5
 
-[node name="RiftEnemy" parent="." instance=ExtResource("21_rift_enemy")]
+[node name="RiftEnemy" parent="." unique_id=895625651 instance=ExtResource("21_rift_enemy")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 6, 0.1, -6)
+passive_remembers_attackers = false
+evade_chance = 0.3
+evade_reaction_time = 0.2
+evade_cooldown = 4.0
+evade_duration = 0.45
+evade_range = 3.5
 
 [node name="FlyingEnemy" parent="." unique_id=279043693 instance=ExtResource("16_flying_enemy")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6, 7, -8)
 
 [node name="UltraAggressiveEnemy" parent="." unique_id=9954827 instance=ExtResource("18_ultra_aggressive")]
 transform = Transform3D(-1, 0, -8.74228e-08, 0, 1, 0, 8.74228e-08, 0, -1, 0, 0.1, 60)
+passive_remembers_attackers = false
+evade_chance = 0.3
+evade_reaction_time = 0.2
+evade_cooldown = 4.0
+evade_duration = 0.45
+evade_range = 3.5
 
 [node name="UltraPreyA" parent="." unique_id=1470338205 instance=ExtResource("12_enemy")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5, 0.1, 66)

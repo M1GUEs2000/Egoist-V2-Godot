@@ -14,7 +14,6 @@ max_energy = 5.0
 rim_max_energy = 4.315
 pulse_interval = 7.0
 pulse_exponent = 11.9
-pulse_visibility_threshold = 0.15
 smoke_pulse_boost = 0.3
 particle_pulse_glow = 1000.0
 fill_energy = 0.0
