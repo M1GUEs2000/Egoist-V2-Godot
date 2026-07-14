@@ -1,0 +1,314 @@
+[gd_scene format=3 uid="uid://c123456789abc"]
+
+[ext_resource type="Script" uid="uid://7jtuoxscym8d" path="res://world/test_scene.gd" id="1_scene"]
+[ext_resource type="PackedScene" uid="uid://bf1ikbdvqburt" path="res://player/player.tscn" id="2_player"]
+[ext_resource type="Script" uid="uid://bm6520nqu8q3f" path="res://visual/camera_rig.gd" id="3_camrig"]
+[ext_resource type="Script" uid="uid://cr2mf5ypgksws" path="res://core/world_membership.gd" id="4_membership"]
+[ext_resource type="PackedScene" path="res://ui/hud.tscn" id="11_hud"]
+[ext_resource type="PackedScene" uid="uid://cfhiggial63t4" path="res://enemies/grounded_enemy.tscn" id="12_enemy"]
+[ext_resource type="Script" uid="uid://bpdpihqvparu5" path="res://visual/camera_occlusion_fade.gd" id="14_occlusion"]
+[ext_resource type="Script" uid="uid://da7tt4qincebu" path="res://visual/world_scan.gd" id="17_world_scan"]
+[ext_resource type="Resource" path="res://data/camera_tuning.tres" id="20_camtuning"]
+[ext_resource type="PackedScene" path="res://world/blocks/traversal_block.tscn" id="6_traversal"]
+[ext_resource type="PackedScene" uid="uid://ddiwctuct5igd" path="res://enemies/ranged_dead.tscn" id="15_ranged_dead"]
+[ext_resource type="PackedScene" path="res://enemies/hybrid_enemy.tscn" id="19_hybrid_enemy"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_floor"]
+size = Vector3(200, 1, 50)
+
+[sub_resource type="BoxMesh" id="BoxMesh_floor"]
+size = Vector3(200, 1, 50)
+
+[sub_resource type="StandardMaterial3D" id="Mat_floor"]
+albedo_color = Color(0.35, 0.38, 0.33, 1)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_block"]
+size = Vector3(4, 2, 1)
+
+[sub_resource type="BoxMesh" id="BoxMesh_block"]
+size = Vector3(4, 2, 1)
+
+[sub_resource type="StandardMaterial3D" id="Mat_block"]
+albedo_color = Color(0.5, 0.45, 0.4, 1)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_wall"]
+size = Vector3(1, 3, 15)
+
+[sub_resource type="BoxMesh" id="BoxMesh_wall"]
+size = Vector3(1, 3, 15)
+
+[sub_resource type="StandardMaterial3D" id="Mat_wall"]
+albedo_color = Color(0.55, 0.52, 0.5, 1)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_platform"]
+size = Vector3(10, 1, 10)
+
+[sub_resource type="BoxMesh" id="BoxMesh_platform"]
+size = Vector3(10, 1, 10)
+
+[sub_resource type="StandardMaterial3D" id="Mat_platform"]
+albedo_color = Color(0.6, 0.55, 0.5, 1)
+
+[sub_resource type="Environment" id="Env_world"]
+background_mode = 1
+background_color = Color(0.4, 0.6, 0.9, 1)
+ambient_light_source = 2
+ambient_light_color = Color(0.36, 0.38, 0.45, 1)
+tonemap_mode = 2
+glow_enabled = true
+glow_levels/3 = 1.0
+glow_levels/4 = 1.0
+glow_levels/5 = 1.0
+glow_intensity = 0.9
+glow_bloom = 0.1
+
+[node name="LVL1_v0_01" type="Node3D" unique_id=1118309263]
+script = ExtResource("1_scene")
+
+[node name="Terrain" type="Node3D" parent="."]
+
+[node name="MainFloor" type="StaticBody3D" parent="Terrain"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.5, 0)
+collision_mask = 0
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Terrain/MainFloor"]
+shape = SubResource("BoxShape3D_floor")
+
+[node name="Mesh" type="MeshInstance3D" parent="Terrain/MainFloor"]
+mesh = SubResource("BoxMesh_floor")
+surface_material_override/0 = SubResource("Mat_floor")
+
+[node name="Corridor" type="Node3D" parent="Terrain"]
+
+[node name="CorridorWallLeft" type="StaticBody3D" parent="Terrain/Corridor"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3.5, 1.5, 15)
+collision_mask = 0
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Terrain/Corridor/CorridorWallLeft"]
+shape = SubResource("BoxShape3D_wall")
+
+[node name="Mesh" type="MeshInstance3D" parent="Terrain/Corridor/CorridorWallLeft"]
+mesh = SubResource("BoxMesh_wall")
+surface_material_override/0 = SubResource("Mat_wall")
+
+[node name="CorridorWallRight" type="StaticBody3D" parent="Terrain/Corridor"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.5, 1.5, 15)
+collision_mask = 0
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Terrain/Corridor/CorridorWallRight"]
+shape = SubResource("BoxShape3D_wall")
+
+[node name="Mesh" type="MeshInstance3D" parent="Terrain/Corridor/CorridorWallRight"]
+mesh = SubResource("BoxMesh_wall")
+surface_material_override/0 = SubResource("Mat_wall")
+
+[node name="Traversal" type="Node3D" parent="Terrain"]
+
+[node name="Platform1" type="StaticBody3D" parent="Terrain/Traversal"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, 35)
+collision_mask = 0
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Terrain/Traversal/Platform1"]
+shape = SubResource("BoxShape3D_platform")
+
+[node name="Mesh" type="MeshInstance3D" parent="Terrain/Traversal/Platform1"]
+mesh = SubResource("BoxMesh_platform")
+surface_material_override/0 = SubResource("Mat_platform")
+
+[node name="Platform2" type="StaticBody3D" parent="Terrain/Traversal"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 32, 85)
+collision_mask = 0
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Terrain/Traversal/Platform2"]
+shape = SubResource("BoxShape3D_platform")
+
+[node name="Mesh" type="MeshInstance3D" parent="Terrain/Traversal/Platform2"]
+mesh = SubResource("BoxMesh_platform")
+surface_material_override/0 = SubResource("Mat_platform")
+
+[node name="Gap" type="Node3D" parent="Terrain"]
+
+[node name="DeadFloor" type="StaticBody3D" parent="Terrain/Gap"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 10, 52)
+collision_mask = 0
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Terrain/Gap/DeadFloor"]
+shape = SubResource("BoxShape3D_platform")
+
+[node name="Mesh" type="MeshInstance3D" parent="Terrain/Gap/DeadFloor"]
+mesh = SubResource("BoxMesh_platform")
+surface_material_override/0 = SubResource("Mat_platform")
+
+[node name="WorldMembership" type="Node" parent="Terrain/Gap/DeadFloor"]
+script = ExtResource("4_membership")
+affiliation = 1
+
+[node name="WorldSwitchBlockBefore" parent="Terrain/Gap" instance=ExtResource("6_traversal")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, 37)
+enable_world_switch = true
+hits_to_break = 1
+
+[node name="TraversalPlaceholders" type="Node3D" parent="Terrain/Gap"]
+
+[node name="WallLeft1" type="StaticBody3D" parent="Terrain/Gap/TraversalPlaceholders"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8, 4, 45)
+collision_mask = 0
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Terrain/Gap/TraversalPlaceholders/WallLeft1"]
+shape = SubResource("BoxShape3D_block")
+
+[node name="Mesh" type="MeshInstance3D" parent="Terrain/Gap/TraversalPlaceholders/WallLeft1"]
+mesh = SubResource("BoxMesh_block")
+surface_material_override/0 = SubResource("Mat_block")
+
+[node name="WallRight1" type="StaticBody3D" parent="Terrain/Gap/TraversalPlaceholders"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8, 4, 45)
+collision_mask = 0
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Terrain/Gap/TraversalPlaceholders/WallRight1"]
+shape = SubResource("BoxShape3D_block")
+
+[node name="Mesh" type="MeshInstance3D" parent="Terrain/Gap/TraversalPlaceholders/WallRight1"]
+mesh = SubResource("BoxMesh_block")
+surface_material_override/0 = SubResource("Mat_block")
+
+[node name="BlockCenter1" type="StaticBody3D" parent="Terrain/Gap/TraversalPlaceholders"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 6, 50)
+collision_mask = 0
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Terrain/Gap/TraversalPlaceholders/BlockCenter1"]
+shape = SubResource("BoxShape3D_block")
+
+[node name="Mesh" type="MeshInstance3D" parent="Terrain/Gap/TraversalPlaceholders/BlockCenter1"]
+mesh = SubResource("BoxMesh_block")
+surface_material_override/0 = SubResource("Mat_block")
+
+[node name="BlockLeft1" type="StaticBody3D" parent="Terrain/Gap/TraversalPlaceholders"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6, 8, 55)
+collision_mask = 0
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Terrain/Gap/TraversalPlaceholders/BlockLeft1"]
+shape = SubResource("BoxShape3D_block")
+
+[node name="Mesh" type="MeshInstance3D" parent="Terrain/Gap/TraversalPlaceholders/BlockLeft1"]
+mesh = SubResource("BoxMesh_block")
+surface_material_override/0 = SubResource("Mat_block")
+
+[node name="BlockRight1" type="StaticBody3D" parent="Terrain/Gap/TraversalPlaceholders"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 6, 10, 60)
+collision_mask = 0
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Terrain/Gap/TraversalPlaceholders/BlockRight1"]
+shape = SubResource("BoxShape3D_block")
+
+[node name="Mesh" type="MeshInstance3D" parent="Terrain/Gap/TraversalPlaceholders/BlockRight1"]
+mesh = SubResource("BoxMesh_block")
+surface_material_override/0 = SubResource("Mat_block")
+
+[node name="BlockCenter2" type="StaticBody3D" parent="Terrain/Gap/TraversalPlaceholders"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 12, 65)
+collision_mask = 0
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Terrain/Gap/TraversalPlaceholders/BlockCenter2"]
+shape = SubResource("BoxShape3D_block")
+
+[node name="Mesh" type="MeshInstance3D" parent="Terrain/Gap/TraversalPlaceholders/BlockCenter2"]
+mesh = SubResource("BoxMesh_block")
+surface_material_override/0 = SubResource("Mat_block")
+
+[node name="BlockLeft2" type="StaticBody3D" parent="Terrain/Gap/TraversalPlaceholders"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -7, 14, 70)
+collision_mask = 0
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Terrain/Gap/TraversalPlaceholders/BlockLeft2"]
+shape = SubResource("BoxShape3D_block")
+
+[node name="Mesh" type="MeshInstance3D" parent="Terrain/Gap/TraversalPlaceholders/BlockLeft2"]
+mesh = SubResource("BoxMesh_block")
+surface_material_override/0 = SubResource("Mat_block")
+
+[node name="BlockCenter3" type="StaticBody3D" parent="Terrain/Gap/TraversalPlaceholders"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 18, 76)
+collision_mask = 0
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Terrain/Gap/TraversalPlaceholders/BlockCenter3"]
+shape = SubResource("BoxShape3D_block")
+
+[node name="Mesh" type="MeshInstance3D" parent="Terrain/Gap/TraversalPlaceholders/BlockCenter3"]
+mesh = SubResource("BoxMesh_block")
+surface_material_override/0 = SubResource("Mat_block")
+
+[node name="WorldSwitchBlockAfter" parent="Terrain/Gap" instance=ExtResource("6_traversal")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 30, 83)
+enable_world_switch = true
+hits_to_break = 1
+
+[node name="Enemies" type="Node3D" parent="."]
+
+[node name="PassiveRoamer1" parent="Enemies" instance=ExtResource("12_enemy")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -15, 0.1, 5)
+hostility = 0
+normal_color = Color(0.25, 0.75, 0.35, 1)
+
+[node name="PassiveRoamer2" parent="Enemies" instance=ExtResource("12_enemy")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10, 0.1, 8)
+hostility = 0
+normal_color = Color(0.25, 0.75, 0.35, 1)
+
+[node name="PassiveRoamer3" parent="Enemies" instance=ExtResource("12_enemy")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5, 0.1, -8)
+hostility = 0
+normal_color = Color(0.25, 0.75, 0.35, 1)
+
+[node name="ReactiveEnemyInCorridor" parent="Enemies" instance=ExtResource("12_enemy")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.1, 15)
+hostility = 1
+normal_color = Color(0.95, 0.7, 0.2, 1)
+
+[node name="GapEnemies" type="Node3D" parent="Enemies"]
+
+[node name="RangedDead1" parent="Enemies/GapEnemies" instance=ExtResource("15_ranged_dead")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -10, 5, 48)
+
+[node name="RangedDead2" parent="Enemies/GapEnemies" instance=ExtResource("15_ranged_dead")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10, 7, 54)
+
+[node name="HybridEnemy1" parent="Enemies/GapEnemies" instance=ExtResource("19_hybrid_enemy")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8, 9, 58)
+
+[node name="HybridEnemy2" parent="Enemies/GapEnemies" instance=ExtResource("19_hybrid_enemy")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8, 11, 64)
+
+[node name="MeleeAggressive1" parent="Enemies/GapEnemies" instance=ExtResource("12_enemy")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5, 14, 72)
+normal_color = Color(1.0, 0.3, 0.2, 1)
+
+[node name="MeleeAggressive2" parent="Enemies/GapEnemies" instance=ExtResource("12_enemy")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5, 20, 78)
+normal_color = Color(1.0, 0.3, 0.2, 1)
+
+[node name="Player" parent="." unique_id=30112187 instance=ExtResource("2_player")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.1, 0)
+
+[node name="CameraRig" type="Node3D" parent="." unique_id=845519878]
+script = ExtResource("3_camrig")
+tuning = ExtResource("20_camtuning")
+
+[node name="Camera3D" type="Camera3D" parent="CameraRig"]
+fov = 60.0
+far = 200.0
+
+[node name="OcclusionFade" type="Node" parent="CameraRig"]
+script = ExtResource("14_occlusion")
+
+[node name="HUD" parent="." instance=ExtResource("11_hud")]
+
+[node name="Sun" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.707107, -0.5, 0.5, 0, 0.707107, 0.707107, -0.707107, -0.5, 0.5, 0, 10, 0)
+shadow_enabled = true
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Env_world")
+
+[node name="WorldScan" type="Node3D" parent="."]
+script = ExtResource("17_world_scan")
