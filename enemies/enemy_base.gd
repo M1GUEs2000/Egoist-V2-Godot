@@ -336,7 +336,9 @@ func tick_base(delta: float) -> bool:
 	# la del move_and_slide del frame anterior (la locomocion corre despues de tick_base).
 	_set_run_dust(_is_active and is_on_floor()
 			and Vector2(velocity.x, velocity.z).length() >= run_dust_min_speed)
-	return _is_active
+	# Fuera de mundo el cuerpo sigue vivo (roam/patrulla): _is_active solo gatea
+	# colision/hurtbox/visual (ver WorldMembership), no la simulacion.
+	return true
 
 func take_hit_from_enemy(hits: float = 1.0, hit_direction: Vector3 = Vector3.ZERO, stun: StunSettings = null) -> bool:
 	if not can_receive_hit() or health == null:
