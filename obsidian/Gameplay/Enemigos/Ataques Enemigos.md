@@ -17,7 +17,7 @@ Los ataques son componentes. Un enemigo puede no tener ataques, tener melee, ran
 |---|---|
 | `MeleeAttack` | Combo de swings, dano, cooldown, ventana de parry. |
 | `RangedAttack` | Windup, proyectil, homing, cadencia y dano. |
-| `Projectile` | Viaja, gira hacia objetivo si hay homing, impacta y expira. Export `world_switch_on_player_hit` opcional: si pega al jugador, ademas de dano voltea el mundo. |
+| `Projectile` | Viaja, gira hacia objetivo si hay homing, impacta y expira. **Parryable**: el arma del player lo deflecta contra el tirador (ver abajo). Export `world_switch_on_player_hit` opcional: si pega al jugador, ademas de dano voltea el mundo. |
 | `AttackLoadout` | **Que familias tiene equipadas**: solo melee, solo ranged o ambas. |
 
 ## AttackLoadout — el modulo inyectable
@@ -60,8 +60,24 @@ ademas del dano normal. Es un flag por **escena de proyectil**, no un modulo nue
 enemigo ranged decide por su cuenta si su variante de proyectil cambia de mundo o no — el resto del
 ataque (windup, homing, cadencia, dano) es identico. Ver [[World Switch]].
 
+## Proyectil parryable (deflect)
+
+El arma del player puede **deflectar un proyectil mid-flight**: el proyectil se da vuelta y vuelve
+homing contra el enemigo que lo tiro, que come el dano y el stun **de su propio tiro**. Es un
+**deflect puro** — no abre el estado vulnerable cian del parry melee. *(2026-07-14)*
+
+Para que el arma lo pueda tocar, el `Projectile` arma **su propia `Hurtbox` por codigo** en `_ready`:
+vive en `collision_layer = 0`, asi que el `Hitbox` del arma (mask `LAYER_HURTBOX`) no lo veia. Se arma
+por codigo y no en un `.tscn` porque los proyectiles se instancian por codigo (`_build_projectile`).
+
+Knobs en `DeflectTuning` (`data/deflect_tuning.tres`, compartido). Se puede apagar por proyectil con
+`parryable = false`. Detalle completo en [[Stun]] > Parry de proyectil.
+
 ## Pendiente
 
+- Tunear jugando el deflect: hoy el rebote pega **igual** que el tiro original (`damage_multiplier = 1.0`)
+  y la ventana espacial del parry (`hurtbox_radius`) es de primer pase. Decidir si el parry de proyectil
+  debe ser recompensa (daño extra) o solo defensa.
 - Tuning por enemigo (los knobs del hibrido son de primer pase).
 - Validar jugando que la transicion melee↔ranged del hibrido no se sienta nerviosa en el borde entre ambos rangos (hoy no hay histeresis en la eleccion de ataque, a diferencia de la de target).
 - Feedback de windup/proyectil.

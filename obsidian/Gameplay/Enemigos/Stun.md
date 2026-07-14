@@ -174,6 +174,50 @@ además el **X cargado (dash)** y el **Y cargado terrestre (launcher)** son `can
 
 Un enemigo puede sobreescribir el `.tres` compartido con su propio `@export var parry_tuning`.
 
+### Parry de proyectil: es un deflect, no el cian
+
+> [!important] Parriar un proyectil NO abre el estado vulnerable
+> El parry melee y el parry de proyectil son **dos cosas distintas**. Contragolpear a un `Projectile`
+> con el arma no llama `resolve_parry` ni toca `current_parry_poise`: solo **da vuelta el proyectil**
+> contra quien lo tiró (`Projectile.try_parry` → `_deflect`). El castigo no lo pone el parry, lo pone
+> el **impacto**: cuando el rebote le llega, el tirador come el daño y el stun **de su propio tiro**
+> por el pipeline de poise de siempre (`take_hit_from_enemy` → `_apply_stun_from_settings`). O sea que
+> se auto-staggerea. *(2026-07-14, pendiente de tunear jugando)*
+
+Cómo se vuelve golpeable: el `Projectile` es un `Area3D` en `collision_layer = 0`, así que el `Hitbox`
+del arma (que solo mira `LAYER_HURTBOX`) **no lo veía**. Ahora se arma su propia `Hurtbox` por código
+en `_ready` — por código y no en un `.tscn` porque los proyectiles se instancian por código
+(`RangedAttack._build_projectile`). Sin esa superficie no hay parry posible.
+
+Al deflectar: el **player pasa a ser el tirador** (y por eso el proyectil lo empieza a ignorar) y el
+enemigo que disparó pasa a ser el **objetivo del homing**. Solo el player deflecta (la hoja de un
+enemigo que roce el proyectil lo deja pasar) y solo una vez por proyectil.
+
+**Knobs (`DeflectTuning`, `data/deflect_tuning.tres`, compartido):**
+
+| Knob | Default | Lectura |
+|---|---|---|
+| `speed_multiplier` | 1.0 | Velocidad del rebote respecto del tiro original. |
+| `damage_multiplier` | 1.0 | Daño del rebote. En 1.0 el parry es defensa pura; subirlo lo vuelve recompensa. |
+| `lifetime` | 5.0 | Segundos de vida que se le devuelven al rebotar (un tiro parriado tarde moriría antes de volver). |
+| `turn_rate` | 120.0 | Homing del rebote, en grados/s. Reemplaza al `turn_rate` del tiro. 0 = va recto adonde estaba el tirador. |
+| `hurtbox_radius` | 0.45 | Radio de la esfera golpeable: la ventana **espacial** del parry. |
+
+Un proyectil puede sobreescribir el `.tres` compartido con su propio `@export var deflect_tuning`, o
+apagarse del todo con `parryable = false` (no arma la hurtbox: el arma lo atraviesa).
+
+> [!warning] Un proyectil muy rápido es **imparriable**: atraviesa la hoja entre frames
+> La detección de `Area3D` es **discreta** (mira overlaps por frame, no barre la trayectoria). A 60 Hz,
+> un proyectil a `projectile_speed = 100` avanza **~1.67 m por frame de física** — mucho más que su
+> propia hurtbox (0.45 de radio, 0.9 de diámetro). Puede **teletransportarse de un lado de la hoja al
+> otro sin registrar overlap**, y el parry no conecta nunca aunque el timing sea perfecto.
+>
+> Hoy `ranged_dead.tscn` tira a **100** y `hybrid_enemy.tscn` a **60**: ambos están en zona de riesgo.
+> Si al probar jugando el parry de proyectil "no responde", **es esto y no el timing**. Se arregla
+> bajando `projectile_speed` o subiendo `hurtbox_radius` (que existe justo para esto) — las dos son
+> decisiones de feel, se validan jugando. Si ninguna alcanza, la salida real es detección barrida
+> (raycast del recorrido del frame), que hoy no está hecha. *(2026-07-14, sin validar jugando)*
+
 ## Golpes al player
 
 Los ataques melee y proyectiles enemigos llevan su propio `StunSettings`. Si su poise **quiebra

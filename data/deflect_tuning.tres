@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="DeflectTuning" format=3]
+
+[ext_resource type="Script" path="res://data/deflect_tuning.gd" id="1_deflect"]
+
+[resource]
+script = ExtResource("1_deflect")
+speed_multiplier = 1.0
+damage_multiplier = 1.0
+lifetime = 5.0
+turn_rate = 120.0
+hurtbox_radius = 0.45

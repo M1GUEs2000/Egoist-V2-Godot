@@ -142,6 +142,44 @@ func _ready() -> void:
 	assert(player.is_stunned())
 	assert(player.stun.mode == PlayerStun.Mode.PUSH)
 	assert(is_equal_approx(player.bump_velocity.length(), ranged.player_stun_push_speed))
+	player.stun.cancel()
+
+	# --- Parry de proyectil: deflect PURO (ver Projectile.try_parry + data/deflect_tuning.tres) ---
+	# El proyectil vive en collision_layer = 0: el Hitbox del arma (mask = LAYER_HURTBOX) no lo ve.
+	# Se vuelve parryable porque arma su propia Hurtbox por codigo — sin esa superficie no hay parry.
+	var shot := Projectile.new()
+	shot.position = Vector3.UP * 100.0  # lejos de todos antes de activar su Area3D
+	add_child(shot)
+	await get_tree().physics_frame
+	shot.launch(Vector3.UP * 100.0, Vector3.FORWARD, player, ranged_enemy, 8.0, 0.0, 3.0, 1.0,
+			ranged.stun)
+	var shot_hurtbox := shot.get_node("Hurtbox") as Hurtbox
+	assert(shot_hurtbox != null)
+	assert(shot_hurtbox.collision_layer == World.LAYER_HURTBOX)  # detectable por el Hitbox del arma
+
+	# Solo el player deflecta: la hoja de un enemigo que roce el proyectil lo deja pasar.
+	assert(not shot.try_parry(ranged_enemy, Vector3.FORWARD))
+	assert(shot._shooter == ranged_enemy)
+
+	# El parry lo da vuelta: el player pasa a ser el tirador (y por eso el proyectil lo empieza a
+	# ignorar) y el enemigo que disparo pasa a ser el objetivo del homing de vuelta.
+	assert(shot.try_parry(player, Vector3.FORWARD))
+	assert(shot._shooter == player)
+	assert(shot._target == ranged_enemy)
+	var to_shooter := (ranged_enemy.global_position - shot.global_position).normalized()
+	assert(shot._velocity.normalized().dot(to_shooter) > 0.9)  # vuelve contra quien lo tiro
+	assert(not shot.try_parry(player, Vector3.FORWARD))         # una sola vez por proyectil
+
+	# Deflect PURO: no abre el estado VULNERABLE cian del parry melee. El castigo es el impacto —
+	# al llegarle, el tirador come el dano y el stun de su propio tiro, por el pipeline de siempre.
+	assert(is_equal_approx(ranged_enemy.incoming_damage_multiplier(), 1.0))
+	ranged_enemy._on_membership_changed(true)  # activo en el mundo para poder recibir el rebote
+	ranged_enemy.poise.poise_max = 0.0  # el smoke mide el PIPELINE del rebote, no el valor del poise
+	ranged_enemy.poise.reset()
+	var shooter_hp := ranged_enemy.health.current
+	shot._on_body_entered(ranged_enemy)
+	assert(ranged_enemy.health.current < shooter_hp)
+	assert(ranged_enemy.is_stunned())
 
 	# EVADE reactivo: los gates del receptor del telegraph (ver Comportamientos > EVADE). Se
 	# prueba el contrato llamando al handler directo; los extremos del dado (0 y 1) son
