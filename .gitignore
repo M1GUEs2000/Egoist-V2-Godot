@@ -8,3 +8,7 @@ obsidian/.obsidian/
 # Temporales que genera LimboAI/Windows al recargar la GDExtension con la DLL
 # bloqueada (renombra la vieja a "~..."). Los binarios reales del addon si van.
 addons/limboai/bin/~*
+
+# Assets sin aprobar todavia: pesan mucho (zips/rar de librerias externas) y
+# no deben ir al repo. Se guardan solo en local hasta que se aprueben.
+assets/assets_por_aprobar/
