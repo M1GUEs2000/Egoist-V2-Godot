@@ -25,7 +25,7 @@ Godot V2 es la version activa. Unity V1 solo se usa como referencia de comportam
 | Entrada | `[input]` en `project.godot` |
 | Camara | `CameraRig`, pitch 30, yaw 45, distance 18 |
 | Datos tuneables | `Resource` + `.tres` en `data/` |
-| Integracion IA | LimboAI v1.1.1 instalado en `addons/limboai/`; port pendiente desde FSM actual |
+| Integracion IA | LimboAI v1.1.1 (`addons/limboai/`): unico motor de decision de enemigos |
 
 ## Estructura real
 
@@ -35,7 +35,9 @@ core/       World, WorldMembership, WorldSwitchTrigger, ActionWorldSwitchModifie
 combat/     Health, Hurtbox, Hitbox, InputBuffer, Poise, weapons/
 data/       PlayerTuning, SwordTuning, MaceTuning, WeaponTuning, StunSettings, PushSettings, GameTuning, TraversalBlockTuning, WorldScanTuning
 player/     Player glue + Locomotion, Dash, Launcher, Meter, Combat, LockOn, Swing, WallSlide, EnemyBounce, AirKillReset, Stun
-enemies/    EnemyBase, GroundedEnemy, Perception, GroundLocomotion, attacks/
+enemies/    EnemyBase, GroundedEnemy, Perception, GroundLocomotion, attacks/ (MeleeAttack, RangedAttack, Projectile, AttackLoadout)
+            ai/       EnemyAIBlackboard, EnemyLimboTreeBuilder, tasks/ (hojas BTAction/BTCondition)
+            ai_spec/  spec YAML del arbol: estados, blackboard, perfiles, hojas
 ui/         HUD, ActionLoadoutMenu
 visual/     CameraRig, CameraOcclusionFade, WorldVisual, LandingIndicator, WorldScan (+ world_scan.gdshader)
 world/      test_scene, smoke_test (transversal), combat_smoke_test, wall_slide_probe, blocks, pickups
@@ -94,7 +96,7 @@ Los custom statuses del plugin viven en la config local (`.obsidian/`, no versio
 | [[Traversal]] | `Gameplay/Traversal/` | [[Movimiento Base]], [[Dash y Airdash]], [[Launcher y Aire]], [[Momentum y Bump]], [[Wall Slide y Wall Jump]], [[Rebote en Enemigos]], [[Reset Aereo por Kill]], [[World Switch]], [[Bloques]], [[Cadenas]], [[Occlusion Fade de Camara]], [[Landing Indicator]], [[Colores de mundo]] |
 | [[Brazo]] | `Gameplay/Brazo/` | [[brazo-combate|Brazo Combate]], [[brazo-traversal|Brazo Traversal]] |
 | [[Enemigos]] | `Gameplay/Enemigos/` | [[Modelo de Enemigo]], [[Mascaras y Cordura]], [[Hostilidad]], [[Afiliacion de Mundo]], [[Estados de Combate Enemigo]], [[Stun]], [[Ataques Enemigos]], [[Ecosistema Vivo]], [[Objetos Golpeables]], [[Roster Enemigos]], [[Melee Living]], [[Ranged Dead]], [[Armored Enemy]], [[Jefes]] |
-| [[IA]] | `Gameplay/IA/` | Indice de FSM, percepcion, locomocion y ataques. |
+| [[IA]] | `Gameplay/IA/` | Arbol de decision (LimboAI), percepcion, locomocion y ataques. Subnota: [[Comportamientos]]. |
 | [[Camara]] | `Gameplay/Camara/` | Sin subnotas — nota unica. |
 | [[Armas]] | `Gameplay/Armas/` | [[Espada]], [[Mazo]], [[Dagas]], [[Punos]] |
 | [[Areas]] | `Gameplay/Areas/` | [[Playa]], [[Castillo]], [[Averno]], [[Final]] |
@@ -134,7 +136,7 @@ Los custom statuses del plugin viven en la config local (`.obsidian/`, no versio
 | `ILaunchable`, `IParryable` | `has_method("launch")`, `has_method("try_parry")` |
 | `ScriptableObject` | `Resource` `.tres` |
 | `TestSceneBuilder.cs` | Escenas `.tscn` editadas directo |
-| Unity Behavior Tree | FSM actual en `GroundedEnemy`; destino H1/H2: LimboAI BT + HSM con blackboard |
+| Unity Behavior Tree | LimboAI BT + HSM con blackboard (`enemies/ai/`) |
 | Unity Input System | `project.godot` input map |
 | URP Shader Graph | Materiales/Shader Godot H3 |
 

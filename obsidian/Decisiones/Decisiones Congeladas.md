@@ -16,7 +16,7 @@ status: active
 | H1 | Playa + Espada. |
 | Arte | Placeholders hasta H3. |
 | World switch | Por triggers ganados; no dodge gratis. |
-| IA | FSM simple primero, no BT por defecto. |
+| IA | LimboAI (BT + HSM) como unico motor de decision. Ver [[IA]]. |
 | Datos | `.tres` desde el inicio, excepcion temporal para enemigos. |
 
 ## Nota historica

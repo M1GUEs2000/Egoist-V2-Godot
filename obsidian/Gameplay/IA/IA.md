@@ -14,44 +14,39 @@ hito: H1
 
 IA cubre percepcion, decision, movimiento enemigo y seleccion de ataque.
 
-## Decision V2
+## Motor de decision: LimboAI
 
-> [!important]
-> No se porta Unity Behavior Tree. Hoy `GroundedEnemy` corre una FSM (priority-selector escrito a mano). **Decision tomada (2026-07-08): se adopta [[Integraciones|LimboAI]] (BT + HSM) desde el inicio, no "migrar despues"** — al ser GDExtension drop-in (no fork del engine), el costo de integracion que antes lo desaconsejaba ya no existe, y el roster futuro + coordinacion de grupo la piden. La FSM actual ya ES un priority-selector, asi que el port es cambiar el selector, no reescribir.
+> [!important] Backend unico
+> El motor de decision es [[Integraciones|LimboAI]] (BT + HSM), validado en engine el 2026-07-13. **Todo trabajo nuevo de IA se hace sobre el arbol de LimboAI**: hojas `BTAction` / `BTCondition` en `enemies/ai/tasks/`, blackboard en `EnemyAIBlackboard` y forma del arbol en `EnemyLimboTreeBuilder`. La FSM manual de `GroundedEnemy` (`use_simple_fsm`) queda solo como red de seguridad si el GDExtension no carga: no se le agregan comportamientos nuevos.
 
-> [!info] Port code-only (2026-07-10)
-> `GroundedEnemy` tiene backend dual `FSM / LIMBO`. El default sigue en FSM hasta
-> validacion en Godot. El port a LimboAI esta armado en codigo con `BTPlayer` manual,
-> `EnemyAIBlackboard`, `EnemyLimboTreeBuilder` y hojas `BTAction` / `BTCondition` en
-> `enemies/ai/tasks/`. Sin Godot local, queda pendiente validar import, carga del
-> GDExtension y comportamiento en `test_scene`.
+El backend se elige con `ai_backend` (`LIMBO` por default). El arbol corre en un `BTPlayer` en modo manual, tickeado desde `_physics_process`. `GroundedEnemy` sigue siendo el glue: percepcion, target, cadencia de ataque y los gates del evade viven ahi, y el arbol los consume via los metodos `limbo_*`.
 
-## Arquitectura destino y spec
+## Arquitectura y spec
 
-El plano construible vive **en el codigo**, en `enemies/ai_spec/*.yaml` (no en la boveda: la boveda documenta, el codigo es la fuente). *(2026-07-08)*
+El plano construible vive **en el codigo**, en `enemies/ai_spec/*.yaml` (no en la boveda: la boveda documenta, el codigo es la fuente).
 
 | Archivo (`enemies/ai_spec/`) | Que define |
 |---|---|
 | `ai_states.yaml` | Los 15 estados, su capa (decide/steer/coord) y su hoja LimboAI. |
-| `fsm_decision_tree.yaml` | El selector actual + la forma destino como BT de LimboAI y la frontera decision/ejecucion. |
+| `fsm_decision_tree.yaml` | La forma del arbol de decision y la frontera decision/ejecucion. |
 | `hostility_profiles.yaml` | Los 4 perfiles como UN arbol compartido parametrizado por blackboard. |
 | `blackboard.yaml` | Schema del blackboard seccionado (el decouple: percepcion escribe, decision emite intent, locomocion ejecuta). |
 | `leaf_tasks.yaml` | Catalogo de hojas reutilizables, target scoring por utility y contrato de locomocion + stuck-check + enganche navmesh. |
 
-**Tres capas** (game-ai): `decide` (que hacer), `steer` (como moverse — `GroundLocomotion`, incluye EVADE), `coord` (multi-agente — CALL_HELP, ATTACK_GROUP). Regla del decouple: la decision **emite intent**, nunca llama locomocion directo. Asi enchufar navmesh o portar a LimboAI no toca la decision.
+**Tres capas** (game-ai): `decide` (que hacer), `steer` (como moverse — `GroundLocomotion`, incluye EVADE), `coord` (multi-agente — CALL_HELP, ATTACK_GROUP). Regla del decouple: la decision **emite intent**, nunca llama locomocion directo. Asi enchufar navmesh no toca la decision.
 
 ## Telegraph del ataque del player
 
 `PlayerCombat.attack_telegraphed(origin, direction)` se emite al arrancar un ataque (en el press). **Emisor implementado** (2026-07-08); no agrega delay al ataque (los swings son procedurales, la hoja tarda en barrer). **Receptor implementado** (2026-07-13): `GroundedEnemy._on_player_attack_telegraphed` corre los gates de EVADE, escribe `combat.incoming_attack_until` y agenda el esquive — ver [[Comportamientos]]. El estado DEFEND que reusa esa condicion sigue pendiente. Ver `enemies/ai_spec/leaf_tasks.yaml` (condicion `IncomingAttack`).
 
-## Estados FSM
+## Estados
 
-El enum `AIState` de `GroundedEnemy` es un catalogo comun a todos los enemigos. Cada enemigo activa o desactiva estados con `allowed_state_flags`; si un estado no esta permitido, la FSM cae al fallback mas cercano. La intencion de cada estado cambia segun [[Hostilidad]]. *(2026-07-07)*
+El enum `AIState` de `GroundedEnemy` es un catalogo comun a todos los enemigos. Cada enemigo activa o desactiva estados con `allowed_state_flags`; si un estado no esta permitido, se cae al fallback mas cercano (`_fallback_state`). La intencion de cada estado cambia segun [[Hostilidad]].
 
 Catalogo completo, que hace cada uno en general y cuales tienen logica real implementada: [[Comportamientos]]. *(2026-07-08)*
 
 > [!warning]
-> `ATTACK_GROUP`, `DEFEND` y `CALL_HELP` son solo enum/flag hoy — ningun `_process_*` los produce ni los maneja. `EVADE` se implemento el 2026-07-13 (engage proactivo + esquive reactivo al telegraph). Ver detalle en [[Comportamientos]].
+> `ATTACK_GROUP`, `DEFEND` y `CALL_HELP` son solo enum/flag hoy — ninguna hoja del arbol los produce ni los maneja. Ver detalle en [[Comportamientos]].
 
 ## Percepcion y memoria
 
@@ -85,16 +80,11 @@ La intencion por nivel (`PASSIVE`, `REACTIVE`, `AGGRESSIVE`, `ULTRA_AGGRESSIVE`)
 
 ## Pendiente H1
 
-- Tuning por escena de rangos, cooldowns, vision y homing.
+- Tuning por escena de rangos, cooldowns, vision y homing (los valores son de primer pase).
 - Validar seleccion melee/ranged por distancia.
-- Probar en engine la FSM ampliada por hostilidad (los valores son de primer pase). *(pendiente de probar)*
-- **Validar backend LimboAI en Godot**: import, carga de `BTPlayer`, tareas custom y equivalencia de comportamiento contra FSM en `test_scene`. *(2026-07-10)*
-- **Retirar fallback FSM** solo despues de validacion runtime jugando/headless. *(2026-07-10)*
-- **Validar LimboAI en Godot editor/headless** tras import: confirmar que `addons/limboai/bin/limboai.gdextension` carga sin errores en Windows y que no hay DLL temporal abierta antes de commitear. *(2026-07-09)*
-- ~~**Target scoring por utility**~~ → **implementado** (2026-07-13): `_acquire_target` usa score de proximidad + compromiso; el compromiso es la histeresis que mata el flip-flop de [[Ultra Agresivo]]. Pesos tuneables (`target_proximity_weight`, `target_commitment_weight`). *Pendiente de probar jugando.*
-- ~~**Stuck-check**~~ → **implementado** (2026-07-13): `GroundLocomotion` compara desplazamiento real vs esperado y dispara un rodeo lateral al trabarse. Antes el `navigation_stuck_timer` se escribia pero **nadie lo leia**. *Pendiente de probar jugando.*
-- ~~`EVADE`~~ → **implementado** (2026-07-13): engage proactivo (cadencia + orbita en rango) + esquive reactivo al telegraph con gates. *Pendiente de headless y de probar jugando (nace E1).* Ver [[Comportamientos]].
-- Implementar (o borrar del enum si se descartan) `ATTACK_GROUP` (coord/director, H3+), `DEFEND` (decide; el receptor del telegraph ya existe y escribe `incoming_attack_until`, H2), `CALL_HELP` (coord ligera, H2). Ver [[Comportamientos]]. *(2026-07-08)*
+- Tunear jugando el engage y el esquive: cadencia entre combos, ring de orbita y `evade_*`. Ver [[Comportamientos]].
+- **Retirar el fallback FSM** de `GroundedEnemy` (`use_simple_fsm` + las ramas `_update_fsm` / `_process_*`), dejando el arbol como unico camino.
+- Implementar (o borrar del enum si se descartan) `ATTACK_GROUP` (coord/director, H3+), `DEFEND` (decide; el receptor del telegraph ya escribe `incoming_attack_until`, H2), `CALL_HELP` (coord ligera, H2). Ver [[Comportamientos]].
 
 ## Pendiente diferido
 

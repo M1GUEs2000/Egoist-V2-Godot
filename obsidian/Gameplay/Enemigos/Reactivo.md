@@ -20,11 +20,11 @@ hito: H1
 
 ## Con target
 
-Una vez detecta, la rama de FSM es identica a `AGGRESSIVE`: persigue si esta fuera de rango de ataque, ataca si esta dentro.
+Una vez detecta, la rama del arbol es identica a `AGGRESSIVE`: persigue si esta fuera de rango de ataque, ataca si esta dentro.
 
 ## SEARCH
 
-Orientado a "investigar quien invadio" mas que a "recuperar target perdido" (tonalmente; la implementacion de `_process_search` es la misma FSM para todos los niveles).
+Orientado a "investigar quien invadio" mas que a "recuperar target perdido" (tonalmente; la implementacion es la misma para todos los niveles).
 
 ## Huida
 

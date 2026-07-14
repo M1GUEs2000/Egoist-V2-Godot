@@ -155,14 +155,15 @@ func _ready() -> void:
 	assert(evader.blackboard.combat_incoming_attack_until < World.now())
 	evader.ai_state = GroundedEnemy.AIState.IDLE
 
-	# Con la ventana activa, la FSM produce EVADE con intent STRAFE (reaccion 0 para el smoke).
+	# Con la ventana activa se produce EVADE con intent EVADE (reaccion 0 para el smoke). El
+	# esquive no es un strafe: siempre retrocede, con la diagonal sorteada al agendarlo.
 	evader.evade_reaction_time = 0.0
 	evader.evade_duration = 999.0
 	evader._on_player_attack_telegraphed(swing_origin, toward_evader)
 	assert(evader._evade_window_active())
 	evader._update_fsm(0.016, evader.hostility)
 	assert(evader.ai_state == GroundedEnemy.AIState.EVADE)
-	assert(evader.blackboard.navigation_intent_kind == EnemyAIBlackboard.IntentKind.STRAFE)
+	assert(evader.blackboard.navigation_intent_kind == EnemyAIBlackboard.IntentKind.EVADE)
 
 	print("COMBAT SMOKE OK")
 	get_tree().quit()

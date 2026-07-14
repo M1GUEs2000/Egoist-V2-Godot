@@ -31,6 +31,9 @@ class_name MeleeAttack extends Node3D
 @export var player_stun_push_vertical_speed := 0.0
 
 var is_attacking := false
+## True solo mientras la hoja esta barriendo. Entre swing y swing es false: ahi es donde la IA
+## puede corregir su orientacion (ver GroundedEnemy.combo_turn_speed).
+var is_in_swing := false
 
 var _owner: EnemyBase
 var _target: Node3D
@@ -90,11 +93,13 @@ func _run_combo() -> void:
 	_reset_hand()
 	_parry_window_open = false
 	_last_attack = World.now()
+	is_in_swing = false
 	is_attacking = false
 
 func _swing_step(step: int) -> void:
 	_parried_this_swing = false
 	_parry_window_open = false
+	is_in_swing = true
 	_play_combo_step(step)
 	var hitbox_active := false
 	var elapsed := 0.0
@@ -113,6 +118,7 @@ func _swing_step(step: int) -> void:
 		elapsed += get_physics_process_delta_time()
 	_blade_hitbox.end_swing()
 	_parry_window_open = false
+	is_in_swing = false
 
 func _can_continue() -> bool:
 	return _owner != null and _owner.can_attack() and _owner.can_receive_hit()

@@ -159,22 +159,28 @@ states:
     playable: pending_runtime_validation
     layer: steer
     category: implemented
-    summary: Reposicionamiento en combate (engage ring) y esquiva reactiva al telegraph.
+    summary: Espaciado de combate (entrar/pegar/salir/orbitar) y esquiva reactiva al telegraph.
     modules:
-      - GroundedEnemy._process_engage        # proactivo: orbita al target esperando su ventana de ataque
+      - GroundedEnemy._process_engage        # proactivo: entra, pega, retrocede, orbita
       - GroundedEnemy._on_player_attack_telegraphed  # reactivo: receptor + gates + agenda con delay
-      - GroundLocomotion.strafe              # steering: perpendicular + correccion de ring opcional
-      - EnemyAIBlackboard.strafe_around      # intent STRAFE
+      - GroundLocomotion.backpedal           # steering: salida del combo, de cara al target
+      - GroundLocomotion.strafe              # steering: orbita en el ring
+      - GroundLocomotion.evade               # steering: salto de esquive (atras o diagonal atras)
+      - EnemyAIBlackboard.backpedal_from / strafe_around / evade_from
     limbo_task: EngageTarget / EvadeWindow
     diseno: >
-      Implementado 2026-07-13 segun obsidian/Gameplay/IA/Comportamientos.md >
-      "EVADE - diseno acordado", con dos partes: (1) PROACTIVO - en rango de ataque,
-      mientras la cadencia (attack_pause_min..max) o el cooldown del arma no habilitan
-      el golpe, orbita al target a attack_range*strafe_ring_fraction; (2) REACTIVO -
-      telegraph del player filtrado por gates (flags, cooldown, estado, percepcion,
-      rango/trayectoria, dado con extremos deterministas), delay evade_reaction_time,
-      strafe sin ring durante evade_duration. Sin i-frames enemigos. evade_speed
-      comparte GroundLocomotion.strafe_speed con el engage (regla de 2).
+      Dos partes. (1) PROACTIVO - ciclo de espaciado del melee: entra, pega, SALE
+      retrocediendo de cara (BACKPEDAL hasta attack_range*melee_ring_fraction, un ring
+      FUERA de su alcance), orbita esperando que la cadencia (attack_pause_min..max) o el
+      cooldown del arma habiliten el golpe, y vuelve a entrar (MOVE_TO con stop_distance =
+      attack_range*strike_distance_fraction). El ranged no retrocede: orbita dentro de su
+      alcance a ranged_ring_fraction. El radio que activa el engage (_engage_radius) incluye
+      el ring, para que retroceder no lo saque del engage y lo deje entrando y saliendo.
+      (2) REACTIVO - telegraph del player filtrado por gates (flags, cooldown, estado,
+      percepcion, rango/trayectoria, dado con extremos deterministas), delay
+      evade_reaction_time, y salto de evade_duration con velocidad propia (evade_speed).
+      El salto SIEMPRE retrocede; el sorteo (begin_evade) decide si ademas abre en diagonal
+      y hacia que lado. Nunca es lateral puro. Sin i-frames enemigos.
 
   DEFEND:
     implemented: false

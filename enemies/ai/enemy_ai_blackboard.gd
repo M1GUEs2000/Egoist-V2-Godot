@@ -2,7 +2,7 @@ class_name EnemyAIBlackboard extends RefCounted
 ## Estado compartido de IA del enemigo: percepcion escribe, decision emite intent,
 ## locomocion ejecuta.
 
-enum IntentKind { NONE, MOVE_TO, FLEE_FROM, SEARCH_AT, HOLD, FACE, STRAFE }
+enum IntentKind { NONE, MOVE_TO, FLEE_FROM, SEARCH_AT, HOLD, FACE, STRAFE, BACKPEDAL, EVADE }
 enum SpeedProfile { CHASE, ROAM, SEARCH, FLEE }
 
 var perception_target: Node3D
@@ -17,6 +17,9 @@ var navigation_speed_profile := SpeedProfile.CHASE
 var navigation_home_position := Vector3.ZERO
 var navigation_stuck_timer := 0.0
 var navigation_strafe_distance := 0.0
+## Distancia a la que un MOVE_TO se da por llegado: el agente frena ahi en vez de caminar
+## hasta el cuerpo del target. En 0 avanza hasta el punto exacto (roam, search).
+var navigation_stop_distance := 0.0
 
 var combat_attacking := false
 var combat_incoming_attack_until := -999.0
@@ -43,7 +46,8 @@ func hold() -> void:
 func face(point: Vector3) -> void:
 	set_intent(IntentKind.FACE, point, SpeedProfile.CHASE)
 
-func move_to(point: Vector3, profile := SpeedProfile.CHASE) -> void:
+func move_to(point: Vector3, profile := SpeedProfile.CHASE, stop_distance := 0.0) -> void:
+	navigation_stop_distance = stop_distance
 	set_intent(IntentKind.MOVE_TO, point, profile)
 
 func roam() -> void:
@@ -61,6 +65,18 @@ func flee_from(point: Vector3) -> void:
 func strafe_around(point: Vector3, keep_distance := 0.0) -> void:
 	navigation_strafe_distance = keep_distance
 	set_intent(IntentKind.STRAFE, point, SpeedProfile.CHASE)
+
+## Esquive reactivo: salta alejandose de `point` (el origen del golpe entrante), sin dejar de
+## mirarlo. La forma del salto (cuanto retroceso vs cuanto costado) y su velocidad son de
+## GroundLocomotion: `evade_lateral_bias` y `evade_speed`.
+func evade_from(point: Vector3) -> void:
+	set_intent(IntentKind.EVADE, point, SpeedProfile.CHASE)
+
+## Retrocede en linea recta alejandose de `point`, sin dejar de mirarlo, hasta `keep_distance`.
+## Es como sale del combo: primero gana distancia de frente, y recien afuera orbita.
+func backpedal_from(point: Vector3, keep_distance: float) -> void:
+	navigation_strafe_distance = keep_distance
+	set_intent(IntentKind.BACKPEDAL, point, SpeedProfile.CHASE)
 
 func set_intent(kind: int, point: Vector3, profile: int) -> void:
 	navigation_intent_kind = kind

@@ -13,9 +13,9 @@ static func build_combat_tree() -> Resource:
 	var root := _task("BTDynamicSelector")
 	if tree == null or root == null:
 		return null
+	# Atacando: el giro NO es libre — lo hace limbo_keep_attack_state con el clamp del combo.
 	_add(root, _sequence([
 		_script_task("limbo_is_attacking.gd"),
-		_script_task("limbo_face_target.gd"),
 		_script_task("limbo_keep_attack_state.gd"),
 	]))
 	_add(root, _sequence([

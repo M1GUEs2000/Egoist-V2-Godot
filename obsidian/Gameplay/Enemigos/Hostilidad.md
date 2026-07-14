@@ -11,7 +11,7 @@ hito: H1
 
 # Hostilidad
 
-Hostilidad define la intencion del enemigo: quien inicia combate, que significa buscar y cuando huye. El sensor y la FSM viven en [[IA]] (catalogo comun `AIState` + `allowed_state_flags`); la identidad del enemigo vive aqui. *(2026-07-07)*
+Hostilidad define la intencion del enemigo: quien inicia combate, que significa buscar y cuando huye. El sensor y el arbol de decision viven en [[IA]] (catalogo comun `AIState` + `allowed_state_flags`); la identidad del enemigo vive aqui.
 
 | Valor Godot | Comportamiento | Detalle |
 |---|---|---|

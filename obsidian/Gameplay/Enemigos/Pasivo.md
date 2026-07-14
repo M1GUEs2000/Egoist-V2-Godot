@@ -17,7 +17,7 @@ hito: H1
 ## Como se activa
 
 - Solo reacciona si lo golpean: `GroundedEnemy._on_passive_attacked` fija `_forced_target` al atacante y sube `hostility` a `AGGRESSIVE`.
-- Mientras esta provocado, se comporta exactamente como un [[Agresivo]] (misma rama de FSM), con el jugador o quien lo haya golpeado como target forzado.
+- Mientras esta provocado, se comporta exactamente como un [[Agresivo]] (misma rama del arbol), con el jugador o quien lo haya golpeado como target forzado.
 - La provocacion dura `passive_memory` (10s por defecto, ver [[IA]]). Al expirar, si `passive_remembers_attackers` esta en `false` (default), `_update_passive_memory` lo devuelve a `PASSIVE` y suelta `_forced_target`. Si el toggle esta en `true`, se queda `AGGRESSIVE` para siempre (nunca vuelve a calmarse).
 
 ## Contagio a otros pasivos
@@ -29,7 +29,7 @@ hito: H1
 
 ## SEARCH
 
-Investigacion/curiosidad, no urgencia de combate — tonalmente distinto al `SEARCH` de [[Reactivo]] o [[Agresivo]], aunque la implementacion de `_process_search` es la misma FSM para todos.
+Investigacion/curiosidad, no urgencia de combate — tonalmente distinto al `SEARCH` de [[Reactivo]] o [[Agresivo]], aunque la implementacion es la misma para todos los niveles.
 
 ## Huida
 

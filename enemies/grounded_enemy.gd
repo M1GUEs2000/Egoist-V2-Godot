@@ -25,6 +25,10 @@ enum AIBackend { FSM, LIMBO }
 ## hacia el enemigo. Generoso porque la mano orbita al player y el arco del swing es ancho.
 const EVADE_TRAJECTORY_DOT := 0.25
 
+## Histeresis del ring: solo retrocede si esta por DEBAJO de esta fraccion del ring. Sin margen,
+## el borde exacto lo deja temblando entre retroceder y orbitar frame a frame.
+const RING_ENTER_MARGIN := 0.9
+
 const ALL_STATE_FLAGS := (
 	(1 << AIState.IDLE)
 	| (1 << AIState.ROAM)
@@ -43,8 +47,10 @@ const ALL_STATE_FLAGS := (
 	| (1 << AIState.HIDE)
 )
 
+## Fallback: solo corre si el backend LimboAI no pudo cargar su arbol (GDExtension ausente).
 @export var use_simple_fsm := true
-@export_enum("FSM", "LIMBO") var ai_backend: int = AIBackend.FSM
+## Motor de decision. LIMBO es el backend de trabajo; FSM queda como red de seguridad.
+@export_enum("FSM", "LIMBO") var ai_backend: int = AIBackend.LIMBO
 @export var chase_delay_after_world_switch := 1.0
 @export_flags("IDLE", "ROAM", "ACTIVITY", "ALERT", "CHASE", "GUARD", "SEARCH", "ATTACK_MELEE", "ATTACK_RANGED", "ATTACK_GROUP", "EVADE", "DEFEND", "CALL_HELP", "FLEE", "HIDE") var allowed_state_flags := ALL_STATE_FLAGS
 @export var passive_remembers_attackers := false
@@ -63,9 +69,22 @@ const ALL_STATE_FLAGS := (
 @export var attack_pause_min := 0.8
 ## Pausa entre combos (segundos, maximo); la pausa real se sortea entre min y max por combo.
 @export var attack_pause_max := 1.6
-## Fraccion del rango de ataque a la que orbita mientras espera su ventana (ring del engage).
-## Menor a 1 para quedar dentro del rango y poder cometer el ataque sin re-acercarse.
-@export_range(0.1, 1.0) var strafe_ring_fraction := 0.75
+## Ring del MELEE: fraccion de su `attack_range` a la que se mantiene mientras espera su ventana.
+## Mayor a 1 = espera FUERA de su alcance y tiene que entrar para pegar, en vez de quedarse
+## encima del jugador entre combo y combo. Bajarlo lo vuelve mas asfixiante.
+@export_range(0.5, 3.0) var melee_ring_fraction := 1.5
+## Ring del RANGED: fraccion de su `attack_range` a la que orbita. Menor a 1 para quedar dentro
+## de su alcance y poder disparar sin re-acercarse.
+@export_range(0.1, 1.0) var ranged_ring_fraction := 0.75
+## Fraccion del `attack_range` hasta la que AVANZA cuando decide pegar: entra un poco adentro
+## del filo para no quedar al borde exacto y whiffear por un centimetro.
+@export_range(0.1, 1.0) var strike_distance_fraction := 0.8
+## Grados por segundo que puede corregir su orientacion ENTRE golpes del combo. El giro libre
+## solo existe antes de comprometer el ataque; adentro del combo esto es todo lo que tiene.
+@export var combo_turn_speed := 120.0
+## Grados por segundo DURANTE el swing activo. Cerca de 0 = el golpe sale hacia donde apunto
+## al lanzarlo y ya no te persigue; subirlo lo vuelve un misil teledirigido.
+@export var combo_swing_turn_speed := 20.0
 ## Probabilidad (0-1) de esquivar cada telegraph percibido del player. Un roll por telegraph.
 ## 0 = nunca esquiva (off natural del pasivo); mas alto para enemigos agiles futuros.
 @export_range(0.0, 1.0) var evade_chance := 0.3
@@ -75,8 +94,9 @@ const ALL_STATE_FLAGS := (
 ## Segundos que el esquive queda bloqueado tras un roll exitoso (la estamina invisible queda
 ## diferida por regla de 2: si jugando este cooldown no alcanza, se agrega).
 @export var evade_cooldown := 4.0
-## Segundos que dura el strafe del esquive una vez arrancado.
-@export var evade_duration := 0.35
+## Segundos que dura el esquive una vez arrancado. Junto con GroundLocomotion.evade_speed define
+## cuanto se despega: son los dos knobs de "el esquive no me saca del arco".
+@export var evade_duration := 0.45
 ## Distancia maxima (m) al origen del telegraph para considerarse amenazado por el golpe.
 @export var evade_range := 3.5
 
@@ -157,6 +177,27 @@ func face_current_target() -> void:
 	if target != null:
 		locomotion.face_target(target.global_position)
 
+## Encarar con el ataque ya comprometido: el giro deja de ser libre. Entre golpes puede corregir
+## a `combo_turn_speed`; durante el swing, solo a `combo_swing_turn_speed`. Asi el combo apunta a
+## donde estabas cuando lo lanzo, y esquivarlo de costado sirve.
+func face_target_committed(delta: float) -> void:
+	if locomotion == null:
+		return
+	var target := perception.target if perception != null else _player
+	if target == null:
+		return
+	var turn_speed := combo_swing_turn_speed if _any_swinging() else combo_turn_speed
+	locomotion.face_target_clamped(target.global_position, turn_speed, delta)
+
+## True mientras alguna hoja esta barriendo (no entre golpe y golpe del combo). Solo el melee
+## tiene fases de swing: preguntarle `is_in_swing` a un RangedAttack devuelve null, no false.
+func _any_swinging() -> bool:
+	for attack in _attacks:
+		var melee := attack as MeleeAttack
+		if melee != null and melee.is_in_swing:
+			return true
+	return false
+
 func search_last_known(delta: float) -> void:
 	if perception != null and locomotion != null:
 		blackboard.search_at(perception.last_known_position)
@@ -181,11 +222,11 @@ func limbo_is_alerted() -> bool:
 func limbo_is_attacking() -> bool:
 	return _any_attacking()
 
-func limbo_keep_attack_state() -> bool:
+func limbo_keep_attack_state(delta: float) -> bool:
 	if not _any_attacking():
 		return false
 	_change_state(_active_attack_state())
-	face_current_target()
+	face_target_committed(delta)
 	return true
 
 func limbo_should_flee() -> bool:
@@ -222,8 +263,8 @@ func limbo_no_target_by_hostility(delta: float) -> bool:
 	return true
 
 func limbo_in_attack_range() -> bool:
-	var attack_range := _max_attack_range()
-	return attack_range > 0.0 and perception != null and perception.within(attack_range)
+	var radius := _engage_radius()
+	return radius > 0.0 and perception != null and perception.within(radius)
 
 func limbo_engage_target(delta: float) -> bool:
 	var target := blackboard.perception_target
@@ -236,7 +277,7 @@ func limbo_evade_window(delta: float) -> bool:
 	if not _evade_window_active():
 		return false
 	_change_state(AIState.EVADE)
-	blackboard.strafe_around(_evade_from)
+	blackboard.evade_from(_evade_from)
 	execute_ai_intent(delta)
 	return true
 
@@ -271,18 +312,17 @@ func _on_passive_attacked(from: Node) -> void:
 func _update_fsm(delta: float, effective_hostility: int) -> void:
 	blackboard.clear_intent()
 	var target := perception.target
-	var attack_range := _max_attack_range()
+	var attack_range := _engage_radius()
 	if _any_attacking():
 		_change_state(_active_attack_state())
-		face_current_target()
+		face_target_committed(delta)
 		return
 	if _should_flee(target, effective_hostility):
 		_process_flee(delta, target)
 		return
 	if _evade_window_active():
 		_change_state(AIState.EVADE)
-		# keep_distance 0: el esquive es salir de la trayectoria, no orbitar un ring.
-		blackboard.strafe_around(_evade_from)
+		blackboard.evade_from(_evade_from)
 		execute_ai_intent(delta)
 		return
 	if target == null:
@@ -294,7 +334,7 @@ func _update_fsm(delta: float, effective_hostility: int) -> void:
 		return
 	if perception.can_see_target:
 		if attack_range > 0.0 and perception.within(attack_range):
-			_process_engage(delta, target, attack_range)
+			_process_engage(delta, target, _max_attack_range())
 		else:
 			_process_chase(delta, target, effective_hostility)
 		return
@@ -340,6 +380,17 @@ func _max_attack_range() -> float:
 	for attack in _attacks:
 		max_range = maxf(max_range, float(attack.get("attack_range")))
 	return max_range
+
+## Radio en el que ya esta "en combate" y deja de perseguir. Incluye el ring, no solo el alcance:
+## si el melee espera su ventana MAS lejos de lo que pega, un radio igual al alcance lo dejaria
+## saliendo del engage apenas retrocede, y volveria a entrar persiguiendo — un yo-yo.
+func _engage_radius() -> float:
+	var radius := 0.0
+	for attack in _attacks:
+		var attack_range := float(attack.get("attack_range"))
+		var fraction := ranged_ring_fraction if attack is RangedAttack else melee_ring_fraction
+		radius = maxf(radius, maxf(attack_range, attack_range * fraction))
+	return radius
 
 func _any_attacking() -> bool:
 	for attack in _attacks:
@@ -457,23 +508,55 @@ func _process_no_target(delta: float, effective_hostility: int) -> void:
 				blackboard.roam()
 			execute_ai_intent(delta)
 
-## Combate en rango: comete el ataque solo cuando la cadencia lo habilita; mientras espera
-## (pausa entre combos o cooldown interno del arma) orbita al target a distancia de ataque en
-## vez de plantarse enfrente. Sin EVADE en allowed_state_flags cae al comportamiento historico:
-## esperar quieto mirando al target.
+## Combate en rango. El ciclo del melee es: entra, pega, SALE retrocediendo de cara, orbita
+## esperando su ventana, vuelve a entrar. El ranged no retrocede — se queda dentro de su alcance
+## y orbita, que es donde ya se siente bien.
+##
+## Sin EVADE en allowed_state_flags no hay reposicionamiento: espera quieto mirando al target.
 func _process_engage(delta: float, target: Node3D, attack_range: float) -> void:
+	var distance := _flat_distance_to(target.global_position)
+	var attack_state := _best_attack_state_for_range(distance)
+	var reference_range := _range_of_attack_state(attack_state, attack_range)
+	var is_melee := attack_state == AIState.ATTACK_MELEE
+	var ring := reference_range * (melee_ring_fraction if is_melee else ranged_ring_fraction)
+
 	if World.now() >= _next_attack_at:
-		var attack_state := _best_attack_state_for_range(_flat_distance_to(target.global_position))
-		_change_state(_fallback_state(attack_state))
-		start_combo_attack(ai_state)
-		if _any_attacking():
+		# Ventana de ataque abierta: si ya esta a tiro pega; si espera afuera del ring, entra.
+		if distance <= reference_range:
+			_change_state(_fallback_state(attack_state))
+			start_combo_attack(ai_state)
+			if _any_attacking():
+				return
+		elif _state_allowed(AIState.CHASE):
+			_change_state(_fallback_state(AIState.CHASE))
+			blackboard.move_to(
+					target.global_position,
+					EnemyAIBlackboard.SpeedProfile.CHASE,
+					reference_range * strike_distance_fraction)
+			execute_ai_intent(delta)
 			return
+
 	if not _state_allowed(AIState.EVADE):
 		face_current_target()
 		return
+
 	_change_state(AIState.EVADE)
-	blackboard.strafe_around(target.global_position, attack_range * strafe_ring_fraction)
+	# Dentro del ring y con la ventana cerrada: primero gana distancia de frente, y recien
+	# afuera orbita. El margen evita el temblor entre retroceder y orbitar justo en el borde.
+	if is_melee and distance < ring * RING_ENTER_MARGIN:
+		blackboard.backpedal_from(target.global_position, ring)
+	else:
+		blackboard.strafe_around(target.global_position, ring)
 	execute_ai_intent(delta)
+
+## Rango del ataque que va a usar. El ring se mide contra ESE rango, no contra el mayor: un
+## hibrido con un ranged largo no debe espaciarse como si su melee alcanzara 10 m.
+func _range_of_attack_state(attack_state: int, fallback: float) -> float:
+	for attack in _attacks:
+		var is_ranged := attack is RangedAttack
+		if (attack_state == AIState.ATTACK_RANGED) == is_ranged:
+			return float(attack.get("attack_range"))
+	return fallback
 
 func _connect_player_telegraph() -> void:
 	if _player == null:
@@ -518,6 +601,10 @@ func _on_player_attack_telegraphed(origin: Vector3, direction: Vector3) -> void:
 	_evade_ends_at = _evade_starts_at + evade_duration
 	_evade_from = origin
 	blackboard.combat_incoming_attack_until = _evade_ends_at
+	# La forma del salto (recto atras / diagonal a un lado) se sortea aca, una vez, y se sostiene
+	# toda la ventana.
+	if locomotion != null:
+		locomotion.begin_evade()
 
 ## Ventana de ejecucion del esquive agendado. Antes de _evade_starts_at el enemigo sigue en lo
 ## suyo (todavia "no reacciono"); entre starts y ends produce EVADE con intent STRAFE.

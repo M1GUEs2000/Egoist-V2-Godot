@@ -34,7 +34,7 @@ pre_tick_pipeline:
 decision_tree:
   type: priority_selector
   children:
-    - {id: keep_current_attack_state, when: _any_attacking, set_state: _active_attack_state, actions: [face_current_target], returns: true, emits_intent: false}
+    - {id: keep_current_attack_state, when: _any_attacking, set_state: _active_attack_state, actions: [face_target_committed], returns: true, emits_intent: false, nota: "giro comprometido: combo_turn_speed entre golpes, combo_swing_turn_speed durante el swing"}
     - id: flee_if_requested
       when: _should_flee
       returns: true
@@ -51,17 +51,22 @@ decision_tree:
       when: perception.can_see_target
       type: selector
       children:
-        - id: engage_if_inside_max_attack_range
-          when: [_max_attack_range > 0.0, "perception.within(_max_attack_range)"]
+        - id: engage_if_inside_engage_radius
+          when: [_engage_radius > 0.0, "perception.within(_engage_radius)"]
+          nota: >
+            El radio incluye el ring, no solo el alcance: si el melee espera su ventana mas lejos
+            de lo que pega, un radio igual al alcance lo sacaria del engage apenas retrocede.
           actions: [_process_engage]
           returns: true
           emits_intent: true
           expands_to:
             type: selector
             children:
-              - {when: "now >= _next_attack_at y el ataque arranca", set_state: _best_attack_state_for_range, fallback: _fallback_state, actions: ["start_combo_attack(ai_state)"], emits_intent: false}
-              - {when: EVADE allowed, set_state: EVADE, intent: "STRAFE target.pos ring attack_range*strafe_ring_fraction", nota: orbita mientras espera la pausa entre combos o el cooldown del arma}
-              - {otherwise: true, actions: [face_current_target], nota: comportamiento historico sin EVADE en allowed_state_flags}
+              - {when: "now >= _next_attack_at y distance <= reference_range y el ataque arranca", set_state: _best_attack_state_for_range, fallback: _fallback_state, actions: ["start_combo_attack(ai_state)"], emits_intent: false}
+              - {when: "now >= _next_attack_at y distance > reference_range", set_state: CHASE, intent: "MOVE_TO target.pos stop_distance reference_range*strike_distance_fraction", nota: entra a pegar desde el ring}
+              - {when: [EVADE allowed, is_melee, "distance < ring*RING_ENTER_MARGIN"], set_state: EVADE, intent: "BACKPEDAL target.pos hasta ring", nota: sale del combo retrocediendo de cara}
+              - {when: EVADE allowed, set_state: EVADE, intent: "STRAFE target.pos ring (melee_ring_fraction | ranged_ring_fraction)", nota: orbita esperando la pausa entre combos o el cooldown del arma}
+              - {otherwise: true, actions: [face_current_target], nota: sin EVADE en allowed_state_flags espera quieto mirando al target}
         - {id: chase_visible_target, otherwise: true, actions: [_process_chase], returns: true, emits_intent: true}
     - {id: search_last_known, when: perception.is_searching, actions: [_process_search], returns: true, emits_intent: true}
     - {id: final_no_target, otherwise: true, actions: [_process_no_target], returns: true, emits_intent: true}

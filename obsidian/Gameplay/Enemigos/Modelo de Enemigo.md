@@ -18,7 +18,7 @@ En Godot V2 no hay una subclase por cada comportamiento de mundo o ataque. Hay u
 | Pieza | Responsabilidad |
 |---|---|
 | `EnemyBase` | Salud, estados, armadura, mundo, verbos aereos, muerte. |
-| `GroundedEnemy` | Glue de enemigo de suelo: FSM, target, locomocion y ataques. |
+| `GroundedEnemy` | Glue de enemigo de suelo: arbol de decision, target, locomocion y ataques. |
 | `Health` | Vida compartida. |
 | `Hurtbox` | Entrada de dano y senal `hit`. |
 | `WorldMembership` | Decide si el enemigo esta activo en el mundo actual. |

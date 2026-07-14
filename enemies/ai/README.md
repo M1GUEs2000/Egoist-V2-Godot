@@ -1,16 +1,13 @@
-IA de enemigos: `GroundedEnemy` conserva la FSM como fallback seguro y ya tiene backend
-dual `AIBackend.FSM / AIBackend.LIMBO`. Decision tomada (2026-07-08): se adopta
-LimboAI (BT + HSM) desde el inicio, no "migrar despues"; el addon ya esta instalado en
-`addons/limboai/`.
+IA de enemigos: el motor de decision es LimboAI (BT + HSM), addon en `addons/limboai/`.
+Es el backend unico — todo comportamiento nuevo se escribe como hoja del arbol. La FSM de
+`GroundedEnemy` (`use_simple_fsm`) queda solo como fallback si el GDExtension no carga, y
+esta pendiente de retirar.
 
-El port code-only esta preparado para validacion en Godot:
-
-- `EnemyAIBlackboard`: estado compartido e intent contract.
-- `EnemyLimboTreeBuilder`: arma por codigo el BehaviorTree equivalente al selector actual.
+- `EnemyAIBlackboard`: estado compartido e intent contract (la decision emite intent, la
+  locomocion lo ejecuta).
+- `EnemyLimboTreeBuilder`: arma por codigo el BehaviorTree de combate.
 - `tasks/*.gd`: hojas `BTAction` / `BTCondition` pequenas que llaman metodos publicos del
-  agente.
-- `grounded_enemy.tscn`: trae un `BTPlayer` manual. El default sigue en FSM hasta probarlo
-  en editor/headless.
+  agente (`limbo_*`).
+- `grounded_enemy.tscn`: trae el `BTPlayer` en modo manual, tickeado desde `_physics_process`.
 
-El plano construible vive en `enemies/ai_spec/*.yaml`. Ver `obsidian/Gameplay/IA/IA.md`
-para el detalle de la decision y el estado del port.
+El plano construible vive en `enemies/ai_spec/*.yaml`. Ver `obsidian/Gameplay/IA/IA.md`.

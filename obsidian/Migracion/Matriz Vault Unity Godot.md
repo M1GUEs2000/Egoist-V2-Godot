@@ -20,7 +20,7 @@ Esta tabla resume como se migra la verdad vieja a Godot V2.
 | Combate base | [[Combate]] | `Health`, `IHittable`, `WeaponTraceHitbox`, `AirDiscHitbox` | `Health`, `Hurtbox`, `Hitbox`, `WeaponBase` | E2 | Grupos y duck typing reemplazan interfaces. |
 | Espada | [[Armas]] / [[Combate]] | `SwordWeapon`, behaviours X/Y | `Sword`, `SwordTuning` | E2 | Procedural hasta H3. |
 | Enemigo de suelo | [[Enemigos]] | `EnemyBase`, `GroundedEnemy` | `EnemyBase`, `GroundedEnemy` | E2 | Un enemigo base componible. |
-| IA | [[IA]] | Unity Behavior Tree | FSM enum + `match` | E2 | No portar BT salvo necesidad real. |
+| IA | [[IA]] | Unity Behavior Tree | LimboAI (BT + HSM) + blackboard | E2 | Backend unico; el enum `AIState` sobrevive como catalogo. |
 | HUD | [[Combate]] | HUD Unity descartable | `HUD` | E1 | Placeholder; rehacer H1. |
 | Lock-on | [[Combate]] | `LockOnTargeting` | `LockOn` | E3 | Implementado: adquisicion por direccion, reticle, integracion con locomocion. |
 | Cadenas | [[Traversal]] | `PlayerSwing`, `ChainSwingHandle` | `PlayerSwing` stub | E0 | Implementar en H1. |

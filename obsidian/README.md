@@ -45,7 +45,7 @@ La boveda se navega por nodos. Primero se lee este README, despues [[Arquitectur
 | [[Camara]] | Follow isometrico y rotacion horizontal por stick (CameraRig). |
 | [[Brazo]] | Habilidad permanente: puño remoto con lock-on pasivo para combate y traversal. |
 | [[Enemigos]] | Identidad, estados, salud, armadura, mundo y objetos golpeables. |
-| [[IA]] | FSM, percepcion, persecucion, ataques y ecosistema vivo. |
+| [[IA]] | Arbol de decision (LimboAI), percepcion, persecucion, ataques y ecosistema vivo. |
 | [[Armas]] | Roadmap de armas y personalidad por slot. |
 | [[Areas]] | Playa, Castillo, Averno y Final. |
 | [[Historia]] | Mascaras, NPCs, plot twist y finales. |

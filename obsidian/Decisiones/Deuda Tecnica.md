@@ -11,7 +11,7 @@ status: active
 
 | Deuda | Cuando pagar |
 |---|---|
-| Port LimboAI desde FSM actual | Despues del refactor de decouple: decision emite intent, locomocion ejecuta. |
+| Fallback FSM en `GroundedEnemy` | H1: retirar `use_simple_fsm` y las ramas `_update_fsm` / `_process_*` ahora que LimboAI es el backend unico. |
 | `PlayerSwing` stub | H1. |
 | `WorldVisual` stub | H1. |
 | HUD placeholder | H1, despues de confirmar senales necesarias. |

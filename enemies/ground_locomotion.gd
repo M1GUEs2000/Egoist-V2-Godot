@@ -6,7 +6,17 @@ class_name GroundLocomotion extends Node
 @export var roam_speed := 1.5
 @export var roam_radius := 5.0
 ## Velocidad del strafe: orbitar al target en combate o salir de la trayectoria de un golpe.
-@export var strafe_speed := 2.2
+## Cuanto mas alta, mas se lee la orbita como intencion y menos como un paso al costado.
+@export var strafe_speed := 3.2
+## Velocidad a la que retrocede de cara al target al salir de un combo (ver `backpedal`).
+@export var backpedal_speed := 2.8
+## Velocidad del esquive reactivo. Es un salto, no un paso: va MUY por encima del strafe, porque
+## tiene que sacarlo del arco del arma en la fraccion de segundo que dura (ver `evade`).
+@export var evade_speed := 6.0
+## Cuanto abre la diagonal del esquive. El retroceso SIEMPRE esta (nunca esquiva de puro costado):
+## esto es el componente lateral que se le suma cuando el sorteo cae en diagonal. 0 lo vuelve
+## siempre retroceso recto; mas alto, diagonales mas abiertas.
+@export_range(0.0, 1.5) var evade_diagonal_bias := 0.7
 ## Segundos sin recibir intent STRAFE tras los cuales el proximo strafe re-sortea el costado.
 ## Mientras el strafe es continuo el costado se sostiene — re-elegirlo por frame lo haria vibrar.
 @export var strafe_side_memory := 0.4
@@ -31,6 +41,7 @@ var _sidestep_until := -999.0
 var _sidestep_dir := Vector3.ZERO
 var _strafe_sign := 1.0
 var _last_strafe_time := -999.0
+var _evade_side := 0.0  # -1 diagonal izquierda, 0 retroceso recto, +1 diagonal derecha
 var _attempted_move := false  # este frame el agente EMPUJO hacia algun lado (no llego y freno)
 
 func setup(body: CharacterBody3D, suspended: Callable) -> void:
@@ -54,13 +65,17 @@ func execute_intent(blackboard: EnemyAIBlackboard, delta: float) -> void:
 			if blackboard.navigation_speed_profile == EnemyAIBlackboard.SpeedProfile.ROAM:
 				roam(delta)
 			else:
-				move_to(blackboard.navigation_intent_point, delta)
+				move_to(blackboard.navigation_intent_point, delta, blackboard.navigation_stop_distance)
 		EnemyAIBlackboard.IntentKind.SEARCH_AT:
 			search_last_known(blackboard.navigation_intent_point, delta)
 		EnemyAIBlackboard.IntentKind.FLEE_FROM:
 			flee_from(blackboard.navigation_intent_point, delta)
 		EnemyAIBlackboard.IntentKind.STRAFE:
 			strafe(blackboard.navigation_intent_point, blackboard.navigation_strafe_distance, delta)
+		EnemyAIBlackboard.IntentKind.BACKPEDAL:
+			backpedal(blackboard.navigation_intent_point, blackboard.navigation_strafe_distance, delta)
+		EnemyAIBlackboard.IntentKind.EVADE:
+			evade(blackboard.navigation_intent_point, delta)
 		EnemyAIBlackboard.IntentKind.HOLD:
 			stop(delta)
 		EnemyAIBlackboard.IntentKind.FACE:
@@ -70,11 +85,17 @@ func execute_intent(blackboard: EnemyAIBlackboard, delta: float) -> void:
 			stop(delta)
 	_update_stuck_timer(blackboard, delta)
 
-func move_to(world_pos: Vector3, delta: float) -> void:
+## `stop_distance` es la distancia a la que se da por llegado: frena y encara, en vez de seguir
+## empujando contra el cuerpo del target. Sin ella un melee termina siempre pegado al jugador.
+func move_to(world_pos: Vector3, delta: float, stop_distance := 0.0) -> void:
 	if _is_suspended() or _body == null:
 		return
 	var to := world_pos - _body.global_position
 	to.y = 0.0
+	if to.length() <= stop_distance:
+		face_target(world_pos)
+		_stop_horizontal(delta)
+		return
 	if to.length_squared() < 0.01:
 		_stop_horizontal(delta)
 		return
@@ -139,6 +160,59 @@ func strafe(around: Vector3, desired_distance: float, delta: float) -> void:
 	_apply_move(dir, strafe_speed, delta)
 	face_target(around)
 
+## Sortea la forma de ESTE esquive: retroceso recto, diagonal izquierda o diagonal derecha.
+## Se sortea una vez al agendarlo y se sostiene toda la ventana — reelegirlo por frame lo dejaria
+## temblando en el lugar en vez de salir del arco.
+func begin_evade() -> void:
+	_evade_side = [-1.0, 0.0, 1.0][randi() % 3]
+
+## Esquive reactivo: salta alejandose de `from_point` (el origen del golpe), sin dejar de mirarlo.
+## SIEMPRE tiene componente de retroceso; el sorteo solo decide si ademas abre en diagonal y hacia
+## que lado. Nunca es un paso de puro costado, que contra un arco ancho no saca de la trayectoria.
+func evade(from_point: Vector3, delta: float) -> void:
+	if _is_suspended() or _body == null:
+		return
+	var to_center := from_point - _body.global_position
+	to_center.y = 0.0
+	if to_center.length_squared() < 0.01:
+		_stop_horizontal(delta)
+		return
+	var radial := to_center.normalized()
+	var lateral := Vector3.UP.cross(radial) * _evade_side * evade_diagonal_bias
+	var dir := (-radial + lateral).normalized()
+	_attempted_move = true
+	_body.velocity.x = dir.x * evade_speed
+	_body.velocity.z = dir.z * evade_speed
+	if _body.is_on_floor():
+		_body.velocity.y = -1.0
+	else:
+		_body.velocity.y += gravity * delta
+	_body.move_and_slide()
+	face_target(from_point)
+
+## Retrocede de frente: se aleja de `around` en linea recta sin dejar de mirarlo, hasta ganar
+## `desired_distance`. Al llegar frena y encara. Es la salida del combo — gana espacio de cara
+## al target, no de espaldas.
+func backpedal(around: Vector3, desired_distance: float, delta: float) -> void:
+	if _is_suspended() or _body == null:
+		return
+	var to_center := around - _body.global_position
+	to_center.y = 0.0
+	if to_center.length() >= desired_distance or to_center.length_squared() < 0.01:
+		face_target(around)
+		_stop_horizontal(delta)
+		return
+	_attempted_move = true
+	var away := _detour_direction(-to_center.normalized())
+	_body.velocity.x = away.x * backpedal_speed
+	_body.velocity.z = away.z * backpedal_speed
+	if _body.is_on_floor():
+		_body.velocity.y = -1.0
+	else:
+		_body.velocity.y += gravity * delta
+	_body.move_and_slide()
+	face_target(around)
+
 func stop(delta: float) -> void:
 	if _body == null:
 		return
@@ -151,6 +225,21 @@ func face_target(world_pos: Vector3) -> void:
 	to.y = 0.0
 	if to.length_squared() > 0.01:
 		_body.look_at(_body.global_position + to.normalized(), Vector3.UP)
+
+## Encara girando a `max_degrees_per_second` como mucho, en vez de teletransportar la mirada.
+## Es lo que compromete un ataque: durante el combo el enemigo ya no puede reorientarse a
+## voluntad hacia donde el jugador esquivo.
+func face_target_clamped(world_pos: Vector3, max_degrees_per_second: float, delta: float) -> void:
+	if _body == null:
+		return
+	var to := world_pos - _body.global_position
+	to.y = 0.0
+	if to.length_squared() < 0.01:
+		return
+	var desired := atan2(-to.x, -to.z)
+	var max_step := deg_to_rad(max_degrees_per_second) * delta
+	var step := clampf(angle_difference(_body.rotation.y, desired), -max_step, max_step)
+	_body.rotation.y += step
 
 func _apply_move(dir: Vector3, speed: float, delta: float) -> void:
 	_attempted_move = true
@@ -227,6 +316,10 @@ func _detour_direction(dir: Vector3) -> Vector3:
 func _intent_speed(blackboard: EnemyAIBlackboard) -> float:
 	if blackboard.navigation_intent_kind == EnemyAIBlackboard.IntentKind.STRAFE:
 		return strafe_speed
+	if blackboard.navigation_intent_kind == EnemyAIBlackboard.IntentKind.BACKPEDAL:
+		return backpedal_speed
+	if blackboard.navigation_intent_kind == EnemyAIBlackboard.IntentKind.EVADE:
+		return evade_speed
 	if blackboard.navigation_speed_profile == EnemyAIBlackboard.SpeedProfile.ROAM:
 		return roam_speed
 	return chase_speed
