@@ -23,6 +23,7 @@ var _dodge_queued := false  # dodge pedido tarde en un golpe: sale al terminarlo
 @onready var dash: PlayerDash = $Dash
 @onready var launcher: PlayerLauncher = $Launcher
 @onready var wall_slide: PlayerWallSlide = $WallSlide
+@onready var floor_slide: PlayerFloorSlide = $FloorSlide
 @onready var enemy_bounce: PlayerEnemyBounce = $EnemyBounce
 @onready var air_kill_reset: PlayerAirKillReset = $AirKillReset
 @onready var stun: PlayerStun = $Stun
@@ -53,6 +54,7 @@ func _ready() -> void:
 	locomotion.setup(self, get_viewport().get_camera_3d())
 	launcher.setup(self)
 	wall_slide.setup(self)
+	floor_slide.setup(self)
 	enemy_bounce.setup(self)
 	air_kill_reset.setup(self)
 	dash.setup(self, locomotion, launcher.register_air_hit_stall, launcher.cancel)
@@ -102,6 +104,7 @@ func _physics_process(delta: float) -> void:
 	if launcher.is_launched:
 		_set_run_dust(false)
 		wall_slide.cancel()
+		floor_slide.cancel()
 		enemy_bounce.cancel()
 		launcher.tick_launch(delta)  # el launcher controla el movimiento
 		return
@@ -114,6 +117,7 @@ func _physics_process(delta: float) -> void:
 	if dash.is_dashing:
 		_set_run_dust(false)
 		wall_slide.cancel()
+		floor_slide.cancel()
 		enemy_bounce.cancel()
 		dash.tick(delta)
 		_bleed_momentum(delta)
@@ -127,9 +131,11 @@ func _physics_process(delta: float) -> void:
 	vertical_velocity += tuning.gravity * launcher.gravity_scale() * delta
 
 	var horizontal_with_momentum := wall_slide.apply_slide_velocity(horizontal + bump_velocity, input_dir, delta)
+	horizontal_with_momentum = floor_slide.apply_slide_velocity(horizontal_with_momentum, input_dir, delta)
 	velocity = horizontal_with_momentum + Vector3(0.0, vertical_velocity, 0.0)
 	move_and_slide()
 	wall_slide.update_after_move(horizontal + bump_velocity, input_dir)
+	floor_slide.update_after_move(horizontal + bump_velocity, input_dir)
 	enemy_bounce.update_after_move(horizontal + bump_velocity)
 
 	if is_on_floor():
@@ -153,6 +159,9 @@ func _on_jump() -> void:
 	_dodge_queued = false  # saltar descarta un dodge bufferizado pendiente
 	# (swing release / begin — batch 6)
 	if is_on_floor():
+		# Saltar desde un floor slide conserva jump_momentum_keep del slide como momentum aereo.
+		if floor_slide.is_sliding:
+			floor_slide.launch_into_jump()
 		vertical_velocity = tuning.jump_force
 		air_state = AirState.AIRBORNE
 	elif wall_slide.try_wall_jump(locomotion.camera_relative(locomotion.read_move_input())):
@@ -237,6 +246,7 @@ func apply_stun(duration: float = -1.0, mode := PlayerStun.Mode.STILL,
 	_dodge_queued = false
 	locomotion.cancel_lunge()
 	wall_slide.cancel()
+	floor_slide.cancel()
 	enemy_bounce.cancel()
 	launcher.cancel()
 	dash.cancel()
@@ -292,6 +302,7 @@ func set_momentum(v: Vector3) -> void:
 func bump(dir: Vector3, h_speed: float, v_speed: float) -> void:
 	_dodge_queued = false
 	wall_slide.cancel()
+	floor_slide.cancel()
 	enemy_bounce.cancel()
 	launcher.cancel()
 	dash.cancel()
@@ -305,12 +316,14 @@ func force_dash(dir: Vector3, distance: float, duration: float, boost_bump_momen
 		deals_damage := false) -> void:
 	_dodge_queued = false
 	wall_slide.cancel()
+	floor_slide.cancel()
 	enemy_bounce.cancel()
 	dash.force_dash(dir, distance, duration, boost_bump_momentum, deals_damage)
 
 func launch(height: float, hang_time: float, rise_time: float = World.LAUNCH_RISE_TIME) -> void:
 	_dodge_queued = false
 	wall_slide.cancel()
+	floor_slide.cancel()
 	enemy_bounce.cancel()
 	stun.cancel()
 	dash.cancel()
@@ -318,6 +331,7 @@ func launch(height: float, hang_time: float, rise_time: float = World.LAUNCH_RIS
 
 func _tick_stunned(delta: float) -> void:
 	wall_slide.cancel()
+	floor_slide.cancel()
 	enemy_bounce.cancel()
 	vertical_velocity += tuning.gravity * tuning.stun_gravity_scale * delta
 	velocity = bump_velocity + Vector3(0.0, vertical_velocity, 0.0)

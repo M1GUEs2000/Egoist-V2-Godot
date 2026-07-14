@@ -25,6 +25,7 @@ Esta nota es el indice del sistema. El detalle vive en una subnota por modulo o 
 | Launcher / aire | `PlayerLauncher` | E2 | [[Launcher y Aire]] |
 | Momentum por bump | `Player.bump()` | E1 | [[Momentum y Bump]] |
 | Wall slide / wall jump | `PlayerWallSlide` | E1 | [[Wall Slide y Wall Jump]] |
+| Floor slide por plataforma | `PlayerFloorSlide`, `FloorSlideSurface`, `FloorSlideTuning` | E0 | [[Floor Slide]] |
 | Rebote en enemigos | `PlayerEnemyBounce` | E1 | [[Rebote en Enemigos]] |
 | Reset aereo por kill / carga | `PlayerAirKillReset` | E1 | [[Reset Aereo por Kill]] |
 | World switch | `WorldManager`, `WorldMembership`, `WorldSwitchTrigger`, `ActionWorldSwitchModifier` | E2 | [[World Switch]] |

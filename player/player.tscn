@@ -16,6 +16,7 @@
 [ext_resource type="Script" uid="uid://dvxrsptoplacw" path="res://combat/hurtbox.gd" id="14_hurtbox"]
 [ext_resource type="PackedScene" uid="uid://dv6cue7n7nrdf" path="res://combat/weapons/mace/mace.tscn" id="15_mace_scene"]
 [ext_resource type="Script" uid="uid://bjojax6u4p856" path="res://player/player_wall_slide.gd" id="16_wall_slide"]
+[ext_resource type="Script" path="res://player/player_floor_slide.gd" id="23_floor_slide"]
 [ext_resource type="Script" uid="uid://hnpykw4f3srn" path="res://player/player_stun.gd" id="17_stun"]
 [ext_resource type="Script" uid="uid://22nvlsquw6vq" path="res://player/lock_on.gd" id="18_lock_on"]
 [ext_resource type="Script" uid="uid://cvgrnt0knmbdg" path="res://visual/landing_indicator.gd" id="19_landing"]
@@ -213,6 +214,9 @@ script = ExtResource("4_launcher")
 [node name="WallSlide" type="Node" parent="." unique_id=1043687573]
 script = ExtResource("16_wall_slide")
 glow_energy = 1.0
+
+[node name="FloorSlide" type="Node" parent="." unique_id=771034512]
+script = ExtResource("23_floor_slide")
 
 [node name="EnemyBounce" type="Node" parent="." unique_id=193226634]
 script = ExtResource("20_enemy_bounce")
