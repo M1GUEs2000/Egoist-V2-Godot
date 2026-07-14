@@ -45,7 +45,7 @@ La cascara y el humo se aplican via `material_override`, que **pisa el material 
 
 `BOTH` y `FOLLOWS` no muestran nada de esto: nunca estan fuera del mundo actual.
 
-Tuneables (exports de `WorldMembership`): humo (`other_world_echo_*`), latido del borde (`other_world_rim_min_energy`/`max_energy`, `other_world_pulse_speed`, `other_world_rim_sharpness`, `other_world_fill_energy`), contagio al humo (`other_world_smoke_pulse_boost`) y estela (`afterimages_enabled`, `afterimage_interval`, `afterimage_lifetime`, `afterimage_min_speed`, `afterimage_rim_energy`). *(pendiente de tunear jugando)*
+Tuneables (exports de `WorldMembership`): humo (`other_world_echo_*`), latido del borde (`other_world_rim_max_energy`, `other_world_pulse_speed`, `other_world_rim_sharpness`, `other_world_fill_energy`), contagio al humo (`other_world_smoke_pulse_boost`) y estela (`afterimages_enabled`, `afterimage_interval`, `afterimage_lifetime`, `afterimage_min_speed`, `afterimage_rim_energy`). *(pendiente de tunear jugando)*
 
 ## Trigger global
 

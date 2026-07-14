@@ -27,6 +27,7 @@ signal changed(active: bool)
 enum Mode { FIXED, BOTH, TIMED, FOLLOWS }
 
 const SHELL_SHADER: Shader = preload("res://visual/other_world_shell.gdshader")
+const SMOKE_TUNING: Resource = preload("res://data/other_world_smoke_tuning.tres")
 
 @export var mode := Mode.FIXED
 @export var affiliation := World.Kind.LIVING
@@ -53,8 +54,6 @@ const SHELL_SHADER: Shader = preload("res://visual/other_world_shell.gdshader")
 # el humo se le engancha (other_world_smoke_pulse_boost). No son dos efectos sueltos.
 ## Finura del contorno encendido: mas alto = anillo mas fino.
 @export var other_world_rim_sharpness := 3.0
-## Energia del borde en el VALLE del latido.
-@export var other_world_rim_min_energy := 0.6
 ## Energia del borde en la CRESTA del latido.
 @export var other_world_rim_max_energy := 2.4
 ## Velocidad del latido, en pulsos por segundo.
@@ -63,7 +62,6 @@ const SHELL_SHADER: Shader = preload("res://visual/other_world_shell.gdshader")
 @export var other_world_fill_energy := 0.03
 ## Cuanto del latido del borde se contagia al humo. En 0 el humo ignora el pulso y queda plano.
 @export var other_world_smoke_pulse_boost := 0.35
-
 # --- Afterimages (la capa CONSTANTE, junto con el humo) ---
 # Copias del mesh que quedan atras al moverse. Son siluetas reconocibles: rompen a proposito la
 # regla de "nada de siluetas exactas" (decision 2026-07-13) — la estela ES el dato.
@@ -149,6 +147,40 @@ func _exit_tree() -> void:
 func is_shell_active() -> bool:
 	return _shell_on
 
+func _smoke_float(property_name: StringName, fallback: float) -> float:
+	var value: Variant = SMOKE_TUNING.get(property_name)
+	return fallback if value == null else float(value)
+
+func _smoke_vector2(property_name: StringName, fallback: Vector2) -> Vector2:
+	var value: Variant = SMOKE_TUNING.get(property_name)
+	if value == null:
+		return fallback
+	return value as Vector2
+
+func _smoke_pulse_speed() -> float:
+	var interval := _smoke_float(&"pulse_interval", 1.25)
+	if interval <= 0.0:
+		return 0.0
+	return 1.0 / interval
+
+func _smoke_pulse() -> float:
+	var speed := _smoke_pulse_speed()
+	if speed <= 0.0:
+		return 0.0
+	var phase := fposmod(World.now() * speed, 1.0)
+	return pow(phase, _smoke_float(&"pulse_exponent", 4.0))
+
+func _pulse_time_left() -> float:
+	var speed := _smoke_pulse_speed()
+	if speed <= 0.0:
+		return 0.0
+	var phase := fposmod(World.now() * speed, 1.0)
+	return (1.0 - phase) / speed
+
+func _visible_pulse() -> float:
+	var threshold := _smoke_float(&"pulse_visibility_threshold", 0.15)
+	return _pulse if _pulse >= threshold else 0.0
+
 ## Prepara una ShaderMaterial de cascara por cada mesh del dueño. No se aplica todavia: vive en
 ## `material_override`, que PISA el material real sin destruirlo — al volver a este mundo se pone
 ## en null y el objeto recupera su look intacto (incluido el color que EnemyBase pinta por su
@@ -176,18 +208,21 @@ func _set_shell_active(on: bool) -> void:
 
 ## El latido del borde. Es el reloj de toda la presencia: esta misma onda tambien empuja el humo.
 func _update_shell(color: Color) -> void:
-	_pulse = 0.5 + 0.5 * sin(World.now() * other_world_pulse_speed * TAU)
-	var rim_energy := lerpf(other_world_rim_min_energy, other_world_rim_max_energy, _pulse)
+	_pulse = _smoke_pulse()
+	# La cascara depende exclusivamente del pulso: entre pulsos no tiene energia ni relleno.
+	var visible_pulse := _visible_pulse()
+	var rim_energy := _smoke_float(&"rim_max_energy", other_world_rim_max_energy) * visible_pulse
+	var fill_energy := _smoke_float(&"fill_energy", other_world_fill_energy) * visible_pulse
 	for material in _shell_materials:
 		material.set_shader_parameter("rim_color", color)
 		material.set_shader_parameter("rim_energy", rim_energy)
-		material.set_shader_parameter("rim_sharpness", other_world_rim_sharpness)
-		material.set_shader_parameter("fill_energy", other_world_fill_energy)
+		material.set_shader_parameter("rim_sharpness", _smoke_float(&"rim_sharpness", other_world_rim_sharpness))
+		material.set_shader_parameter("fill_energy", fill_energy)
 
 ## Estela: copias del mesh que quedan CLAVADAS donde pasó el cuerpo (por eso cuelgan de un host
 ## fijo en la escena y no del dueño — si fueran hijas suyas lo seguirian y no habria estela).
 ## Cada copia nace con el borde encendido y se apaga sola; al llegar a cero se libera.
-func _spawn_afterimage(color: Color) -> void:
+func _spawn_afterimage(color: Color, lifetime: float) -> void:
 	if _afterimage_host == null:
 		return
 	for mesh in _shell_meshes:
@@ -205,7 +240,7 @@ func _spawn_afterimage(color: Color) -> void:
 		_afterimage_host.add_child(ghost)
 		ghost.global_transform = mesh.global_transform  # despues de entrar al arbol
 		var fade := ghost.create_tween()
-		fade.tween_property(material, "shader_parameter/rim_energy", 0.0, afterimage_lifetime)
+		fade.tween_property(material, "shader_parameter/rim_energy", 0.0, lifetime)
 		fade.tween_callback(ghost.queue_free)
 
 ## El eco se vuelve hermano del dueño en la escena, no hijo suyo: asi sigue siendo visible cuando
@@ -229,9 +264,9 @@ func _setup_other_world_echo() -> void:
 
 	_other_world_echo = GPUParticles3D.new()
 	_other_world_echo.name = "Smoke"
-	_other_world_echo.amount = other_world_echo_particle_amount
-	_other_world_echo.lifetime = 1.35
-	_other_world_echo.randomness = 0.55
+	_other_world_echo.amount = int(_smoke_float(&"particle_amount", float(other_world_echo_particle_amount)))
+	_other_world_echo.lifetime = _smoke_float(&"lifetime", 1.35)
+	_other_world_echo.randomness = _smoke_float(&"randomness", 0.55)
 	_other_world_echo.emitting = false
 	_other_world_echo_anchor.add_child(_other_world_echo)
 
@@ -239,18 +274,20 @@ func _setup_other_world_echo() -> void:
 	process.emission_shape = ParticleProcessMaterial.EMISSION_SHAPE_SPHERE_SURFACE
 	process.emission_sphere_radius = contour_radius
 	process.direction = Vector3.UP
-	process.spread = 38.0
-	process.initial_velocity_min = 0.08
-	process.initial_velocity_max = 0.35
-	process.gravity = Vector3(0.0, 0.16, 0.0)
-	process.damping_min = 0.08
-	process.damping_max = 0.25
-	process.scale_min = 0.45
-	process.scale_max = 1.0
+	process.spread = _smoke_float(&"spread", 38.0)
+	process.initial_velocity_min = _smoke_float(&"velocity_min", 0.08)
+	process.initial_velocity_max = _smoke_float(&"velocity_max", 0.35)
+	process.gravity = Vector3(0.0, _smoke_float(&"gravity", 0.16), 0.0)
+	process.damping_min = _smoke_float(&"damping_min", 0.08)
+	process.damping_max = _smoke_float(&"damping_max", 0.25)
+	process.scale_min = _smoke_float(&"scale_min", 0.45)
+	process.scale_max = _smoke_float(&"scale_max", 1.0)
 	var smoke_gradient := Gradient.new()
 	smoke_gradient.offsets = PackedFloat32Array([0.0, 0.3, 1.0])
 	smoke_gradient.colors = PackedColorArray([
-			Color(1.0, 1.0, 1.0, 0.0), Color(1.0, 1.0, 1.0, 0.5), Color(1.0, 1.0, 1.0, 0.0),
+			Color(1.0, 1.0, 1.0, _smoke_float(&"alpha_start", 0.0)),
+			Color(1.0, 1.0, 1.0, _smoke_float(&"alpha_mid", 0.5)),
+			Color(1.0, 1.0, 1.0, _smoke_float(&"alpha_end", 0.0)),
 	])
 	var smoke_ramp := GradientTexture1D.new()
 	smoke_ramp.gradient = smoke_gradient
@@ -264,16 +301,16 @@ func _setup_other_world_echo() -> void:
 	_other_world_echo_material.billboard_mode = BaseMaterial3D.BILLBOARD_PARTICLES
 	_other_world_echo_material.emission_enabled = true
 	var smoke_mesh := QuadMesh.new()
-	smoke_mesh.size = Vector2(0.9, 0.9)
+	smoke_mesh.size = _smoke_vector2(&"quad_size", Vector2(0.9, 0.9))
 	smoke_mesh.material = _other_world_echo_material
 	_other_world_echo.draw_pass_1 = smoke_mesh
 
 	_other_world_echo_light = OmniLight3D.new()
 	_other_world_echo_light.name = "Glow"
 	_other_world_echo_light.position = Vector3.UP * 0.25
-	_other_world_echo_light.omni_range = other_world_echo_light_range
-	_other_world_echo_light.light_indirect_energy = 0.15
-	_other_world_echo_light.light_volumetric_fog_energy = 0.2
+	_other_world_echo_light.omni_range = _smoke_float(&"light_range", other_world_echo_light_range)
+	_other_world_echo_light.light_indirect_energy = _smoke_float(&"light_indirect_energy", 0.15)
+	_other_world_echo_light.light_volumetric_fog_energy = _smoke_float(&"light_volumetric_energy", 0.2)
 	_other_world_echo_light.visible = false
 	_other_world_echo_anchor.add_child(_other_world_echo_light)
 	_update_other_world_echo(0.0)
@@ -309,24 +346,31 @@ func _update_other_world_echo(delta: float) -> void:
 
 	_update_shell(color)  # escribe _pulse: el reloj del que cuelga todo lo de abajo
 
-	var motion := clampf(speed / maxf(0.01, other_world_echo_motion_speed), 0.0, 1.0)
+	var motion := clampf(speed / maxf(0.01, _smoke_float(&"motion_speed", other_world_echo_motion_speed)), 0.0, 1.0)
 	# El humo respira con el latido del borde en vez de quedarse plano.
-	var energy := lerpf(other_world_echo_min_energy, other_world_echo_max_energy, motion) \
-			+ _pulse * other_world_smoke_pulse_boost
+	var energy := lerpf(_smoke_float(&"min_energy", other_world_echo_min_energy),
+			_smoke_float(&"max_energy", other_world_echo_max_energy), motion) \
+			+ _pulse * _smoke_float(&"smoke_pulse_boost", other_world_smoke_pulse_boost)
+	var particle_glow := maxf(1.0, _pulse * _smoke_float(&"particle_pulse_glow", 8.0))
+	var particle_emission := color * particle_glow
+	particle_emission.a = color.a
 	_other_world_echo_material.albedo_color = color
-	_other_world_echo_material.emission = color
+	_other_world_echo_material.emission = particle_emission
 	_other_world_echo_material.emission_energy_multiplier = energy
 	_other_world_echo_light.light_color = color
 	_other_world_echo_light.light_energy = energy
 
-	if afterimages_enabled and speed >= afterimage_min_speed and World.now() >= _afterimage_next_at:
+	# Conserva los frames saltados, pero solo durante la ventana visible de este mismo pulso.
+	var afterimage_lifetime_in_pulse := minf(afterimage_lifetime, _pulse_time_left())
+	if afterimages_enabled and _visible_pulse() > 0.0 and speed >= afterimage_min_speed \
+			and afterimage_lifetime_in_pulse > 0.01 and World.now() >= _afterimage_next_at:
 		_afterimage_next_at = World.now() + afterimage_interval
-		_spawn_afterimage(color)
+		_spawn_afterimage(color, afterimage_lifetime_in_pulse)
 
 ## Los CharacterBody suelen tener el origen en los pies y las estructuras lo tienen en su centro.
 ## Tomamos los meshes reales para que el humo abrace volumen visible en ambos casos.
 func _infer_other_world_echo_shape() -> float:
-	var radius := other_world_echo_radius
+	var radius := _smoke_float(&"radius", other_world_echo_radius)
 	var highest_center := _other_world_echo_local_center.y
 	for node in _target.find_children("*", "MeshInstance3D", true):
 		var mesh_instance := node as MeshInstance3D

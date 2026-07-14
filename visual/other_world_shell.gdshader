@@ -23,6 +23,11 @@ uniform float fill_energy : hint_range(0.0, 1.0) = 0.03;
 void fragment() {
 	float facing = clamp(dot(normalize(NORMAL), normalize(VIEW)), 0.0, 1.0);
 	float rim = pow(1.0 - facing, rim_sharpness);
-	ALBEDO = rim_color * (rim * rim_energy + fill_energy);
-	ALPHA = 1.0;
+	float intensity = rim * rim_energy + fill_energy;
+	// Sin intensidad no existe cascara visible entre pulsos.
+	if (intensity <= 0.0001) {
+		discard;
+	}
+	ALBEDO = rim_color * intensity;
+	ALPHA = clamp(intensity, 0.0, 1.0);
 }

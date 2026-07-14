@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="OtherWorldSmokeTuning" format=3 uid="uid://bqbs5xbwy6jjy"]
+
+[ext_resource type="Script" uid="uid://b3p743v7bodms" path="res://data/other_world_smoke_tuning.gd" id="1_tuning"]
+
+[resource]
+script = ExtResource("1_tuning")
+particle_amount = 10
+radius = 2.5
+spread = 50.0
+scale_max = 2.0
+quad_size = Vector2(0.2, 0.4)
+alpha_mid = 0.9
+max_energy = 5.0
+rim_max_energy = 4.315
+pulse_interval = 7.0
+pulse_exponent = 11.9
+pulse_visibility_threshold = 0.15
+smoke_pulse_boost = 0.3
+particle_pulse_glow = 1000.0
+fill_energy = 0.0
+rim_sharpness = 6.0
