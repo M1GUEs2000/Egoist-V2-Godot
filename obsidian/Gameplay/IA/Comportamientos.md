@@ -5,7 +5,7 @@ tags:
   - gameplay
   - ia
 status: active
-system_status: E2
+system_status: E3
 hito: H1
 ---
 
@@ -50,7 +50,7 @@ Mientras no se implementen, dejarlos fuera de `allowed_state_flags` en las escen
 
 ## EVADE
 
-El enemigo no se planta enfrente entre golpe y golpe: en rango de ataque **rodea** al target y comete el golpe solo en su ventana, y ademas **esquiva reactivamente** el telegraph del player. Estado **E1**: los knobs existen, el feel se sigue tuneando jugando.
+El enemigo no se planta enfrente entre golpe y golpe: en rango de ataque **se espacia** y comete el golpe solo en su ventana, y ademas **esquiva reactivamente** el telegraph del player. Estado **E3**: aprobado jugando; faltan juice y edge cases.
 
 **Parte proactiva (engage)** — `GroundedEnemy._process_engage`. El **melee tiene espaciado**: entra, pega, **sale retrocediendo de cara** al target (`BACKPEDAL`, nunca de espaldas) hasta `attack_range * melee_ring_fraction` — un ring **fuera** de su alcance —, ahi **orbita** esperando que la cadencia (`attack_pause_min..max`, sorteada al cerrar cada combo) o el cooldown del arma le habiliten el golpe, y entonces **vuelve a entrar** (`MOVE_TO` con parada en `attack_range * strike_distance_fraction`). Ya no se queda encima del jugador entre combo y combo.
 
