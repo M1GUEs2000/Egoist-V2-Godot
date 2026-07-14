@@ -29,7 +29,7 @@ Esta nota es el indice del sistema. El detalle vive en una subnota por modulo o 
 | Reset aereo por kill / carga | `PlayerAirKillReset` | E1 | [[Reset Aereo por Kill]] |
 | World switch | `WorldManager`, `WorldMembership`, `WorldSwitchTrigger`, `ActionWorldSwitchModifier` | E2 | [[World Switch]] |
 | Grieta | `WorldRift`, `WorldRiftTuning`, `RiftSpawner` | E0 | [[Grieta]] |
-| Bloques traversal | `TraversalBlock`, `BreakOnDeath`, `SpikeWall` | E3 | [[Bloques]] |
+| Bloques traversal | `TraversalBlock`, `BreakOnDeath`, `SpikeWall` | E2 | [[Bloques]] |
 | Cadenas | `PlayerSwing` | E0 | [[Cadenas]] |
 | Occlusion fade de camara | `CameraOcclusionFade` | E2 | [[Occlusion Fade de Camara]] |
 | Landing indicator | `LandingIndicator` | E3 | [[Landing Indicator]] |

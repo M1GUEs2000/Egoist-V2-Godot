@@ -37,6 +37,7 @@ var _light: OmniLight3D
 var _down_lights: Array[SpotLight3D] = []
 var _down_particles: Array[GPUParticles3D] = []
 var _down_particle_materials: Array[StandardMaterial3D] = []
+var _dash_arrow: Node3D
 
 @onready var _health: Health = $Health
 @onready var _hurtbox: Hurtbox = $Hurtbox
@@ -53,6 +54,8 @@ func _ready() -> void:
 	_setup_light()
 	_rebuild_glow_segments()
 	_update_glow()
+	if enable_dash:
+		_build_dash_arrow()
 
 ## Luz real (no solo emision del material) para que el bloque ilumine el entorno.
 ## El color y el encendido se ajustan en _repaint_segments y _update_glow.
@@ -110,12 +113,14 @@ func _apply_launch(player: Player) -> void:
 	player.restore_double_jump()
 	player.restore_airdash()
 
+## Empuja siempre hacia la cara -Z del bloque (misma convencion que Player.forward()), sin
+## importar por donde llego el jugador: rotar el TraversalBlock en el editor cambia el rumbo.
 func _apply_dash(player: Player) -> void:
 	if World.now() - _last_dash_hit_time < hit_cooldown:
 		return
 	_last_dash_hit_time = World.now()
-	player.force_dash(player.forward(), dash_distance, dash_duration, boost_existing_bump_momentum,
-			dash_deals_damage)
+	player.force_dash(-global_transform.basis.z, dash_distance, dash_duration,
+			boost_existing_bump_momentum, dash_deals_damage)
 
 func _rebuild_glow_segments() -> void:
 	for child in _glow_segments.get_children():
@@ -257,6 +262,47 @@ func _repaint_light(colors: Array[Color]) -> void:
 		blended += color
 	_light.light_color = blended / float(colors.size())
 	_light.omni_range = tuning.light_range
+
+## Cono + vara semitransparente pegada a la cara -Z del bloque: marca hacia donde empuja el
+## dash sin depender de por donde llegue el jugador. Vive fija en local; rotar el TraversalBlock
+## en el editor la mueve junto con el empuje real (ver _apply_dash).
+func _build_dash_arrow() -> void:
+	_dash_arrow = Node3D.new()
+	add_child(_dash_arrow)
+	var material := StandardMaterial3D.new()
+	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	material.albedo_color = Color(World.COLOR_TRAVERSAL_DASH, tuning.arrow_alpha)
+	material.emission_enabled = true
+	material.emission = World.COLOR_TRAVERSAL_DASH_EMISSION
+	material.cull_mode = BaseMaterial3D.CULL_DISABLED
+
+	# CylinderMesh nace con el largo en +Y local; -90 en X lo acuesta apuntando a -Z (la misma
+	# cara que usa _apply_dash / Player.forward()).
+	var shaft := MeshInstance3D.new()
+	var shaft_mesh := CylinderMesh.new()
+	shaft_mesh.top_radius = tuning.arrow_shaft_radius
+	shaft_mesh.bottom_radius = tuning.arrow_shaft_radius
+	shaft_mesh.height = tuning.arrow_shaft_length
+	shaft.mesh = shaft_mesh
+	shaft.set_surface_override_material(0, material)
+	shaft.rotation_degrees = Vector3(-90.0, 0.0, 0.0)
+	shaft.position = Vector3(0.0, 0.55, -0.5 - tuning.arrow_shaft_length * 0.5)
+	shaft.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	_dash_arrow.add_child(shaft)
+
+	var head := MeshInstance3D.new()
+	var head_mesh := CylinderMesh.new()
+	head_mesh.bottom_radius = tuning.arrow_head_radius  # base ancha, pegada a la vara
+	head_mesh.top_radius = 0.0                          # punta, apuntando lejos del bloque
+	head_mesh.height = tuning.arrow_head_length
+	head.mesh = head_mesh
+	head.set_surface_override_material(0, material)
+	head.rotation_degrees = Vector3(-90.0, 0.0, 0.0)
+	head.position = Vector3(0.0, 0.55,
+			-0.5 - tuning.arrow_shaft_length - tuning.arrow_head_length * 0.5)
+	head.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	_dash_arrow.add_child(head)
 
 func _update_glow() -> void:
 	var player := get_tree().get_first_node_in_group("player") as Node3D

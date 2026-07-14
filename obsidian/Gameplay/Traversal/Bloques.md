@@ -5,7 +5,7 @@ tags:
   - gameplay
   - sistema
 status: active
-system_status: E3
+system_status: E2
 hito: H1
 ---
 
@@ -26,7 +26,7 @@ Objetos golpeables de traversal.
 | Caracteristica | Efecto | Color |
 |---|---|---|
 | Launch / bump | Suma momentum horizontal, aplica bump vertical, restaura doble salto y airdash. | Rojo |
-| Dash | Fuerza dash hacia donde mira el jugador; el dash **daña al atravesar** enemigos (`dash_deals_damage`, prende el `DashHitbox` del player). | Verde |
+| Dash | Fuerza dash hacia la cara **-Z local del bloque** (fija, no depende de por donde llega el jugador; rotar el `TraversalBlock` en el editor cambia el rumbo). Una flecha cono+vara semitransparente en esa cara muestra el rumbo. El dash **daña al atravesar** enemigos (`dash_deals_damage`, prende el `DashHitbox` del player). | Verde |
 | Meter | Suma barras de meter al jugador. | Celeste |
 | Maldicion | Al romperse, la proxima accion cambia de mundo. | Amarillo |
 | World switch | Cambia de mundo al golpearlo. | Color del mundo destino |
@@ -55,6 +55,8 @@ Pared de pinchos reusable (`world/blocks/spike_wall.tscn`). **Una sola escena pa
 - Prefabs H1.
 - Tuning de impulsos por zona.
 - Probar la spike wall jugando.
+- Probar jugando el nuevo rumbo fijo del dash verde (rotar el bloque en vez de que el jugador
+  decida la direccion) y el tamaño/alpha de la flecha (E3→E2 hasta reprobarse).
 
 Lo que todavia no existe (efecto del color negro, bloques dañinos) vive en [[ideas]].
 

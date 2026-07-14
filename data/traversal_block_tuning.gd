@@ -37,3 +37,15 @@ class_name TraversalBlockTuning extends Resource
 @export var particle_fall_speed := 3.0
 ## Lado de cada mota en metros.
 @export_range(0.01, 0.5, 0.01) var particle_size := 0.07
+
+@export_group("Flecha de direccion (bloque verde)")
+## Largo de la vara, en metros, pegada a la cara -Z del bloque.
+@export var arrow_shaft_length := 0.6
+## Radio de la vara.
+@export_range(0.01, 0.3, 0.01) var arrow_shaft_radius := 0.05
+## Largo de la punta (cono).
+@export var arrow_head_length := 0.35
+## Radio de la base del cono.
+@export_range(0.05, 0.5, 0.01) var arrow_head_radius := 0.16
+## Transparencia de la flecha: 0 invisible, 1 solida.
+@export_range(0.0, 1.0, 0.05) var arrow_alpha := 0.55
