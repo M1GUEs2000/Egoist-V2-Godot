@@ -6,7 +6,7 @@ tags:
   - sistema
   - ia
 status: active
-system_status: E2
+system_status: E3
 hito: H1
 ---
 
@@ -48,6 +48,22 @@ Catalogo completo, que hace cada uno en general y cuales tienen logica real impl
 > [!warning]
 > `ATTACK_GROUP`, `DEFEND` y `CALL_HELP` son solo enum/flag hoy — ninguna hoja del arbol los produce ni los maneja. Ver detalle en [[Comportamientos]].
 
+## Fuera del mundo del jugador
+
+Un enemigo que no comparte mundo con el jugador **no se congela**: sigue simulando. Cae por
+gravedad, corre su arbol y sigue en lo suyo — el agresivo vaga, el reactivo monta guardia, el
+volador patrulla. Es lo que se ve moverse detras de la cascara y el humo (ver [[Afiliacion de Mundo]]).
+
+Lo que si se apaga es el **combate**: fuera de mundo `_acquire_target` devuelve `null`, asi que no
+persigue ni ataca al jugador. No es una regla suelta, es la unica coherente: inactivo, su hurtbox
+deja de ser monitorable y su `collision_layer` queda en 0, o sea que ni el conecta un golpe ni se
+lo conectan. Perseguir a un intocable seria teatro. *(2026-07-13)*
+
+> [!warning] Los enemigos tampoco pelean ENTRE ellos en el otro mundo
+> Por lo mismo: todos los `Hitbox` comparten mascara, asi que dos enemigos fuera de mundo se
+> perseguirian sin poder danarse. Que el ecosistema siga vivo del otro lado (ver [[Ecosistema Vivo]])
+> pide separar las capas de hurtbox por mundo — no esta hecho.
+
 ## Percepcion y memoria
 
 Ningun enemigo es omnisciente (los agresivos y ultra agresivos ya no detectan por magia). Toda deteccion pasa por `Perception`: rango de vision + angulo de vision + raycast contra el mundo. Guarda la ultima posicion conocida; la persecucion se corta cuando pierde linea de vision y se agota la memoria. *(2026-07-07)*
@@ -66,7 +82,7 @@ Memoria por hostilidad (default): pasivo `10s`, reactivo `20s`, agresivo `40s`, 
 | Bloque | Responsabilidad |
 |---|---|
 | `Perception` | Rango, angulo, raycast, ultima posicion conocida y memoria por hostilidad. |
-| `GroundLocomotion` | Chase, roam, search, huida (`flee_from`), strafe (orbita/esquive, intent `STRAFE`) y `stop` para estados pasivos/guard/hide. |
+| `GroundLocomotion` | Chase (con parada por distancia), roam, search, huida (`flee_from`), espaciado de combate (`backpedal` + `strafe`), salto de esquive (`evade`) y `stop` para estados pasivos/guard/hide. |
 | `MeleeAttack` | Combo melee y ventana de parry; aplica `receive_stun` si el ataque trae `StunSettings`. |
 | `RangedAttack` | Windup, proyectil y homing. |
 
@@ -82,7 +98,6 @@ La intencion por nivel (`PASSIVE`, `REACTIVE`, `AGGRESSIVE`, `ULTRA_AGGRESSIVE`)
 
 - Tuning por escena de rangos, cooldowns, vision y homing (los valores son de primer pase).
 - Validar seleccion melee/ranged por distancia.
-- Tunear jugando el engage y el esquive: cadencia entre combos, ring de orbita y `evade_*`. Ver [[Comportamientos]].
 - **Retirar el fallback FSM** de `GroundedEnemy` (`use_simple_fsm` + las ramas `_update_fsm` / `_process_*`), dejando el arbol como unico camino.
 - Implementar (o borrar del enum si se descartan) `ATTACK_GROUP` (coord/director, H3+), `DEFEND` (decide; el receptor del telegraph ya escribe `incoming_attack_until`, H2), `CALL_HELP` (coord ligera, H2). Ver [[Comportamientos]].
 
