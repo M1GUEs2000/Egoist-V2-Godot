@@ -20,6 +20,9 @@ var navigation_strafe_distance := 0.0
 ## Distancia a la que un MOVE_TO se da por llegado: el agente frena ahi en vez de caminar
 ## hasta el cuerpo del target. En 0 avanza hasta el punto exacto (roam, search).
 var navigation_stop_distance := 0.0
+## Velocidad del salto de esquive, en m/s. La decide la decision a partir de la distancia que
+## quiere recorrer; la locomocion solo la ejecuta.
+var navigation_evade_speed := 0.0
 
 var combat_attacking := false
 var combat_incoming_attack_until := -999.0
@@ -67,9 +70,11 @@ func strafe_around(point: Vector3, keep_distance := 0.0) -> void:
 	set_intent(IntentKind.STRAFE, point, SpeedProfile.CHASE)
 
 ## Esquive reactivo: salta alejandose de `point` (el origen del golpe entrante), sin dejar de
-## mirarlo. La forma del salto (cuanto retroceso vs cuanto costado) y su velocidad son de
-## GroundLocomotion: `evade_lateral_bias` y `evade_speed`.
-func evade_from(point: Vector3) -> void:
+## mirarlo, a `speed` m/s. La velocidad viaja en el intent porque la decide la decision (sale de
+## evade_distance / evade_duration del enemigo), no la locomocion. La forma del salto (recto o
+## diagonal) es de GroundLocomotion: `evade_diagonal_bias`.
+func evade_from(point: Vector3, speed: float) -> void:
+	navigation_evade_speed = speed
 	set_intent(IntentKind.EVADE, point, SpeedProfile.CHASE)
 
 ## Retrocede en linea recta alejandose de `point`, sin dejar de mirarlo, hasta `keep_distance`.

@@ -81,13 +81,13 @@ actions:
     layer: decide
     reads: [perception.target, _next_attack_at]
     writes: [combat.attacking, navigation.intent]
-    maps_to_hoy: _process_engage (start_combo_attack cuando la cadencia habilita; STRAFE ring mientras espera)
-    nota: reemplazo 2026-07-13 de StartAttack — comete el ataque O orbita, nunca se planta
+    maps_to_hoy: _process_engage (entra/pega cuando la cadencia habilita; BACKPEDAL y luego STRAFE al ring mientras espera)
+    nota: comete el ataque, sale del combo o rodea — nunca se planta encima del target
   EvadeWindow:
     layer: steer
-    reads: [_evade_starts_at, _evade_ends_at, _evade_from]
-    writes: [navigation.intent]
-    maps_to_hoy: _evade_window_active + strafe_around(_evade_from) (esquive reactivo agendado por el telegraph)
+    reads: [_evade_starts_at, _evade_ends_at, _evade_from, evade_distance, evade_duration]
+    writes: [navigation.intent, navigation.evade_speed]
+    maps_to_hoy: _evade_window_active + evade_from(_evade_from, evade_distance/evade_duration) (esquive reactivo agendado por el telegraph)
   AcquireTarget:
     layer: decide
     writes: [perception.target]

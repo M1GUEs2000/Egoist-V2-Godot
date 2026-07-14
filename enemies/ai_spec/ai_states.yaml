@@ -178,9 +178,10 @@ states:
       el ring, para que retroceder no lo saque del engage y lo deje entrando y saliendo.
       (2) REACTIVO - telegraph del player filtrado por gates (flags, cooldown, estado,
       percepcion, rango/trayectoria, dado con extremos deterministas), delay
-      evade_reaction_time, y salto de evade_duration con velocidad propia (evade_speed).
-      El salto SIEMPRE retrocede; el sorteo (begin_evade) decide si ademas abre en diagonal
-      y hacia que lado. Nunca es lateral puro. Sin i-frames enemigos.
+      evade_reaction_time, y salto que recorre evade_distance en evade_duration (la velocidad
+      sale de esa division: el knob es la distancia, no la velocidad). El salto SIEMPRE
+      retrocede; el sorteo (begin_evade) decide si ademas abre en diagonal y hacia que lado.
+      Nunca es lateral puro. Sin i-frames enemigos.
 
   DEFEND:
     implemented: false

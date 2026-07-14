@@ -131,6 +131,14 @@ size = Vector3(0.35, 0.35, 1.15)
 
 [node name="GroundedEnemy" type="CharacterBody3D" unique_id=1176923943]
 script = ExtResource("1_enemy")
+allowed_state_flags = 32762
+passive_remembers_attackers = true
+evade_chance = 0.81
+evade_reaction_time = 0.1
+evade_cooldown = 1.0
+evade_distance = 4.0
+evade_duration = 0.2
+evade_range = 6.0
 airborne_gravity = -15.0
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="." unique_id=1862644087]
@@ -214,6 +222,18 @@ script = ExtResource("5_perception")
 
 [node name="GroundLocomotion" type="Node" parent="." unique_id=1424312942]
 script = ExtResource("6_locomotion")
+chase_range = null
+chase_speed = null
+roam_speed = null
+roam_radius = null
+strafe_speed = 6.0
+backpedal_speed = null
+evade_diagonal_bias = null
+strafe_side_memory = null
+gravity = null
+stuck_time_threshold = null
+stuck_speed_fraction = null
+stuck_sidestep_time = null
 
 [node name="BTPlayer" type="BTPlayer" parent="." unique_id=128661082]
 update_mode = 2
@@ -223,6 +243,8 @@ blackboard_plan = SubResource("BlackboardPlan_qymcn")
 [node name="MeleeAttack" type="Node3D" parent="." unique_id=2066280899]
 script = ExtResource("7_melee")
 stun = SubResource("Resource_melee_stun")
+hand_radius = 1.52
+player_stun_push_speed = 2.0
 
 [node name="Hand" type="Node3D" parent="MeleeAttack" unique_id=1729610825]
 

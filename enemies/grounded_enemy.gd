@@ -94,8 +94,12 @@ const ALL_STATE_FLAGS := (
 ## Segundos que el esquive queda bloqueado tras un roll exitoso (la estamina invisible queda
 ## diferida por regla de 2: si jugando este cooldown no alcanza, se agrega).
 @export var evade_cooldown := 4.0
-## Segundos que dura el esquive una vez arrancado. Junto con GroundLocomotion.evade_speed define
-## cuanto se despega: son los dos knobs de "el esquive no me saca del arco".
+## Metros que recorre el salto de esquive. Es EL knob de "no se despega lo suficiente": subilo
+## hasta que el enemigo salga del arco del arma. La velocidad sale sola (distancia / duracion),
+## asi que tocar esto no obliga a recalcular nada. Es distancia deseada: si choca con geometria
+## o con otro enemigo, recorre menos.
+@export var evade_distance := 3.0
+## Segundos que dura el salto. Con la misma distancia, mas corto = mas explosivo (mas rapido).
 @export var evade_duration := 0.45
 ## Distancia maxima (m) al origen del telegraph para considerarse amenazado por el golpe.
 @export var evade_range := 3.5
@@ -277,7 +281,7 @@ func limbo_evade_window(delta: float) -> bool:
 	if not _evade_window_active():
 		return false
 	_change_state(AIState.EVADE)
-	blackboard.evade_from(_evade_from)
+	blackboard.evade_from(_evade_from, _evade_speed())
 	execute_ai_intent(delta)
 	return true
 
@@ -322,7 +326,7 @@ func _update_fsm(delta: float, effective_hostility: int) -> void:
 		return
 	if _evade_window_active():
 		_change_state(AIState.EVADE)
-		blackboard.evade_from(_evade_from)
+		blackboard.evade_from(_evade_from, _evade_speed())
 		execute_ai_intent(delta)
 		return
 	if target == null:
@@ -398,7 +402,13 @@ func _any_attacking() -> bool:
 			return true
 	return false
 
+## Fuera de mundo no hay pelea posible: su hurtbox deja de ser monitorable y su collision_layer
+## queda en 0 (ver EnemyBase._on_membership_changed), asi que ni el conecta un golpe ni se lo
+## conectan. Sin target cae solo en la rama de _process_no_target que le toque por hostilidad
+## (el agresivo sigue vagando, el reactivo monta guardia) en vez de perseguir a un intocable.
 func _acquire_target() -> Node3D:
+	if not _is_active:
+		return null
 	if _forced_target != null and is_instance_valid(_forced_target):
 		return _forced_target
 	if _base_hostility == Hostility.PASSIVE and hostility == Hostility.AGGRESSIVE:
@@ -605,6 +615,11 @@ func _on_player_attack_telegraphed(origin: Vector3, direction: Vector3) -> void:
 	# toda la ventana.
 	if locomotion != null:
 		locomotion.begin_evade()
+
+## Velocidad del salto para recorrer `evade_distance` en `evade_duration`. El knob es la
+## distancia: la velocidad es consecuencia, no algo que haya que recalcular a mano.
+func _evade_speed() -> float:
+	return evade_distance / maxf(0.01, evade_duration)
 
 ## Ventana de ejecucion del esquive agendado. Antes de _evade_starts_at el enemigo sigue en lo
 ## suyo (todavia "no reacciono"); entre starts y ends produce EVADE con intent STRAFE.

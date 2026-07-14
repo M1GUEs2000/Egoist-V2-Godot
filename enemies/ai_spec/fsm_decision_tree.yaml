@@ -44,7 +44,7 @@ decision_tree:
         children:
           - {when: [HIDE allowed, _hide_unlocked, "can_see_target == false"], set_state: HIDE, intent: HOLD}
           - {otherwise: true, set_state: FLEE, intent: "FLEE_FROM target.pos"}
-    - {id: evade_window, when: _evade_window_active, set_state: EVADE, intent: "STRAFE _evade_from (keep_distance 0: salir de la trayectoria)", returns: true, emits_intent: true, nota: la ventana la agenda _on_player_attack_telegraphed tras pasar sus gates}
+    - {id: evade_window, when: _evade_window_active, set_state: EVADE, intent: "EVADE _evade_from a evade_distance/evade_duration m/s (siempre retrocede; diagonal sorteada en begin_evade)", returns: true, emits_intent: true, nota: la ventana la agenda _on_player_attack_telegraphed tras pasar sus gates}
     - {id: no_target, when: "perception.target == null", set_state: depends_on_hostility, actions: [_process_no_target], returns: true, emits_intent: true}
     - {id: alert_beat, when: perception.is_alerted, set_state: ALERT, fallback: _fallback_state, actions: [face_current_target], returns: true, emits_intent: false}
     - id: visible_target_attack_or_chase

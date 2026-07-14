@@ -10,9 +10,6 @@ class_name GroundLocomotion extends Node
 @export var strafe_speed := 3.2
 ## Velocidad a la que retrocede de cara al target al salir de un combo (ver `backpedal`).
 @export var backpedal_speed := 2.8
-## Velocidad del esquive reactivo. Es un salto, no un paso: va MUY por encima del strafe, porque
-## tiene que sacarlo del arco del arma en la fraccion de segundo que dura (ver `evade`).
-@export var evade_speed := 6.0
 ## Cuanto abre la diagonal del esquive. El retroceso SIEMPRE esta (nunca esquiva de puro costado):
 ## esto es el componente lateral que se le suma cuando el sorteo cae en diagonal. 0 lo vuelve
 ## siempre retroceso recto; mas alto, diagonales mas abiertas.
@@ -75,7 +72,7 @@ func execute_intent(blackboard: EnemyAIBlackboard, delta: float) -> void:
 		EnemyAIBlackboard.IntentKind.BACKPEDAL:
 			backpedal(blackboard.navigation_intent_point, blackboard.navigation_strafe_distance, delta)
 		EnemyAIBlackboard.IntentKind.EVADE:
-			evade(blackboard.navigation_intent_point, delta)
+			evade(blackboard.navigation_intent_point, blackboard.navigation_evade_speed, delta)
 		EnemyAIBlackboard.IntentKind.HOLD:
 			stop(delta)
 		EnemyAIBlackboard.IntentKind.FACE:
@@ -166,10 +163,11 @@ func strafe(around: Vector3, desired_distance: float, delta: float) -> void:
 func begin_evade() -> void:
 	_evade_side = [-1.0, 0.0, 1.0][randi() % 3]
 
-## Esquive reactivo: salta alejandose de `from_point` (el origen del golpe), sin dejar de mirarlo.
-## SIEMPRE tiene componente de retroceso; el sorteo solo decide si ademas abre en diagonal y hacia
-## que lado. Nunca es un paso de puro costado, que contra un arco ancho no saca de la trayectoria.
-func evade(from_point: Vector3, delta: float) -> void:
+## Esquive reactivo: salta alejandose de `from_point` (el origen del golpe) a `speed` m/s, sin
+## dejar de mirarlo. SIEMPRE tiene componente de retroceso; el sorteo solo decide si ademas abre
+## en diagonal y hacia que lado. Nunca es un paso de puro costado, que contra un arco ancho no
+## saca de la trayectoria.
+func evade(from_point: Vector3, speed: float, delta: float) -> void:
 	if _is_suspended() or _body == null:
 		return
 	var to_center := from_point - _body.global_position
@@ -181,8 +179,8 @@ func evade(from_point: Vector3, delta: float) -> void:
 	var lateral := Vector3.UP.cross(radial) * _evade_side * evade_diagonal_bias
 	var dir := (-radial + lateral).normalized()
 	_attempted_move = true
-	_body.velocity.x = dir.x * evade_speed
-	_body.velocity.z = dir.z * evade_speed
+	_body.velocity.x = dir.x * speed
+	_body.velocity.z = dir.z * speed
 	if _body.is_on_floor():
 		_body.velocity.y = -1.0
 	else:
@@ -319,7 +317,7 @@ func _intent_speed(blackboard: EnemyAIBlackboard) -> float:
 	if blackboard.navigation_intent_kind == EnemyAIBlackboard.IntentKind.BACKPEDAL:
 		return backpedal_speed
 	if blackboard.navigation_intent_kind == EnemyAIBlackboard.IntentKind.EVADE:
-		return evade_speed
+		return blackboard.navigation_evade_speed
 	if blackboard.navigation_speed_profile == EnemyAIBlackboard.SpeedProfile.ROAM:
 		return roam_speed
 	return chase_speed
