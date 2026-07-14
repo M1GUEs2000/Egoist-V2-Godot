@@ -61,3 +61,6 @@ air_step_time = 0.09
 air_stall_scale = 1.8
 push = SubResource("Resource_macepush")
 push_at = 0.5
+parry_poise_normal = 8.0
+parry_poise_charged_x = 12.0
+parry_poise_charged_y = 16.0

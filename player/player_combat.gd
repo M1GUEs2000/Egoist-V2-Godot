@@ -4,6 +4,10 @@ class_name PlayerCombat extends Node
 ## afuera" (gatillará el lock-on, batch 6) y la pose de descanso de las armas.
 ## En v1 slot X y slot Y podían ser armas distintas; hoy ambos apuntan a la Espada.
 
+## Tipo del ataque en curso: lo lee el parry para saber cuanto poise inflige (WeaponTuning tiene un
+## valor por cada uno). NORMAL = tap; CHARGED_X/CHARGED_Y = hold del slot. Aereo y suelo comparten.
+enum AttackKind { NORMAL, CHARGED_X, CHARGED_Y }
+
 @export var slot_x: WeaponBase
 @export var slot_y: WeaponBase
 
@@ -21,6 +25,7 @@ var _body: Player
 var _last_attack_time := -999.0
 var _charging_weapon: WeaponBase  # arma del último press: recibe el glow de carga
 var _active_weapon: WeaponBase  # arma visible actualmente
+var _attack_kind := AttackKind.NORMAL  # tipo del ultimo ataque iniciado (lo lee el parry)
 var _rest_rotations := {}  # WeaponBase → Quaternion
 var _air_charge_fall_applied := false
 
@@ -94,6 +99,9 @@ func _on_press(weapon: WeaponBase, slot: World.Slot) -> void:
 	_body.fire_action_world_switch()
 	_last_attack_time = World.now()
 	_charging_weapon = weapon
+	# Baseline: el press arranca como tap (NORMAL). Si escala a hold, _fire_hold lo pasa a cargado
+	# antes de que salga el swing cargado — asi el parry lee el tipo correcto.
+	_attack_kind = AttackKind.NORMAL
 	_air_charge_fall_applied = false
 	if weapon.should_reset_pose_on_press():
 		weapon.quaternion = _rest_rotations[weapon]
@@ -106,7 +114,22 @@ func _fire_hold(weapon: WeaponBase, slot: World.Slot) -> void:
 	if not _air_charge_fall_applied:
 		_air_charge_fall_applied = true
 		_body.apply_air_charge_fall_control()
+	_attack_kind = AttackKind.CHARGED_X if slot == World.Slot.X else AttackKind.CHARGED_Y
 	weapon.hold(slot, weapon.charge_level(buffer.held_duration()))
+
+## Poise que inflige un parry hecho AHORA: sale del arma activa (su .tres) segun el tipo del
+## ultimo ataque iniciado. Lo consulta EnemyBase.resolve_parry via Player.current_parry_poise().
+func current_parry_poise() -> float:
+	var weapon := _active_weapon
+	if weapon == null or weapon.tuning == null:
+		return 0.0
+	match _attack_kind:
+		AttackKind.CHARGED_X:
+			return weapon.tuning.parry_poise_charged_x
+		AttackKind.CHARGED_Y:
+			return weapon.tuning.parry_poise_charged_y
+		_:
+			return weapon.tuning.parry_poise_normal
 
 ## Armas guardadas: rotan a la pose inactiva (hoja hacia abajo) al pasar el rato.
 func _process(delta: float) -> void:

@@ -38,6 +38,10 @@ enum AirState { GROUNDED, AIRBORNE }
 ## Segundos que tarda en apagarse el fogonazo. Corto: es un destello, no un estado.
 @export var poise_chip_time := 0.12
 
+# Resultado de un parry correcto (rompe reserva → vulnerable cian + stun). Compartido por todos los
+# enemigos: si queda null en _ready se resuelve al .tres comun. Se puede sobreescribir por enemigo.
+@export var parry_tuning: ParryTuning
+
 @export var airborne_gravity := -20.0
 @export var airborne_max_time := 4.0
 @export var death_destroy_delay := 0.4
@@ -122,6 +126,8 @@ var _is_active := true
 var _last_hit_direction := Vector3.FORWARD
 var _stunned_until := -999.0
 var _stun_feedback_color := Color(1.0, 0.9, 0.15, 1.0)
+var _parry_vulnerable_until := -999.0  # ventana cian de daño multiplicado tras un parry
+var _parry_damage_multiplier := 1.0
 var _airborne_until := -999.0
 var _airborne_ground_y := 0.0
 var _slam_bounce := false
@@ -171,6 +177,10 @@ func _ready() -> void:
 	poise.break_levels = poise_break_levels
 	poise.recovery_time = poise_recovery_time
 	poise.reset()
+	if parry_tuning == null:
+		parry_tuning = load("res://data/parry_tuning.tres") as ParryTuning
+	if parry_tuning == null:
+		parry_tuning = ParryTuning.new()  # fallback defensivo si falta el .tres
 
 	if health != null and not health.died.is_connected(_die):
 		health.died.connect(_die)
@@ -496,11 +506,42 @@ func push(direction: Vector3, settings: PushSettings) -> void:
 	# a AIRBORNE (arco bajo), sigue su trayectoria y el ragdoll arranca al tocar el suelo.
 	_set_lying(true)
 
+## Base: un enemigo sin ataques no se puede parriar. GroundedEnemy lo sobreescribe consultando
+## sus MeleeAttack (la ventana mid-swing) y, si alguno estaba en ventana, llama resolve_parry.
 func try_parry(_player: Player, _hit_direction: Vector3 = Vector3.ZERO) -> bool:
 	return false
 
-func apply_parry_stun(duration: float) -> void:
-	apply_stun(duration)
+## Resultado de un parry en ventana (lo llama GroundedEnemy tras confirmar la ventana). El golpe del
+## player NO hace HP: mete SOLO poise, cuyo monto sale del arma+ataque del player (current_parry_poise).
+## - Si ese poise quiebra la reserva (o ya estaba stuneado) → estado VULNERABLE cian + stun 1.5s.
+## - Si NO alcanza (armado/reserva alta) → fogonazo blanco, sin cian ni stun. Ver ParryTuning.
+func resolve_parry(player: Node, hit_direction := Vector3.ZERO) -> void:
+	if _dead or not _is_active:
+		return
+	_remember_hit_direction(player, hit_direction)  # el retroceso/inclinacion del stun se alejan del player
+	_play_hit_sparks()
+	var poise_damage := 1.0
+	if player != null and player.has_method("current_parry_poise"):
+		poise_damage = float(player.call("current_parry_poise"))
+	var broke := is_stunned() or poise.take_poise_damage(poise_damage, is_armored())
+	if broke:
+		_enter_parry_vulnerable()
+	else:
+		_play_poise_chip_flash()  # aguanto la reserva: solo comio poise, no entra al estado cian
+
+## Entra al estado VULNERABLE: rompe la reserva (queda stuneado, asi el juggle entra directo),
+## pinta cian en vez de amarillo y abre la ventana de daño multiplicado.
+func _enter_parry_vulnerable() -> void:
+	_parry_vulnerable_until = World.now() + parry_tuning.vulnerable_duration
+	_parry_damage_multiplier = parry_tuning.damage_multiplier
+	apply_stun(parry_tuning.stun_duration, parry_tuning.cyan_color)
+
+## Multiplicador del daño entrante: >1 mientras dure la ventana cian del parry (lo lee Hurtbox).
+func incoming_damage_multiplier() -> float:
+	return _parry_damage_multiplier if _is_parry_vulnerable() else 1.0
+
+func _is_parry_vulnerable() -> bool:
+	return World.now() < _parry_vulnerable_until
 
 func receive_stun(stun: StunSettings, feedback_color := Color.TRANSPARENT) -> bool:
 	if stun == null:
@@ -972,7 +1013,9 @@ func _refresh_visual_state() -> void:
 			material.emission_enabled = stunned or pulsing
 			if stunned:
 				material.emission = color
-				material.emission_energy_multiplier = stun_emission_energy
+				# Vulnerable por parry = celeste brilloso: mas emision que el stun amarillo comun.
+				material.emission_energy_multiplier = parry_tuning.cyan_emission_energy \
+						if _is_parry_vulnerable() else stun_emission_energy
 			elif pulsing:
 				material.emission = color
 

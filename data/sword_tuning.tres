@@ -35,3 +35,6 @@ stun = SubResource("Resource_swordstun")
 hand_radius = 1.0
 air_wait_spin_hop = 5.0
 push = SubResource("Resource_swordpush")
+parry_poise_normal = 6.0
+parry_poise_charged_x = 9.0
+parry_poise_charged_y = 12.0

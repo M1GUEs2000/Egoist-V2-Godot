@@ -300,9 +300,12 @@ func on_world_changed() -> void:
 	if membership != null and membership.mode == WorldMembership.Mode.FOLLOWS:
 		_can_chase_at = World.now() + chase_delay_after_world_switch
 
-func try_parry(_player_ref: Player, _hit_direction: Vector3 = Vector3.ZERO) -> bool:
+func try_parry(player_ref: Player, hit_direction: Vector3 = Vector3.ZERO) -> bool:
 	for attack in _attacks:
 		if attack.has_method("try_parry") and attack.call("try_parry"):
+			# El ataque estaba en ventana: EnemyBase resuelve el outcome (poise del player → cian+stun
+			# o fogonazo blanco). El poise sale del arma/ataque con que el player pego (player_ref).
+			resolve_parry(player_ref, hit_direction)
 			return true
 	return false
 

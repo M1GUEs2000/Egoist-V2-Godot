@@ -19,7 +19,7 @@ Estados mecanicos compartidos por cualquier enemigo.
 | `ARMORED` | No se parrea; la armadura tiene vida propia y **suma reserva de poise**. No es inmunidad: un golpe que le quiebre esa reserva lo stunea y lo mueve igual. Detalle en [[Stun]]. |
 | `STUNNED` | IA congelada; entra al **quebrarse la reserva de poise**, y la duracion la define quien ataca. Detalle en [[Stun]]. |
 | `AIRBORNE` | En el aire por launcher, push, slam o bounce. **Solo se llega con la reserva de poise quebrada**: con poise de sobra el enemigo aguanta plantado. Ver [[Stun]]. |
-| Parry vulnerable | Ventana cian donde recibe dano multiplicado. |
+| Parry vulnerable | Ventana **celeste** que abre un parry correcto: el enemigo entra `STUNNED` pintado cian y recibe **daño multiplicado** mientras dura. No es un `CombatState` aparte: es un temporizador (`_parry_vulnerable_until`) que se solapa al stun. Detalle en [[Stun]] > Parry. |
 | Dead | Muere, puede disparar `WorldSwitchTrigger.ON_DEATH`. |
 
 ## Armadura y stun

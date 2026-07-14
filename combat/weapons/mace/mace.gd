@@ -27,6 +27,9 @@ func setup(player: Player) -> void:
 	air_slam_cylinder.radius = t.air_y_aoe_radius
 	air_slam_cylinder.height = t.air_y_aoe_height
 	setup_launcher_hitbox(_launcher_hitbox, t.ground_y_launcher_deals_damage, tuning.stun, true)
+	# El launcher Y terrestre (cargado Y) SI se parria: usa parry_poise_charged_y. El AOE aereo del Y
+	# (AirSlamHitbox) queda sin parriar a proposito: es multi-target, no un golpe unico de compromiso.
+	_launcher_hitbox.can_be_parried = true
 	# El AOE aereo usa dos respuestas: launcher si explota en suelo, slam_arc si la caida
 	# conecto con un enemigo airborne.
 	_air_slam_hitbox.source = player

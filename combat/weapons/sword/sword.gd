@@ -19,13 +19,17 @@ var _aerial_charged_meet_y := 0.0
 func setup(player: Player) -> void:
 	super.setup(player)
 	setup_launcher_hitbox(_launcher_hitbox, _t().launcher_deals_damage, tuning.stun)
+	# El launcher Y terrestre (cargado Y) SI se parria: clavarlo en un enemigo atacando cuenta como
+	# parry (usa parry_poise_charged_y). setup_launcher_hitbox lo deja en false; lo reactivamos aca.
+	_launcher_hitbox.can_be_parried = true
 
-	# Dash cargado: hitbox PROPIO de la espada (no comparte con el dash de movimiento del
-	# dodge). Su daño/stun/tamaño salen de SwordTuning; nunca se parria.
+	# Dash cargado (cargado X): hitbox PROPIO de la espada (no comparte con el dash de movimiento del
+	# dodge). Su daño/stun/tamaño salen de SwordTuning. Se parria: clavarlo en un enemigo atacando
+	# cuenta como parry (usa parry_poise_charged_x).
 	_charged_dash_hitbox.source = player
 	_charged_dash_hitbox.damage = _t().charged_dash_damage
 	_charged_dash_hitbox.stun = _t().charged_dash_stun
-	_charged_dash_hitbox.can_be_parried = false
+	_charged_dash_hitbox.can_be_parried = true
 	(_charged_dash_shape.shape as SphereShape3D).radius = _t().charged_dash_hit_radius
 	_charged_dash_hitbox.landed.connect(_on_charged_dash_hit)
 

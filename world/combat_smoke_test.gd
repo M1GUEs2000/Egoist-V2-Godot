@@ -79,6 +79,43 @@ func _ready() -> void:
 	player.stun.cancel()
 	player.dash.cancel()
 
+	# --- Parry: daño SOLO de poise + estado vulnerable cian (ver EnemyBase.resolve_parry) ---
+	# El parry mete el poise del arma/ataque del player (current_parry_poise), sin HP. Si quiebra la
+	# reserva → cian + stun + daño multiplicado; si no alcanza → fogonazo blanco, sin cian ni stun.
+	var parry_enemy := (load("res://enemies/grounded_enemy.tscn") as PackedScene).instantiate() as EnemyBase
+	add_child(parry_enemy)
+	await get_tree().physics_frame
+	parry_enemy._on_membership_changed(true)  # activo en el mundo para poder recibir el parry
+	parry_enemy.health.set_max(100.0)         # vida holgada: el test mide daño, no busca matarlo
+
+	# El player pega con la Espada en tap → parry_poise_normal (6.0), que quiebra la reserva comun (6).
+	assert(is_equal_approx(player.current_parry_poise(), 6.0))
+	var hp_before := parry_enemy.health.current
+	parry_enemy.resolve_parry(player, Vector3.FORWARD)
+	assert(is_equal_approx(parry_enemy.health.current, hp_before))  # el parry NO hace HP, solo poise
+	assert(parry_enemy.is_stunned())                                # quebro: entro al estado
+	assert(parry_enemy._stun_feedback_color.is_equal_approx(parry_enemy.parry_tuning.cyan_color))
+	assert(parry_enemy.incoming_damage_multiplier() > 1.0)          # ventana vulnerable abierta
+
+	# Vulnerable: un golpe por la hurtbox entra multiplicado (daño x damage_multiplier).
+	var mult := parry_enemy.parry_tuning.damage_multiplier
+	var hp_vuln := parry_enemy.health.current
+	parry_enemy.hurtbox.receive_hit(player, 1.0, Vector3.FORWARD, null)
+	assert(is_equal_approx(parry_enemy.health.current, hp_vuln - 1.0 * mult))
+	parry_enemy.queue_free()
+
+	# Reserva alta: el mismo parry NO alcanza a quebrar → fogonazo blanco, sin cian ni stun.
+	var tough_enemy := (load("res://enemies/grounded_enemy.tscn") as PackedScene).instantiate() as EnemyBase
+	add_child(tough_enemy)
+	await get_tree().physics_frame
+	tough_enemy._on_membership_changed(true)
+	tough_enemy.poise.poise_max = 100.0
+	tough_enemy.poise.reset()
+	tough_enemy.resolve_parry(player, Vector3.FORWARD)
+	assert(not tough_enemy.is_stunned())                              # aguanto la reserva
+	assert(is_equal_approx(tough_enemy.incoming_damage_multiplier(), 1.0))  # sin ventana vulnerable
+	tough_enemy.queue_free()
+
 	var ranged_enemy := (load("res://enemies/ranged_dead.tscn") as PackedScene).instantiate() as GroundedEnemy
 	add_child(ranged_enemy)
 	await get_tree().physics_frame

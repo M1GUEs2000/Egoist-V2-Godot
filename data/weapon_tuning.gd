@@ -39,3 +39,12 @@ class_name WeaponTuning extends Resource
 ## Fracción del swing a la que se cobra el push (0.5 = a mitad del golpe). Bajarlo adelanta
 ## el impacto y deja los frames finales como recovery cancelable.
 @export_range(0.0, 1.0, 0.05) var push_at := 1.0
+
+@export_group("Parry (poise que inflige)")
+## Poise que mete un parry hecho con un golpe NORMAL de esta arma (aéreo o suelo comparten valor).
+## Solo poise, sin HP: si quiebra la reserva del enemigo → estado vulnerable cian + stun (ParryTuning).
+@export var parry_poise_normal := 4.0
+## Poise que mete un parry hecho con el CARGADO X (aéreo o suelo comparten valor).
+@export var parry_poise_charged_x := 6.0
+## Poise que mete un parry hecho con el CARGADO Y (aéreo o suelo comparten valor).
+@export var parry_poise_charged_y := 8.0

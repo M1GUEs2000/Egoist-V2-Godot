@@ -38,5 +38,10 @@ func receive_hit(from: Node, damage: float, _hit_direction: Vector3, _stun: Stun
 		owner_node.call("on_hurtbox_hit", from, damage, _hit_direction, _stun)
 	hit.emit(from, damage)
 	if health != null:
-		return health.take_damage(damage)
+		# El dueño puede multiplicar el daño entrante (ej: enemigo VULNERABLE tras un parry, ver
+		# EnemyBase.incoming_damage_multiplier). Sin el método, x1 (sin cambio para el resto).
+		var multiplier := 1.0
+		if owner_node.has_method("incoming_damage_multiplier"):
+			multiplier = owner_node.call("incoming_damage_multiplier")
+		return health.take_damage(damage * multiplier)
 	return false

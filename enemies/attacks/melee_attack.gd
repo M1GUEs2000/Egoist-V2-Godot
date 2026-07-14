@@ -9,7 +9,6 @@ class_name MeleeAttack extends Node3D
 @export var between_swings := 0.08
 @export var combo_steps := 4
 @export var parry_window_duration := 0.10
-@export var parry_stun_duration := 1.2
 @export var stun: StunSettings
 ## Radio de la mano orbital. Igual que WeaponTuning.hand_radius de la Espada.
 @export var hand_radius := 1.0
@@ -68,13 +67,15 @@ func try_attack(target: Node3D) -> void:
 	_target = target
 	_run_combo()
 
+## Detecta si este ataque esta en su ventana de parry (mid-swing) y, si si, lo consume: corta la
+## hoja y devuelve true. NO aplica el stun — de eso se encarga EnemyBase.resolve_parry (necesita el
+## arma del player para el poise). Lo llama GroundedEnemy.try_parry al recibir un golpe en ventana.
 func try_parry() -> bool:
 	if not is_attacking or not _parry_window_open or _parried_this_swing or _owner == null:
 		return false
 	_parried_this_swing = true
 	_parry_window_open = false
 	_blade_hitbox.end_swing()
-	_owner.apply_parry_stun(parry_stun_duration)
 	_reset_hand()
 	return true
 

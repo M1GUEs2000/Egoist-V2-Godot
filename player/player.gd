@@ -79,6 +79,11 @@ func can_receive_hit() -> bool:
 func forward() -> Vector3:
 	return -global_basis.z
 
+## Poise que inflige un parry del jugador ahora mismo (por arma y tipo de ataque). Lo consulta el
+## enemigo parriado (EnemyBase.resolve_parry) por duck typing.
+func current_parry_poise() -> float:
+	return combat.current_parry_poise() if combat != null else 0.0
+
 func _unhandled_input(event: InputEvent) -> void:
 	if is_stunned():
 		return

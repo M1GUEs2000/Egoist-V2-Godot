@@ -42,7 +42,8 @@ Un golpe con `poise_damage = 0` **nunca** staggerea, ni con la reserva en cero: 
 |---|---|
 | `receive_stun(stun: StunSettings)` | Entrada normal: llama `try_apply_stun` con `duration_for(is_airborne())` y el `poise_damage` del `StunSettings`. |
 | `try_apply_stun(duration, poise_damage)` | **El gate**: come poise y stunea solo si quiebra la reserva. Si ya esta stuneado, entra directo. |
-| `apply_stun(duration)` | Aplicacion directa que **ignora el poise** — solo para casos que ya decidieron que el stun aplica (ej. `apply_parry_stun`: un parry siempre stunea). |
+| `apply_stun(duration, color)` | Aplicacion directa que **ignora el poise** — para casos que ya decidieron que el stun aplica. Lo usa el estado vulnerable del parry (`_enter_parry_vulnerable`), una vez que su poise ya quebro la reserva, para pintar el stun cian. |
+| `resolve_parry(player, dir)` | Outcome de un parry en ventana (ver seccion Parry): mete el poise del arma/ataque del player (**solo poise, sin HP**) y, si quiebra, entra al estado vulnerable cian. |
 
 `MeleeAttack` llama `receive_stun` en su target cuando el `StunSettings` del ataque no es null (`_deal_damage`); si el target no tiene `receive_stun` pero es otro `EnemyBase`, usa `take_hit_from_enemy` que aplica stun via `_apply_stun_from_settings`.
 
@@ -140,6 +141,39 @@ rebotar sobre un enemigo **no lo desplaza** salvo que ya este stuneado. El jugad
 
 Tanto el retroceso como la inclinacion del stun leen esta direccion. *(2026-07-09)*
 
+## Parry
+
+> [!important] El parry hace daño de poise, no de HP
+> Un parry correcto (el player contragolpea a un enemigo a mitad de su swing, dentro de la ventana
+> de `MeleeAttack`) ya no aplica un stun plano: **mete poise** al enemigo, cuyo monto sale del arma
+> y del tipo de ataque con que el player parrió. Si ese poise **quiebra la reserva**, el enemigo
+> entra al estado **vulnerable cian**; si no alcanza (armado / reserva alta), tira el fogonazo
+> blanco y sigue peleando. *(2026-07-14, reemplaza el `apply_parry_stun(1.2)` fijo)*
+
+**Poise que inflige (por arma, en `WeaponTuning`):** tres valores, aéreo y suelo comparten cada uno.
+
+| Knob | Espada | Mazo | Lectura |
+|---|---|---|---|
+| `parry_poise_normal` | 6.0 | 8.0 | Golpe normal. Quiebra a un enemigo común (reserva 6) de un parry. |
+| `parry_poise_charged_x` | 9.0 | 12.0 | Cargado X (dash / vueltas). |
+| `parry_poise_charged_y` | 12.0 | 16.0 | Cargado Y (launcher / cargada aérea). Quiebra incluso a un armado (reserva 12). |
+
+El valor lo resuelve `PlayerCombat.current_parry_poise()` según el `AttackKind` del último ataque
+iniciado (tap = NORMAL, hold X/Y = cargado). Lo lee el enemigo parriado por duck typing.
+
+**Qué ataques pueden parriar:** el combo normal y la Y cargada aérea siempre pudieron; ahora
+además el **X cargado (dash)** y el **Y cargado terrestre (launcher)** son `can_be_parried = true`
+(Espada y Mazo). El AOE aéreo del Y del Mazo queda sin parriar a propósito (es multi-target).
+
+**Outcome de un parry correcto (`ParryTuning`, `data/parry_tuning.tres`, compartido):**
+
+- Rompe la reserva (queda `STUNNED`, así el juggle entra directo) y **stun `stun_duration = 1.5s`**.
+- Estado **vulnerable**: durante `vulnerable_duration` (1.5s) recibe daño `× damage_multiplier` (2.0).
+  El multiplicador lo aplica `Hurtbox.receive_hit` vía `EnemyBase.incoming_damage_multiplier()`.
+- Pinta **cian** en vez de amarillo (`cyan_color`) con emisión más alta (`cyan_emission_energy`).
+
+Un enemigo puede sobreescribir el `.tres` compartido con su propio `@export var parry_tuning`.
+
 ## Golpes al player
 
 Los ataques melee y proyectiles enemigos llevan su propio `StunSettings`. Si su poise **quiebra
@@ -172,6 +206,7 @@ Tres colores, tres cosas distintas. Se leen sin HUD:
 | **Blanco** | El golpe **comio poise pero no quebro**: "te di, aguanto". Solo emision, un destello — el albedo no se toca, asi que no cambia el color del cuerpo. | `poise_chip_color` / `poise_chip_energy` / `poise_chip_time` (`EnemyBase`); mismos knobs en `PlayerTuning`. *(2026-07-13)* |
 | **Amarillo** | **Stuneado**: la reserva se quebro. Pinta albedo + emision + `StunLight`. | `_stun_feedback_color` (`EnemyBase`), `stun_color` (`PlayerTuning`). |
 | **Rojo** | **Hazard** (`SpikeWall`): stun + daño + push. El rojo distingue el peligro del entorno del impacto de combate. | `hazard_stun_color` (`SpikeWall`). *(2026-07-12)* |
+| **Celeste** | **Vulnerable por parry**: la reserva se quebró con un parry. Pinta cian + emisión alta + daño multiplicado mientras dura la ventana. | `ParryTuning.cyan_color` / `cyan_emission_energy`. *(2026-07-14)* |
 
 Manda siempre el estado mas fuerte: si el golpe quiebra, el fogonazo blanco no se dispara, y si un
 stun entra a mitad de un destello, este se cancela para no pelearle la emision al amarillo.
@@ -209,7 +244,7 @@ La duracion la define la fuente via `StunSettings`; el enemigo solo decide si en
 - Dash del player: `grounded = 0.35`, `airborne = 1.0`.
 - Mazo base: `grounded = 0.35`, `airborne = 0.9`.
 - Freezes del sweet spot del Mazo: largos a proposito (`Resource_macefreeze = 1.4`, `Resource_maceairfreeze = 1.2`) para mantener enemigos congelados hasta la ultima vuelta.
-- Parry del enemigo (`MeleeAttack.parry_stun_duration = 1.2`) no pasa por `StunSettings`; entra por `apply_stun()` directo.
+- Parry correcto: `ParryTuning.stun_duration = 1.5` (compartido, `data/parry_tuning.tres`). No pasa por `StunSettings`; el parry mete poise por arma/ataque (`WeaponTuning.parry_poise_*`) y, si quiebra, entra por `apply_stun()` pintado cian. Ver sección Parry.
 
 ## Relacionado
 
