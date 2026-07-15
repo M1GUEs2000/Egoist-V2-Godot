@@ -18,3 +18,8 @@ class_name CameraTuning extends Resource
 @export_range(1.0, 360.0, 1.0) var yaw_speed := 90.0
 ## Zona muerta del eje camera_left/camera_right.
 @export_range(0.0, 1.0, 0.01) var input_deadzone := 0.2
+
+@export_group("Lock-on")
+## Con lock activo, la cámara mira a un punto entre jugador y target en vez de solo al jugador.
+## 0 = solo jugador, 1 = solo target, 0.5 = punto medio.
+@export_range(0.0, 1.0, 0.05) var lock_focus_weight := 0.5

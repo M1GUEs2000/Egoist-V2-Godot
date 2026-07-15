@@ -183,7 +183,7 @@ Escala E0–E4 (ver *Ciclo de vida*). Se actualiza en el mismo commit que cambia
 | Grieta | `WorldRift` · `WorldRiftTuning` · `RiftSpawner` · `rift_enemy.tscn` | **E0** | Recién construida: puerta temporal de un solo uso que voltea el mundo al cruzarla; la abre `WorldRift.spawn()` (hoy la deja el enemigo al huir tras el primer golpe). Falta verificación headless + smoke y tunear jugando el `delay` del enemigo contra el `lifetime` de la grieta |
 | HUD | `HUD` | **E1** | Es placeholder funcional (labels/barras); rediseño visual pendiente |
 | Cámara | `CameraRig` · `CameraTuning` | **E1** | Rotacion horizontal por stick recien agregada (offset clamped ±30°, recentrado tras 1-2s idle); falta headless + tunear jugando follow y rotacion; falta definir centro por area |
-| Lock-on | `LockOn` | **E3** | Ultimos detalles de rango/angulo/reticle jugando |
+| Lock-on | `LockOn` · `CameraRig` (modo lockeado) | **E2** | Reworkeado a boton dedicado (`C`) tipo Dark Souls con ciclado por Q/E y camara que encuadra jugador+target (antes: cuantizado por direccion, sin boton). Probado jugando por Tutupa tras el rework; falta iterar `lock_focus_weight`, distancia/pitch en modo lockeado y feel del ciclado (E2→E3 pendiente de aprobacion final) |
 | Columpio de cadenas | `PlayerSwing` | **E0** | Stub — batch 6 |
 | Visual de mundos | `WorldVisual` | **E0** | Stub — 2 Environments + lerp |
 | Indicador de aterrizaje | `LandingIndicator` | **E3** | Ultimos detalles visuales si aparecen jugando |

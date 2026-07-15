@@ -1,50 +1,90 @@
 class_name LockOn extends Node3D
-## Lock-on direccional tipo Hades + reticle (ex LockOnTargeting.cs): sin cono físico ni
-## raycasts, solo math sobre el grupo "enemy". La mira (direccion + cuantizado a 16
-## direcciones cada 22.5°) vive en el plano XZ para que el apuntado se sienta discreto;
-## la elevacion se filtra aparte con `lock_vertical_half_angle` para permitir enemigos
-## aereos sin lockear objetivos a cualquier altura.
-## El target se recalcula siempre (para que el ataque oriente desde el primer golpe);
-## el reticle solo se muestra cuando el jugador tiene las armas afuera.
-
-const DIRECTIONS := 16
+## Lock-on por botón tipo Dark Souls (ex sistema direccional tipo Hades). `toggle_lock()`
+## ancla un target persistente (el más centrado en cámara, dentro de rango/cono) que ya no se
+## recalcula solo — se suelta con el mismo botón o si el target muere/sale de rango.
+## `cycle_target()` cambia entre targets en rango con camera_left/camera_right mientras hay
+## lock activo (ver Player._unhandled_input; CameraRig deja de rotar libre mientras is_locked).
+## El reticle solo se muestra con armas afuera, igual que antes.
 
 var current_target: EnemyBase = null
+var is_locked := false
 
 var _body: Player
-var _aim_direction := Vector3.FORWARD
+var _cam: Camera3D
 
 @onready var _reticle: MeshInstance3D = $Reticle
 @onready var _reticle_material: ShaderMaterial = _reticle.get_surface_override_material(0)
 @onready var _target_landing: LandingIndicator = $TargetLandingIndicator
 
-func setup(body: Player) -> void:
+func setup(body: Player, cam: Camera3D) -> void:
 	_body = body
-	_aim_direction = body.forward()
+	_cam = cam
 	_reticle.visible = false
 	_reticle_material.set_shader_parameter("fill", 1.0)
 	_target_landing.enabled = false
 
-## Target visible (reticle sobre cabeza) solo con armas afuera, si el tuning lo exige.
+## Target visible (reticle sobre cabeza) solo con lock activo y armas afuera si el tuning lo exige.
 func has_visible_target() -> bool:
-	return current_target != null and _is_weapons_out()
+	return is_locked and current_target != null and _is_weapons_out()
 
-## Setea la mira (compartida con el input de movimiento, ver PlayerLocomotion.tick).
-func set_aim_direction(aim_direction: Vector3) -> void:
-	aim_direction.y = 0.0
-	if aim_direction.length_squared() < 0.0001:
+## Ancla/suelta el lock-on. Al anclar, elige el enemigo más centrado en cámara dentro de
+## rango/cono (ver `_best_camera_target`).
+func toggle_lock() -> void:
+	if is_locked:
+		_release()
+	else:
+		_acquire()
+
+## Cambia el target lockeado al vecino en rango, ordenado izquierda→derecha respecto a cámara.
+## `direction`: -1 (camera_left) o +1 (camera_right).
+func cycle_target(direction: int) -> void:
+	if not is_locked or current_target == null:
 		return
-	_aim_direction = aim_direction.normalized()
+	var candidates := _targets_in_range()
+	if candidates.size() <= 1:
+		return
+	var cam_fwd := _camera_forward()
+	var cam_right := _camera_right()
+	candidates.sort_custom(func(a: EnemyBase, b: EnemyBase) -> bool:
+		return _screen_angle(a, cam_fwd, cam_right) < _screen_angle(b, cam_fwd, cam_right))
+	var idx := candidates.find(current_target)
+	if idx == -1:
+		return
+	current_target = candidates[wrapi(idx + direction, 0, candidates.size())]
 
-## El enemigo más cercano dentro del cono de la mira (cuantizada a 16 direcciones).
-func acquire_target(aim_direction: Vector3) -> EnemyBase:
-	current_target = _find_best_target(aim_direction)
-	return current_target
+## Enemigo más cercano dentro del cono de `direction` (rango + ángulo horizontal/vertical),
+## SIN tocar el lock activo. Lo usa PlayerLocomotion para el snap del golpe cuando no hay lock.
+func nearest_in_cone(direction: Vector3) -> EnemyBase:
+	var dir := direction
+	dir.y = 0.0
+	if dir.length_squared() < 0.0001:
+		return null
+	dir = dir.normalized()
+	var best: EnemyBase = null
+	var best_dist := INF
+	for enemy in _targets_in_range():
+		var to := enemy.global_position - _body.global_position
+		var horiz := to
+		horiz.y = 0.0
+		var horiz_dist := horiz.length()
+		if horiz_dist < 0.01:
+			continue
+		if rad_to_deg(dir.angle_to(horiz)) > _body.tuning.lock_half_angle:
+			continue
+		var vertical_angle := rad_to_deg(atan2(to.y, horiz_dist))
+		if absf(vertical_angle) > _body.tuning.lock_vertical_half_angle:
+			continue
+		var dist := to.length()
+		if dist < best_dist:
+			best_dist = dist
+			best = enemy
+	return best
 
 func _process(_delta: float) -> void:
 	if _body == null:
 		return
-	acquire_target(_aim_direction)
+	if is_locked and not _target_still_valid(current_target):
+		_release()
 	var show := has_visible_target()
 	_reticle.visible = show
 	# El ring de aterrizaje del target reusa LandingIndicator: solo se muestra mientras
@@ -65,44 +105,79 @@ func _target_health_ratio(target: EnemyBase) -> float:
 func _is_weapons_out() -> bool:
 	return not _body.tuning.lock_require_weapons_out or _body.combat.weapons_out()
 
-func _find_best_target(aim_direction: Vector3) -> EnemyBase:
-	var aim := _quantize(aim_direction)
+func _acquire() -> void:
+	var best := _best_camera_target()
+	if best == null:
+		return
+	current_target = best
+	is_locked = true
+
+func _release() -> void:
+	is_locked = false
+	current_target = null
+
+func _target_still_valid(target: EnemyBase) -> bool:
+	if target == null or not is_instance_valid(target) or not target.can_receive_hit():
+		return false
+	return (target.global_position - _body.global_position).length() <= _body.tuning.lock_max_range
+
+## El enemigo en rango más centrado respecto al forward de cámara (dentro del cono de
+## `lock_half_angle`/`lock_vertical_half_angle`): "lockea lo que estás mirando", no el más cercano.
+func _best_camera_target() -> EnemyBase:
+	var cam_fwd := _camera_forward()
 	var best: EnemyBase = null
-	var best_dist := INF
+	var best_angle := INF
+	for enemy in _targets_in_range():
+		var to := enemy.global_position - _body.global_position
+		var horiz := to
+		horiz.y = 0.0
+		if horiz.length_squared() < 0.0001:
+			continue
+		var angle := rad_to_deg(cam_fwd.angle_to(horiz))
+		if angle > _body.tuning.lock_half_angle:
+			continue
+		var vertical_angle := rad_to_deg(atan2(to.y, horiz.length()))
+		if absf(vertical_angle) > _body.tuning.lock_vertical_half_angle:
+			continue
+		if angle < best_angle:
+			best_angle = angle
+			best = enemy
+	return best
+
+## Enemigos vivos dentro de `lock_max_range`, sin filtro de ángulo (lo usan tanto la
+## adquisición inicial como el ciclado, que sí puede saltar a algo fuera del cono original).
+func _targets_in_range() -> Array[EnemyBase]:
+	var result: Array[EnemyBase] = []
 	for node in get_tree().get_nodes_in_group("enemy"):
 		var enemy := node as EnemyBase
 		if enemy == null or not enemy.can_receive_hit():
 			continue
-		var to := enemy.global_position - _body.global_position
-		var to_horizontal := to
-		to_horizontal.y = 0.0
-		var horiz_dist := to_horizontal.length()
-		if horiz_dist < 0.01:
+		if (enemy.global_position - _body.global_position).length() > _body.tuning.lock_max_range:
 			continue
-		var dist := to.length()
-		if dist > _body.tuning.lock_max_range:
-			continue
-		if rad_to_deg(aim.angle_to(to_horizontal)) > _body.tuning.lock_half_angle:
-			continue
-		# Elevacion respecto al plano horizontal: sin esto un enemigo aereo se lockea a
-		# cualquier altura (el resto del calculo solo mira la direccion en XZ).
-		var vertical_angle := rad_to_deg(atan2(to.y, horiz_dist))
-		if absf(vertical_angle) > _body.tuning.lock_vertical_half_angle:
-			continue
-		if dist < best_dist:
-			best_dist = dist
-			best = enemy
-	return best
+		result.append(enemy)
+	return result
 
-## Cuantiza una dirección del plano XZ a la más cercana de 16 (cada 22.5°). Round-trip
-## atan2/sin/cos: solo necesita ser autoconsistente, no depende de la convención de "forward".
-static func _quantize(dir: Vector3) -> Vector3:
-	dir.y = 0.0
-	if dir.length_squared() < 0.0001:
-		return Vector3.FORWARD
-	var step := TAU / DIRECTIONS
-	var angle := roundf(atan2(dir.x, dir.z) / step) * step
-	return Vector3(sin(angle), 0.0, cos(angle))
+func _screen_angle(enemy: EnemyBase, cam_fwd: Vector3, cam_right: Vector3) -> float:
+	var to := enemy.global_position - _body.global_position
+	to.y = 0.0
+	if to.length_squared() < 0.0001:
+		return 0.0
+	to = to.normalized()
+	return atan2(to.dot(cam_right), to.dot(cam_fwd))
+
+func _camera_forward() -> Vector3:
+	if _cam == null:
+		return _body.forward()
+	var fwd := -_cam.global_basis.z
+	fwd.y = 0.0
+	return fwd.normalized() if fwd.length_squared() > 0.0001 else Vector3.FORWARD
+
+func _camera_right() -> Vector3:
+	if _cam == null:
+		return _body.global_basis.x
+	var right := _cam.global_basis.x
+	right.y = 0.0
+	return right.normalized() if right.length_squared() > 0.0001 else Vector3.RIGHT
 
 ## Centro sobre la cabeza: AABB combinado de los MeshInstance3D del target (fallback:
 ## su global_position + offset si no tiene mallas visibles).

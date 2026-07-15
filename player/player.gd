@@ -50,7 +50,7 @@ func _ready() -> void:
 	setup_poise()
 	player_health.setup(self)
 	meter.setup(self)
-	lock_on.setup(self)
+	lock_on.setup(self, get_viewport().get_camera_3d())
 	locomotion.setup(self, get_viewport().get_camera_3d())
 	launcher.setup(self)
 	wall_slide.setup(self)
@@ -93,6 +93,12 @@ func _unhandled_input(event: InputEvent) -> void:
 		_on_jump()
 	elif event.is_action_pressed("dodge"):
 		_on_dodge()
+	elif event.is_action_pressed("lock_on"):
+		lock_on.toggle_lock()
+	elif lock_on.is_locked and event.is_action_pressed("camera_left"):
+		lock_on.cycle_target(-1)
+	elif lock_on.is_locked and event.is_action_pressed("camera_right"):
+		lock_on.cycle_target(1)
 
 func _physics_process(delta: float) -> void:
 	stun.tick()

@@ -555,7 +555,8 @@ func _ready() -> void:
 	assert(lying_enemy.visual.visible)
 	lying_enemy.queue_free()
 
-	# LockOn (batch 6): adquiere el enemigo más cercano dentro de rango/ángulo, ignora el lejano.
+	# LockOn (rework Dark Souls): toggle_lock() ancla el enemigo más centrado en cámara dentro
+	# de rango/cono, ignora el lejano, y el lock persiste (no se recalcula solo cada frame).
 	# Los enemigos van RELATIVOS a la posición/forward actuales del player: los tests previos lo
 	# dejan desplazado del origen, y un enemigo en coordenadas absolutas caería detrás del cono.
 	var lock_origin := player.global_position
@@ -567,25 +568,37 @@ func _ready() -> void:
 	add_child(enemy_far)
 	enemy_far.global_position = lock_origin + lock_fwd * (3.0 + player.tuning.lock_max_range * 2.0)  # fuera de rango
 	await get_tree().process_frame
-	assert(player.lock_on.acquire_target(lock_fwd) == enemy_near)
+	assert(not player.lock_on.is_locked)
+	player.lock_on.toggle_lock()
+	assert(player.lock_on.is_locked)
+	assert(player.lock_on.current_target == enemy_near)
 
 	# El target landing indicator reusa LandingIndicator: se enciende junto con el reticle
 	# y sigue al target actual del lock-on.
 	await get_tree().process_frame  # deja correr un _process para que reticle/target_landing se asienten
 	assert(player.lock_on._target_landing.enabled)
 	assert(player.lock_on._target_landing.source == enemy_near)
+
+	# El lock persiste sin recalcularse: mover al target fuera de rango lo suelta solo,
+	# sin necesidad de volver a tocar el botón.
+	enemy_near.global_position = lock_origin + lock_fwd * (3.0 + player.tuning.lock_max_range * 2.0)
+	await get_tree().process_frame
+	assert(not player.lock_on.is_locked)
+	assert(player.lock_on.current_target == null)
 	enemy_near.queue_free()
 	enemy_far.queue_free()
 	await get_tree().process_frame  # confirma el free antes de la siguiente ronda de targets
 
-	# Lock-on vertical: el rango/angulo ahora es 3D, asi que un enemigo aereo dentro del
+	# Lock-on vertical: el rango/angulo sigue siendo 3D, asi que un enemigo aereo dentro del
 	# cono vertical se lockea igual que uno a ras de piso.
 	var vertical_half_angle := maxf(player.tuning.lock_vertical_half_angle - 10.0, 1.0)
 	var enemy_aerial_ok := EnemyBase.new()
 	add_child(enemy_aerial_ok)
 	enemy_aerial_ok.global_position = lock_origin + lock_fwd * 3.0 + Vector3.UP * (3.0 * tan(deg_to_rad(vertical_half_angle)))
 	await get_tree().process_frame
-	assert(player.lock_on.acquire_target(lock_fwd) == enemy_aerial_ok)
+	player.lock_on.toggle_lock()
+	assert(player.lock_on.current_target == enemy_aerial_ok)
+	player.lock_on.toggle_lock()  # suelta para la siguiente ronda
 	enemy_aerial_ok.queue_free()
 	await get_tree().process_frame
 
@@ -595,8 +608,30 @@ func _ready() -> void:
 	add_child(enemy_aerial_too_high)
 	enemy_aerial_too_high.global_position = lock_origin + lock_fwd * 3.0 + Vector3.UP * (3.0 * tan(deg_to_rad(too_high_angle)))
 	await get_tree().process_frame
-	assert(player.lock_on.acquire_target(lock_fwd) == null)
+	player.lock_on.toggle_lock()
+	assert(not player.lock_on.is_locked)  # nada en cono: toggle no ancla nada
 	enemy_aerial_too_high.queue_free()
+	await get_tree().process_frame
+
+	# Ciclado (camera_left/camera_right) mientras hay lock: salta al vecino en rango, izquierda
+	# y derecha respecto al forward de cámara (aquí igual al del player: no hay Camera3D en el
+	# smoke, `_camera_forward()` cae al fallback `_body.forward()`).
+	var enemy_left := EnemyBase.new()
+	add_child(enemy_left)
+	enemy_left.global_position = lock_origin + lock_fwd * 3.0 + player.global_basis.x * -2.0
+	var enemy_right := EnemyBase.new()
+	add_child(enemy_right)
+	enemy_right.global_position = lock_origin + lock_fwd * 3.0 + player.global_basis.x * 2.0
+	await get_tree().process_frame
+	player.lock_on.toggle_lock()
+	assert(player.lock_on.current_target != null)
+	player.lock_on.cycle_target(1)
+	var after_right := player.lock_on.current_target
+	player.lock_on.cycle_target(-1)
+	assert(player.lock_on.current_target != after_right)  # el ciclo va y vuelve entre los dos
+	player.lock_on.toggle_lock()
+	enemy_left.queue_free()
+	enemy_right.queue_free()
 	await get_tree().process_frame
 
 	# El reticle es una dona (shader) que se vacia con la vida del target: fill sigue a
@@ -610,25 +645,24 @@ func _ready() -> void:
 	add_child(enemy_hit)
 	enemy_hit.global_position = lock_origin + lock_fwd * 3.0
 	await get_tree().process_frame
-	assert(player.lock_on.acquire_target(lock_fwd) == enemy_hit)
+	player.lock_on.toggle_lock()
+	assert(player.lock_on.current_target == enemy_hit)
 	await get_tree().process_frame
 	assert(is_equal_approx(player.lock_on._reticle_material.get_shader_parameter("fill"), 1.0))
 	hit_health.take_damage(6.0)  # 40% de vida restante
 	await get_tree().process_frame
 	assert(is_equal_approx(player.lock_on._reticle_material.get_shader_parameter("fill"), 0.4))
-	enemy_hit.queue_free()
-	await get_tree().process_frame
 
-	# Sin reticle (armas guardadas, sin ataques recientes) el ring del target tampoco se muestra.
-	var enemy_gate := EnemyBase.new()
-	add_child(enemy_gate)
-	enemy_gate.global_position = lock_origin + lock_fwd * 3.0
+	# Sin reticle (armas guardadas, sin ataques recientes) el ring del target tampoco se muestra,
+	# aunque el lock siga anclado (has_visible_target exige armas afuera, is_locked no).
 	player.tuning.lock_require_weapons_out = true
 	player.combat._last_attack_time = World.now() - player.tuning.weapons_out_duration * 2.0
 	await get_tree().process_frame
+	assert(player.lock_on.is_locked)
 	assert(not player.lock_on.has_visible_target())
 	assert(not player.lock_on._target_landing.enabled)
-	enemy_gate.queue_free()
+	player.lock_on.toggle_lock()
+	enemy_hit.queue_free()
 
 	# Enemigo de la grieta: el primer golpe arranca su reloj; al cumplirse se va al otro mundo
 	# (voltea SU afiliacion, no la de nadie mas) y deja una grieta. Irse NO cambia el mundo.

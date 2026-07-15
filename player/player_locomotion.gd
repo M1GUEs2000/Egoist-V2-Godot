@@ -59,17 +59,10 @@ func movement_direction(input: Vector2, camera_dir: Vector3) -> Vector3:
 		return to_target
 	return camera_dir
 
-## Setea la mira del lock-on a partir del input (compartido con el snap de movimiento).
-func aim_with_input(input: Vector2, camera_dir: Vector3) -> void:
-	if has_move_input(input) and camera_dir != Vector3.ZERO:
-		_body.lock_on.set_aim_direction(camera_dir)
-		_body.lock_on.acquire_target(camera_dir)
-
 ## Devuelve la velocidad horizontal del frame y maneja el facing.
 func tick(_delta: float) -> Vector3:
 	var input := read_move_input()
 	var camera_dir := camera_relative(input)
-	aim_with_input(input, camera_dir)
 	var dir := movement_direction(input, camera_dir)
 	# Durante un golpe (lunge) no giramos por input: mantenemos la mira del ataque.
 	if dir != Vector3.ZERO and World.now() >= _lunge_until:
@@ -88,10 +81,11 @@ func attack_step(duration: float) -> void:
 	_lunge_start = World.now()
 	_lunge_until = World.now() + duration
 
-## Re-adquiere target sobre el forward actual (no la mira): el golpe snapea al enemigo más
-## cercano en cono aunque el reticle no esté visible (armas guardadas).
+## Con lock activo, el golpe encara al target lockeado. Sin lock, snapea al enemigo más
+## cercano en cono sobre el forward actual (comportamiento previo, sin persistir el target).
 func _attack_direction() -> Vector3:
-	var target: EnemyBase = _body.lock_on.acquire_target(_body.forward())
+	var target: EnemyBase = _body.lock_on.current_target if _body.lock_on.is_locked \
+			else _body.lock_on.nearest_in_cone(_body.forward())
 	if target != null:
 		var to_target := _direction_to(target.global_position)
 		if to_target != Vector3.ZERO:
