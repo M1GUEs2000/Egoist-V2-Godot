@@ -21,7 +21,7 @@ Etapas (casilla → estado del ciclo E0-E4): `[ ]` Por implementar (E0) · `[/]`
 - [ ] Implementar Visual de mundos (WorldVisual: 2 Environments + lerp) — [[Colores de mundo]]
 - [f] Scan de cambio de mundo: tunear world_scan_tuning (velocidad, radio, brillo/trama, luz) y validar que la revelacion barrida no rompa el feel del switch — [[World Switch]]
 - [ ] Crear prefabs/escenas: player, melee, ranged, armored, bloques y pickups — [[Enemigos]] [[Arquitectura Godot]]
-- [ ] Greybox del primer tramo de Playa — [[Playa]]
+- [t] Greybox del primer tramo de Playa: `lvl_1_v_0_1.tscn` es la escena principal con ruta modular, Player, HUD y pickups de switch; falta integrar el roster H1 y validarlo jugando — [[Playa]]
 - [ ] Playtest externo con 2-3 personas — [[Playa]]
 - [f] Ragdoll de aterrizaje: headless + tunear pose acostada, radio GroundSense, getup/spin/gravity — [[Stun]] [[Enemigos]]
 - [t] Reset aereo por kill/carga: probar doble salto/airdash por kill + reduccion de caida por cargas — [[Reset Aereo por Kill]]

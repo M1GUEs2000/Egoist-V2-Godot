@@ -21,13 +21,14 @@ Area del vertical slice. Debe entregar 10 minutos jugables con Espada.
 
 ## Pendiente
 
-- Greybox jugable.
-- Ubicar pickups de switch sin softlock.
-- Probar loop de combate + traversal.
+- Greybox jugable: `world/lvl_1_v_0_1.tscn` es ahora la escena principal y contiene la ruta
+  modular con Player, HUD, cambio de mundo y tres pickups de switch.
+- Integrar el roster H1 (melee Living, ranged Dead y armored) en la ruta: hoy los enemigos viven
+  en `test_scene`, no en el nivel.
+- Ubicar pickups de switch sin softlock y probar el loop completo de combate + traversal.
 
 ## Relacionado
 
 - [[Areas]]
 - [[hitos]]
 - [[Playa Arte]]
-

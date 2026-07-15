@@ -7,7 +7,7 @@ tags:
   - world-switch
   - sistema
 status: active
-system_status: E0
+system_status: E2
 hito: H1
 ---
 

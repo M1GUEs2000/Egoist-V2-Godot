@@ -16,9 +16,9 @@ Roster por hito y area. H1 usa placeholders claros; arte final entra H3.
 
 | Tipo | Mundo/cordura | Estado |
 |---|---|---|
-| [[Melee Living]] | Living, Sane | Comportamiento base existe; falta prefab/tuning. Hoy todas las instancias en `test_scene` son Dead por el default de `grounded_enemy.tscn` — ningun enemigo esta seteado a Living. |
-| [[Ranged Dead]] | Dead, Sane/Not so sane | Mecanica existe; falta prefab/tuning. |
-| [[Armored Enemy]] | Living o Dead | Estado existe; falta lectura y tuning. |
+| [[Melee Living]] | Living, Sane | `grounded_enemy.tscn` provee el comportamiento base y se prueba en `test_scene`; falta instanciar/configurar su variante Living y tunearla dentro de Playa. |
+| [[Ranged Dead]] | Dead, Sane/Not so sane | Prefab `ranged_dead.tscn` y mecanica existentes en `test_scene`; falta integrarlo y tunearlo dentro de Playa. |
+| [[Armored Enemy]] | Living o Dead | El flag `armored` existe y se prueba en instancias de `test_scene`; falta su lectura/prefab final y colocarlo/tunearlo en Playa. |
 | Enemigo de world switch | Sigue el default de `grounded_enemy.tscn` | Escena `world_switch_enemy.tscn` lista: al morir voltea el mundo de todos. Late con el color del mundo opuesto (ver [[Afiliacion de Mundo]]). Falta tunear jugando. |
 | [[Ultra Agresivo]] | Sigue el default de `grounded_enemy.tscn` (Dead) | Prefab `ultra_aggressive_enemy.tscn` listo: berserker carmesi con cuernos, ataca al jugador Y a otros enemigos con histeresis de target. Es el motor de [[Ecosistema Vivo]]. Stats de primer pase, falta tunear jugando. *(2026-07-13)* |
 | Enemigo de la grieta | Sigue el default de `grounded_enemy.tscn` | Prefab `rift_enemy.tscn` listo: el primer golpe recibido arranca su reloj y, al cumplirse, se va al otro mundo dejando una [[Grieta]] cruzable. Irse no voltea el mundo — cruzar la grieta si. Modulo `RiftSpawner`, ver [[Afiliacion de Mundo]]. Falta headless y tunear jugando. *(2026-07-13)* |
