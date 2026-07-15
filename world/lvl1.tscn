@@ -1,0 +1,121 @@
+[gd_scene format=3 uid="uid://ih15miowynpt"]
+
+[ext_resource type="Script" uid="uid://7jtuoxscym8d" path="res://world/test_scene.gd" id="1_scene"]
+[ext_resource type="PackedScene" path="res://world/lvl1_modular.tscn" id="2_modular"]
+[ext_resource type="PackedScene" uid="uid://bf1ikbdvqburt" path="res://player/player.tscn" id="3_player"]
+[ext_resource type="Script" uid="uid://bm6520nqu8q3f" path="res://visual/camera_rig.gd" id="4_camrig"]
+[ext_resource type="Script" uid="uid://cr2mf5ypgksws" path="res://core/world_membership.gd" id="5_membership"]
+[ext_resource type="PackedScene" path="res://ui/hud.tscn" id="6_hud"]
+[ext_resource type="PackedScene" uid="uid://daxq4pjmxnv7w" path="res://world/blocks/traversal_block.tscn" id="7_traversal"]
+[ext_resource type="Script" uid="uid://bpdpihqvparu5" path="res://visual/camera_occlusion_fade.gd" id="8_occlusion"]
+[ext_resource type="Script" uid="uid://da7tt4qincebu" path="res://visual/world_scan.gd" id="9_world_scan"]
+[ext_resource type="Resource" uid="uid://ddmumqevh7gg8" path="res://data/camera_tuning.tres" id="10_camtuning"]
+
+[sub_resource type="BoxShape3D" id="BoxShape_world"]
+size = Vector3(3, 0.5, 3)
+
+[sub_resource type="BoxMesh" id="BoxMesh_world"]
+size = Vector3(3, 0.5, 3)
+
+[sub_resource type="StandardMaterial3D" id="Mat_living"]
+albedo_color = Color(1, 0.55, 0.05, 1)
+emission_enabled = true
+emission = Color(0.9, 0.4, 0.03, 1)
+
+[sub_resource type="StandardMaterial3D" id="Mat_dead"]
+albedo_color = Color(0.55, 0.15, 0.9, 1)
+emission_enabled = true
+emission = Color(0.35, 0.05, 0.8, 1)
+
+[sub_resource type="Environment" id="Env_world"]
+background_mode = 1
+background_color = Color(0.09, 0.09, 0.12, 1)
+ambient_light_source = 2
+ambient_light_color = Color(0.36, 0.38, 0.45, 1)
+tonemap_mode = 2
+glow_enabled = true
+glow_levels/3 = 1.0
+glow_levels/4 = 1.0
+glow_levels/5 = 1.0
+glow_intensity = 0.9
+glow_bloom = 0.1
+
+[node name="LVL1" type="Node3D" unique_id=883919862]
+script = ExtResource("1_scene")
+
+[node name="Modular" parent="." unique_id=912592621 instance=ExtResource("2_modular")]
+
+[node name="WorldPlatforms" type="Node3D" parent="." unique_id=248762093]
+
+[node name="LivingPlatform" type="StaticBody3D" parent="WorldPlatforms" unique_id=564722331]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5, 1, -5)
+collision_mask = 0
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="WorldPlatforms/LivingPlatform" unique_id=694349847]
+shape = SubResource("BoxShape_world")
+
+[node name="Mesh" type="MeshInstance3D" parent="WorldPlatforms/LivingPlatform" unique_id=287137039]
+mesh = SubResource("BoxMesh_world")
+surface_material_override/0 = SubResource("Mat_living")
+
+[node name="WorldMembership" type="Node" parent="WorldPlatforms/LivingPlatform" unique_id=2100500251]
+script = ExtResource("5_membership")
+
+[node name="DeadPlatform" type="StaticBody3D" parent="WorldPlatforms" unique_id=1661675188]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5, 1.5, -5)
+collision_mask = 0
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="WorldPlatforms/DeadPlatform" unique_id=20591905]
+shape = SubResource("BoxShape_world")
+
+[node name="Mesh" type="MeshInstance3D" parent="WorldPlatforms/DeadPlatform" unique_id=1663517010]
+mesh = SubResource("BoxMesh_world")
+surface_material_override/0 = SubResource("Mat_dead")
+
+[node name="WorldMembership" type="Node" parent="WorldPlatforms/DeadPlatform" unique_id=384294937]
+script = ExtResource("5_membership")
+affiliation = 1
+
+[node name="WorldSwitchBlock" parent="." unique_id=2020556693 instance=ExtResource("7_traversal")]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, -1, 0, 1, -4.371139e-08, 0, 1.3525255, -3.1859694)
+enable_dash = true
+dash_distance = 10.0
+dash_duration = 0.17
+dash_bop_forward_speed = 20.0
+dash_vertical_bop_speed = 20.0
+hits_to_break = 50
+
+[node name="WorldSwitchBlock2" parent="." unique_id=441635832 instance=ExtResource("7_traversal")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.1877446, 1.352525, -3.2531056)
+enable_dash = true
+dash_distance = 10.0
+dash_duration = 0.17
+dash_bop_forward_speed = 20.0
+dash_vertical_bop_speed = 20.0
+hits_to_break = 50
+
+[node name="Player" parent="." unique_id=952239359 instance=ExtResource("3_player")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.6, 0)
+
+[node name="CameraRig" type="Node3D" parent="." unique_id=730469544]
+script = ExtResource("4_camrig")
+tuning = ExtResource("10_camtuning")
+
+[node name="Camera3D" type="Camera3D" parent="CameraRig" unique_id=184446845]
+fov = 60.0
+far = 200.0
+
+[node name="OcclusionFade" type="Node" parent="CameraRig" unique_id=753105057]
+script = ExtResource("8_occlusion")
+
+[node name="HUD" parent="." unique_id=648103721 instance=ExtResource("6_hud")]
+
+[node name="Sun" type="DirectionalLight3D" parent="." unique_id=1149702024]
+transform = Transform3D(0.7071068, -0.49999994, 0.5000001, 0, 0.70710695, 0.7071067, -0.7071068, -0.49999994, 0.5000001, -0.3086834, 72.62163, 0)
+shadow_enabled = true
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=1228478784]
+environment = SubResource("Env_world")
+
+[node name="WorldScan" type="Node3D" parent="." unique_id=956398711]
+script = ExtResource("9_world_scan")

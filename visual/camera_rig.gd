@@ -5,16 +5,14 @@ class_name CameraRig extends Node3D
 ## la Camera3D hija, este script no la pisa.
 ##
 ## Rotación: el yaw real es `tuning.center_yaw + _yaw_offset`. El stick (camera_left/right)
-## mueve `_yaw_offset` clamped a ±`tuning.max_yaw_offset` — nunca deja rodear completamente al
-## personaje, solo desviación lateral. Sin input por `tuning.recenter_delay` segundos, el offset
-## vuelve solo a 0.
+## mueve `_yaw_offset` libremente (360°, sin clamp): la cámara puede rodear por completo al
+## personaje y se queda donde el jugador la dejó — no hay recentrado automático.
 
 @export var target: Node3D
 @export var tuning: CameraTuning
 
 var _snapped := false
 var _yaw_offset := 0.0
-var _idle_time := 0.0
 
 func _ready() -> void:
 	# El export de nodo puede llegar null (referencia rota / escena instanciada por código):
@@ -41,9 +39,5 @@ func _physics_process(delta: float) -> void:
 func _update_yaw_offset(delta: float) -> void:
 	var input := Input.get_axis("camera_left", "camera_right")
 	if absf(input) > tuning.input_deadzone:
-		_yaw_offset = clampf(_yaw_offset + input * tuning.yaw_speed * delta, -tuning.max_yaw_offset, tuning.max_yaw_offset)
-		_idle_time = 0.0
-		return
-	_idle_time += delta
-	if _idle_time >= tuning.recenter_delay:
-		_yaw_offset = lerpf(_yaw_offset, 0.0, clampf(tuning.recenter_speed * delta, 0.0, 1.0))
+		# wrapf solo mantiene el número acotado (-180..180); la rotación es libre, sin tope.
+		_yaw_offset = wrapf(_yaw_offset + input * tuning.yaw_speed * delta, -180.0, 180.0)

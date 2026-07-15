@@ -6,4 +6,3 @@
 script = ExtResource("1_tuning")
 pitch = 40.0
 yaw_speed = 194.0
-recenter_delay = 5.0
