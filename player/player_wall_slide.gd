@@ -47,13 +47,20 @@ func apply_slide_velocity(horizontal_velocity: Vector3, input_dir: Vector3, delt
 	else:
 		_body.vertical_velocity = maxf(_body.vertical_velocity, -t.wall_slide_max_fall_speed)
 
+	# Momentum de entrada: se conserva al enganchar y decae a cero con `wall_slide_momentum_decay`
+	# (el arco lateral que se endereza con el tiempo).
 	_wall_tangent_velocity = _wall_tangent_velocity.move_toward(
 			Vector3.ZERO, t.wall_slide_momentum_decay * delta)
-	var along_wall := horizontal_velocity.slide(wall_normal)
-	along_wall.y = 0.0
+	# Steering vivo: el input a lo largo de la pared, con la autoridad recortada por
+	# `wall_slide_steer_control` (0 = sin control, solo coasteas el momentum de entrada;
+	# 1 = control total como el movimiento normal). Recortarlo evita sentir que "volas"
+	# de lado sobre la pared.
+	var steer := horizontal_velocity.slide(wall_normal)
+	steer.y = 0.0
+	steer *= t.wall_slide_steer_control
 	# Presion constante contra la pared: sin esto el movimiento queda paralelo al muro,
 	# se pierde el contacto (is_on_wall) y el estado de slide titila frame a frame.
-	return along_wall + _wall_tangent_velocity - wall_normal * t.wall_slide_press_speed
+	return steer + _wall_tangent_velocity - wall_normal * t.wall_slide_press_speed
 
 func update_after_move(horizontal_velocity: Vector3, input_dir: Vector3) -> void:
 	if _body == null:
@@ -88,11 +95,19 @@ func update_after_move(horizontal_velocity: Vector3, input_dir: Vector3) -> void
 	_grace_until = World.now() + _body.tuning.wall_slide_release_grace
 	if not was_sliding:
 		_stick_until = World.now() + _body.tuning.wall_slide_stick_time
+		# Semilla del momentum de entrada: la velocidad con la que se llega a la pared. Se
+		# siembra SOLO al enganchar y de ahi decae a cero en apply_slide_velocity; no se
+		# re-setea por frame (si se reseteara nunca decaeria y no habria arco lateral).
+		var entry := horizontal_velocity.slide(wall_normal)
+		entry.y = 0.0
+		# Empuje horizontal al pegarse: un impulso a lo largo de la pared en la direccion
+		# en que ya venias, para ensanchar el arco (evita el arco alto-y-flaco que cae
+		# vertical cuando llegas lento). Solo se aplica si hay una direccion lateral clara.
+		if entry.length() > 0.1:
+			entry += entry.normalized() * _body.tuning.wall_slide_stick_push
+		_wall_tangent_velocity = entry
 		_set_glow(true)
 		_set_dust(true)
-
-	_wall_tangent_velocity = horizontal_velocity.slide(wall_normal)
-	_wall_tangent_velocity.y = 0.0
 
 func try_wall_jump(input_dir: Vector3) -> bool:
 	if _body == null:

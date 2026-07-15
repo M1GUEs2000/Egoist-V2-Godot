@@ -42,6 +42,15 @@ class_name PlayerTuning extends Resource
 ## Frenado del momentum lateral a lo largo de la pared (m/s²). Más alto = el arco de la
 ## caída se endereza antes y terminas cayendo vertical más rápido.
 @export var wall_slide_momentum_decay := 4.0
+## Autoridad del input vivo para moverse a lo largo de la pared mientras eslidea (0-1).
+## 0 = sin control, solo coasteás el momentum de entrada; 1 = control total como en el
+## movimiento normal. Bajarlo evita sentir que te movés demasiado libre de lado sobre el muro.
+@export_range(0.0, 1.0) var wall_slide_steer_control := 1.0
+## Empuje horizontal (m/s) a lo largo de la pared al enganchar, en la dirección en que ya
+## venías. Ensancha el arco del slide (evita el arco alto y flaco que cae vertical cuando
+## llegás lento). 0 = sin empuje. Se nota junto con un `wall_slide_momentum_decay` bajo,
+## que conserva el lateral durante toda la bajada.
+@export var wall_slide_stick_push := 0.0
 ## Impulso vertical del wall jump (m/s). Junto con away_speed define el ángulo vertical del rebote.
 @export var wall_slide_wall_jump_up_speed := 7.2
 ## Impulso horizontal perpendicular a la pared del wall jump (m/s). Junto con up_speed
