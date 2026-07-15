@@ -33,6 +33,7 @@ var _dodge_queued := false  # dodge pedido tarde en un golpe: sale al terminarlo
 @onready var combat: PlayerCombat = $Combat
 @onready var action_world_switch: ActionWorldSwitchModifier = $ActionWorldSwitchModifier
 @onready var lock_on: LockOn = $LockOn
+@onready var arm: PlayerArm = $Arm
 @onready var _run_dust: GPUParticles3D = get_node_or_null("RunDust") as GPUParticles3D
 @onready var _mesh: MeshInstance3D = get_node_or_null("Mesh") as MeshInstance3D
 
@@ -59,6 +60,7 @@ func _ready() -> void:
 	air_kill_reset.setup(self)
 	dash.setup(self, locomotion, launcher.register_air_hit_stall, launcher.cancel)
 	combat.setup(self)
+	arm.setup(self)
 	stun.stunned_started.connect(_on_stunned_started)
 	stun.stunned_ended.connect(_on_stunned_ended)
 

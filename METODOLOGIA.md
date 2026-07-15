@@ -184,6 +184,7 @@ Escala E0–E4 (ver *Ciclo de vida*). Se actualiza en el mismo commit que cambia
 | HUD | `HUD` | **E1** | Es placeholder funcional (labels/barras); rediseño visual pendiente |
 | Cámara | `CameraRig` · `CameraTuning` | **E1** | Rotacion horizontal por stick recien agregada (offset clamped ±30°, recentrado tras 1-2s idle); falta headless + tunear jugando follow y rotacion; falta definir centro por area |
 | Lock-on | `LockOn` · `CameraRig` (modo lockeado) | **E2** | Reworkeado a boton dedicado (`C`) tipo Dark Souls con ciclado por Q/E y camara que encuadra jugador+target (antes: cuantizado por direccion, sin boton). Probado jugando por Tutupa tras el rework; falta iterar `lock_focus_weight`, distancia/pitch en modo lockeado y feel del ciclado (E2→E3 pendiente de aprobacion final) |
-| Columpio de cadenas | `PlayerSwing` | **E0** | Stub — batch 6 |
+| Brazo (puño remoto, combate) | `PlayerArm` · `ArmTuning` | **E2** | Primera pasada solo combate/tap, reemplaza a Cadenas (aún stub) cuando entre el traversal. Golpea al target del lock-on pasivo con daño/poise/meter propios y bajos, 5 taps seguidos + cooldown de 3s; knobs ya existen en `arm_tuning.tres`. Falta iterar jugando montos, cadencia y si el whiff sin target debería sentirse distinto. Traversal del Brazo (agarres/checkpoints) pendiente, fase siguiente |
+| Columpio de cadenas | `PlayerSwing` | **E0** | Stub — batch 6; lo reemplaza el Brazo cuando su traversal entre |
 | Visual de mundos | `WorldVisual` | **E0** | Stub — 2 Environments + lerp |
 | Indicador de aterrizaje | `LandingIndicator` | **E3** | Ultimos detalles visuales si aparecen jugando |

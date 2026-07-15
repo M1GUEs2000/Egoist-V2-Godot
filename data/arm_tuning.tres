@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="ArmTuning" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://data/arm_tuning.gd" id="1_tuning"]
+[ext_resource type="Resource" path="res://data/arm_stun.tres" id="2_stun"]
+
+[resource]
+script = ExtResource("1_tuning")
+damage = 2.0
+stun = ExtResource("2_stun")
+max_taps = 5
+cooldown_duration = 3.0
+travel_time = 0.1
+hitbox_radius = 0.35
+meter_gain_on_hit = 1.0

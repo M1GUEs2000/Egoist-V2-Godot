@@ -241,6 +241,53 @@ func _ready() -> void:
 	assert(evader.ai_state == GroundedEnemy.AIState.EVADE)
 	assert(evader.blackboard.navigation_intent_kind == EnemyAIBlackboard.IntentKind.EVADE)
 
+	# --- Brazo: puño remoto, tap-only, 5 taps seguidos + cooldown (ver player/player_arm.gd) ---
+	var arm_enemy := (load("res://enemies/grounded_enemy.tscn") as PackedScene).instantiate() as EnemyBase
+	add_child(arm_enemy)
+	await get_tree().physics_frame
+	arm_enemy.global_position = Vector3(0.0, 0.0, -2.0)  # al frente del player: entra en su cono de mira
+	arm_enemy._on_membership_changed(true)
+	arm_enemy.health.set_max(100.0)
+	player.global_position = Vector3.ZERO
+	player.rotation = Vector3.ZERO
+	player.arm.tuning = player.arm.tuning.duplicate(true) as ArmTuning
+	player.arm.tuning.cooldown_duration = 0.05  # cooldown corto para no alargar el smoke
+
+	# Sin nadie en el cono de mira: _resolve_target no encuentra a nadie y el tap es gratis.
+	arm_enemy.global_position = Vector3(0.0, 0.0, 500.0)  # fuera de lock_max_range
+	await player.arm._try_tap()
+	assert(player.arm._taps_used == 0)
+	arm_enemy.global_position = Vector3(0.0, 0.0, -2.0)
+	await get_tree().physics_frame
+	assert(player.arm._resolve_target() == arm_enemy)
+
+	# El daño/poise/meter del golpe salen del contrato generico Hitbox->Hurtbox (ya probado
+	# arriba); acá se confirma que _try_tap lo dispara sobre el hurtbox del target, con el mismo
+	# patrón de invocación directa que el resto del archivo (ver blade._on_area_entered), sin
+	# depender de que la esfera y la cápsula del enemigo se toquen en el timing real del smoke.
+	var hp_before_arm := arm_enemy.health.current
+	var meter_before_arm := player.meter.meter()
+	player.arm._hitbox.begin_swing()
+	player.arm._hitbox._on_area_entered(arm_enemy.hurtbox)
+	player.arm._hitbox.end_swing()
+	assert(arm_enemy.health.current < hp_before_arm)
+	assert(player.meter.meter() > meter_before_arm)
+
+	# Los primeros max_taps consumen el contador (gating puro sobre el target ya validado).
+	for i in range(player.arm.tuning.max_taps):
+		await player.arm._try_tap()
+	assert(player.arm._taps_used == player.arm.tuning.max_taps)
+
+	# El siguiente tap, todavia en cooldown, no gasta el contador.
+	await player.arm._try_tap()
+	assert(player.arm._taps_used == player.arm.tuning.max_taps)
+
+	# Pasado el cooldown, vuelve a habilitarse.
+	await get_tree().create_timer(player.arm.tuning.cooldown_duration + 0.02).timeout
+	await player.arm._try_tap()
+	assert(player.arm._taps_used == 1)
+	arm_enemy.queue_free()
+
 	print("COMBAT SMOKE OK")
 	get_tree().quit()
 
