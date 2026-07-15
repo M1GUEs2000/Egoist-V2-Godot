@@ -30,6 +30,8 @@ Etapas (casilla → estado del ciclo E0-E4): `[ ]` Por implementar (E0) · `[/]`
 - [t] Mazo aereo: probar AOE cilindrico + slam_bounce, rebote del jugador arriba+adelante, combo X de 2 — [[Mazo]]
 - [f] Espada X/Y: iterar combos/angulos/ventanas + mano orbital; tunear sword_tuning — [[Espada]] [[Combate]]
 - [t] Mazo: probar combos jugando; loadout X/Y + placeholder — [[Mazo]]
+- [ ] Sweet spots de la Espada: crear el efecto extra que se dispara al SOLTAR el cargado en el momento justo (timing, no nivel maximo), para TODOS sus cargados (X/Y, terrestre y aereo) — heredan del ataque cargado, no del base — [[Espada]] [[Combate]]
+- [ ] Sweet spots del Mazo: crear el efecto extra que se dispara al SOLTAR el cargado en el momento justo (timing, no nivel maximo), para TODOS sus cargados (X/Y, terrestre y aereo) — heredan del ataque cargado, no del base — [[Mazo]] [[Combate]]
 - [t] Movimiento del player: tunear player_tuning (momentum, dash, wall slide/jump, gracia) — [[Movimiento Base]]
 - [t] IA por hostilidad: tunear percepcion/FLEE-HIDE jugando — [[IA]]
 - [t] Stun universal + spike wall: probar en player y enemigos — [[Stun]] [[Combate]]

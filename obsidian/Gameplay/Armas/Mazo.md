@@ -18,22 +18,24 @@ Arma de mas dano. Controla masas. Tiene bastante knockback. Tumba a los enemigos
 
 ## Terrestre
 
-| Input | Descripcion |
-|---|---|
-| X X X | Swing horizontal, swing horizontal, smash vertical con AOE. |
-| X X espera X X | Swing horizontal, swing horizontal, tres smash verticales. Todos con AOE. |
-| X cargado (3 niveles) | Das vueltas y golpeas. 1 carga = 1 vuelta, 2 cargas = 2 vueltas, 3 cargas = 3 vueltas. Gasta 1 barra por nivel; si no alcanza el meter, degrada al nivel maximo pagable. |
-| X cargado sweet spot | Los enemigos que pega quedan congelados hasta la ultima vuelta, que siempre los manda a volar. |
-| Y cargado | Paso corto hacia adelante con el launcher armado durante el paso: si el paso choca con un enemigo, se activa ahi; si no toca a nadie, cubre igual el final. Eleva enemigos pero no al jugador. No tiene niveles ni sweet spot por ahora. |
+| Input                 | Descripcion                                                                                                                                                                                                                              |
+| --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| X X X                 | Swing horizontal, swing horizontal, smash vertical con AOE.                                                                                                                                                                              |
+| X X espera X X        | Swing horizontal, swing horizontal, tres smash verticales. Todos con AOE.                                                                                                                                                                |
+| X cargado (3 niveles) | Das vueltas y golpeas. 1 carga = 1 vuelta, 2 cargas = 2 vueltas, 3 cargas = 3 vueltas. Gasta 1 barra por nivel; si no alcanza el meter, degrada al nivel maximo pagable.                                                                 |
+| X cargado sweet spot  | Cada sweet spot exitoso, es decir con 3 cargas si al tercero logras bien el sweet spot das 6 vueltas, si al primero lo logras das 2 y si logras al segundo das 4                                                                         |
+| Y cargado             | Paso corto hacia adelante con el launcher armado durante el paso: si el paso choca con un enemigo, se activa ahi; si no toca a nadie, cubre igual el final. Eleva enemigos pero no al jugador. No tiene niveles ni sweet spot por ahora. |
+| Y cargado sweet spot  | Lanzas una shockwave hacia adelante que levanta a todos en su camino.                                                                                                                                                                    |
 
 ## Aereo
 
-| Input | Descripcion |
-|---|---|
-| X | Combo de 2: golpe con el mango (sin push) y luego cabezazo con knockback hacia adelante. |
-| X cargado | Caes con un ataque AOE. |
-| X cargado sweet spot | Caes con un ataque y al final das una vuelta. Los mantiene en el aire. |
-| Y cargado | Caida diagonal con angulo tuneable; al impactar estalla un AOE cilindrico. Si estalla contra el suelo, los enemigos del cilindro salen por launcher (hacia arriba). Si conectas contra un enemigo **en el aire**, esos enemigos hacen un pique balistico genuino en tu direccion (se clavan al suelo y rebotan en arco, no vuelven a tu altura) y el jugador rebota en diagonal (45°) arriba-adelante sin gastar el doble salto: esa es la ventana para perseguirlos. No tiene niveles ni sweet spot por ahora. |
+| Input                | Descripcion                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| X                    | Combo de 2: golpe con el mango (sin push) y luego cabezazo con knockback hacia adelante.                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| X cargado            | Caes con un ataque AOE.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| X cargado sweet spot | Un spike hacia abajo que cuando impacta en el suelo los eleva un poco y realizas una vuelta que empuja a los afectados.                                                                                                                                                                                                                                                                                                                                                                                         |
+| Y cargado            | Caida diagonal con angulo tuneable; al impactar estalla un AOE cilindrico. Si estalla contra el suelo, los enemigos del cilindro salen por launcher (hacia arriba). Si conectas contra un enemigo **en el aire**, esos enemigos hacen un pique balistico genuino en tu direccion (se clavan al suelo y rebotan en arco, no vuelven a tu altura) y el jugador rebota en diagonal (45°) arriba-adelante sin gastar el doble salto: esa es la ventana para perseguirlos. No tiene niveles ni sweet spot por ahora. |
+| Y cargado sweetspot  | si impacta en el aire al enemigo, lanza una shockwave hacia abajo del impacto que levanta a todos los que se encontraban abajo. Si impacta en el suelo aparte del launcher lanza shockwaves hacia 4 direcciones.                                                                                                                                                                                                                                                                                                |
 
 ## Estado Godot
 

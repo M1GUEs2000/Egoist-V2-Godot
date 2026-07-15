@@ -18,25 +18,25 @@ Arma base / equilibrada. Velocidad media. Sirve para mantener el flujo del comba
 
 ## Terrestre
 
-| Input | Descripcion |
-|---|---|
-| X X X X | Swing horizontal, swing horizontal, estocada, estocada. La estocada extiende el brazo al frente (`thrust_reach`) y vuelve. |
-| X X espera X X | Izquierda a derecha, derecha a izquierda, vuelta completa, vuelta completa. El ultimo golpe empuja. |
-| X cargado | Dash hacia adelante que golpea todo. Rompe armadura. |
-| X cargado sweet spot | Todo lo que toca el dash explota despues. |
-| Y cargado | Launcher. Area pequena/media. |
-| Y cargado sweet spot | Golpe hacia arriba que sube a los enemigos un poco. Despues te elevas con otro Y. Aumenta un poco el AOE. |
+| Input                | Descripcion                                                                                                                |
+| -------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| X X X X              | Swing horizontal, swing horizontal, estocada, estocada. La estocada extiende el brazo al frente (`thrust_reach`) y vuelve. |
+| X X espera X X       | Izquierda a derecha, derecha a izquierda, vuelta completa, vuelta completa. El ultimo golpe empuja.                        |
+| X cargado            | Dash hacia adelante que golpea todo. Rompe armadura.                                                                       |
+| X cargado sweet spot | Todo lo que toca el dash explota despues y les impulsa hacia arriba.                                                       |
+| Y cargado            | Launcher. Area pequena/media.                                                                                              |
+| Y cargado sweet spot | Golpe hacia arriba que sube a los enemigos un poco. Despues te elevas con otro Y. Aumenta un poco el AOE.                  |
 
 ## Aereo
 
-| Input | Descripcion |
-|---|---|
-| X X X | Diagonal, diagonal, hacia abajo. |
-| X espera X X | Diagonal, doble vuelta con empuje hacia adelante. La primera vuelta te eleva un poco; el empuje final es un arco tuneable (`push`: velocidad + altura + cierre). *(2026-07-09)* |
-| X cargado | Mismo dash que en el piso, pero en el aire. |
-| X cargado sweet spot | Igual que el terrestre. Las explosiones te mantienen en el aire a ti y a los enemigos. |
-| Y cargado | Golpe hacia abajo que hace rebotar al enemigo. Implementado 2026-07-02: gasta 1 barra; te auto-lanza hacia arriba y spikea/rebota al enemigo hasta tu altura. Pendiente de probar. |
-| Y cargado sweet spot | Doble rebote con los enemigos que alcance a dar. Sweet spot aun no implementado. |
+| Input                | Descripcion                                                                                                                                                                        |
+| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| X X X                | Diagonal, diagonal, hacia abajo.                                                                                                                                                   |
+| X espera X X         | Diagonal, doble vuelta con empuje hacia adelante. La primera vuelta te eleva un poco; el empuje final es un arco tuneable (`push`: velocidad + altura + cierre). *(2026-07-09)*    |
+| X cargado            | Mismo dash que en el piso, pero en el aire.                                                                                                                                        |
+| X cargado sweet spot | Igual que el terrestre. Las explosiones suben a los enemigos afectados como si fuera un launcher.                                                                                  |
+| Y cargado            | Golpe hacia abajo que hace rebotar al enemigo. Implementado 2026-07-02: gasta 1 barra; te auto-lanza hacia arriba y spikea/rebota al enemigo hasta tu altura. Pendiente de probar. |
+| Y cargado sweet spot | Doble rebote con los enemigos que alcance a dar. Sweet spot aun no implementado. El segundo rebote te sube mas a ti y a todos los enemigos afectados                               |
 
 ## Estado Godot
 
