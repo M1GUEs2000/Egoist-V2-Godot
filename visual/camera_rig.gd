@@ -9,9 +9,12 @@ class_name CameraRig extends Node3D
 ## personaje y se queda donde el jugador la dejó — no hay recentrado automático.
 ##
 ## Lock-on: mientras `target.lock_on.is_locked`, el stick deja de rotar la cámara (lo usa
-## LockOn.cycle_target vía Player._unhandled_input) y el yaw pasa a mirar "hacia atrás" del
-## target lockeado, mientras el punto de mira se corre del jugador hacia el target según
-## `tuning.lock_focus_weight` — encuadra a los dos, como en Dark Souls.
+## LockOn.cycle_target vía Player._unhandled_input) y el yaw se congela en el que ya tenía (no
+## orbita a la espalda del jugador); la distancia hace zoom in/out según la separación
+## jugador-target (`lock_zoom_min_distance`/`lock_zoom_max_distance` entre
+## `lock_zoom_near_separation`/`lock_zoom_far_separation`), mientras el punto de mira se corre
+## del jugador hacia el target según `tuning.lock_focus_weight` — encuadra a los dos, como en
+## Dark Souls.
 ##
 ## Seguimiento vertical: el punto de mira sigue al target en Y solo dentro de
 ## `tuning.vertical_follow_limit` metros desde la última altura "asentada" (`_vertical_anchor`,
@@ -56,18 +59,16 @@ func _update_free(delta: float) -> void:
 	follow_point.y = _clamp_vertical(follow_point.y)
 	_move_to(follow_point + offset, follow_point, delta)
 
-## Encuadra jugador + target: la cámara orbita el punto de mira (entre ambos, ver
-## `lock_focus_weight`) parada del lado opuesto al target respecto del jugador.
+## Encuadra jugador + target: mantiene el yaw libre actual (no orbita a la espalda del jugador)
+## y hace zoom in/out según la separación jugador-target, orbitando el punto de mira entre ambos
+## (ver `lock_focus_weight`).
 func _update_locked(delta: float, enemy: EnemyBase) -> void:
-	var to_target := enemy.global_position - target.global_position
-	to_target.y = 0.0
-	if to_target.length_squared() < 0.0001:
-		_update_free(delta)
-		return
-	var away := -to_target.normalized()
-	var yaw := rad_to_deg(atan2(away.x, away.z))
+	var separation := enemy.global_position.distance_to(target.global_position)
+	var zoom_t := clampf(inverse_lerp(tuning.lock_zoom_near_separation, tuning.lock_zoom_far_separation, separation), 0.0, 1.0)
+	var lock_distance := lerpf(tuning.lock_zoom_min_distance, tuning.lock_zoom_max_distance, zoom_t)
+	var yaw := tuning.center_yaw + _yaw_offset
 	var offset := Basis(Vector3.UP, deg_to_rad(yaw)) \
-			* (Basis(Vector3.RIGHT, deg_to_rad(-tuning.pitch)) * Vector3(0.0, 0.0, tuning.distance))
+			* (Basis(Vector3.RIGHT, deg_to_rad(-tuning.pitch)) * Vector3(0.0, 0.0, lock_distance))
 	var focus := target.global_position.lerp(enemy.global_position, tuning.lock_focus_weight)
 	focus.y = _clamp_vertical(focus.y)
 	_move_to(focus + offset, focus, delta)

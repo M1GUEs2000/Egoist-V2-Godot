@@ -38,6 +38,7 @@ Objetos golpeables de traversal.
 - Los colores viven en `World`, no en la escena. Ver [[Colores de mundo]]: las features usan colores propios y nunca reusan un color de mundo.
 - `hits_to_break = 0` significa indestructible. Valores mayores usan `Health` + `BreakOnDeath` para romperse tras esa cantidad de golpes.
 - El launch ahora alimenta el modelo de [[Momentum y Bump]]: encadenar bloques compone exceso hasta `momentum_max_speed`, y el exceso se drena por superficie en vez de morir de golpe al aterrizar.
+- Un bloque con `enable_dash` tambien se puede activar sin golpearlo: [[brazo-traversal|Brazo Traversal]] lo marca a distancia y teletransporta al jugador encima (`TraversalBlock.activate()`, mismo efecto que un golpe).
 
 ## Spike wall
 
@@ -64,3 +65,4 @@ Lo que todavia no existe (efecto del color negro, bloques dañinos) vive en [[id
 
 - [[Traversal]]
 - [[Playa]]
+- [[brazo-traversal|Brazo Traversal]]

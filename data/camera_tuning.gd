@@ -23,6 +23,16 @@ class_name CameraTuning extends Resource
 ## Con lock activo, la cámara mira a un punto entre jugador y target en vez de solo al jugador.
 ## 0 = solo jugador, 1 = solo target, 0.5 = punto medio.
 @export_range(0.0, 1.0, 0.05) var lock_focus_weight := 0.5
+## Distancia de la cámara cuando jugador y target están a `lock_zoom_near_separation` metros o
+## menos (zoom in en combate pegado).
+@export_range(1.0, 60.0, 0.5) var lock_zoom_min_distance := 10.0
+## Distancia de la cámara cuando jugador y target están a `lock_zoom_far_separation` metros o
+## más (zoom out cuando se pelea a distancia).
+@export_range(1.0, 60.0, 0.5) var lock_zoom_max_distance := 20.0
+## Separación jugador-target (metros) en o por debajo de la cual la cámara usa `lock_zoom_min_distance`.
+@export_range(0.0, 30.0, 0.5) var lock_zoom_near_separation := 3.0
+## Separación jugador-target (metros) en o por encima de la cual la cámara usa `lock_zoom_max_distance`.
+@export_range(0.0, 60.0, 0.5) var lock_zoom_far_separation := 15.0
 
 @export_group("Seguimiento vertical")
 ## Cuántos metros por sobre/bajo de la última altura "asentada" sigue la cámara al target antes

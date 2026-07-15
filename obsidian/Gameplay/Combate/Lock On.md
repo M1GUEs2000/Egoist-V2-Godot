@@ -33,10 +33,13 @@ tocar el lock persistente). Reticle sobre el AABB combinado de las mallas del ta
 (`has_visible_target`/`_is_weapons_out`). Cobertura en `world/smoke_test.gd`.
 
 `visual/camera_rig.gd`: mientras `player.lock_on.is_locked`, `CameraRig` deja el modo libre
-(`_update_free`, con rotacion manual por stick) y entra a `_update_locked` — orbita un punto de
-mira entre jugador y target (`CameraTuning.lock_focus_weight`, 0.5 = punto medio) parada del lado
-opuesto al target respecto del jugador, encuadrando a los dos como en Dark Souls. Distancia/pitch
-se reusan del modo libre (sin escalar todavia por separacion jugador-target).
+(`_update_free`, con rotacion manual por stick) y entra a `_update_locked` — mantiene el yaw libre
+que ya tenia (no orbita a la espalda del jugador respecto al target: el stick queda repurposado
+para `cycle_target` mientras dura el lock) y hace zoom in/out de la distancia segun la separacion
+jugador-target: `lock_zoom_min_distance` cuando estan a `lock_zoom_near_separation` metros o
+menos, `lock_zoom_max_distance` a `lock_zoom_far_separation` o mas, interpolado entre medio.
+Orbita un punto de mira entre jugador y target (`CameraTuning.lock_focus_weight`, 0.5 = punto
+medio), encuadrando a los dos como en Dark Souls. Pitch se reusa del modo libre.
 
 ## Rango/angulo vertical (enemigos aereos)
 
@@ -65,8 +68,9 @@ lo bastante alto sobre el suelo (`min_air_height`).
 
 ## Ultimos detalles
 
-- Tunear jugando `lock_focus_weight`, y si distancia/pitch necesitan escalar con la separacion
-  jugador-target (hoy fijos, mismos valores que el modo libre).
+- Tunear jugando `lock_focus_weight` y el rango de zoom (`lock_zoom_min_distance`/
+  `lock_zoom_max_distance`/`lock_zoom_near_separation`/`lock_zoom_far_separation`).
+  *(pendiente de probar en engine)*
 - Ver jugando si el ciclado (Q/E) necesita orden mas inteligente que angulo puro respecto a camara
   (ej. priorizar el mas cercano en empate).
 - Validar feel del snap de camara al entrar/salir de lock (hoy solo el damping existente, sin

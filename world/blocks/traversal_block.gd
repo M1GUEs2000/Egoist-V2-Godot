@@ -60,6 +60,7 @@ func _ready() -> void:
 	_update_glow()
 	if enable_dash:
 		_build_dash_arrow()
+		add_to_group("arm_dash_target")  # PlayerArm me encuentra por acá para el lock-on de traversal
 
 ## Luz real (no solo emision del material) para que el bloque ilumine el entorno.
 ## El color y el encendido se ajustan en _repaint_segments y _update_glow.
@@ -81,8 +82,14 @@ func _configure_health() -> void:
 		_break_on_death.free_owner = false
 
 func _on_hit(from: Node, _damage: float) -> void:
+	activate(from)
+
+## Dispara todas las features activas del bloque sobre quien lo activa. Mismo efecto sea por
+## golpe de arma (`_hurtbox.hit` -> `_on_hit`) o por el Brazo, que teletransporta al jugador
+## encima del bloque de dash marcado y activa directo, sin pegarle (ver PlayerArm).
+func activate(from: Node) -> void:
 	if enable_world_switch:
-		WorldManager.switch_world(global_position)  # la onda del scan nace en el bloque golpeado
+		WorldManager.switch_world(global_position)  # la onda del scan nace en el bloque activado
 	var player := _resolve_player(from)
 	if player == null:
 		return

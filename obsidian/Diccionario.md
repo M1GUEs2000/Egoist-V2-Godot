@@ -458,32 +458,36 @@ la hostilidad escala en niveles). Hoy es más lore/identidad que sistema. Fuente
 
 # Brazo
 
-Habilidad **permanente** del jugador (puño remoto). **No es un arma** ni ocupa los slots X/Y: vive
-encima del loadout, siempre disponible tenga el arma que tenga. Al activarlo (input propuesto: gatillo
-izquierdo), el puño se proyecta hacia un objetivo pasivo marcado, pega o se **engancha**, y vuelve.
-Usa su **propio lock-on pasivo**, separado del lock-on de combate (marca hacia dónde mirás, sin
-arrastrar al jugador). Sirve para **combate** (mantener enemigos en el aire, extender ventanas,
-controlar el caos) y **traversal** (agarres, estabilizar rutas, pseudo-checkpoints). Puede costar meter
-en usos cargados.
+Habilidad **permanente** del jugador (puño remoto, `PlayerArm`). **No es un arma** ni ocupa los slots
+X/Y: vive encima del loadout, siempre disponible tenga el arma que tenga. Un tap (`arm_attack`) con
+dos usos según el target de su **propio lock-on pasivo** (marca hacia dónde mirás, sin arrastrar al
+jugador):
 
-> [!warning] No implementado
-> Estado **E0 / planned**, hito **H2** — todavía no existe. H1 sigue siendo Espada + world switch +
-> traversal base. Cuando entre, nace como sistema propio del player, no como `WeaponBase`. Fuente:
-> [[Brazo]].
+- **Combate**: pega al target del lock-on pasivo (lockeado si hay uno, si no el más centrado en el
+  cono de mira). Daño/poise bajos, meter propio; 5 taps seguidos + cooldown de 3s.
+- **Traversal**: si no hay enemigo en el cono, marca el bloque de dash **verde** más cercano en su
+  propio cono/rango y, al tap, empuja al jugador hacia él con un dash forzado y lo activa al llegar
+  (mismo efecto que golpearlo). Gratis, con su propio cooldown corto (1s). Solo bloques de dash por
+  ahora — agarres/objetos genéricos de traversal siguen sin implementar.
+
+Entró en H1, adelantado respecto al roadmap original (H2). Nace como sistema propio del player, no
+como `WeaponBase`. Estado **E2**. Fuente: [[Brazo]], [[brazo-combate|Brazo Combate]],
+[[brazo-traversal|Brazo Traversal]].
 
 ---
 
 # Cámara
 
-Cámara **isométrica** que sigue al jugador con damping, más **rotación horizontal por stick** dentro de
-un rango acotado (`CameraRig`). El follow calcula la posición por `pitch`/`center_yaw`/`distance` sobre
-el target y suaviza con `damping`. La rotación (stick derecho, o `Q`/`E`) desvía el yaw dentro de
-`±max_yaw_offset` (30° por defecto) — **nunca se pone del todo detrás** del personaje, solo lateral — y
-**recentra sola** tras `recenter_delay` sin input. Sigue al target en Y solo hasta un tope
-(`vertical_follow_limit`); pasado eso se congela y el jugador sale de cuadro en vertical (pensado para
-subidas bruscas con launcher/Brazo). El **occlusion fade** y el **lock-on** son sistemas aparte (viven
-en Traversal y Combate). Pendiente: "centro por área" (que `center_yaw` cambie según la zona). Fuente:
-[[Camara]], [[Occlusion Fade de Camara]], [[Lock On]].
+Cámara **isométrica** que sigue al jugador con damping, más **rotación horizontal libre por stick**
+(`CameraRig`). El follow calcula la posición por `pitch`/`center_yaw`/`distance` sobre el target y
+suaviza con `damping`. La rotación (stick derecho, o `Q`/`E`) gira el yaw **360° sin clamp** a
+`yaw_speed` grados/seg y se queda donde el jugador la dejó — **no hay recentrado automático**. Sigue
+al target en Y solo hasta un tope (`vertical_follow_limit`); pasado eso se congela y el jugador sale
+de cuadro en vertical (pensado para subidas bruscas con launcher/Brazo). Con **lock-on** activo el
+yaw se congela en el que ya tenía (no orbita a la espalda del jugador) y la distancia hace zoom
+in/out según la separación jugador-target (`lock_zoom_*`) — ver [[Lock On]]. El **occlusion fade**
+es sistema aparte (vive en Traversal). Pendiente: "centro por área" (que `center_yaw` cambie según
+la zona). Fuente: [[Camara]], [[Occlusion Fade de Camara]], [[Lock On]].
 
 ---
 

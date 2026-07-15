@@ -6,7 +6,7 @@ tags:
   - sistema
   - camara
 status: active
-system_status: E3
+system_status: E1
 hito: H1
 ---
 
@@ -31,12 +31,9 @@ stick dentro de un rango acotado. No incluye el occlusion fade (vive aparte, ver
   decide la `Camera3D` hija, `CameraRig` no la pisa.
 - **Rotacion horizontal**: el jugador mueve la camara a izquierda/derecha con el stick
   derecho (acciones `camera_left`/`camera_right`, con fallback de teclado Q/E). El yaw real
-  usado en el follow es `center_yaw + offset`, donde `offset` esta clamped a
-  `±max_yaw_offset` (30° por defecto) — nunca permite colocarse completamente detras del
-  personaje, solo desviacion lateral.
-- **Recentrado**: si el stick esta en su zona muerta (`input_deadzone`) durante
-  `recenter_delay` segundos (1.2s por defecto), el `offset` empieza a volver solo a 0 con
-  velocidad `recenter_speed`. Se corta apenas el jugador vuelve a mover el stick.
+  usado en el follow es `center_yaw + offset`; `offset` gira libre (360°, sin clamp) a
+  `yaw_speed` grados/seg mientras el input supera `input_deadzone`, y se queda donde el
+  jugador la dejo — no hay recentrado automatico.
 - **Centro por area**: `center_yaw` hoy es un valor fijo del tuning (45°, igual que antes de
   esta tarea). "La posicion central varia por area" queda pendiente — falta un mecanismo
   (marcador de zona que le escriba `center_yaw` a `CameraRig` al entrar el jugador). Ver
@@ -64,22 +61,20 @@ Acciones nuevas en `project.godot`:
 | Campo | Rol |
 |---|---|
 | `pitch` | Inclinacion isometrica fija |
-| `center_yaw` | Yaw de reposo (centro de la rotacion) |
-| `distance` | Distancia camara-target |
+| `center_yaw` | Yaw de reposo (centro de la rotacion libre) |
+| `distance` | Distancia camara-target en modo libre |
 | `damping` | Suavizado del follow de posicion |
-| `max_yaw_offset` | Rango de desviacion lateral permitido (± grados) |
-| `yaw_speed` | Velocidad de giro mientras se sostiene el stick (grados/seg) |
-| `recenter_delay` | Segundos sin input antes de empezar a recentrar |
-| `recenter_speed` | Suavizado del recentrado |
+| `yaw_speed` | Velocidad de giro mientras se sostiene el stick (grados/seg), libre y sin recentrado |
 | `input_deadzone` | Zona muerta del eje del stick |
 | `lock_focus_weight` | Con lock activo, cuanto se corre el punto de mira del jugador hacia el target (0=jugador, 1=target) |
+| `lock_zoom_min_distance` / `lock_zoom_max_distance` | Con lock activo, rango de distancia de la camara (zoom in/out) segun separacion jugador-target (ver [[Lock On]]) |
+| `lock_zoom_near_separation` / `lock_zoom_far_separation` | Separacion (metros) que mapea a `lock_zoom_min_distance`/`lock_zoom_max_distance` |
 | `vertical_follow_limit` | Tope en metros del seguimiento vertical antes de congelarse (<=0 = sin tope). Default 10 |
 
 ## Pendiente
 
-- Verificacion headless (`--import` + `--quit-after 2`) — no disponible en este entorno,
-  falta correrla.
-- Tunear jugando: rango de ±30°, velocidad de giro, delay y velocidad de recentrado.
+- Verificacion headless (`--import` + `--quit-after 2`) — no corrida todavia. *(pendiente de probar)*
+- Tunear jugando: `yaw_speed` de la rotacion libre y si la falta de recentrado se siente bien.
 - Centro por area: definir el mecanismo (zona/trigger) que varie `center_yaw` segun donde
   este el jugador.
 

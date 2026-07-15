@@ -5,8 +5,8 @@ tags:
   - gameplay
   - sistema
   - brazo
-status: planned
-system_status: E0
+status: active
+system_status: E2
 hito: H2
 ---
 
@@ -41,17 +41,21 @@ No es un disparo de arma tradicional. La palabra "disparo" describe la accion de
 
 ## Decisiones abiertas
 
-- Si el uso basico es gratis y solo el cargado cuesta meter.
-- Alcance, cooldown y numero de usos encadenables.
-- Si el objetivo pasivo prioriza enemigos, agarres de traversal o direccion pura.
-- Como se comunica visualmente el lock-on pasivo sin ensuciar el lock-on de combos.
-- Si el brazo puede agarrar objetos golpeables ademas de enemigos y puntos de traversal.
+- Si el uso basico de combate es gratis y solo el cargado cuesta meter (hoy: gratis, sin
+  cargado implementado todavia).
+- Si el brazo puede agarrar objetos golpeables genericos o puntos de agarre puros ademas de
+  los bloques de dash (hoy: solo bloques verdes de [[Bloques|traversal]]).
 
 ## Estado Godot
 
-- No implementado.
-- No entra en H1. H1 sigue siendo validar Espada + world switch + traversal base.
-- Cuando entre, debe nacer como sistema propio del player, no como `WeaponBase`.
+- Implementado: combate (tap sobre el target del lock-on pasivo) y traversal (teletransporte +
+  activacion de bloques de dash verdes). Ver [[brazo-combate|Brazo Combate]] y
+  [[brazo-traversal|Brazo Traversal]].
+- Entro en H1, adelantado respecto al roadmap original que lo preveia para H2.
+- Nace como sistema propio del player (`PlayerArm` + `ArmTuning`), no como `WeaponBase`.
+- El objetivo pasivo prioriza combate: si hay un enemigo en el cono de mira/lock, el tap le
+  pega; si no, marca el bloque de dash mas cercano en su propio cono/rango de traversal. El
+  lock-on pasivo del brazo (punto morado, `ArmMarker`) es el mismo para ambos casos.
 
 ## Relacionado
 

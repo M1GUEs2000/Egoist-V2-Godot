@@ -8,14 +8,24 @@ tags:
   - gameplay
   - combate
   - brazo
-status: planned
-system_status: E0
+status: active
+system_status: E2
 hito: H2
 ---
 
 # Brazo Combate
 
 Uso del [[Brazo]] dentro del combate. Su funcion no es hacer de arma nueva, sino aumentar el kit que ya existe: mas control, mas opciones de aire y un boton para recuperar lectura cuando la pelea esta rapida o caotica.
+
+## Implementado en Godot
+
+`player/player_arm.gd` (`PlayerArm`) + `data/arm_tuning.gd` (`ArmTuning`, instancia
+`arm_tuning.tres`). Un tap (`arm_attack`) pega al target del lock-on pasivo: lockeado si hay uno
+(mismo [[Lock On]] de combos), si no el enemigo mas centrado en el cono de mira (mismo target que
+usa el snap del golpe normal sin lock). Daño y poise bajos (`damage`, `stun` en `ArmTuning`);
+genera meter propio al conectar (`meter_gain_on_hit`). `max_taps` seguidos antes de forzar
+`cooldown_duration` segundos de bloqueo. El resto de esta nota (brazo cargado, sostenimiento
+aereo, golpe a objetos) es diseño a futuro, todavia no implementado.
 
 ## Intencion
 
