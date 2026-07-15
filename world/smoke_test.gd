@@ -250,6 +250,21 @@ func _ready() -> void:
 	player.force_dash(Vector3.RIGHT, 4.0, 0.12, false, false)
 	assert(not player.dash._hitbox.monitoring)
 	player.dash.cancel()
+	# El bloque verde puede inclinarse: force_dash debe conservar su direccion 3D.
+	var tilted_dash_dir := Vector3(0.0, 1.0, 1.0).normalized()
+	player.force_dash(tilted_dash_dir, 4.0, 0.12, false, false)
+	assert(player.dash._dash_dir.is_equal_approx(tilted_dash_dir))
+	player.dash.cancel()
+	var dash_block := TraversalBlock.new()
+	player.bump_velocity = Vector3.ZERO
+	dash_block.dash_bop_forward_speed = 2.0
+	dash_block.dash_vertical_bop_speed = 3.0
+	dash_block._apply_dash(player)
+	assert(player.bump_velocity == Vector3.ZERO)
+	assert(is_zero_approx(player.vertical_velocity))
+	player.dash._end_dash(true)
+	assert(player.bump_velocity.is_equal_approx(Vector3.FORWARD * dash_block.dash_bop_forward_speed))
+	assert(is_equal_approx(player.vertical_velocity, dash_block.dash_vertical_bop_speed))
 
 	# AirKillReset: cargar en aire reduce cada vez menos la caida vertical; una kill aerea
 	# resetea la secuencia junto con doble salto y airdash.

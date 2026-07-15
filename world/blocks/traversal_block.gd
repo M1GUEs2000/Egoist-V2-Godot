@@ -17,6 +17,10 @@ class_name TraversalBlock extends Node3D
 @export_group("Dash")
 @export var dash_distance := 4.0
 @export var dash_duration := 0.12
+## Empujon horizontal extra al salir, en la proyeccion de la flecha. 0 = sin empujon.
+@export var dash_bop_forward_speed := 4.0
+## Pequeno impulso vertical que queda al terminar el dash. 0 = sin rebote.
+@export var dash_vertical_bop_speed := 4.0
 @export var boost_existing_bump_momentum := false
 ## Si el dash forzado por el bloque verde prende el DashHitbox del player y daña al atravesar.
 @export var dash_deals_damage := true
@@ -114,13 +118,16 @@ func _apply_launch(player: Player) -> void:
 	player.restore_airdash()
 
 ## Empuja siempre hacia la cara -Z del bloque (misma convencion que Player.forward()), sin
-## importar por donde llego el jugador: rotar el TraversalBlock en el editor cambia el rumbo.
+## importar por donde llego el jugador: rotarlo en el editor cambia el rumbo, incluida Y.
 func _apply_dash(player: Player) -> void:
 	if World.now() - _last_dash_hit_time < hit_cooldown:
 		return
 	_last_dash_hit_time = World.now()
-	player.force_dash(-global_transform.basis.z, dash_distance, dash_duration,
+	var dash_dir := -global_transform.basis.z
+	player.force_dash(dash_dir, dash_distance, dash_duration,
 			boost_existing_bump_momentum, dash_deals_damage)
+	# El dash conserva la inclinacion; el bop se aplica solo cuando termina.
+	player.set_dash_exit_bop(dash_dir, dash_bop_forward_speed, dash_vertical_bop_speed)
 
 func _rebuild_glow_segments() -> void:
 	for child in _glow_segments.get_children():

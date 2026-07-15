@@ -320,6 +320,10 @@ func force_dash(dir: Vector3, distance: float, duration: float, boost_bump_momen
 	enemy_bounce.cancel()
 	dash.force_dash(dir, distance, duration, boost_bump_momentum, deals_damage)
 
+## Programa un impulso que PlayerDash aplica solo al terminar naturalmente el dash actual.
+func set_dash_exit_bop(dir: Vector3, forward_speed: float, vertical_speed: float) -> void:
+	dash.set_exit_bop(dir, forward_speed, vertical_speed)
+
 func launch(height: float, hang_time: float, rise_time: float = World.LAUNCH_RISE_TIME) -> void:
 	_dodge_queued = false
 	wall_slide.cancel()

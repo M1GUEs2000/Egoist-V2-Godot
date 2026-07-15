@@ -20,6 +20,8 @@ var _timer := 0.0
 var _active_distance := 0.01
 var _active_duration := 0.01
 var _iframe_timer := 0.0
+var _exit_bop_velocity := Vector3.ZERO
+var _exit_bop_vertical_speed := 0.0
 
 @onready var _hitbox: Hitbox = $DashHitbox
 @onready var _hitbox_shape: CollisionShape3D = $DashHitbox/CollisionShape3D
@@ -99,11 +101,19 @@ func dodge() -> void:
 ## hay, lo pone su propio hitbox (ver Sword._run_charged_dash_window).
 func force_dash(dir: Vector3, distance: float, duration: float, boost_bump_momentum: bool,
 		deals_damage := false) -> void:
-	dir.y = 0.0
 	if dir.length_squared() < 0.0001:
 		dir = _body.forward()
+	# Conserva Y: los bloques de traversal pueden orientar el dash hacia arriba o abajo.
 	# Dash ofensivo: atraviesa enemigos, choca con objetos (pass_through_enemies = true).
 	_start_dash(dir.normalized(), distance, duration, boost_bump_momentum, true, deals_damage, true)
+
+## Impulso extra para el final del dash (ej. el bop de salida del bloque verde).
+func set_exit_bop(dir: Vector3, forward_speed: float, vertical_speed: float) -> void:
+	var horizontal_dir := Vector3(dir.x, 0.0, dir.z)
+	_exit_bop_velocity = Vector3.ZERO
+	if horizontal_dir.length_squared() > 0.0001:
+		_exit_bop_velocity = horizontal_dir.normalized() * forward_speed
+	_exit_bop_vertical_speed = vertical_speed
 
 ## I-frames del dodge de esquiva. force_dash (dash ofensivo) nunca los pide.
 func is_invulnerable() -> bool:
@@ -119,7 +129,7 @@ func tick(delta: float) -> void:
 	_body.velocity = _dash_dir * speed + _body.bump_velocity
 	_body.move_and_slide()
 	if _timer <= 0.0:
-		_end_dash()
+		_end_dash(true)
 
 func _start_dash(dir: Vector3, distance: float, duration: float, boost_bump_momentum: bool,
 		cancel_controlled: bool, deal_damage: bool, pass_through_enemies: bool) -> void:
@@ -128,6 +138,8 @@ func _start_dash(dir: Vector3, distance: float, duration: float, boost_bump_mome
 	# El dash borra la caída acumulada: sin esto, Player.vertical_velocity sobrevive al dash
 	# y al salir seguís cayendo a la velocidad que traías antes de entrar.
 	_body.vertical_velocity = 0.0
+	_exit_bop_velocity = Vector3.ZERO
+	_exit_bop_vertical_speed = 0.0
 	_dash_dir = dir
 	_active_distance = maxf(0.01, distance)
 	_active_duration = maxf(0.01, duration)
@@ -141,12 +153,26 @@ func _start_dash(dir: Vector3, distance: float, duration: float, boost_bump_mome
 		_hitbox.begin_swing()
 	_set_particles(true)
 
-func _end_dash() -> void:
+func _end_dash(apply_exit_bop := false) -> void:
 	is_dashing = false
 	_iframe_timer = 0.0
 	_hitbox.end_swing()
 	_body.collision_mask |= World.LAYER_ENEMY
 	_set_particles(false)
+	if apply_exit_bop:
+		_apply_exit_bop()
+	else:
+		_exit_bop_velocity = Vector3.ZERO
+		_exit_bop_vertical_speed = 0.0
+
+func _apply_exit_bop() -> void:
+	if _exit_bop_velocity.length_squared() > 0.0001:
+		_body.add_momentum(_exit_bop_velocity)
+	if absf(_exit_bop_vertical_speed) > 0.0001:
+		_body.vertical_velocity = _exit_bop_vertical_speed
+		_body.air_state = Player.AirState.AIRBORNE
+	_exit_bop_velocity = Vector3.ZERO
+	_exit_bop_vertical_speed = 0.0
 
 func _set_particles(active: bool) -> void:
 	if _particles != null and _particles.emitting != active:
