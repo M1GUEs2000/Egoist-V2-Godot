@@ -20,6 +20,10 @@ var poise_max := 6.0
 var armor_bonus := 6.0
 ## Drenaje lineal del acumulado, en puntos por segundo.
 var decay_per_second := 1.5
+## Segundos sin recibir poise antes de que el acumulado empiece a decaer. Mientras dura, el
+## acumulado queda pisado (ni decae, ni tampoco puede recibirse recuperacion completa via
+## recovery_time, que exige ademas superar este delay).
+var decay_delay := 0.5
 ## Escalera de degradacion: multiplicadores de la reserva tras cada quiebre. El primero es el
 ## estado intacto. 0.0 = reserva nula, cualquier golpe stunea. Un solo elemento [1.0] = nunca
 ## degrada (el player).
@@ -34,6 +38,12 @@ var _break_index := 0
 # desde el ultimo GOLPE (es el "hace 20s que nadie lo toca").
 var _last_hit_time := -999.0
 var _last_settle_time := 0.0
+
+# Ventana en la que el reloj de poise queda congelado (aire o stun): ni decae el acumulado ni
+# corre la cuenta regresiva de recovery_time. Golpes recibidos durante la pausa SI suman poise
+# (take_poise_damage no la consulta), solo se congela lo que pasa entre golpes.
+var _paused := false
+var _paused_since := -1.0
 
 ## Reserva que hay que superar AHORA: base (+ armadura) escalada por los quiebres ya sufridos.
 func effective_max(armored: bool) -> float:
@@ -78,16 +88,46 @@ func reset() -> void:
 	_break_index = 0
 	_last_hit_time = -999.0
 	_last_settle_time = World.now()
+	_paused = false
+	_paused_since = -1.0
+
+## Congela/descongela el reloj de decaimiento y recuperacion (llamarlo mientras el dueño este
+## en el aire o stuneado). Idempotente: llamarlo con el mismo valor no hace nada. Al pausar,
+## primero pone al dia el acumulado (para no perder el decaimiento ya ganado); al reanudar,
+## corre ambos relojes hacia adelante el tiempo que estuvo pausado, asi ese lapso no cuenta
+## ni para el decaimiento ni para el recovery_time.
+func set_paused(paused: bool) -> void:
+	if paused == _paused:
+		return
+	var now := World.now()
+	if paused:
+		_settle(now)
+		_paused_since = now
+	else:
+		var frozen_span := now - _paused_since
+		_last_settle_time += frozen_span
+		if _last_hit_time > -999.0:
+			_last_hit_time += frozen_span
+		_paused_since = -1.0
+	_paused = paused
 
 # Pone el estado al dia contra el reloj: recupera del todo si lleva recovery_time sin golpes, o
 # drena lo que corresponda al tiempo transcurrido. Se llama al recibir y al consultar, nunca por frame.
 func _settle(now: float) -> void:
+	if _paused:
+		return  # reloj congelado: ni decae ni corre la cuenta de recovery_time
 	if now - _last_hit_time >= recovery_time:
 		_accumulated = 0.0
 		_break_index = 0
 		_last_settle_time = now
 		return
-	var elapsed := now - _last_settle_time
+	if now - _last_hit_time < decay_delay:
+		_last_settle_time = now  # dentro del delay: el acumulado queda pisado, sin decaer todavia
+		return
+	# Decae solo la porcion de tiempo que ya paso el delay (por si el ultimo settle cayo adentro
+	# de la ventana de gracia, no contar ese tramo como si hubiera decaido).
+	var decay_start := maxf(_last_settle_time, _last_hit_time + decay_delay)
+	var elapsed := now - decay_start
 	if elapsed > 0.0:
 		_accumulated = maxf(0.0, _accumulated - decay_per_second * elapsed)
 	_last_settle_time = now

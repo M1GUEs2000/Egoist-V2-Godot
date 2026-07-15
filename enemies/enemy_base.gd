@@ -36,6 +36,8 @@ static func can_damage_enemy(attacker: EnemyBase, target: EnemyBase) -> bool:
 @export var armor_poise_bonus := 6.0
 ## Drenaje del poise acumulado, en puntos por segundo. Alto = hay que encadenar golpes rapido.
 @export var poise_decay_per_second := 1.5
+## Segundos sin recibir poise antes de que el acumulado empiece a decaer.
+@export var poise_decay_delay := 0.5
 ## Escalera de degradacion: multiplicador de la reserva tras cada quiebre. Cada stun lo deja mas
 ## fragil; en el ultimo escalon (0.0) cualquier golpe lo stunea. Se reinicia solo (ver abajo).
 @export var poise_break_levels: Array[float] = [1.0, 0.8, 0.6, 0.4, 0.2, 0.0]
@@ -188,6 +190,7 @@ func _ready() -> void:
 	poise.poise_max = poise_max
 	poise.armor_bonus = armor_poise_bonus
 	poise.decay_per_second = poise_decay_per_second
+	poise.decay_delay = poise_decay_delay
 	poise.break_levels = poise_break_levels
 	poise.recovery_time = poise_recovery_time
 	poise.reset()
@@ -667,6 +670,9 @@ func _update_combat_state() -> void:
 		combat_state = CombatState.NORMAL
 		_reset_stun_reaction()
 		_refresh_visual_state()
+	# En el aire o stuneado (stun normal o vulnerable por parry) el reloj de poise queda
+	# congelado: no decae el acumulado ni corre el recovery_time. Ver combat/poise.gd.
+	poise.set_paused(is_airborne() or is_stunned())
 
 func _begin_airborne() -> void:
 	if air_state == AirState.AIRBORNE:

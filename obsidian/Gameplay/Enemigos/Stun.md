@@ -28,6 +28,9 @@ Ciclo completo:
 4. Ya `STUNNED` **no hay poise que romper** (esta quebrado): los golpes entran directo y extienden el stun. Eso es lo que sostiene el juggle y los combos.
 5. Sin recibir golpes por `poise_recovery_time` (20 s), la reserva vuelve al **100%**. Es silencioso: el jugador no lo ve.
 
+> [!important] El reloj de poise se congela en el aire y durante el stun
+> `Poise.set_paused()` frena tanto el decaimiento del acumulado como la cuenta de `poise_recovery_time` mientras `EnemyBase.is_airborne()` o `is_stunned()` es true (stun normal o vulnerable cian por parry, ambos son `combat_state == STUNNED`). `EnemyBase._update_combat_state()` sincroniza la pausa todos los frames. Un enemigo lanzado o stuneado **no recupera poise** durante ese lapso; el reloj retoma exactamente donde quedo al tocar el piso o salir del stun. Los golpes que llegan mientras esta pausado igual suman poise con normalidad — la pausa solo afecta lo que pasa **entre** golpes. *(2026-07-15)*
+
 ### Degradacion: cada quiebre lo deja mas fragil
 
 `poise_break_levels` es la escalera de multiplicadores de la reserva tras cada quiebre. Default: `[1.0, 0.8, 0.6, 0.4, 0.2, 0.0]` — editable **por enemigo**. En el ultimo escalon (`0.0`) la reserva es nula: **cualquier golpe lo stunea**. Castigar sin pausa es progresivamente mas facil; soltarlo 20 s lo devuelve a cero.
@@ -66,6 +69,7 @@ Exports por escena en `EnemyBase` (excepcion de enemigos); en `PlayerTuning` gru
 | `poise_max` | 6.0 | Reserva a romper. `WorldSwitchEnemy` e `HybridEnemy` usan 12 (cuesta mas), el ultra agresivo 9. |
 | `armor_poise_bonus` | 6.0 | Reserva extra mientras esta armado. Se pierde al romperse la armadura. |
 | `poise_decay_per_second` | 1.5 | Drenaje lineal del acumulado. Alto = hay que encadenar rapido. |
+| `poise_decay_delay` | 0.5 | Segundos sin recibir poise antes de que el acumulado empiece a decaer. Mientras dura, el acumulado queda pisado (solo enemigos por ahora, el Player no lo usa todavia). |
 | `poise_break_levels` | `[1.0, 0.8, 0.6, 0.4, 0.2, 0.0]` | Escalera de degradacion. El player usa `[1.0]`. |
 | `poise_recovery_time` | 20.0 | Segundos sin golpes tras los que la reserva vuelve al 100%. |
 

@@ -327,6 +327,7 @@ func _test_poise_meter() -> void:
 	var draining := Poise.new()
 	draining.poise_max = 6.0
 	draining.decay_per_second = 100.0
+	draining.decay_delay = 0.0  # este test mide el drenaje puro, no el delay de gracia
 	draining.break_levels = [1.0]
 	draining.reset()
 	assert(not draining.take_poise_damage(5.0))
@@ -334,6 +335,19 @@ func _test_poise_meter() -> void:
 	await get_tree().create_timer(0.2).timeout
 	assert(is_equal_approx(draining.accumulated(), 0.0))  # 100/s se lo comio todo
 	assert(not draining.take_poise_damage(5.0))           # arranca de cero otra vez: no quiebra
+
+	# Delay de gracia: dentro de la ventana el acumulado queda pisado, recien despues decae.
+	var delayed := Poise.new()
+	delayed.poise_max = 6.0
+	delayed.decay_per_second = 100.0
+	delayed.decay_delay = 0.3
+	delayed.break_levels = [1.0]
+	delayed.reset()
+	assert(not delayed.take_poise_damage(5.0))
+	await get_tree().create_timer(0.2).timeout  # adentro del delay: no decayo nada
+	assert(is_equal_approx(delayed.accumulated(), 5.0))
+	await get_tree().create_timer(0.2).timeout  # 0.4s totales: ya paso el delay, decayo 0.1s a 100/s
+	assert(is_equal_approx(delayed.accumulated(), 0.0))
 
 	# Recuperacion: sin golpes por recovery_time, la reserva vuelve al 100% (escalon 0).
 	var recovering := Poise.new()
@@ -348,6 +362,21 @@ func _test_poise_meter() -> void:
 	await get_tree().create_timer(0.25).timeout
 	assert(recovering.break_index() == 0)                          # se recompuso solo
 	assert(is_equal_approx(recovering.effective_max(false), 2.0))
+
+	# Pausa (aire/stun): mientras esta pausado no decae ni corre el recovery_time.
+	var paused := Poise.new()
+	paused.poise_max = 2.0
+	paused.decay_per_second = 100.0
+	paused.break_levels = [1.0, 0.5]
+	paused.recovery_time = 0.15
+	paused.reset()
+	assert(paused.take_poise_damage(2.0))  # quiebra: break_index 1, acumulado en 0
+	paused.set_paused(true)
+	await get_tree().create_timer(0.25).timeout  # excede recovery_time, pero esta pausado
+	assert(paused.break_index() == 1)              # no se recompuso: el reloj estaba congelado
+	paused.set_paused(false)
+	await get_tree().create_timer(0.25).timeout  # ahora si corre el recovery_time
+	assert(paused.break_index() == 0)              # recien ahora se recompone
 
 ## La identidad de hostilidad decide dano entre enemigos. La alerta temporal de un pasivo
 ## provocado no participa aqui: sus alianzas siguen siendo las de PASSIVE.
