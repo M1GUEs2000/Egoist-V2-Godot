@@ -26,7 +26,7 @@ Objetos golpeables de traversal.
 | Caracteristica | Efecto | Color |
 |---|---|---|
 | Launch / bump | Suma momentum horizontal, aplica bump vertical, restaura doble salto y airdash. | Rojo |
-| Dash | Fuerza dash hacia la cara **-Z local del bloque** (fija, no depende de por donde llega el jugador; rotar el `TraversalBlock` en el editor cambia el rumbo). Una flecha cono+vara semitransparente en esa cara muestra el rumbo. El dash **daña al atravesar** enemigos (`dash_deals_damage`, prende el `DashHitbox` del player). | Verde |
+| Dash | Fuerza dash hacia la cara **-Z local del bloque** (fija, no depende de por donde llega el jugador; rotar el `TraversalBlock` en el editor cambia el rumbo, incluida la inclinacion vertical). Una flecha cono+vara semitransparente en esa cara muestra el rumbo. Al terminar naturalmente, aplica un bop corto: momentum hacia adelante en la proyeccion horizontal de la flecha (`dash_bop_forward_speed`) y empuje hacia arriba (`dash_vertical_bop_speed`); ambos son exports por instancia y `0` los desactiva. Si el dash se cancela, no hay bop. El dash **daña al atravesar** enemigos (`dash_deals_damage`, prende el `DashHitbox` del player). | Verde |
 | Meter | Suma barras de meter al jugador. | Celeste |
 | Maldicion | Al romperse, la proxima accion cambia de mundo. | Amarillo |
 | World switch | Cambia de mundo al golpearlo. | Color del mundo destino |
