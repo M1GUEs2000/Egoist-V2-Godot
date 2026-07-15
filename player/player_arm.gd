@@ -10,14 +10,31 @@ class_name PlayerArm extends Node
 var _taps_used := 0
 var _cooldown_until := -999.0
 var _swing_id := 0
-
 var _player: Player
 
 @onready var _hitbox: Hitbox = $ArmHitbox
+@onready var _marker: MeshInstance3D = $ArmMarker
 
 func _ready() -> void:
 	if tuning == null:
 		tuning = ArmTuning.new()
+	_marker.visible = false
+
+## Punto morado sobre quien recibiria el golpe AHORA (lock-on pasivo del Brazo): no depende de
+## armas afuera ni de estar atacando, a diferencia del reticle de combate (ver LockOn._process).
+func _process(_delta: float) -> void:
+	if _player == null:
+		return
+	var target := _resolve_target()
+	_marker.visible = target != null
+	if target != null:
+		_marker.global_position = _player.lock_on.head_position(target)
+
+func _input(event: InputEvent) -> void:
+	if _player != null and _player.is_stunned():
+		return
+	if event.is_action_pressed("arm_attack"):
+		_try_tap()
 
 func setup(player: Player) -> void:
 	_player = player
@@ -25,12 +42,6 @@ func setup(player: Player) -> void:
 	_hitbox.damage = tuning.damage
 	_hitbox.stun = tuning.stun
 	_hitbox.landed.connect(_on_hit)
-
-func _input(event: InputEvent) -> void:
-	if _player != null and _player.is_stunned():
-		return
-	if event.is_action_pressed("arm_attack"):
-		_try_tap()
 
 func _try_tap() -> void:
 	if _taps_used >= tuning.max_taps:

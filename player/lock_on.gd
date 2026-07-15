@@ -92,7 +92,7 @@ func _process(_delta: float) -> void:
 	_target_landing.enabled = show
 	_target_landing.source = current_target
 	if show:
-		_reticle.global_position = _reticle_position(current_target)
+		_reticle.global_position = head_position(current_target)
 		_reticle_material.set_shader_parameter("fill", _target_health_ratio(current_target))
 
 ## Fraccion de vida restante del target (1 = intacto, 0 = a punto de morir). El shader del
@@ -180,8 +180,9 @@ func _camera_right() -> Vector3:
 	return right.normalized() if right.length_squared() > 0.0001 else Vector3.RIGHT
 
 ## Centro sobre la cabeza: AABB combinado de los MeshInstance3D del target (fallback:
-## su global_position + offset si no tiene mallas visibles).
-func _reticle_position(target: EnemyBase) -> Vector3:
+## su global_position + offset si no tiene mallas visibles). Publico: lo usa tambien el
+## marcador liviano del Brazo (ver PlayerArm) para ubicarse en el mismo punto que el reticle.
+func head_position(target: EnemyBase) -> Vector3:
 	var found := false
 	var combined := AABB()
 	for mesh in target.find_children("*", "MeshInstance3D", true):
