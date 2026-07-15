@@ -12,6 +12,7 @@ travel_time = 0.3
 hitbox_radius = 1.0
 meter_gain_on_hit = 0.01
 traversal_lock_max_range = 25.0
+traversal_lock_half_angle = 100.0
 traversal_lock_vertical_half_angle = 45.0
 teleport_duration = 0.1
 traversal_cooldown_duration = 0.0
