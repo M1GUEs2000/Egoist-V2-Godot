@@ -12,6 +12,7 @@ var _body: Player
 var _stick_until := -999.0
 var _ignore_until := -999.0
 var _move_lock_until := -999.0
+var _grace_until := -999.0
 var _wall_tangent_velocity := Vector3.ZERO
 var _mesh: MeshInstance3D
 var _glow_material: StandardMaterial3D
@@ -29,13 +30,18 @@ func apply_slide_velocity(horizontal_velocity: Vector3, input_dir: Vector3, delt
 	if World.now() < _ignore_until or _body.is_on_floor():
 		cancel()
 		return horizontal_velocity
-	if not _presses_toward_wall(input_dir, wall_normal):
+	# Assist: el slide ya no exige apretar HACIA la pared; solo se corta si el jugador
+	# dirige el stick EN CONTRA (se despega a propósito). Input neutro mantiene el deslice.
+	if _presses_away_from_wall(input_dir, wall_normal):
 		cancel()
 		return horizontal_velocity
 
 	var t := _body.tuning
-	if _body.vertical_velocity < 0.0:
-		_body.vertical_velocity += -t.gravity * (1.0 - t.wall_slide_gravity_scale) * delta
+	# Gravedad reducida SIMÉTRICA (subiendo y cayendo): entrando con momentum hacia arriba
+	# el arco sube, frena y vuelve; entrando en caída, se ralentiza y sigue bajando. Antes
+	# solo se reducía al caer, así que el momentum de subida moría a gravedad completa y no
+	# había arco genuino.
+	_body.vertical_velocity += -t.gravity * (1.0 - t.wall_slide_gravity_scale) * delta
 	if World.now() < _stick_until:
 		_body.vertical_velocity = maxf(_body.vertical_velocity, -t.wall_slide_stick_fall_speed)
 	else:
@@ -55,26 +61,31 @@ func update_after_move(horizontal_velocity: Vector3, input_dir: Vector3) -> void
 	if World.now() < _ignore_until or _body.is_on_floor():
 		cancel()
 		return
-	if not _body.is_on_wall():
+
+	var normal := _find_wall_normal()
+	var has_wall := normal.length_squared() >= 0.0001 and _body.is_on_wall()
+	if not has_wall:
+		# Contacto perdido: ventana de gracia (coyote) antes de cortar, así el estado no
+		# titila en esquinas o micro-separaciones; se mantiene con la última normal conocida.
+		if is_sliding and World.now() < _grace_until:
+			return
 		cancel()
 		return
 
-	var normal := _find_wall_normal()
-	if normal.length_squared() < 0.0001:
-		cancel()
-		return
-	if not _presses_toward_wall(input_dir, normal):
+	# Solo corta si el jugador se dirige EN CONTRA de la pared (ver apply_slide_velocity).
+	if _presses_away_from_wall(input_dir, normal):
 		cancel()
 		return
 
 	var push_speed := horizontal_velocity.dot(-normal)
-	if push_speed < _body.tuning.wall_slide_min_push_speed:
-		cancel()
+	# Para ENGANCHAR hace falta empuje real contra la pared; ya deslizando se mantiene solo.
+	if not is_sliding and push_speed < _body.tuning.wall_slide_min_push_speed:
 		return
 
 	var was_sliding := is_sliding
 	is_sliding = true
 	wall_normal = normal
+	_grace_until = World.now() + _body.tuning.wall_slide_release_grace
 	if not was_sliding:
 		_stick_until = World.now() + _body.tuning.wall_slide_stick_time
 		_set_glow(true)
@@ -157,8 +168,10 @@ func _find_wall_normal() -> Vector3:
 			return normal.normalized()
 	return Vector3.ZERO
 
-func _presses_toward_wall(input_dir: Vector3, normal: Vector3) -> bool:
+## True solo si el jugador dirige el stick claramente HACIA AFUERA de la pared (alineado con
+## la normal). Input neutro devuelve false → el slide se mantiene sin apretar (assist).
+func _presses_away_from_wall(input_dir: Vector3, normal: Vector3) -> bool:
 	input_dir.y = 0.0
 	if input_dir.length_squared() < 0.0001:
 		return false
-	return input_dir.normalized().dot(-normal) >= _body.tuning.wall_slide_input_dot
+	return input_dir.normalized().dot(normal) >= _body.tuning.wall_slide_input_dot

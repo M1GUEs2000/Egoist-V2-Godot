@@ -24,15 +24,20 @@ class_name PlayerTuning extends Resource
 ## (sin esto el estado titila frame a frame).
 @export var wall_slide_press_speed := 2.5
 ## Qué tan alineado debe estar el input con la pared para engancharse/mantenerse (0-1;
-## 1 = exactamente de frente, más bajo = más permisivo).
+## 1 = exactamente de frente, más bajo = más permisivo). Ahora solo mide cuándo el jugador
+## apunta EN CONTRA de la pared para soltarse; input neutro mantiene el slide.
 @export_range(0.0, 1.0) var wall_slide_input_dot := 0.35
+## Ventana de gracia (coyote) tras perder contacto con la pared antes de cortar el slide,
+## en segundos. Evita que el estado titile en esquinas o micro-separaciones del muro.
+@export var wall_slide_release_grace := 0.12
 ## Duración de la fase inicial "pegado": casi no cae, en segundos.
 @export var wall_slide_stick_time := 0.16
 ## Velocidad máxima de caída durante la fase pegado (m/s).
 @export var wall_slide_stick_fall_speed := 0.35
 ## Velocidad máxima de caída deslizando, después de la fase pegado (m/s).
 @export var wall_slide_max_fall_speed := 3.4
-## Fracción de la gravedad aplicada mientras eslidea (0 = no cae, 1 = gravedad completa).
+## Fracción de la gravedad aplicada mientras eslidea, tanto subiendo como cayendo
+## (0 = no cae/no frena la subida, 1 = gravedad completa). Gobierna la altura del arco.
 @export_range(0.0, 1.0) var wall_slide_gravity_scale := 0.35
 ## Frenado del momentum lateral a lo largo de la pared (m/s²). Más alto = el arco de la
 ## caída se endereza antes y terminas cayendo vertical más rápido.
