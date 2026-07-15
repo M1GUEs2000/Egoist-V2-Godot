@@ -33,6 +33,38 @@ hito: H1
 Fuente unica de verdad: `core/world.gd`. Nadie hardcodea el color en un `.tscn` ni en su
 propio script. Cada color tiene su par `_EMISSION` (mas apagado) para el glow.
 
+## Piezas de Structures: pintado por afiliacion
+
+Las piezas greybox del pack modular de Structures se tiñen con las **texturas prototipo**
+(pack CC0 de Kenney, `assets/textures/kenney_prototype-textures/`), no con color plano. Cada
+afiliacion mapea a un color del pack, y `World` las expone como constantes + helpers:
+
+```gdscript
+World.PROTOTYPE_TEXTURE_LIVING  # naranja  -> mundo vivo
+World.PROTOTYPE_TEXTURE_DEAD    # morado   -> mundo muerto
+World.PROTOTYPE_TEXTURE_BOTH    # gris claro -> pieza en ambos mundos (Mode.BOTH)
+World.PROTOTYPE_TEXTURE_NONE    # verde    -> pieza SIN afiliacion de mundo
+
+World.prototype_material(texture)        # StandardMaterial3D triplanar (las piezas del
+                                         # pack no traen UVs pensadas para esta grilla)
+World.paint_all_surfaces(root, material) # pinta cada superficie de cada MeshInstance3D
+```
+
+Quien pinta segun quien tenga el modulo:
+
+- Pieza **con `WorldMembership`**: el modulo pinta solo si su export `paint_prototype_material`
+  esta en `true` (apagado por default: `WorldMembership` tambien vive en enemigos, que pintan
+  su propio color en `EnemyBase` y no deben ser pisados). El color sale de `mode`/`affiliation`:
+  naranja si `LIVING`, morado si `DEAD`, gris claro si `Mode.BOTH` (ignora `affiliation`). Se
+  repinta cuando cambia el mundo, junto al resto de `_apply_world`.
+- Pieza **sin `WorldMembership`**: lleva el modulo hijo `PrototypeDefaultPaint`, que la pinta de
+  **verde** en `_ready`. Verde = "esta pieza no participa del sistema de mundos".
+
+> [!note] Triplanar y superficies
+> El material es triplanar a proposito (las UVs del pack modular no calzan con la grilla). El
+> pintado recorre **todas** las superficies de cada mesh, no solo la 0 — `surface_override_material`
+> es indexada, se escribe con `set_surface_override_material(idx, mat)`.
+
 ```gdscript
 # Mundo
 const COLOR_LIVING            := Color(1.0, 0.55, 0.05)  # naranja
@@ -74,6 +106,8 @@ World.world_emission(kind) -> Color   # glow
 | `TraversalBlock` | Neutro / destino | `World` + `TraversalBlockTuning` |
 | `SpikeWall` | Ambos (`world`) | `World.world_color()` |
 | `WorldScan` (onda del switch) | Destino | `World.world_emission()` (ver [[World Switch]]) |
+| Piezas de Structures (con `WorldMembership`) | Segun `mode`/`affiliation` | `WorldMembership.paint_prototype_material` + texturas prototipo |
+| Piezas de Structures (sin `WorldMembership`) | Ninguno (verde) | `PrototypeDefaultPaint` |
 
 ## WorldEnvironment con glow
 

@@ -33,6 +33,11 @@ const SMOKE_TUNING: Resource = preload("res://data/other_world_smoke_tuning.tres
 @export var affiliation := World.Kind.LIVING
 @export var hide_when_inactive := true
 @export var shift_interval := 3.0  # solo Mode.TIMED
+## Pinta los meshes del dueño con la textura prototipo de Kenney segun mode/affiliation
+## (naranja=vivo, morado=muerto, light=Mode.BOTH; ver [[Colores de mundo]]). Apagado por
+## default: WorldMembership tambien vive en enemigos, que pintan su propio color en
+## EnemyBase — esto no debe pisarlos salvo que la pieza lo pida explicitamente.
+@export var paint_prototype_material := false
 ## Muestra humo abstracto del mundo opuesto cuando el dueño esta inactivo en el mundo actual.
 @export var other_world_echo_enabled := true
 ## Particulas que componen el contorno de humo.
@@ -395,8 +400,19 @@ func _apply_world(world: World.Kind) -> void:
 	is_active = mode == Mode.BOTH or world == affiliation
 	if hide_when_inactive:
 		_apply_visibility()
+	_paint_prototype()
 	_update_other_world_echo(0.0)
 	changed.emit(is_active)
+
+## Textura fija por mode/affiliation, no por is_active: la pieza se lee del mismo color
+## este o no en su mundo actual (el eco de cascara ya comunica eso por su cuenta).
+func _paint_prototype() -> void:
+	if not paint_prototype_material or _target == null:
+		return
+	var texture := World.PROTOTYPE_TEXTURE_BOTH
+	if mode != Mode.BOTH:
+		texture = World.PROTOTYPE_TEXTURE_LIVING if affiliation == World.Kind.LIVING else World.PROTOTYPE_TEXTURE_DEAD
+	World.paint_all_surfaces(_target, World.prototype_material(texture))
 
 func _apply_visibility() -> void:
 	if _target == null:

@@ -1,0 +1,105 @@
+[gd_scene load_steps=8 format=3]
+
+[ext_resource type="Script" path="res://core/world_membership.gd" id="1_membership"]
+[ext_resource type="Script" path="res://core/prototype_default_paint.gd" id="2_default_paint"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_cube"]
+size = Vector3(2, 2, 2)
+
+[sub_resource type="BoxMesh" id="BoxMesh_cube"]
+size = Vector3(2, 2, 2)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_floor"]
+size = Vector3(24, 1, 8)
+
+[sub_resource type="BoxMesh" id="BoxMesh_floor"]
+size = Vector3(24, 1, 8)
+
+[sub_resource type="Environment" id="Env_demo"]
+background_mode = 1
+background_color = Color(0.5, 0.55, 0.6, 1)
+ambient_light_source = 2
+ambient_light_color = Color(0.5, 0.5, 0.5, 1)
+tonemap_mode = 2
+
+[node name="PrototypePaintDemo" type="Node3D"]
+
+[node name="Floor" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.5, 0)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Floor"]
+shape = SubResource("BoxShape3D_floor")
+
+[node name="Mesh" type="MeshInstance3D" parent="Floor"]
+mesh = SubResource("BoxMesh_floor")
+
+[node name="CubeDead" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -9, 1, 0)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="CubeDead"]
+shape = SubResource("BoxShape3D_cube")
+
+[node name="Mesh" type="MeshInstance3D" parent="CubeDead"]
+mesh = SubResource("BoxMesh_cube")
+
+[node name="WorldMembership" type="Node" parent="CubeDead"]
+script = ExtResource("1_membership")
+affiliation = 1
+paint_prototype_material = true
+other_world_echo_enabled = false
+hide_when_inactive = false
+
+[node name="CubeLiving" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3, 1, 0)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="CubeLiving"]
+shape = SubResource("BoxShape3D_cube")
+
+[node name="Mesh" type="MeshInstance3D" parent="CubeLiving"]
+mesh = SubResource("BoxMesh_cube")
+
+[node name="WorldMembership" type="Node" parent="CubeLiving"]
+script = ExtResource("1_membership")
+affiliation = 0
+paint_prototype_material = true
+other_world_echo_enabled = false
+hide_when_inactive = false
+
+[node name="CubeBoth" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3, 1, 0)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="CubeBoth"]
+shape = SubResource("BoxShape3D_cube")
+
+[node name="Mesh" type="MeshInstance3D" parent="CubeBoth"]
+mesh = SubResource("BoxMesh_cube")
+
+[node name="WorldMembership" type="Node" parent="CubeBoth"]
+script = ExtResource("1_membership")
+mode = 1
+paint_prototype_material = true
+other_world_echo_enabled = false
+hide_when_inactive = false
+
+[node name="CubeNone" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 9, 1, 0)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="CubeNone"]
+shape = SubResource("BoxShape3D_cube")
+
+[node name="Mesh" type="MeshInstance3D" parent="CubeNone"]
+mesh = SubResource("BoxMesh_cube")
+
+[node name="PrototypeDefaultPaint" type="Node" parent="CubeNone"]
+script = ExtResource("2_default_paint")
+
+[node name="Camera3D" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.906308, 0.42262, 0, -0.42262, 0.906308, 0, 5, 16)
+fov = 55.0
+
+[node name="Sun" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.707107, -0.5, 0.5, 0, 0.707107, 0.707107, -0.707107, -0.5, 0.5, 0, 10, 0)
+shadow_enabled = true
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Env_demo")
