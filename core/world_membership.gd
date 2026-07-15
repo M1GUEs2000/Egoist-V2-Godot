@@ -218,6 +218,9 @@ func _update_shell(color: Color) -> void:
 		material.set_shader_parameter("rim_energy", rim_energy)
 		material.set_shader_parameter("rim_sharpness", _smoke_float(&"rim_sharpness", other_world_rim_sharpness))
 		material.set_shader_parameter("fill_energy", fill_energy)
+		# Opacidad separada del glow: visible_pulse ya esta acotada 0..1, asi que rampea
+		# durante TODO el pulso en vez de saturarse apenas rim_energy cruza 1.0 (ver shader).
+		material.set_shader_parameter("rim_alpha", visible_pulse)
 
 ## Estela: copias del mesh que quedan CLAVADAS donde pasó el cuerpo (por eso cuelgan de un host
 ## fijo en la escena y no del dueño — si fueran hijas suyas lo seguirian y no habria estela).
@@ -234,14 +237,17 @@ func _spawn_afterimage(color: Color, lifetime: float) -> void:
 		material.set_shader_parameter("rim_energy", afterimage_rim_energy)
 		material.set_shader_parameter("rim_sharpness", other_world_rim_sharpness)
 		material.set_shader_parameter("fill_energy", 0.0)  # la estela es contorno puro
+		material.set_shader_parameter("rim_alpha", 1.0)
 		var ghost := MeshInstance3D.new()
 		ghost.mesh = mesh.mesh
 		ghost.material_override = material
 		_afterimage_host.add_child(ghost)
 		ghost.global_transform = mesh.global_transform  # despues de entrar al arbol
 		var fade := ghost.create_tween()
+		fade.set_parallel(true)
 		fade.tween_property(material, "shader_parameter/rim_energy", 0.0, lifetime)
-		fade.tween_callback(ghost.queue_free)
+		fade.tween_property(material, "shader_parameter/rim_alpha", 0.0, lifetime)
+		fade.chain().tween_callback(ghost.queue_free)
 
 ## El eco se vuelve hermano del dueño en la escena, no hijo suyo: asi sigue siendo visible cuando
 ## hide_when_inactive apaga la estructura real. Es la misma lectura abstracta para enemigos y mundo.

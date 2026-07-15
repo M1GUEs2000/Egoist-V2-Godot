@@ -582,6 +582,12 @@ func apply_spike_hit(damage: float, push_direction: Vector3, stun: StunSettings,
 func _on_membership_changed(active_now: bool) -> void:
 	_is_active = active_now
 	collision_layer = World.LAYER_ENEMY if _is_active else 0
+	# La colision fisica es un OR bidireccional (A.layer & B.mask != 0 o B.layer & A.mask != 0):
+	# vaciar solo collision_layer no basta, porque el mask del enemigo seguia incluyendo al jugador
+	# y esa direccion sola ya bastaba para que siguiera siendo solido en el otro mundo. Inactivo solo
+	# necesita seguir chocando contra el piso/paredes (sigue roameando, ver tick_base).
+	collision_mask = (World.LAYER_WORLD | World.LAYER_PLAYER | World.LAYER_ENEMY) \
+			if _is_active else World.LAYER_WORLD
 	if hurtbox != null:
 		# El switch puede venir desde un golpe/pickup (callback de area_entered), o sea
 		# durante el flush de queries de fisica, donde el motor BLOQUEA set_monitorable.
