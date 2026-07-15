@@ -76,7 +76,7 @@ func _fire() -> void:
 	if parent == null:
 		parent = _owner.get_parent()
 	parent.add_child(projectile)
-	projectile.launch(origin, dir, _target, _owner, projectile_speed, homing_turn_rate,
+rr	projectile.launch(origin, dir, _target, _owner, projectile_speed, homing_turn_rate,
 			projectile_damage, projectile_lifetime, stun, player_stun_push_speed,
 			player_stun_push_vertical_speed)
 

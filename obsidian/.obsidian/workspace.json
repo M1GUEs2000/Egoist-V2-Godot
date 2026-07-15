@@ -27,12 +27,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "Gameplay/Armas/Mazo.md",
+                "file": "Tareas/backlog.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "Mazo"
+              "title": "backlog"
             }
           }
         ],
@@ -197,6 +197,8 @@
   },
   "active": "98dbec3731a6bae9",
   "lastOpenFiles": [
+    "Bases/Hitos.base",
+    "Bases/Sistemas.base",
     "Gameplay/Armas/Espada.md",
     "Gameplay/Armas/Armas.md",
     "Diccionario.md",

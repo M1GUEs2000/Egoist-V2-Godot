@@ -1,9 +1,9 @@
-[gd_resource type="Resource" script_class="StunSettings" load_steps=2 format=3]
+[gd_resource type="Resource" script_class="StunSettings" format=3 uid="uid://eyi1a88usmmc"]
 
-[ext_resource type="Script" path="res://data/stun_settings.gd" id="1_stun"]
+[ext_resource type="Script" uid="uid://w0b3i18w442a" path="res://data/stun_settings.gd" id="1_stun"]
 
 [resource]
 script = ExtResource("1_stun")
 poise_damage = 0.75
-grounded = 1.0
-airborne = 1.0
+grounded = 0.7
+airborne = 0.3
