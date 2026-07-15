@@ -25,13 +25,14 @@
             "id": "98dbec3731a6bae9",
             "type": "leaf",
             "state": {
-              "type": "bases",
+              "type": "markdown",
               "state": {
-                "file": "Bases/Sistemas.base",
-                "viewName": "Sistemas por estado"
+                "file": "Tareas/ideas.md",
+                "mode": "source",
+                "source": false
               },
-              "icon": "lucide-table",
-              "title": "Sistemas"
+              "icon": "lucide-file",
+              "title": "ideas"
             }
           }
         ],
@@ -197,6 +198,11 @@
   "active": "98dbec3731a6bae9",
   "lastOpenFiles": [
     "Gameplay/Traversal/Colores de mundo.md.tmp.23728.b61339855631",
+    "Gameplay/Traversal/Grieta.md",
+    "Gameplay/Camara/Camara.md",
+    "Gameplay/Camara",
+    "Tareas/backlog.md.tmp.4928.51cd2b2b2eda",
+    "Bases/Sistemas.base",
     "Bases/Hitos.base",
     "tareas.md",
     "README.md",
@@ -217,9 +223,6 @@
     "Tareas/H0 - Fundacion.md",
     "README.md.tmp.5296.e1f62d172be8",
     "README.md.tmp.5296.d09a735e7090",
-    "Tareas/hitos.md.tmp.5296.d749bf9bac94",
-    "Bases/Tareas.base",
-    "Bases/Sistemas.base",
     "Tareas/Pendientes e Ideas.md",
     "Tareas/Roadmap Futuro.md",
     "Gameplay/Brazo/brazo-combate.md",
@@ -230,7 +233,6 @@
     "Gameplay/Traversal/Reset Aereo por Kill.md",
     "Gameplay/Traversal/Traversal.md",
     "Gameplay/Traversal/Colores de mundo.md",
-    "Gameplay/Traversal/Landing Indicator.md",
-    "Gameplay/Traversal/Occlusion Fade de Camara.md"
+    "Gameplay/Traversal/Landing Indicator.md"
   ]
 }
