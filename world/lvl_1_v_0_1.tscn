@@ -65,7 +65,7 @@ glow_bloom = 0.1
 [node name="Lvl1 v0_1" type="Node3D" unique_id=149798636]
 
 [node name="Player" parent="." unique_id=1407604159 instance=ExtResource("1_ay86g")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.32819128, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.8423097, 7.674101, -21.650055)
 
 [node name="Vivo" type="StaticBody3D" parent="." unique_id=589895606]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.5035, 0, 0)
@@ -3340,7 +3340,7 @@ paint_prototype_material = true
 metadata/_custom_type_script = "uid://cr2mf5ypgksws"
 
 [node name="Piso 9x9_5" type="StaticBody3D" parent="." unique_id=914146018]
-transform = Transform3D(-3.3937813e-08, -0.7764068, -0.6302322, 1, -4.371139e-08, 1.4652805e-15, -2.7548325e-08, -0.6302322, 0.7764068, 4.6553345, 3.397768, -41.00458)
+transform = Transform3D(-3.3937813e-08, -0.7764068, -0.6302322, 1, -4.371139e-08, 1.4652805e-15, -2.7548325e-08, -0.6302322, 0.7764068, 7.739212, 3.397768, -38.498936)
 
 [node name="Piso 3x3_" type="StaticBody3D" parent="Piso 9x9_5" unique_id=8124830]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -1.719, 0)

@@ -48,9 +48,14 @@ func _on_area_entered(area: Area3D) -> void:
 		return
 	if source != null and hurtbox.owner_node == source:
 		return
-	_already_hit.append(hurtbox)
 	var direction := (hurtbox.global_position - global_position).normalized()
 	var target := hurtbox.owner_node
+	var attacker_enemy := source as EnemyBase
+	var target_enemy := target as EnemyBase
+	if attacker_enemy != null and target_enemy != null \
+			and not EnemyBase.can_damage_enemy(attacker_enemy, target_enemy):
+		return
+	_already_hit.append(hurtbox)
 	# Parry: si el dueño puede parriar ESTE golpe ahora mismo (melee mid-swing en su ventana),
 	# se auto-stunea y el golpe NO hace daño (ex WeaponTraceHitbox: TryParry antes de TakeHit).
 	if can_be_parried and target != null and target.has_method("try_parry") \

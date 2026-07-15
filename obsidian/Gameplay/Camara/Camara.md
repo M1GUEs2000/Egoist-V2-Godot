@@ -41,6 +41,14 @@ stick dentro de un rango acotado. No incluye el occlusion fade (vive aparte, ver
   esta tarea). "La posicion central varia por area" queda pendiente — falta un mecanismo
   (marcador de zona que le escriba `center_yaw` a `CameraRig` al entrar el jugador). Ver
   Pendiente mas abajo.
+- **Seguimiento vertical con tope**: la camara sigue al target en Y solo dentro de
+  `vertical_follow_limit` metros desde la ultima altura "asentada" (`CameraRig._vertical_anchor`,
+  que se re-ancla mientras el target esta dentro del tope). Pasado el tope se congela: el jugador
+  sale de cuadro en vertical (sube/baja) en vez de que la camara lo persiga sin fin — pensado para
+  tramos donde se sube mucho de golpe (Brazo, launcher). `vertical_follow_limit <= 0` desactiva el
+  tope (sigue siempre, comportamiento previo al rework). `CameraVerticalZone` (`visual/camera_vertical_zone.gd`,
+  Area3D en capa jugador) apila un tope distinto por area via `CameraRig.push_vertical_limit`/
+  `pop_vertical_limit` (grupo `"camera_rig"`); zonas anidadas usan la mas reciente.
 
 ## Input
 
@@ -64,6 +72,8 @@ Acciones nuevas en `project.godot`:
 | `recenter_delay` | Segundos sin input antes de empezar a recentrar |
 | `recenter_speed` | Suavizado del recentrado |
 | `input_deadzone` | Zona muerta del eje del stick |
+| `lock_focus_weight` | Con lock activo, cuanto se corre el punto de mira del jugador hacia el target (0=jugador, 1=target) |
+| `vertical_follow_limit` | Tope en metros del seguimiento vertical antes de congelarse (<=0 = sin tope). Default 10 |
 
 ## Pendiente
 

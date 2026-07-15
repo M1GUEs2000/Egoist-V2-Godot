@@ -141,7 +141,9 @@ func _on_body_entered(body: Node3D) -> void:
 			WorldManager.switch_world(global_position)
 		queue_free()
 	elif body is EnemyBase:
-		(body as EnemyBase).take_hit_from_enemy(_enemy_hits, _velocity.normalized(), _stun)
+		var enemy := body as EnemyBase
+		var enemy_shooter := _shooter as EnemyBase
+		enemy.take_hit_from_enemy(_enemy_hits, _velocity.normalized(), _stun, enemy_shooter)
 		queue_free()
 	else:
 		var collider := body as CollisionObject3D
@@ -156,6 +158,12 @@ func _on_area_entered(area: Area3D) -> void:
 		return
 	if hurtbox.owner_node == self:
 		return  # mi propia superficie parryable: el proyectil no se dispara a si mismo
+	var enemy_shooter := _shooter as EnemyBase
+	var enemy_target := hurtbox.owner_node as EnemyBase
+	if enemy_shooter != null and enemy_target != null \
+			and not EnemyBase.can_damage_enemy(enemy_shooter, enemy_target):
+		queue_free()
+		return
 	var amount := _enemy_hits if hurtbox.owner_node is EnemyBase else _damage
 	hurtbox.receive_hit(_shooter, amount, _velocity.normalized(), _stun)
 	queue_free()

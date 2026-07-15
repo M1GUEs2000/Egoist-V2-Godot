@@ -34,6 +34,10 @@ func can_receive_hit() -> bool:
 func receive_hit(from: Node, damage: float, _hit_direction: Vector3, _stun: StunSettings) -> bool:
 	if not can_receive_hit():
 		return false
+	var attacker := from as EnemyBase
+	var target := owner_node as EnemyBase
+	if attacker != null and target != null and not EnemyBase.can_damage_enemy(attacker, target):
+		return false
 	if owner_node.has_method("on_hurtbox_hit"):
 		owner_node.call("on_hurtbox_hit", from, damage, _hit_direction, _stun)
 	hit.emit(from, damage)

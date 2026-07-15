@@ -12,14 +12,24 @@ class_name CameraRig extends Node3D
 ## LockOn.cycle_target vía Player._unhandled_input) y el yaw pasa a mirar "hacia atrás" del
 ## target lockeado, mientras el punto de mira se corre del jugador hacia el target según
 ## `tuning.lock_focus_weight` — encuadra a los dos, como en Dark Souls.
+##
+## Seguimiento vertical: el punto de mira sigue al target en Y solo dentro de
+## `tuning.vertical_follow_limit` metros desde la última altura "asentada" (`_vertical_anchor`,
+## que se re-ancla solo mientras el target está dentro del tope). Pasado el tope se congela: el
+## jugador sale de cuadro en vertical en vez de que la cámara lo persiga sin fin. `CameraVerticalZone`
+## puede apilar un tope distinto por área (`push_vertical_limit`/`pop_vertical_limit`).
 
 @export var target: Node3D
 @export var tuning: CameraTuning
 
 var _snapped := false
 var _yaw_offset := 0.0
+var _vertical_anchor := 0.0
+var _vertical_anchor_set := false
+var _vertical_overrides: Array[float] = []
 
 func _ready() -> void:
+	add_to_group("camera_rig")  # CameraVerticalZone me encuentra por grupo
 	# El export de nodo puede llegar null (referencia rota / escena instanciada por código):
 	# fallback al grupo "player", que es el cableado nativo de Godot.
 	if target == null:
@@ -42,7 +52,9 @@ func _update_free(delta: float) -> void:
 	var yaw := tuning.center_yaw + _yaw_offset
 	var offset := Basis(Vector3.UP, deg_to_rad(yaw)) \
 			* (Basis(Vector3.RIGHT, deg_to_rad(-tuning.pitch)) * Vector3(0.0, 0.0, tuning.distance))
-	_move_to(target.global_position + offset, target.global_position, delta)
+	var follow_point := target.global_position
+	follow_point.y = _clamp_vertical(follow_point.y)
+	_move_to(follow_point + offset, follow_point, delta)
 
 ## Encuadra jugador + target: la cámara orbita el punto de mira (entre ambos, ver
 ## `lock_focus_weight`) parada del lado opuesto al target respecto del jugador.
@@ -57,6 +69,7 @@ func _update_locked(delta: float, enemy: EnemyBase) -> void:
 	var offset := Basis(Vector3.UP, deg_to_rad(yaw)) \
 			* (Basis(Vector3.RIGHT, deg_to_rad(-tuning.pitch)) * Vector3(0.0, 0.0, tuning.distance))
 	var focus := target.global_position.lerp(enemy.global_position, tuning.lock_focus_weight)
+	focus.y = _clamp_vertical(focus.y)
 	_move_to(focus + offset, focus, delta)
 
 func _move_to(desired: Vector3, look_at_point: Vector3, delta: float) -> void:
@@ -67,6 +80,33 @@ func _move_to(desired: Vector3, look_at_point: Vector3, delta: float) -> void:
 		_snapped = true
 	if global_position.distance_squared_to(look_at_point) > 0.0001:
 		look_at(look_at_point, Vector3.UP)
+
+## Tope de seguimiento vertical activo: el de la zona más reciente si hay alguna apilada,
+## si no el default del tuning.
+func _current_vertical_limit() -> float:
+	return _vertical_overrides.back() if not _vertical_overrides.is_empty() else tuning.vertical_follow_limit
+
+## Sigue a `true_y` mientras esté a `limit` metros o menos del ancla; más allá, congela el ancla
+## y clampea — la cámara deja de subir/bajar hasta que el target vuelva a estar cerca de esa altura.
+func _clamp_vertical(true_y: float) -> float:
+	if not _vertical_anchor_set:
+		_vertical_anchor = true_y
+		_vertical_anchor_set = true
+	var limit := _current_vertical_limit()
+	if limit <= 0.0:
+		_vertical_anchor = true_y
+		return true_y
+	if absf(true_y - _vertical_anchor) <= limit:
+		_vertical_anchor = true_y
+	return clampf(true_y, _vertical_anchor - limit, _vertical_anchor + limit)
+
+## Apila un tope distinto (lo usa `CameraVerticalZone` al entrar el jugador). Con zonas anidadas
+## manda la más reciente; al salir de la de más adentro, vuelve a la anterior.
+func push_vertical_limit(limit: float) -> void:
+	_vertical_overrides.append(limit)
+
+func pop_vertical_limit(limit: float) -> void:
+	_vertical_overrides.erase(limit)
 
 func _update_yaw_offset(delta: float) -> void:
 	var input := Input.get_axis("camera_left", "camera_right")

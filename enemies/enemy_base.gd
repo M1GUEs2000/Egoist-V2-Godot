@@ -6,6 +6,20 @@ enum Hostility { PASSIVE, REACTIVE, AGGRESSIVE, ULTRA_AGGRESSIVE }
 enum CombatState { NORMAL, STUNNED, ARMORED }
 enum AirState { GROUNDED, AIRBORNE }
 
+## La identidad de hostilidad define las alianzas de dano. No se usa la alerta temporal:
+## un pasivo provocado sigue siendo pasivo para que los agresivos no pasen a ser aliados suyos.
+static func can_damage_enemy(attacker: EnemyBase, target: EnemyBase) -> bool:
+	if attacker == null or target == null or attacker == target:
+		return false
+	match attacker.hostility:
+		Hostility.PASSIVE, Hostility.REACTIVE:
+			return target.hostility in [Hostility.AGGRESSIVE, Hostility.ULTRA_AGGRESSIVE]
+		Hostility.AGGRESSIVE:
+			return target.hostility != Hostility.AGGRESSIVE
+		Hostility.ULTRA_AGGRESSIVE:
+			return true
+	return false
+
 @export var hostility := Hostility.AGGRESSIVE
 @export var alert_radius := 8.0
 @export var initial_combat_state := CombatState.NORMAL
@@ -350,8 +364,11 @@ func tick_base(delta: float) -> bool:
 	# colision/hurtbox/visual (ver WorldMembership), no la simulacion.
 	return true
 
-func take_hit_from_enemy(hits: float = 1.0, hit_direction: Vector3 = Vector3.ZERO, stun: StunSettings = null) -> bool:
+func take_hit_from_enemy(hits: float = 1.0, hit_direction: Vector3 = Vector3.ZERO,
+		stun: StunSettings = null, attacker: EnemyBase = null) -> bool:
 	if not can_receive_hit() or health == null:
+		return false
+	if attacker != null and not can_damage_enemy(attacker, self):
 		return false
 	if hit_direction.length_squared() > 0.0001:
 		_last_hit_direction = hit_direction.normalized()
@@ -607,12 +624,19 @@ func on_hurtbox_hit(from: Node, damage: float, hit_direction: Vector3, stun: Stu
 	_play_hit_sparks()
 	if hostility == Hostility.PASSIVE:
 		_on_passive_attacked(from)
+	elif from is EnemyBase:
+		react_to_enemy_attack(from)
 	if is_armored():
 		_damage_armor(int(ceil(damage)))
 	_apply_stun_from_settings(stun)
 
-func _on_passive_attacked(_from: Node) -> void:
-	_provoke_nearby()
+func _on_passive_attacked(from: Node) -> void:
+	_provoke_nearby(from)
+
+## Gancho de IA: GroundedEnemy fija al atacante como objetivo temporal. La base conserva
+## la identidad de hostilidad y permite que otros tipos de enemigo ignoren esta reaccion.
+func react_to_enemy_attack(_attacker: Node) -> void:
+	pass
 
 func _apply_stun_from_settings(stun: StunSettings) -> void:
 	if stun == null:
@@ -628,8 +652,7 @@ func _damage_armor(hits: int) -> void:
 	_armor_hits_taken = 0
 	_refresh_visual_state()
 
-func _provoke_nearby() -> void:
-	hostility = Hostility.AGGRESSIVE
+func _provoke_nearby(attacker: Node) -> void:
 	for node in get_tree().get_nodes_in_group("enemy"):
 		var enemy := node as EnemyBase
 		if enemy == null or enemy == self or enemy.is_dead():
@@ -637,7 +660,7 @@ func _provoke_nearby() -> void:
 		if enemy.hostility != Hostility.PASSIVE:
 			continue
 		if global_position.distance_to(enemy.global_position) <= alert_radius:
-			enemy.hostility = Hostility.AGGRESSIVE
+			enemy.react_to_enemy_attack(attacker)
 
 func _update_combat_state() -> void:
 	if combat_state == CombatState.STUNNED and World.now() >= _stunned_until:

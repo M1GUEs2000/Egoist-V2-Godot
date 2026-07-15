@@ -1,7 +1,6 @@
 [gd_scene format=3 uid="uid://crrg4ksomcwea"]
 
 [ext_resource type="Script" uid="uid://7jtuoxscym8d" path="res://world/test_scene.gd" id="1_scene"]
-[ext_resource type="PackedScene" uid="uid://c86f5pa1mwdn7" path="res://assets/assets_por_aprobar/Structures/PSX_Dungeon/PSX_Dungeon/Models/Arch.fbx" id="2_ook8m"]
 [ext_resource type="PackedScene" uid="uid://bf1ikbdvqburt" path="res://player/player.tscn" id="2_player"]
 [ext_resource type="Script" uid="uid://bm6520nqu8q3f" path="res://visual/camera_rig.gd" id="3_camrig"]
 [ext_resource type="Script" uid="uid://cr2mf5ypgksws" path="res://core/world_membership.gd" id="4_membership"]
@@ -71,9 +70,6 @@ glow_bloom = 0.1
 
 [node name="TestScene" type="Node3D" unique_id=1118309263]
 script = ExtResource("1_scene")
-
-[node name="Arch" parent="." unique_id=1426346342 instance=ExtResource("2_ook8m")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -14.818089, -7.6293945e-06, 85.76109)
 
 [node name="Floor" type="StaticBody3D" parent="." unique_id=516349101]
 transform = Transform3D(0.49, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.5, 0)

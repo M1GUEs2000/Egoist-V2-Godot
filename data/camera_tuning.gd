@@ -23,3 +23,10 @@ class_name CameraTuning extends Resource
 ## Con lock activo, la cámara mira a un punto entre jugador y target en vez de solo al jugador.
 ## 0 = solo jugador, 1 = solo target, 0.5 = punto medio.
 @export_range(0.0, 1.0, 0.05) var lock_focus_weight := 0.5
+
+@export_group("Seguimiento vertical")
+## Cuántos metros por sobre/bajo de la última altura "asentada" sigue la cámara al target antes
+## de congelarse: pasado el tope, deja de subir/bajar y el jugador sale de cuadro en vertical en
+## vez de que la cámara lo persiga (ej. subiendo agarrado de algo). <= 0 desactiva el tope (sigue
+## siempre, como antes). Sobreescribible por área con `CameraVerticalZone`.
+@export_range(0.0, 60.0, 0.5) var vertical_follow_limit := 10.0

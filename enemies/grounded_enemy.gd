@@ -310,11 +310,21 @@ func try_parry(player_ref: Player, hit_direction: Vector3 = Vector3.ZERO) -> boo
 	return false
 
 func _on_passive_attacked(from: Node) -> void:
-	var attacker := from as Node3D
-	if attacker != null:
-		_forced_target = attacker
-	_passive_provoked_until = World.now() + _memory_for_hostility(Hostility.PASSIVE)
-	hostility = Hostility.AGGRESSIVE
+	super._on_passive_attacked(from)
+	react_to_enemy_attack(from)
+
+## La represalia solo aparece despues de recibir un golpe valido. La afiliacion queda intacta;
+## _effective_hostility transforma temporalmente el comportamiento del pasivo, no su alianza.
+func react_to_enemy_attack(attacker: Node) -> void:
+	var enemy_attacker := attacker as EnemyBase
+	if enemy_attacker != null and not EnemyBase.can_damage_enemy(self, enemy_attacker):
+		return
+	var attacker_node := attacker as Node3D
+	if attacker_node == null:
+		return
+	_forced_target = attacker_node
+	if _base_hostility == Hostility.PASSIVE:
+		_passive_provoked_until = World.now() + _memory_for_hostility(Hostility.PASSIVE)
 
 func _update_fsm(delta: float, effective_hostility: int) -> void:
 	blackboard.clear_intent()
@@ -414,9 +424,9 @@ func _acquire_target() -> Node3D:
 		return null
 	if _forced_target != null and is_instance_valid(_forced_target):
 		return _forced_target
-	if _base_hostility == Hostility.PASSIVE and hostility == Hostility.AGGRESSIVE:
+	if _base_hostility == Hostility.PASSIVE:
 		return null
-	if hostility != Hostility.ULTRA_AGGRESSIVE:
+	if hostility != Hostility.AGGRESSIVE and hostility != Hostility.ULTRA_AGGRESSIVE:
 		return _player
 	_current_target = _best_target_by_utility()
 	return _current_target
@@ -440,15 +450,17 @@ func _best_target_by_utility() -> Node3D:
 			best_score = score
 	return best
 
-## Todo lo que este berserker considera golpeable: el jugador y cualquier otro enemigo vivo del
-## mundo actual. Los muertos ya salieron del grupo "enemy" (EnemyBase._die), asi que no aparecen.
+## Agresivos y ultras comparan jugador y enemigos que su alianza les permite danar. Los muertos
+## ya salieron del grupo "enemy" (EnemyBase._die), asi que no aparecen.
 func _target_candidates() -> Array[Node3D]:
 	var candidates: Array[Node3D] = []
 	if _player != null:
 		candidates.append(_player)
 	for node in get_tree().get_nodes_in_group("enemy"):
 		var enemy := node as EnemyBase
-		if enemy == null or enemy == self or not enemy.is_active_in_current_world():
+		if enemy == null or not enemy.is_active_in_current_world():
+			continue
+		if not EnemyBase.can_damage_enemy(self, enemy):
 			continue
 		candidates.append(enemy)
 	return candidates
@@ -742,7 +754,6 @@ func _update_passive_memory() -> void:
 		return
 	if World.now() < _passive_provoked_until:
 		return
-	hostility = Hostility.PASSIVE
 	_forced_target = null
 
 func _memory_for_hostility(value: int) -> float:

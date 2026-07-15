@@ -6,6 +6,7 @@ extends Node3D
 
 func _ready() -> void:
 	await _test_poise_meter()
+	_test_enemy_damage_affinity()
 
 	var player := (load("res://player/player.tscn") as PackedScene).instantiate() as Player
 	add_child(player)
@@ -300,3 +301,28 @@ func _test_poise_meter() -> void:
 	await get_tree().create_timer(0.25).timeout
 	assert(recovering.break_index() == 0)                          # se recompuso solo
 	assert(is_equal_approx(recovering.effective_max(false), 2.0))
+
+## La identidad de hostilidad decide dano entre enemigos. La alerta temporal de un pasivo
+## provocado no participa aqui: sus alianzas siguen siendo las de PASSIVE.
+func _test_enemy_damage_affinity() -> void:
+	var profiles: Array[EnemyBase] = []
+	for hostility in [
+		EnemyBase.Hostility.PASSIVE,
+		EnemyBase.Hostility.REACTIVE,
+		EnemyBase.Hostility.AGGRESSIVE,
+		EnemyBase.Hostility.ULTRA_AGGRESSIVE,
+	]:
+		var enemy := EnemyBase.new()
+		enemy.hostility = hostility
+		profiles.append(enemy)
+	var expected := [
+		[false, false, true, true],
+		[false, false, true, true],
+		[true, true, false, true],
+		[true, true, true, true],
+	]
+	for attacker_index in range(profiles.size()):
+		for target_index in range(profiles.size()):
+			assert(EnemyBase.can_damage_enemy(
+					profiles[attacker_index], profiles[target_index]
+			) == expected[attacker_index][target_index])
