@@ -329,8 +329,8 @@ func is_ragdolling() -> bool:
 ## golpe la va a cobrar despues en on_hurtbox_hit. Los que corren DESPUES del golpe (push, slam,
 ## slam_arc, en landed) no lo pasan: para entonces el stun ya entro y alcanza con is_stunned().
 func _breaks_poise(stun: StunSettings = null) -> bool:
-	if is_stunned():
-		return true  # la reserva ya esta quebrada: el juggle y los combos entran directo
+	if is_stunned() or _ragdolling:
+		return true  # reserva ya quebrada (stun) o cuerpo caido (ragdoll): el juggle entra directo
 	if stun == null or poise == null:
 		return false
 	return poise.would_break(stun.poise_damage, is_armored())
@@ -437,8 +437,13 @@ func set_armored(enabled: bool) -> void:
 ## solo lanza si esa reserva se quiebra. Ver _breaks_poise.
 func launch(height: float, hang_time: float, stun: StunSettings = null,
 		starts_lying := false) -> bool:
-	if not can_receive_hit() or _ragdolling or not _breaks_poise(stun):
+	if not can_receive_hit() or not _breaks_poise(stun):
 		return false
+	# Un cuerpo en ragdoll ya esta quebrado: el golpe lo re-levanta (juggle). Se interrumpe el
+	# ragdoll, el CharacterBody vuelve a mandar donde quedo, y sigue acostado para el nuevo vuelo.
+	if _ragdolling:
+		_interrupt_ragdoll()
+		starts_lying = true
 	_begin_airborne()
 	if starts_lying:
 		_set_lying(true)
@@ -568,11 +573,12 @@ func receive_stun(stun: StunSettings, feedback_color := Color.TRANSPARENT) -> bo
 		return false
 	return try_apply_stun(stun.duration_for(is_airborne()), stun.poise_damage, feedback_color)
 
-## Gate del stun: el golpe come poise y solo stunea si quiebra la reserva. Ya stuneado no hay
-## poise que romper (esta quebrado): el golpe entra directo y extiende — eso sostiene el juggle.
+## Gate del stun: el golpe come poise y solo stunea si quiebra la reserva. Ya stuneado (o caido en
+## ragdoll, que tambien es un estado quebrado) no hay poise que romper: el golpe entra directo y
+## extiende — eso sostiene el juggle y encadenar sobre un cuerpo en el piso.
 func try_apply_stun(duration: float, poise_damage: float,
 		feedback_color := Color.TRANSPARENT) -> bool:
-	if not is_stunned() and not poise.take_poise_damage(poise_damage, is_armored()):
+	if not is_stunned() and not _ragdolling and not poise.take_poise_damage(poise_damage, is_armored()):
 		_play_poise_chip_flash()  # aguanto: fogonazo blanco, sin stun
 		return false
 	apply_stun(duration, feedback_color)
@@ -670,9 +676,9 @@ func _update_combat_state() -> void:
 		combat_state = CombatState.NORMAL
 		_reset_stun_reaction()
 		_refresh_visual_state()
-	# En el aire o stuneado (stun normal o vulnerable por parry) el reloj de poise queda
-	# congelado: no decae el acumulado ni corre el recovery_time. Ver combat/poise.gd.
-	poise.set_paused(is_airborne() or is_stunned())
+	# En el aire, stuneado (stun normal o vulnerable por parry) o caido en ragdoll el reloj de
+	# poise queda congelado: no decae el acumulado ni corre el recovery_time. Ver combat/poise.gd.
+	poise.set_paused(is_airborne() or is_stunned() or _ragdolling)
 
 func _begin_airborne() -> void:
 	if air_state == AirState.AIRBORNE:
@@ -811,7 +817,7 @@ func _start_ragdoll() -> void:
 		visual.visible = false
 	# Arranca donde estaba el cuerpo (capsula centrada), ya acostado, heredando su velocidad.
 	var center := global_position + Vector3.UP * _body_center_height()
-	ragdoll_body.global_transform = Transform3D(Basis(_tilt_quaternion(lie_angle)), center)
+	ragdoll_body.global_transform = Transform3D(Basis(_tilt_quaternion_world(lie_angle)), center)
 	ragdoll_body.freeze = false
 	ragdoll_body.visible = true
 	ragdoll_body.linear_velocity = velocity
@@ -835,8 +841,11 @@ func _freeze_ragdoll_for_stun() -> void:
 	ragdoll_body.freeze = true
 	_ragdoll_until = maxf(_ragdoll_until, _stunned_until)
 
-## Se para: congela y esconde el ragdoll, reubica el cuerpo donde se asento y lo endereza.
-func _end_ragdoll() -> void:
+## Devuelve el control al CharacterBody donde quedo el ragdoll: X/Z del RigidBody y Y del piso
+## real (raycast, no la altura de despegue). Congela y esconde el RigidBody, reactiva colision y
+## Visual. NO endereza: el que llama decide (getup normal o re-launch para juggle). Devuelve la
+## posicion donde estaba el ragdoll.
+func _restore_body_from_ragdoll() -> Vector3:
 	var rest := ragdoll_body.global_position if ragdoll_body != null else global_position
 	if ragdoll_body != null:
 		ragdoll_body.freeze = true
@@ -844,24 +853,56 @@ func _end_ragdoll() -> void:
 		ragdoll_body.linear_velocity = Vector3.ZERO
 		ragdoll_body.angular_velocity = Vector3.ZERO
 	_ragdolling = false
-	_lying = false
 	air_state = AirState.GROUNDED
 	velocity = Vector3.ZERO
-	# Reubica el cuerpo donde rodo el ragdoll; los pies al piso. Greybox plano: usa la altura de
-	# despegue. H3: raycast al piso real para terreno con desnivel.
+	# La Y sale de un raycast al piso real: si el ragdoll rodo por un borde a otro nivel, el cuerpo
+	# se para donde quedo y no salta de vuelta a la altura desde la que lo lanzaron.
 	global_position.x = rest.x
 	global_position.z = rest.z
-	global_position.y = _airborne_ground_y
+	global_position.y = _floor_y_below(rest, _airborne_ground_y)
 	if _body_shape != null:
 		_body_shape.set_deferred("disabled", false)
 	if visual != null:
 		visual.visible = true
 		visual.scale = Vector3.ONE
+	return rest
+
+## Se para: restaura el cuerpo donde se asento el ragdoll y lo endereza con un tween.
+func _end_ragdoll() -> void:
+	_restore_body_from_ragdoll()
+	_lying = false
+	if visual != null:
 		# Arranca acostado (sobre la mitad) y se endereza. En el piso el pivote ya no importa,
 		# pero mantenerlo evita un salto de posicion al pararse.
 		_apply_visual_rotation(_tilt_quaternion(lie_angle), _lie_pivot())
 		_rotate_visual_to(Quaternion.IDENTITY, _lie_pivot(), ragdoll_stand_time)
 	_refresh_visual_state()
+
+## Un golpe que va a re-levantar (juggle) interrumpe el ragdoll: el cuerpo vuelve a mandar donde
+## quedo y sigue acostado para el nuevo vuelo. El ragdoll ya es un estado quebrado (venia de stun o
+## push), asi que el poise no lo frena (ver _breaks_poise / try_apply_stun). Lo llama launch().
+func _interrupt_ragdoll() -> void:
+	if not _ragdolling:
+		return
+	_restore_body_from_ragdoll()
+	_lying = true
+	# El cuerpo sigue quebrado: se marca STUNNED para que el stun del mismo golpe (que cae justo
+	# despues, en el receive_hit del hitbox) entre directo y sostenga el juggle, sin depender de
+	# que el poise del launcher vuelva a quebrar la reserva. El landed extiende la duracion real.
+	combat_state = CombatState.STUNNED
+	_refresh_visual_state()
+
+## Y del piso justo debajo de `pos` (mask LAYER_WORLD). Si no encuentra piso (borde/vacio) devuelve
+## `fallback` (la altura de despegue). Barre desde el centro de la capsula hacia abajo.
+func _floor_y_below(pos: Vector3, fallback: float) -> float:
+	var space := get_world_3d().direct_space_state
+	if space == null:
+		return fallback
+	var from := pos + Vector3.UP * _body_center_height()
+	var to := pos + Vector3.DOWN * 50.0
+	var query := PhysicsRayQueryParameters3D.create(from, to, World.LAYER_WORLD)
+	var hit := space.intersect_ray(query)
+	return float(hit["position"].y) if not hit.is_empty() else fallback
 
 ## Altura del centro de la capsula sobre los pies (el CollisionShape del cuerpo esta offset +Y).
 func _body_center_height() -> float:
@@ -975,6 +1016,19 @@ func _tilt_quaternion(angle_deg: float) -> Quaternion:
 	if local_dir.length_squared() < 0.0001:
 		return Quaternion.IDENTITY
 	var axis := Vector3.UP.cross(local_dir.normalized())
+	if axis.length_squared() < 0.0001:
+		return Quaternion.IDENTITY
+	return Quaternion(axis.normalized(), deg_to_rad(angle_deg))
+
+## Igual que _tilt_quaternion pero en espacio MUNDO: para el `Ragdoll`, que es `top_level` y cuya
+## rotacion NO la compensa ningun padre. Usa la direccion del golpe global directa (mismo eje que
+## `_ragdoll_spin_axis`). Con la version local, el ragdoll se acostaba segun hacia donde miraba el
+## enemigo al caer, no segun la direccion real del golpe. *(2026-07-15)*
+func _tilt_quaternion_world(angle_deg: float) -> Quaternion:
+	var direction := Vector3(_last_hit_direction.x, 0.0, _last_hit_direction.z)
+	if direction.length_squared() < 0.0001:
+		return Quaternion.IDENTITY
+	var axis := Vector3.UP.cross(direction.normalized())
 	if axis.length_squared() < 0.0001:
 		return Quaternion.IDENTITY
 	return Quaternion(axis.normalized(), deg_to_rad(angle_deg))
