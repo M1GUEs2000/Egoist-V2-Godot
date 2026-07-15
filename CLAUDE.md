@@ -82,3 +82,7 @@ $GODOT="C:/Users/Tutupa/Downloads/Godot_v4.7-stable_win64.exe/Godot_v4.7-stable_
 ```
 
 El feel lo aprueba Tutupa jugando; headless solo verifica que no este roto.
+
+## 6. Commits
+
+- Todo valor de tuning tocado al cerrar una tarea (`.tres`, `project.godot`, escenas) va en el commit junto con el cambio de codigo que lo motiva — nunca se deja tuning sin commitear.
