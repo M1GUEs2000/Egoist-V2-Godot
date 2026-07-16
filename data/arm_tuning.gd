@@ -10,6 +10,10 @@ class_name ArmTuning extends Resource
 @export var max_taps := 5
 ## Segundos bloqueado tras agotar max_taps.
 @export var cooldown_duration := 3.0
+## Segundos minimos entre dos golpes consecutivos (cadencia). Aplastar el input mas rapido que
+## esto no pega mas rapido: los taps de mas se guardan en cola y salen a este ritmo, sin
+## perderse, hasta agotar max_taps.
+@export var tap_cadence := 0.15
 ## Segundos que el hitbox queda activo sobre el target (ventana de detección, no viaje visual).
 @export var travel_time := 0.1
 ## Radio de la esfera de golpe que se posiciona sobre el target.

@@ -8,6 +8,7 @@ script = ExtResource("1_tuning")
 stun = ExtResource("2_stun")
 max_taps = 1000
 cooldown_duration = 0.0
+tap_cadence = 0.15
 travel_time = 0.3
 hitbox_radius = 1.0
 meter_gain_on_hit = 0.01

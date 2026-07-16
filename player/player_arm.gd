@@ -4,7 +4,9 @@ class_name PlayerArm extends Node
 ## Un solo boton (tap) con dos usos segun el target resuelto:
 ## - Combate: golpea al target del lock-on pasivo (lockeado si hay uno, si no el más cercano en
 ##   el cono de mira — mismo target que usa PlayerLocomotion para el snap del golpe normal). Daño
-##   y poise bajos; genera meter propio y bajo al conectar. Gasta tap y entra en cooldown.
+##   y poise bajos; genera meter propio y bajo al conectar. Gasta tap y entra en cooldown. No pega
+##   mas rapido que `tuning.tap_cadence`: mashear no acelera, encola los taps de mas en vez de
+##   perderlos (hasta agotar max_taps).
 ## - Traversal: si no hay enemigo en el cono de combate, marca el bloque de dash (verde) más
 ##   cercano en su propio cono/rango (`tuning.traversal_lock_*`) y, al tap, teletransporta al
 ##   jugador encima y lo activa (mismo efecto que golpearlo). No gasta tap ni entra en el
@@ -17,6 +19,12 @@ var _cooldown_until := -999.0
 var _traversal_cooldown_until := -999.0
 var _swing_id := 0
 var _player: Player
+
+## Cola de taps de combate que llegaron mas rapido que `tuning.tap_cadence`: no se pierden,
+## salen apenas la cadencia lo permite (ver _process). Capada por el margen que quede antes de
+## max_taps, no por tiempo: mashear no acelera la cadencia, solo llena la cola hasta el limite.
+var _pending_taps := 0
+var _next_tap_ready_at := -999.0
 
 @onready var _hitbox: Hitbox = $ArmHitbox
 @onready var _marker: MeshInstance3D = $ArmMarker
@@ -32,6 +40,7 @@ func _ready() -> void:
 func _process(_delta: float) -> void:
 	if _player == null:
 		return
+	_flush_tap_buffer()
 	var target := _resolve_target()
 	if target != null:
 		_marker.visible = true
@@ -41,6 +50,15 @@ func _process(_delta: float) -> void:
 	_marker.visible = block != null
 	if block != null:
 		_marker.global_position = block.global_position + Vector3.UP * tuning.traversal_marker_height
+
+## Flush de la cola de taps bufferizados, al ritmo de `tuning.tap_cadence`.
+func _flush_tap_buffer() -> void:
+	if _pending_taps <= 0 or World.now() < _next_tap_ready_at:
+		return
+	_pending_taps -= 1
+	var target := _resolve_target()
+	if target != null:
+		_fire_tap(target)  # si el target ya no existe, el tap en cola se pierde (no hay a quien pegarle)
 
 func _input(event: InputEvent) -> void:
 	if _player != null and _player.is_stunned():
@@ -55,15 +73,28 @@ func setup(player: Player) -> void:
 	_hitbox.stun = tuning.stun
 	_hitbox.landed.connect(_on_hit)
 
+## Un tap de combate no pega mas rapido que `tuning.tap_cadence`: si todavia no toca, se guarda
+## en `_pending_taps` en vez de perderse (ver _flush_tap_buffer), capado por el margen que quede
+## antes de max_taps. El traversal (bloques) no pasa por la cola: no tiene sentido encolar
+## teletransportes, ya tiene su propio cooldown corto.
 func _try_tap() -> void:
 	var target := _resolve_target()
 	if target != null:
-		_tap_enemy(target)
+		if _taps_used + _pending_taps >= tuning.max_taps:
+			return  # sin margen: se pierde (ya esta o va a estar en cooldown)
+		if _pending_taps == 0 and World.now() >= _next_tap_ready_at:
+			_fire_tap(target)
+		else:
+			_pending_taps += 1
 		return
 	var block := _nearest_dash_block()
 	if block != null:
 		_teleport_and_activate(block)
 	# sin enemigo ni bloque marcado: apreton gratis, no gasta tap ni entra en cooldown
+
+func _fire_tap(target: EnemyBase) -> void:
+	_next_tap_ready_at = World.now() + tuning.tap_cadence
+	_tap_enemy(target)
 
 func _tap_enemy(target: EnemyBase) -> void:
 	if _taps_used >= tuning.max_taps:
