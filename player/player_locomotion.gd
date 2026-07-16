@@ -1,10 +1,14 @@
 class_name PlayerLocomotion extends Node
 ## Bloque (ex PlayerLocomotion.cs): movimiento por input relativo a cámara + attack lunge
-## (avance corto en cada golpe). Expone los helpers de dirección (camera_relative /
-## movement_direction) que reusan dash y swing. El snap hacia el target lockeado (LockOn)
-## ajusta movimiento y encare del golpe; el reticle en sí lo dueña LockOn.
+## (avance corto en cada golpe). En el suelo el input manda directo; en el aire la velocidad
+## de input se conserva (inercia) y el stick solo la empuja a tuning.air_acceleration.
+## Expone los helpers de dirección (camera_relative / movement_direction) que reusan dash y
+## swing. El snap hacia el target lockeado (LockOn) ajusta movimiento y encare del golpe;
+## el reticle en sí lo dueña LockOn.
 
 var last_move_dir := Vector3.ZERO
+
+var _air_velocity := Vector3.ZERO
 
 var _body: Player
 var _cam: Camera3D
@@ -59,15 +63,28 @@ func movement_direction(input: Vector2, camera_dir: Vector3) -> Vector3:
 		return to_target
 	return camera_dir
 
-## Devuelve la velocidad horizontal del frame y maneja el facing.
-func tick(_delta: float) -> Vector3:
+## Devuelve la velocidad horizontal del frame y maneja el facing. En el suelo el input tiene
+## autoridad instantánea; en el aire manda la inercia: la velocidad se conserva y el input
+## solo la empuja hacia su target a air_acceleration (ya no se invierte el rumbo en un frame).
+func tick(delta: float) -> Vector3:
 	var input := read_move_input()
 	var camera_dir := camera_relative(input)
 	var dir := movement_direction(input, camera_dir)
 	# Durante un golpe (lunge) no giramos por input: mantenemos la mira del ataque.
 	if dir != Vector3.ZERO and World.now() >= _lunge_until:
 		set_facing(dir)
-	return dir * _body.tuning.move_speed
+	var target := dir * _body.tuning.move_speed
+	if _body.is_on_floor():
+		_air_velocity = target  # despegar (salto o caída) arranca con la velocidad de carrera
+		return target
+	_air_velocity = _air_velocity.move_toward(target, _body.tuning.air_acceleration * delta)
+	return _air_velocity
+
+## Reemplaza la inercia aérea del input (solo el plano horizontal). La llaman los módulos que
+## toman el control del movimiento (dash, wall jump, rebote, stun): al devolver el input no
+## debe reaparecer una velocidad vieja — el impulso real de esas mecánicas vive en bump_velocity.
+func set_air_velocity(v: Vector3) -> void:
+	_air_velocity = Vector3(v.x, 0.0, v.z)
 
 ## Lunge: el jugador encara la dirección de ataque (target lockeado si existe, si no su
 ## forward) y avanza un poco durante el golpe.

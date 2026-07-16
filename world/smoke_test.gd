@@ -158,6 +158,18 @@ func _ready() -> void:
 	assert(is_equal_approx(momentum_player.bump_velocity.length(), 2.5))
 	momentum_player.free()  # nunca entro al arbol: sin esto queda huerfano y ensucia stderr al salir
 
+	# Inercia aerea: en el aire el input ya no manda directo — la velocidad de input se
+	# conserva y solo se acerca a su target a air_acceleration (m/s²). Sin stick (headless
+	# no aprieta nada) el target es ZERO: frena gradualmente en vez de cortarse en seco.
+	player.launcher.cancel()
+	player.dash.cancel()
+	player.tuning.air_acceleration = 10.0
+	player.locomotion.set_air_velocity(Vector3.RIGHT * 6.0)
+	var air_step := player.locomotion.tick(0.1)
+	assert(air_step.is_equal_approx(Vector3.RIGHT * 5.0))
+	air_step = player.locomotion.tick(0.1)
+	assert(air_step.is_equal_approx(Vector3.RIGHT * 4.0))
+
 	# EnemyBounce: gracia, stomp, doble salto intacto, cooldown por enemigo y techo global.
 	player.launcher.cancel()
 	player.dash.cancel()

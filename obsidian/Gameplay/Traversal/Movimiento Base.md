@@ -6,7 +6,7 @@ tags:
   - sistema
   - traversal
 status: active
-system_status: E3
+system_status: E2
 hito: H1
 ---
 
@@ -24,6 +24,12 @@ Movimiento terrestre principal del jugador.
 - Leer input direccional y convertirlo en velocidad sobre el plano del mundo.
 - Mantener la locomocion base separada de acciones especiales como dash, launcher, stun o wall slide.
 - Dejar que `Player` orqueste el estado general, mientras `PlayerLocomotion` resuelve la decision fina de movimiento.
+
+## Control aereo (inercia)
+
+En el suelo el input tiene autoridad instantanea: la velocidad horizontal es `dir * move_speed` en el mismo frame. En el aire manda la inercia: la velocidad de input se conserva y el stick solo la empuja hacia donde apunta a `air_acceleration` (m/s², `PlayerTuning`); no se puede invertir el rumbo a velocidad plena en un frame. Saltar o caer conserva la velocidad de carrera del despegue. Referencia de tuning: `move_speed / air_acceleration` = segundos de quieto a velocidad plena en el aire (invertir tarda el doble); un valor muy alto (>= 1000) equivale a control instantaneo. *(2026-07-16, pendiente de probar jugando)*
+
+Cuando otro modulo toma el control del movimiento la inercia del input se resetea via `PlayerLocomotion.set_air_velocity()`: al terminar un dash queda apuntando a la salida del dash a velocidad de carrera; el lock post wall jump/rebote y el stun la borran (el impulso real de esas mecanicas vive en `bump_velocity`, ver [[Momentum y Bump]]).
 
 ## Polvo al correr
 

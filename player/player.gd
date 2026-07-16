@@ -135,6 +135,9 @@ func _physics_process(delta: float) -> void:
 	var horizontal := locomotion.tick(delta) + locomotion.lunge_velocity()
 	if wall_slide.blocks_move_input() or enemy_bounce.blocks_move_input():
 		horizontal = Vector3.ZERO
+		# El impulso del wall jump/rebote vive en bump_velocity: la inercia aérea del input
+		# se borra para que al soltarse el lock no reaparezca el rumbo previo al salto.
+		locomotion.set_air_velocity(Vector3.ZERO)
 
 	vertical_velocity += tuning.gravity * launcher.gravity_scale() * delta
 
@@ -345,6 +348,7 @@ func _tick_stunned(delta: float) -> void:
 	wall_slide.cancel()
 	floor_slide.cancel()
 	enemy_bounce.cancel()
+	locomotion.set_air_velocity(Vector3.ZERO)  # el golpe pisa la inercia del input; el knockback vive en bump
 	vertical_velocity += tuning.gravity * tuning.stun_gravity_scale * delta
 	velocity = bump_velocity + Vector3(0.0, vertical_velocity, 0.0)
 	move_and_slide()

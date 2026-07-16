@@ -159,6 +159,9 @@ func _end_dash(apply_exit_bop := false) -> void:
 	_hitbox.end_swing()
 	_body.collision_mask |= World.LAYER_ENEMY
 	_set_particles(false)
+	# Continuidad post-dash: la inercia aérea del input queda apuntando a la salida del dash
+	# a velocidad de carrera (el exceso, si lo hubo, ya vive en bump por el boost de momentum).
+	_loco.set_air_velocity(_dash_dir * _body.tuning.move_speed)
 	if apply_exit_bop:
 		_apply_exit_bop()
 	else:

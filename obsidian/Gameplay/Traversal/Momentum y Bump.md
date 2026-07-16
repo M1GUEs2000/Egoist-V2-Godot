@@ -25,11 +25,13 @@ hito: H1
 
 Hay una velocidad normal (`move_speed`) y un exceso (`|bump_velocity|`) encima. El exceso se drena linealmente: el doble de exceso tarda el doble en irse.
 
-| Apoyo | Escala de drenaje | Tuning |
-|---|---:|---|
-| Suelo | 1.0 | `momentum_bleed_ground` |
-| Pared | 0.5 | `momentum_bleed_wall` |
-| Aire | 0.1 | `momentum_bleed_air` |
+| Apoyo | Tuning |
+|---|---|
+| Suelo | `momentum_bleed_ground` (la referencia: 1.0) |
+| Pared | `momentum_bleed_wall` |
+| Aire | `momentum_bleed_air` |
+
+Las escalas por superficie y el ritmo base son knobs de `player_tuning.tres`; los valores vigentes viven ahi, no en esta nota.
 
 `momentum_bleed_seconds_per_unit` mide cuantos segundos tarda en drenarse un exceso igual a una `move_speed` en suelo. Ejemplo: con `move_speed = 6` y `momentum_bleed_seconds_per_unit = 3`, venir a 12 m/s (2x total) tarda 3s en volver a normal; venir a 18 m/s (3x total) tarda 6s.
 
@@ -48,10 +50,6 @@ El drenaje solo come el exceso. Como `bump_velocity` se suma encima del movimien
 - Stun `PUSH` esta aislado del modelo de superficie: drena con `stun_bump_decay` para que recibir un golpe no se convierta en una fuente normal de traversal.
 - Wall slide hoy tiene dos drenajes actuando: `momentum_bleed_wall` sobre `bump_velocity` y `wall_slide_momentum_decay` sobre la velocidad tangente interna del slide. Si la pared frena demasiado, se valida jugando y se toca `momentum_bleed_wall`; no se borra el drenaje tangente.
 - El dash boost antes podia llegar hasta `dash_bump_max_speed`; ahora, al pasar por `set_momentum()`, tambien respeta `momentum_max_speed`. Primer sospechoso si el dash se siente demasiado corto o apagado.
-
-## Estado
-
-E1. El modelo mecanico esta implementado y tiene knobs, pero reescribe el nucleo del momentum. Sube a E2 cuando se confirme que el comportamiento basico funciona y los knobs estan listos para tuning; E3 solo lo sube Tutupa jugando.
 
 ## Relacionado
 

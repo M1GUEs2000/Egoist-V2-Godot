@@ -6,6 +6,12 @@ class_name PlayerTuning extends Resource
 @export_group("Locomotion")
 ## Velocidad horizontal base de movimiento, en m/s (suelo y aire).
 @export var move_speed := 6.0
+## Aceleración del control aéreo, en m/s². En el aire la velocidad de input se CONSERVA
+## (inercia) y el stick solo la empuja hacia donde apunta a este ritmo; en el suelo el input
+## sigue mandando directo. Referencia: move_speed / air_acceleration = segundos de quieto a
+## velocidad plena (9/30 ≈ 0.3 s; invertir el rumbo tarda el doble). Muy alto (>= 1000) ≈
+## control instantáneo, como era antes de existir este knob.
+@export var air_acceleration := 30.0
 ## Magnitud mínima del stick/input para contar como movimiento (debajo se ignora).
 @export var move_input_deadzone := 0.15
 ## Si el input apunta a menos de estos grados del target lockeado, el movimiento snapea hacia él (LockOn).
