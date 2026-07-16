@@ -14,6 +14,8 @@ hito: H1
 
 `EnemyAnimationController` es una capa visual de `GroundedEnemy`. Traduce estados ya resueltos de IA y combate a clips UAL sin mover el `CharacterBody3D`, abrir hitboxes ni decidir impactos. El piloto es `ReactiveEnemyA` en `lvl_1_v_0_1`.
 
+Ver [[Player]] para el plan de animaciones del player (hoy 100% procedural, sin `AnimationPlayer`): locomoción por blend de velocidad, ninja jump y el slide de pared. Los combos de arma tienen nota propia: [[Animacion Espada]] y [[Animacion Mazo]].
+
 UAL2 aporta combate, reacciones y recuperacion; UAL1 completa locomocion, esquive y muerte. Ambos comparten el esqueleto de 67 huesos, asi que el controlador copia en runtime los clips necesarios de UAL1 al `AnimationPlayer` de UAL2.
 
 ## Enemigo animado
@@ -66,6 +68,9 @@ El ragdoll fisico sigue siendo una capsula `RigidBody3D`, pero lleva `UAL2_Ragdo
 
 ## Relacionado
 
+- [[Player]]
+- [[Animacion Espada]]
+- [[Animacion Mazo]]
 - [[Combate]]
 - [[Enemigos]]
 - [[Blender Pipeline]]
