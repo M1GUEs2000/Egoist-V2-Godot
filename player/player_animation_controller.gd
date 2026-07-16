@@ -34,9 +34,13 @@ const UAL1_ANIMATIONS := [&"Idle", &"Walk", &"Sprint"]
 # mano vía BoneAttachment3D y acompaña la animación; los meshes orbitales quedan invisibles
 # pero sus hitboxes siguen barriendo — el daño no cambia. La copia comparte los materiales
 # (el glow de carga se ve en la mano). Offset/rotación para acomodar el grip, a tunear.
+## El arma orbital está autorizada en el espacio del Player (la hoja apunta a -Z, el forward
+## de Godot), pero la copia cuelga del hueso — o sea DENTRO del UAL2_Standard, que lleva el
+## 180° en Y que endereza al maniquí (ver bóveda Animacion/Player). La copia heredaba ese
+## giro y salía apuntando hacia atrás: estos 180° lo compensan.
 @export var hand_bone_name: StringName = &"hand_r"
 @export var hand_attach_offset := Vector3.ZERO
-@export var hand_attach_rotation_degrees := Vector3.ZERO
+@export var hand_attach_rotation_degrees := Vector3(0.0, 180.0, 0.0)
 # Stun: fuera del plan original de la bóveda — espeja al enemigo (EnemyAnimationController):
 # tramo del clip y pose final congelada mientras dure el stun.
 @export var ground_stun_animation: StringName = &"Zombie_Scratch"
@@ -154,6 +158,12 @@ func _physics_process(_delta: float) -> void:
 func _on_weapon_clip_started(clip: StringName, start_time: float, end_time: float,
 		duration: float) -> void:
 	if not _has_animation(clip):
+		return
+	# El stun manda (capa de prioridad máxima). PlayerStun.apply NO cancela las rutinas de
+	# arma en vuelo: sin este guard, el golpe que despierta a mitad del stun pisa la pose
+	# congelada por la espalda — y como _stun_animation_frozen ya es true, _update_stun_visual
+	# sale temprano y nunca la restaura (el maniquí sigue atacando stuneado).
+	if _player.is_stunned():
 		return
 	_stop_slide_rotation()
 	var clip_length := _animation_player.get_animation(clip).length

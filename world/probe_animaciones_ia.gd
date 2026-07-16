@@ -155,9 +155,21 @@ func _run_states() -> void:
 	print("PROBE animaciones_ia=ragdoll_visual_ual")
 
 	_enemy._end_ragdoll()
+	_enemy.velocity = Vector3.ZERO
 	_tick_controller()
 	assert(_animation_player.current_animation == _clip("ragdoll_recovery_animation"))
 	print("PROBE animaciones_ia=ragdoll_lay_to_idle")
+
+	# Regresion: _end_ragdoll devuelve el control a la IA al instante, asi que el getup NO puede
+	# sostenerse mientras el enemigo ya camina (patinaba de lado en la pose de levantarse).
+	# El stun del push que lo tumbo sigue vivo y es capa de mayor prioridad: se limpia primero.
+	_enemy.combat_state = EnemyBase.CombatState.NORMAL
+	_enemy.ai_state = GroundedEnemy.AIState.CHASE
+	_enemy.velocity = Vector3(3.0, 0.0, 0.0)
+	_tick_controller()
+	assert(_animation_player.current_animation == _clip("chase_animation"))
+	print("PROBE animaciones_ia=getup_cortado_por_moverse")
+	_enemy.velocity = Vector3.ZERO
 
 	_enemy.health.kill()
 	await get_tree().physics_frame

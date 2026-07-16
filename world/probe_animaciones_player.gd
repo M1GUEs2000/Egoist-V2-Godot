@@ -337,6 +337,13 @@ func _run_interruptions() -> void:
 	_tick_controller()
 	assert(is_zero_approx(_animation_player.speed_scale))
 	print("PROBE animaciones_player=stun_pose_congelada")
+	# Regresion: una rutina de arma que despierta a mitad del stun NO puede pisar la pose
+	# congelada. El stun es la capa de maxima prioridad y PlayerStun no cancela las rutinas.
+	_sword.play_visual_clip(Sword.ANIM_REGULAR_A, 0.0, -1.0, 0.25)
+	_tick_controller()
+	assert(is_zero_approx(_animation_player.speed_scale))
+	assert(_animation_player.current_animation == _clip(&"ground_stun_animation"))
+	print("PROBE animaciones_player=stun_ignora_clip_de_arma")
 	_player.stun.cancel()
 	_tick_controller()
 	assert(is_equal_approx(_animation_player.speed_scale, 1.0))

@@ -28,9 +28,12 @@ const UAL1_ANIMATIONS := [&"Idle", &"Walk", &"Jog_Fwd", &"Sprint", &"Roll", &"De
 ## visual del arma cuelga del hueso de la mano y acompaña el clip; el mesh orbital que
 ## barre con la Hand procedural queda invisible pero su Hitbox sigue intacto — el daño no
 ## cambia. Offset/rotacion para acomodar el grip.
+## Los 180° en Y compensan el giro del maniqui: el arma orbital apunta a -Z (forward de
+## Godot) pero la copia cuelga del hueso, dentro del UAL2_Standard ya rotado 180° — sin
+## esto la hoja sale apuntando hacia atras. Mismo caso que el player.
 @export var hand_bone_name: StringName = &"hand_r"
 @export var hand_attach_offset := Vector3.ZERO
-@export var hand_attach_rotation_degrees := Vector3.ZERO
+@export var hand_attach_rotation_degrees := Vector3(0.0, 180.0, 0.0)
 
 var _enemy: GroundedEnemy
 var _animation_player: AnimationPlayer
@@ -138,8 +141,12 @@ func _physics_process(_delta: float) -> void:
 	if _enemy.is_dead():
 		_start_death()
 		return
+	# El getup dura 1.53 s, pero _end_ragdoll devuelve el control a la IA al instante: si el
+	# enemigo ya arranco a moverse, sostener LayToIdle lo deja patinando de lado en la pose de
+	# levantarse. Moverse lo corta, igual que land_hold_time en el player.
 	if _getup_animation_active:
-		if World.now() < _getup_animation_ends_at:
+		var getting_up_speed := Vector2(_enemy.velocity.x, _enemy.velocity.z).length()
+		if World.now() < _getup_animation_ends_at and getting_up_speed < moving_speed_threshold:
 			return
 		_getup_animation_active = false
 	if _enemy.is_stunned():
