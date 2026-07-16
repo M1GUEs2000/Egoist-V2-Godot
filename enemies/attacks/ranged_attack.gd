@@ -28,23 +28,24 @@ var _routine_id := 0
 func setup(owner: EnemyBase) -> void:
 	_owner = owner
 
-func try_attack(target: Node3D) -> void:
+func try_attack(target: Node3D, opening_windup := 0.0) -> bool:
 	if _owner == null or not _owner.can_attack() or is_attacking:
-		return
+		return false
 	if World.now() - _last_attack < attack_cooldown:
-		return
+		return false
 	_target = target
-	_fire_routine()
+	_fire_routine(maxf(windup, opening_windup))
+	return true
 
 func try_parry() -> bool:
 	return false
 
-func _fire_routine() -> void:
+func _fire_routine(total_windup: float) -> void:
 	is_attacking = true
 	_routine_id += 1
 	var id := _routine_id
 	var elapsed := 0.0
-	while elapsed < windup:
+	while elapsed < total_windup:
 		if id != _routine_id or _owner == null or not _owner.can_attack():
 			is_attacking = false
 			return

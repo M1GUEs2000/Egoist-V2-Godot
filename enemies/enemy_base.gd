@@ -6,6 +6,10 @@ enum Hostility { PASSIVE, REACTIVE, AGGRESSIVE, ULTRA_AGGRESSIVE }
 enum CombatState { NORMAL, STUNNED, ARMORED }
 enum AirState { GROUNDED, AIRBORNE }
 
+signal stun_started(is_airborne: bool)
+signal push_started
+signal ragdoll_recovered
+
 ## La identidad de hostilidad define las alianzas de dano. No se usa la alerta temporal:
 ## un pasivo provocado sigue siendo pasivo para que los agresivos no pasen a ser aliados suyos.
 static func can_damage_enemy(attacker: EnemyBase, target: EnemyBase) -> bool:
@@ -398,6 +402,7 @@ func apply_stun(duration: float, feedback_color := Color.TRANSPARENT) -> void:
 		_freeze_ragdoll_for_stun()
 		_refresh_visual_state()
 		return
+	stun_started.emit(is_airborne())
 	# El golpe cancela el push (u otro impulso) en curso y lo reemplaza por un retroceso
 	# corto propio del stun, sin acumular momentum previo.
 	_apply_stun_knockback()
@@ -407,7 +412,6 @@ func apply_stun(duration: float, feedback_color := Color.TRANSPARENT) -> void:
 		_airborne_until = maxf(_airborne_until, _stunned_until)
 		# Golpeado en el aire = queda acostado (el hang no se toca, solo la pose).
 		_lying = true
-	_play_stun_reaction(duration)
 	_refresh_visual_state()
 
 func apply_armor(duration: float) -> void:
@@ -530,6 +534,7 @@ func push(direction: Vector3, settings: PushSettings) -> void:
 	# Empujado = cae acostado. Un push sobre un enemigo en el piso tambien lo acuesta: entra igual
 	# a AIRBORNE (arco bajo), sigue su trayectoria y el ragdoll arranca al tocar el suelo.
 	_set_lying(true)
+	push_started.emit()
 
 ## Base: un enemigo sin ataques no se puede parriar. GroundedEnemy lo sobreescribe consultando
 ## sus MeleeAttack (la ventana mid-swing) y, si alguno estaba en ventana, llama resolve_parry.
@@ -815,6 +820,7 @@ func _start_ragdoll() -> void:
 		_body_shape.set_deferred("disabled", true)
 	if visual != null:
 		visual.visible = false
+	_play_ragdoll_visual_pose()
 	# Arranca donde estaba el cuerpo (capsula centrada), ya acostado, heredando su velocidad.
 	var center := global_position + Vector3.UP * _body_center_height()
 	ragdoll_body.global_transform = Transform3D(Basis(_tilt_quaternion_world(lie_angle)), center)
@@ -832,6 +838,27 @@ func _update_ragdoll() -> void:
 		global_position.z = ragdoll_body.global_position.z
 	if World.now() >= _ragdoll_until:
 		_end_ragdoll()
+
+## El ragdoll fisico sigue siendo una capsula por ahora, pero su visual es el maniqui UAL. Se deja
+## congelado en una pose de impacto para que ruede como un cuerpo y no como una capsula visible.
+func _play_ragdoll_visual_pose() -> void:
+	if ragdoll_body == null:
+		return
+	var animation_player := _find_animation_player(ragdoll_body)
+	if animation_player == null or not animation_player.has_animation(&"Hit_Knockback"):
+		return
+	animation_player.play(&"Hit_Knockback")
+	animation_player.advance(0.12)
+	animation_player.pause()
+
+func _find_animation_player(root: Node) -> AnimationPlayer:
+	if root is AnimationPlayer:
+		return root as AnimationPlayer
+	for child in root.get_children():
+		var found := _find_animation_player(child)
+		if found != null:
+			return found
+	return null
 
 func _freeze_ragdoll_for_stun() -> void:
 	if ragdoll_body == null:
@@ -872,10 +899,10 @@ func _end_ragdoll() -> void:
 	_restore_body_from_ragdoll()
 	_lying = false
 	if visual != null:
-		# Arranca acostado (sobre la mitad) y se endereza. En el piso el pivote ya no importa,
-		# pero mantenerlo evita un salto de posicion al pararse.
-		_apply_visual_rotation(_tilt_quaternion(lie_angle), _lie_pivot())
-		_rotate_visual_to(Quaternion.IDENTITY, _lie_pivot(), ragdoll_stand_time)
+		# LayToIdle anima la incorporacion con el esqueleto; el padre visual vuelve neutro para no
+		# sumar la antigua inclinacion procedural al clip.
+		_apply_visual_rotation(Quaternion.IDENTITY, Vector3.ZERO)
+	ragdoll_recovered.emit()
 	_refresh_visual_state()
 
 ## Un golpe que va a re-levantar (juggle) interrumpe el ragdoll: el cuerpo vuelve a mandar donde

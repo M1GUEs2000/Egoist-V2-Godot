@@ -69,6 +69,9 @@ const ALL_STATE_FLAGS := (
 @export var attack_pause_min := 0.8
 ## Pausa entre combos (segundos, maximo); la pausa real se sortea entre min y max por combo.
 @export var attack_pause_max := 1.6
+## Anticipo visual del primer ataque de cada encuentro REACTIVE. El ataque entra en su pose
+## inicial y la sostiene antes de avanzar hacia el impacto.
+@export_range(0.0, 3.0, 0.05) var reactive_opening_attack_windup := 0.7
 ## Ring del MELEE: fraccion de su `attack_range` a la que se mantiene mientras espera su ventana.
 ## Mayor a 1 = espera FUERA de su alcance y tiene que entrar para pegar, en vez de quedarse
 ## encima del jugador entre combo y combo. Bajarlo lo vuelve mas asfixiante.
@@ -120,6 +123,8 @@ var _hide_unlocked := false
 var _limbo_ready := false
 var _next_attack_at := 0.0
 var _was_attacking := false
+var _reactive_opening_attack_pending := false
+var _reactive_opening_attack_target: Node3D
 var _evade_starts_at := INF
 var _evade_ends_at := -999.0
 var _last_evade_at := -999.0
@@ -154,6 +159,7 @@ func _physics_process(delta: float) -> void:
 	_update_passive_memory()
 	var effective_hostility := _effective_hostility()
 	perception.tick(_acquire_target(), effective_hostility, World.now() >= _can_chase_at)
+	_update_reactive_opening_attack(effective_hostility)
 	_sync_blackboard()
 	_update_attack_cadence()
 	if ai_backend == AIBackend.LIMBO:
@@ -172,7 +178,28 @@ func start_combo_attack(preferred_state := AIState.ATTACK_MELEE) -> void:
 	var distance := _flat_distance_to(target.global_position)
 	var attack := _select_attack(distance, preferred_state)
 	if attack != null and attack.has_method("try_attack"):
-		attack.call("try_attack", target)
+		var opening_windup := 0.0
+		if _reactive_opening_attack_pending:
+			opening_windup = reactive_opening_attack_windup
+		var started := bool(attack.call("try_attack", target, opening_windup))
+		if started and _reactive_opening_attack_pending:
+			_reactive_opening_attack_pending = false
+
+## Reactivos anuncian solo su primer ataque por encuentro. Al perder el target, el siguiente
+## encuentro vuelve a tener el mismo anticipo; los ataques posteriores usan la cadencia normal.
+func _update_reactive_opening_attack(effective_hostility: int) -> void:
+	if effective_hostility != Hostility.REACTIVE:
+		_reactive_opening_attack_pending = false
+		_reactive_opening_attack_target = null
+		return
+	var target := perception.target
+	if target == null:
+		_reactive_opening_attack_pending = true
+		_reactive_opening_attack_target = null
+		return
+	if target != _reactive_opening_attack_target:
+		_reactive_opening_attack_target = target
+		_reactive_opening_attack_pending = true
 
 func face_current_target() -> void:
 	if locomotion == null:

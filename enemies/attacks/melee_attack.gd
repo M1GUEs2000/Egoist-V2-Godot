@@ -33,6 +33,9 @@ var is_attacking := false
 ## True solo mientras la hoja esta barriendo. Entre swing y swing es false: ahi es donde la IA
 ## puede corregir su orientacion (ver GroundedEnemy.combo_turn_speed).
 var is_in_swing := false
+## El primer golpe de un reactivo sostiene esta fase tras mostrar la pose inicial. El visual usa
+## esta senal para pausar su clip de ataque sin adivinar tiempos ni estados de IA.
+var is_in_opening_windup := false
 
 var _owner: EnemyBase
 var _target: Node3D
@@ -59,13 +62,14 @@ func setup(owner: EnemyBase) -> void:
 	_blade_hitbox.can_be_parried = false
 	_blade_hitbox.landed.connect(_on_blade_landed)
 
-func try_attack(target: Node3D) -> void:
+func try_attack(target: Node3D, opening_windup := 0.0) -> bool:
 	if _owner == null or not _owner.can_attack() or is_attacking:
-		return
+		return false
 	if World.now() - _last_attack < attack_cooldown:
-		return
+		return false
 	_target = target
-	_run_combo()
+	_run_combo(maxf(0.0, opening_windup))
+	return true
 
 ## Detecta si este ataque esta en su ventana de parry (mid-swing) y, si si, lo consume: corta la
 ## hoja y devuelve true. NO aplica el stun — de eso se encarga EnemyBase.resolve_parry (necesita el
@@ -79,14 +83,14 @@ func try_parry() -> bool:
 	_reset_hand()
 	return true
 
-func _run_combo() -> void:
+func _run_combo(opening_windup: float) -> void:
 	is_attacking = true
 	_routine_id += 1
 	var id := _routine_id
 	for step in range(1, combo_steps + 1):
 		if not _can_continue() or id != _routine_id:
 			break
-		await _swing_step(step)
+		await _swing_step(step, opening_windup if step == 1 else 0.0)
 		if not _can_continue() or id != _routine_id:
 			break
 		await get_tree().create_timer(between_swings).timeout
@@ -97,10 +101,22 @@ func _run_combo() -> void:
 	is_in_swing = false
 	is_attacking = false
 
-func _swing_step(step: int) -> void:
+func _swing_step(step: int, windup: float) -> void:
 	_parried_this_swing = false
 	_parry_window_open = false
 	is_in_swing = true
+	_set_combo_start_pose(step)
+	is_in_opening_windup = windup > 0.0
+	var windup_elapsed := 0.0
+	while windup_elapsed < windup:
+		if not _can_continue():
+			break
+		await get_tree().physics_frame
+		windup_elapsed += get_physics_process_delta_time()
+	is_in_opening_windup = false
+	if not _can_continue():
+		is_in_swing = false
+		return
 	_play_combo_step(step)
 	var hitbox_active := false
 	var elapsed := 0.0
@@ -157,6 +173,15 @@ func _play_combo_step(step: int) -> void:
 			_play_swing(Quaternion(Vector3.UP, half), Quaternion(Vector3.UP, -half))
 		_:
 			_play_thrust()
+
+func _set_combo_start_pose(step: int) -> void:
+	if step == 1:
+		_hand.quaternion = Quaternion(Vector3.UP, -deg_to_rad(combo_swing_angle * 0.5))
+	elif step == 2:
+		_hand.quaternion = Quaternion(Vector3.UP, deg_to_rad(combo_swing_angle * 0.5))
+	else:
+		_hand.quaternion = _hand_rest()
+		_set_hand_radius(hand_radius)
 
 func _play_thrust() -> void:
 	_kill_swing_tween()

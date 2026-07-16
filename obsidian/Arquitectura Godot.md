@@ -102,7 +102,7 @@ Los custom statuses del plugin viven en la config local (`.obsidian/`, no versio
 | [[Areas]] | `Gameplay/Areas/` | [[Playa]], [[Castillo]], [[Averno]], [[Final]] |
 | [[Historia]] | `Gameplay/Historia/` | Lore, mascaras, NPCs y final. |
 | [[Exploracion]] | `Gameplay/Exploracion/` | Runas, consumibles, secretos y rutas opcionales. |
-| [[Animacion]] | `Gameplay/Animacion/` | Retarget Godot y animacion H3. |
+| [[Animacion]] | `Gameplay/Animacion/` | Pipeline UAL y piloto animado de enemigos H1; retarget/personaje final H3. |
 
 ## Registro del roster de armas
 

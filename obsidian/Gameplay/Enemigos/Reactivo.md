@@ -20,7 +20,7 @@ hito: H1
 
 ## Con target
 
-Una vez detecta, la rama del arbol es identica a `AGGRESSIVE`: persigue si esta fuera de rango de ataque, ataca si esta dentro.
+Una vez detecta, la rama del arbol es identica a `AGGRESSIVE`: persigue si esta fuera de rango de ataque, ataca si esta dentro. La excepcion es su primer ataque de cada encuentro: entra de inmediato en la pose inicial del ataque y la sostiene **0.7 s** antes de que avance el swing o salga el proyectil. Los ataques siguientes conservan su cadencia normal. *(2026-07-16)*
 
 ## SEARCH
 

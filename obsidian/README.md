@@ -50,7 +50,7 @@ La boveda se navega por nodos. Primero se lee este README, despues [[Arquitectur
 | [[Areas]] | Playa, Castillo, Averno y Final. |
 | [[Historia]] | Mascaras, NPCs, plot twist y finales. |
 | [[Exploracion]] | Runas, consumibles, secretos y recompensas opcionales. |
-| [[Animacion]] | Import/retarget Godot, Mixamo placeholder y animaciones propias H3. |
+| [[Animacion]] | Pipeline UAL, enemigo animado H1 y retarget/personaje final H3. |
 | [[Blender Pipeline]] | Regla de arte, targets tecnicos y workflow por asset. |
 | [[tareas]] | Hub del kanban: subtareas por estado (pendientes, en progreso, completadas). |
 | [[hitos]] | Los hitos H0-H5 en un solo nodo: metas, puerta de salida y roadmap. |

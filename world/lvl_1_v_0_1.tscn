@@ -8,6 +8,7 @@
 [ext_resource type="Script" uid="uid://bpdpihqvparu5" path="res://visual/camera_occlusion_fade.gd" id="7_3ypg5"]
 [ext_resource type="Script" uid="uid://da7tt4qincebu" path="res://visual/world_scan.gd" id="7_5bvi1"]
 [ext_resource type="PackedScene" uid="uid://daxq4pjmxnv7w" path="res://world/blocks/traversal_block.tscn" id="8_3ypg5"]
+[ext_resource type="PackedScene" uid="uid://cfhiggial63t4" path="res://enemies/grounded_enemy.tscn" id="9_ica1u"]
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_sg0es"]
 resource_name = "Material"
@@ -9306,3 +9307,8 @@ dash_duration = 0.3
 dash_bop_forward_speed = 20.0
 dash_vertical_bop_speed = 20.0
 hits_to_break = 50
+
+[node name="ReactiveEnemyA" parent="." unique_id=1176923943 instance=ExtResource("9_ica1u")]
+transform = Transform3D(0.7066589, -0.035595715, 0.7066589, 0.025169998, 0.9993663, 0.025169998, -0.70710695, 0, 0.70710695, -4.445176, 51.833492, -10.451716)
+hostility = 1
+normal_color = Color(0.95, 0.7, 0.2, 1)

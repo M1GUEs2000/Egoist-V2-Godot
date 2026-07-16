@@ -29,6 +29,7 @@ pre_tick_pipeline:
   - {step: compute_effective_hostility, code: GroundedEnemy._effective_hostility}
   - {step: acquire_target, code: GroundedEnemy._acquire_target, escribe: perception.target}
   - {step: perception_tick, code: Perception.tick, escribe: [perception.can_see_target, last_known_position, memory_until]}
+  - {step: reactive_opening_attack, code: GroundedEnemy._update_reactive_opening_attack, condicion: "Hostility.REACTIVE", nota: "el primer ataque de cada encuentro sostiene la pose inicial 0.7 s antes del impacto"}
   - {step: update_attack_cadence, code: GroundedEnemy._update_attack_cadence, escribe: _next_attack_at, nota: al cerrar un combo sortea la pausa attack_pause_min..max; corre para ambos backends}
 
 decision_tree:

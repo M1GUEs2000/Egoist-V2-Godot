@@ -2,6 +2,8 @@
 
 [ext_resource type="Script" uid="uid://6lxu6ob4jhq4" path="res://enemies/grounded_enemy.gd" id="1_enemy"]
 [ext_resource type="Script" uid="uid://coemg5ljdfu7t" path="res://combat/health.gd" id="2_health"]
+[ext_resource type="PackedScene" uid="uid://d1mqppcblj4fm" path="res://assets/animations/Universal Animation Library 2[Standard]/Universal Animation Library 2[Standard]/Unreal-Godot/UAL2_Standard.glb" id="2_q8813"]
+[ext_resource type="Script" path="res://enemies/enemy_animation_controller.gd" id="2_animation_controller"]
 [ext_resource type="Script" uid="uid://dvxrsptoplacw" path="res://combat/hurtbox.gd" id="3_hurtbox"]
 [ext_resource type="Script" uid="uid://cr2mf5ypgksws" path="res://core/world_membership.gd" id="4_membership"]
 [ext_resource type="Script" uid="uid://cttyioaixbthw" path="res://enemies/perception.gd" id="5_perception"]
@@ -149,8 +151,14 @@ shape = SubResource("CapsuleShape3D_body")
 
 [node name="Mesh" type="MeshInstance3D" parent="Visual" unique_id=1421867283]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
+visible = false
 mesh = SubResource("CapsuleMesh_body")
 surface_material_override/0 = SubResource("Mat_body")
+
+[node name="UAL2_Standard" parent="Visual" unique_id=845256640 instance=ExtResource("2_q8813")]
+
+[node name="AnimationController" type="Node" parent="." unique_id=516602449]
+script = ExtResource("2_animation_controller")
 
 [node name="StunLight" type="OmniLight3D" parent="." unique_id=915778972]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.1, 0)
@@ -197,8 +205,12 @@ freeze = true
 shape = SubResource("CapsuleShape3D_body")
 
 [node name="Mesh" type="MeshInstance3D" parent="Ragdoll" unique_id=1114347772]
+visible = false
 mesh = SubResource("CapsuleMesh_body")
 surface_material_override/0 = SubResource("Mat_ragdoll")
+
+[node name="UAL2_Ragdoll" parent="Ragdoll" unique_id=677114982 instance=ExtResource("2_q8813")]
+position = Vector3(0, -0.9, 0)
 
 [node name="Health" type="Node" parent="." unique_id=1832183654]
 script = ExtResource("2_health")
