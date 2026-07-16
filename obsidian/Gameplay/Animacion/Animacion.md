@@ -12,6 +12,10 @@ hito: H1
 
 # Animacion
 
+> [!warning] Pendientes de resolver — confirmados jugando
+> 1. **El maniqui enemigo tambien mira 180° al reves** (mismo bug que el player, ver [[Player]]): el esqueleto UAL estilo Unreal mira +Z y el forward de gameplay es -Z. Arreglo candidato: rotar el `Visual` del enemigo 180° en Y, junto con el fix del player.
+> 2. **La espada del enemigo no esta anclada a la mano**: los clips de combate (`Sword_Regular_Combo`, `Sword_Block`) animan al maniqui con la mano vacia — no existe arma visible. Arreglo candidato: replicar la opcion A del player (`BoneAttachment3D` en `hand_r` con el mesh del arma; ver [[Player]] seccion "Arma en mano"), recordando el `UAL2_Ragdoll` que es un maniqui aparte.
+
 `EnemyAnimationController` es una capa visual de `GroundedEnemy`. Traduce estados ya resueltos de IA y combate a clips UAL sin mover el `CharacterBody3D`, abrir hitboxes ni decidir impactos. El piloto es `ReactiveEnemyA` en `lvl_1_v_0_1`.
 
 Ver [[Player]] para las animaciones del player (implementadas en `player/player_animation_controller.gd` sobre el mismo maniqui UAL, con el swing procedural como motor mecanico): locomoción por velocidad, ninja jump y el slide de pared. Los combos de arma tienen nota propia: [[Animacion Espada]] y [[Animacion Mazo]].
