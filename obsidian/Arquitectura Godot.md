@@ -34,7 +34,7 @@ autoload/   WorldManager, GameManager, ComboTracker
 core/       World, WorldMembership, WorldSwitchTrigger, ActionWorldSwitchModifier
 combat/     Health, Hurtbox, Hitbox, InputBuffer, Poise, weapons/
 data/       PlayerTuning, SwordTuning, MaceTuning, WeaponTuning, StunSettings, PushSettings, GameTuning, TraversalBlockTuning, WorldScanTuning, ArmTuning, CameraTuning
-player/     Player glue + Locomotion, Dash, Launcher, Meter, Combat, LockOn, Arm, Swing, WallSlide, EnemyBounce, AirKillReset, Stun
+player/     Player glue + Locomotion, Dash, Launcher, Meter, Combat, LockOn, Arm, Swing, WallSlide, EnemyBounce, AirKillReset, Stun, AnimationController
 enemies/    EnemyBase, GroundedEnemy, Perception, GroundLocomotion, attacks/ (MeleeAttack, RangedAttack, Projectile, AttackLoadout)
             ai/       EnemyAIBlackboard, EnemyLimboTreeBuilder, tasks/ (hojas BTAction/BTCondition)
             ai_spec/  spec YAML del arbol: estados, blackboard, perfiles, hojas

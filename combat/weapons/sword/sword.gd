@@ -8,6 +8,18 @@ class_name Sword extends WeaponBase
 
 const STEP_COUNT := 4
 
+# Clips UAL2 del plan de la bóveda (Animacion Espada) — nombres verificados contra el .glb.
+const ANIM_REGULAR_A := &"Sword_Regular_A"
+const ANIM_REGULAR_B := &"Sword_Regular_B"
+const ANIM_REGULAR_C := &"Sword_Regular_C"
+const ANIM_DASH := &"Sword_Dash"
+const ANIM_HEAVY := &"Sword_Heavy_Combo"
+# Tramos de Sword_Heavy_Combo para los cargados Y (segundos dentro del clip).
+const HEAVY_GROUND_Y_START := 0.90
+const HEAVY_GROUND_Y_END := 1.30
+const HEAVY_AIR_Y_START := 2.40
+const HEAVY_AIR_Y_END := 2.70
+
 var _charged_dash_id := 0
 var _aerial_charged_y_active := false
 var _aerial_charged_meet_y := 0.0
@@ -77,6 +89,7 @@ func _hold_x() -> void:
 	cancel_routines()
 
 	if _player.meter.spend_charged():
+		play_visual_clip(ANIM_DASH, 0.0, -1.0, _t().charged_dash_duration)
 		_player.force_dash(_player.forward(), _t().charged_dash_distance, _t().charged_dash_duration, true)
 		_run_charged_dash_window()
 	else:
@@ -98,6 +111,7 @@ func _hold_y() -> void:
 		_aerial_charged_y()
 		return
 	# Launcher terrestre (ex AttackLauncher: solo desde el suelo — ya garantizado acá).
+	play_visual_clip(ANIM_HEAVY, HEAVY_GROUND_Y_START, HEAVY_GROUND_Y_END, tuning.swing_time)
 	swing_up(_t().strike_angle)
 	run_launcher_window(_launcher_hitbox, _t().launcher_height, _t().launcher_hang_time,
 			_t().launcher_hitbox_duration)
@@ -117,6 +131,7 @@ func _run_aerial_charged_y() -> void:
 	_aerial_charged_y_active = true
 	_aerial_charged_meet_y = _player.global_position.y + t.aerial_charged_meet_height
 	_player.launch(t.aerial_charged_player_height, t.launcher_hang_time, t.aerial_charged_player_rise_time)
+	play_visual_clip(ANIM_HEAVY, HEAVY_AIR_Y_START, HEAVY_AIR_Y_END, tuning.swing_time)
 	swing_up(t.strike_angle)
 	begin_damage_window(tuning.swing_time)
 	ComboTracker.register_hit()
@@ -154,7 +169,9 @@ func _on_charged_dash_hit(hurtbox: Hurtbox, died: bool) -> void:
 # ---- Coreografía (swing/swing_up/_play_swing/_play_spin viven en WeaponBase) ----
 
 ## Combo terrestre: swing, swing, estocada, estocada (o vueltas en la rama espera).
+## Maniquí (bóveda Animacion Espada): A, B, A, B sin espera · A, B, C, C con espera.
 func _play_combo_step(step: int, spin: bool) -> void:
+	play_visual_clip(_ground_step_clip(step, spin), 0.0, -1.0, tuning.swing_time)
 	var half := _t().combo_swing_angle
 	match step:
 		1:  # izquierda → derecha
@@ -166,6 +183,17 @@ func _play_combo_step(step: int, spin: bool) -> void:
 				_play_spin()  # vuelta completa
 			else:
 				_play_thrust()  # estocada
+
+func _ground_step_clip(step: int, spin: bool) -> StringName:
+	match step:
+		1:
+			return ANIM_REGULAR_A
+		2:
+			return ANIM_REGULAR_B
+		_:
+			if spin:
+				return ANIM_REGULAR_C
+			return ANIM_REGULAR_A if step == 3 else ANIM_REGULAR_B
 
 ## Combo AÉREO (bóveda Armas): golpe 1 siempre diagonal; según la espera antes del 2:
 ##   X X X          → diagonal, diagonal, hachazo vertical (spikea al suelo)

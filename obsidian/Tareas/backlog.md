@@ -56,6 +56,7 @@ Etapas (casilla → estado del ciclo E0-E4): `[ ]` Por implementar (E0) · `[/]`
 - [f] EVADE enemigo (esquive humano): aprobado jugando — salta hacia atras (recto o diagonal, sorteado), distancia tuneable con evade_distance, sin i-frames por diseño. Faltan juice y edge cases — [[Comportamientos]] [[IA]] [[Stun]]
 - [f] Engage en rango: aprobado jugando — el melee entra, pega, retrocede de cara y orbita en vez de plantarse encima. Faltan juice y edge cases — [[Comportamientos]] [[IA]]
 - [f] Giro comprometido del combo: aprobado jugando — combo_turn_speed entre golpes, combo_swing_turn_speed durante el swing — [[Comportamientos]] [[IA]]
+- [/] Animacion del player sobre el maniqui UAL: `PlayerAnimationController` (locomocion Idle/Walk/Sprint, ninja jump, wall slide con rotacion a la pared) + clips por golpe de Espada/Mazo via `WeaponBase.visual_clip_started`, escalados a la duracion mecanica; correr headless/probe (`probe_animaciones_player`), probar jugando umbrales/blend y re-ubicar el feedback de stun/poise-chip que pintaba la capsula (ahora invisible) — [[Player]] [[Animacion Espada]] [[Animacion Mazo]] [[Animacion]]
 - [ ] Retirar el fallback FSM de GroundedEnemy (use_simple_fsm + _update_fsm / _process_*): LimboAI es el backend unico — [[IA]]
 - [f] Lock-on vertical: ultimos detalles de rango/angulo/reticle para enemigos aereos + indicador de aterrizaje del target cuando corresponda — [[Lock On]] [[Landing Indicator]]
 - [f] Bloques traversal: probar combinaciones, glow por proximidad e impulsos — [[Bloques]]

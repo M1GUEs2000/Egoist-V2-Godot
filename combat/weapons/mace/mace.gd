@@ -9,6 +9,22 @@ const STEP_COUNT := 3
 const WAIT_BRANCH_EXTRA_STEPS := 2
 const AIR_STEP_COUNT := 2
 
+# El Mazo no tiene clips propios: todo sale de tramos de Sword_Heavy_Combo (bóveda
+# Animacion Mazo). Vector2(inicio, fin) en segundos dentro del clip; fin < 0 = hasta el
+# final (4.333 s).
+const ANIM_HEAVY := &"Sword_Heavy_Combo"
+const HEAVY_STEP_1 := Vector2(0.00, 0.70)
+const HEAVY_STEP_2 := Vector2(1.50, 2.10)
+# Rama espera: el plan lista 4 tramos para 5 pasos → los smashes intermedios (pasos 3-4)
+# COMPARTEN el tramo corto y el finisher (paso 3 sin espera / paso 5 con espera) remata
+# hasta el final del clip. Así WAIT_BRANCH_EXTRA_STEPS no cambia.
+const HEAVY_SMASH_MID := Vector2(2.10, 3.10)
+const HEAVY_SMASH_FINAL := Vector2(2.10, -1.0)
+const HEAVY_CHARGED_X_SPIN := Vector2(1.30, 2.00)
+const HEAVY_CHARGED_X_AIR := Vector2(2.40, 2.70)
+const HEAVY_CHARGED_Y_GROUND := Vector2(0.90, 1.30)
+const HEAVY_CHARGED_Y_AIR := Vector2(2.40, 3.00)
+
 var _air_y_hit_enemy_in_air := false
 # Move de compromiso en curso (vueltas del X cargado terrestre): mientras esta activo,
 # tap/hold se ignoran para que pegar NO cancele las vueltas a mitad. Ver boveda Armas/Mazo.
@@ -75,7 +91,8 @@ func _tap_combo() -> void:
 			2, _t().ground_wait_branch_threshold, _begin_ground_step, Callable(),
 			WAIT_BRANCH_EXTRA_STEPS)
 
-func _begin_ground_step(step: int, _finisher: bool, _wait_branch: bool) -> void:
+func _begin_ground_step(step: int, finisher: bool, _wait_branch: bool) -> void:
+	_play_ground_step_visual(step, finisher)
 	match step:
 		1:
 			var half := _t().combo_swing_angle
@@ -87,6 +104,18 @@ func _begin_ground_step(step: int, _finisher: bool, _wait_branch: bool) -> void:
 			_play_smash()
 	_player.attack_step(tuning.swing_time)
 	_player.hold_airborne_for_attack()
+
+## Maniquí (bóveda Animacion Mazo): tramos de Sword_Heavy_Combo por paso.
+func _play_ground_step_visual(step: int, finisher: bool) -> void:
+	var segment := Vector2.ZERO
+	match step:
+		1:
+			segment = HEAVY_STEP_1
+		2:
+			segment = HEAVY_STEP_2
+		_:
+			segment = HEAVY_SMASH_FINAL if finisher else HEAVY_SMASH_MID
+	play_visual_clip(ANIM_HEAVY, segment.x, segment.y, tuning.swing_time)
 
 func _play_smash() -> void:
 	# Martillazo DESCENDENTE: arranca arriba-atras (-smash_angle) y remata clavando en el punto
@@ -124,6 +153,9 @@ func _run_charged_spins(level: int) -> void:
 	var sweet_spot := level >= t.max_charge_level
 	_player.hold_airborne_for_attack()
 	for spin in range(1, level + 1):
+		# Una vuelta de clip por vuelta mecánica (el tramo se repite según el nivel de carga).
+		play_visual_clip(ANIM_HEAVY, HEAVY_CHARGED_X_SPIN.x, HEAVY_CHARGED_X_SPIN.y,
+				t.charged_spin_time)
 		_play_spin(t.charged_spin_time)
 		var finisher := spin == level
 		_set_hitbox_stun(t.charged_freeze_stun if (sweet_spot and not finisher) else t.charged_final_stun)
@@ -154,6 +186,8 @@ func _hold_y() -> void:
 	# tiempo. El cuerpo atraviesa enemigos (pass_through), pero el LauncherHitbox es un Area3D propio
 	# que detecta hurtboxes igual. La ventana cubre paso + remate, asi que un paso al vacio no cambia:
 	# el final sigue lanzando lo que quede en el area.
+	play_visual_clip(ANIM_HEAVY, HEAVY_CHARGED_Y_GROUND.x, HEAVY_CHARGED_Y_GROUND.y,
+			tuning.swing_time)
 	swing_up(t.strike_angle)
 	_player.force_dash(_player.forward(), t.ground_y_dash_distance, t.ground_y_dash_duration, false)
 	run_launcher_window(_launcher_hitbox, t.ground_y_launcher_height, t.ground_y_launcher_hang_time,
@@ -186,6 +220,7 @@ func _aerial_charged_x(sweet_spot: bool) -> void:
 	var id := begin_routine()
 	reset_hit_profile()
 	_player.notify_aerial_attack(tuning.swing_time)
+	play_visual_clip(ANIM_HEAVY, HEAVY_CHARGED_X_AIR.x, HEAVY_CHARGED_X_AIR.y, tuning.swing_time)
 	_player.vertical_velocity = -absf(t.air_smash_fall_speed)
 	_set_hitbox_damage(t.charged_hit_damage)
 	begin_damage_window(tuning.swing_time)
@@ -194,6 +229,10 @@ func _aerial_charged_x(sweet_spot: bool) -> void:
 	if not is_routine_current(id):
 		return
 	if sweet_spot:
+		# La vuelta congelante reusa el tramo de vueltas del X terrestre (el plan no le asigna
+		# tramo propio; decidido al implementar, ver bóveda Animacion Mazo).
+		play_visual_clip(ANIM_HEAVY, HEAVY_CHARGED_X_SPIN.x, HEAVY_CHARGED_X_SPIN.y,
+				t.charged_spin_time)
 		_play_spin(t.charged_spin_time)
 		_set_hitbox_stun(t.air_freeze_stun)
 		begin_damage_window(t.charged_spin_time)
@@ -210,6 +249,10 @@ func _aerial_charged_x(sweet_spot: bool) -> void:
 func _aerial_hold_y(id: int) -> void:
 	var t := _t()
 	_set_air_y_fall_velocity()
+	# La caída dura hasta el impacto (variable): el tramo se estira al techo de la caída y el
+	# estallido corta el override al arrancar el siguiente golpe o expirar.
+	play_visual_clip(ANIM_HEAVY, HEAVY_CHARGED_Y_AIR.x, HEAVY_CHARGED_Y_AIR.y,
+			t.air_y_max_fall_time)
 	_player.notify_aerial_attack(t.air_y_max_fall_time)
 	ComboTracker.register_hit()
 	var end_at := World.now() + t.air_y_max_fall_time
@@ -257,6 +300,7 @@ func _burst_air_slam(id: int, hit_enemy_in_air: bool) -> void:
 	var t := _t()
 	end_damage_window()
 	end_launcher_window()
+	end_visual_clip()  # la caída terminó: suelta el tramo estirado del Y aéreo
 	_air_y_hit_enemy_in_air = hit_enemy_in_air
 	if hit_enemy_in_air:
 		# La caida fue abajo+adelante; el rebote sale arriba+adelante a un angulo FIJO (no depende

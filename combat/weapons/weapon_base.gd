@@ -21,6 +21,15 @@ class_name WeaponBase extends Node3D
 ## afuera, y describe el arco porque la mano la lleva. Rotar la mano en Y la pasea por un
 ## semicírculo al frente; rotarla en X la sube/baja; alejar el radio la extiende (estocada).
 
+## Un golpe arrancó y muestra este tramo de clip UAL sobre el maniquí del player. SOLO
+## visual (lo consume PlayerAnimationController): no toca hitboxes ni tiempos mecánicos.
+## end_time < 0 = hasta el final del clip; duration <= 0 = el tramo dura su tiempo natural.
+signal visual_clip_started(clip: StringName, start_time: float, end_time: float, duration: float)
+
+## El golpe terminó antes de lo previsto (ej: la caída del Y aéreo del Mazo impacta antes
+## del techo): la capa de animación suelta el clip y vuelve a locomoción/aire.
+signal visual_clip_ended
+
 @export var tuning: WeaponTuning
 
 ## Juice de carga: la hoja emite este color al mantener un ataque (glow proporcional a
@@ -87,6 +96,15 @@ func setup(player: Player) -> void:
 	# ponytail: v1 además solo dejaba parriar en la mitad del propio swing (CanParryAt →
 	# "clash" mutuo). Acá es parriable todo el swing y la ventana estrecha del enemigo ya
 	# acota; afinar el clash mid-swing cuando haya Godot para tunear.
+
+## Atajo para la coreografía de cada arma: avisa a la capa de animación qué tramo de clip
+## acompaña este golpe (ver visual_clip_started).
+func play_visual_clip(clip: StringName, start_time := 0.0, end_time := -1.0,
+		duration := -1.0) -> void:
+	visual_clip_started.emit(clip, start_time, end_time, duration)
+
+func end_visual_clip() -> void:
+	visual_clip_ended.emit()
 
 # ---- API que enruta PlayerCombat (cada arma define sus personalidades) ----
 

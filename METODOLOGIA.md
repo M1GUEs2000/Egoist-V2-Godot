@@ -188,3 +188,4 @@ Escala E0–E4 (ver *Ciclo de vida*). Se actualiza en el mismo commit que cambia
 | Columpio de cadenas | `PlayerSwing` | **E0** | Stub — batch 6; lo reemplaza el Brazo cuando su traversal entre |
 | Visual de mundos | `WorldVisual` | **E0** | Stub — 2 Environments + lerp |
 | Indicador de aterrizaje | `LandingIndicator` | **E3** | Ultimos detalles visuales si aparecen jugando |
+| Animación player (visual) | `PlayerAnimationController` · `WeaponBase.visual_clip_started` · clips en `Sword`/`Mace` | **E1** | Construida sobre el maniquí UAL (locomoción, ninja jump, wall slide, stun con pose congelada + tramos de clip por golpe de Espada/Mazo escalados a la duración mecánica). Verificada con `probe_animaciones_player` (29 fases OK, headless); falta probar jugando (umbrales/blend/tramos de stun) y re-ubicar el fogonazo de poise-chip que pintaba la cápsula (ahora invisible) |

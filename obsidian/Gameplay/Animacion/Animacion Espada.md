@@ -6,13 +6,13 @@ tags:
   - animacion
   - combate
 status: active
-system_status: E0
+system_status: E1
 hito: H1
 ---
 
 # Animacion Espada
 
-Plan de clips UAL para el combate de [[Espada]] sobre el player. Hoy la Espada es 100% procedural (swings por quaternion en `Hand`, ver `combat/weapons/sword/sword.gd`); este plan la pasa a clips reales del maniqui UAL2. Ver [[Player]] para locomocion/salto/slide.
+Clips UAL para el combate de [[Espada]] sobre el player. Implementado: `sword.gd` emite `visual_clip_started` (señal de `WeaponBase.play_visual_clip`) al arrancar cada golpe y `PlayerAnimationController` reproduce el tramo en el maniqui, escalado a la duracion mecanica del golpe (`swing_time` / `charged_dash_duration`). Los swings por quaternion en `Hand` siguen siendo el motor de hitboxes: la animacion es solo visual. El combo AEREO (diagonales/vueltas) no tiene clips asignados en este plan y queda solo procedural. Ver [[Player]] para locomocion/salto/slide.
 
 Clips en `assets/animations/Universal Animation Library 2[Standard]/.../Unreal-Godot/UAL2_Standard.glb`, nombres verificados contra el JSON del `.glb` (no inventados).
 

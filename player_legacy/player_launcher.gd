@@ -1,0 +1,102 @@
+class_name PlayerLegacyLauncher extends Node
+## Bloque (ex PlayerLegacyLauncher.cs): combate aéreo del jugador — el launcher (sube y flota)
+## y el air-hit-stall (conectando golpes en el aire la caída se RALENTIZA; atacando en el
+## aire SIN conectar cae con MÁS fuerza). No aplica gravedad él mismo: provee al glue la
+## ESCALA de gravedad de este frame. (El freeze vertical de v1 nunca se usaba: eliminado.)
+
+var is_launched := false
+
+var _body: PlayerLegacy
+var _height := 0.0
+var _rise_time := World.LAUNCH_RISE_TIME
+var _rise_left := 0.0
+var _float_until := 0.0
+var _fall_until := 0.0
+var _air_stall_until := 0.0
+var _aerial_attack_until := 0.0
+var _last_stall_time := -999.0
+var _stall_count := 0
+
+func setup(body: PlayerLegacy) -> void:
+	_body = body
+
+## El dueño ya canceló dash/swing antes de esto. (hang_time reservado: v1 lo recibía sin usarlo.)
+func start_launch(height: float, _hang_time: float, rise_time: float = World.LAUNCH_RISE_TIME) -> void:
+	is_launched = true
+	_height = height
+	_rise_time = maxf(0.01, rise_time)
+	_rise_left = _rise_time
+	_body.air_state = PlayerLegacy.AirState.AIRBORNE
+	_body.vertical_velocity = 0.0
+
+func tick_launch(delta: float) -> void:
+	_body.velocity = Vector3.UP * (_height / _rise_time)
+	_body.move_and_slide()
+	_rise_left -= delta
+	if _rise_left <= 0.0:
+		is_launched = false
+		_body.vertical_velocity = 0.0
+		var t := _body.tuning
+		_float_until = World.now() + t.launcher_float_duration
+		_fall_until = World.now() + t.launcher_fall_duration
+
+## Escala de gravedad para este frame. El momentum horizontal NO se toca acá.
+func gravity_scale() -> float:
+	var t := _body.tuning
+	# Conectando golpes en el aire: cae lento. Atacando en el aire sin conectar: cae MÁS fuerte.
+	if World.now() < _air_stall_until:
+		return t.air_stall_float_gravity
+	if World.now() < _aerial_attack_until:
+		return t.aerial_whiff_fall_gravity
+	if World.now() < _float_until:
+		return t.launcher_float_gravity
+	if World.now() < _fall_until:
+		return t.launcher_fall_gravity
+	return 1.0
+
+## El arma avisa que hay un golpe aéreo en curso: si NO conecta, la caída se agrava.
+## Si conecta, el hitbox llama register_air_hit_stall y el float gana prioridad.
+func notify_aerial_attack(duration: float) -> void:
+	if _body.is_on_floor():
+		return
+	_aerial_attack_until = maxf(_aerial_attack_until, World.now() + duration)
+
+## Hang PROPIO de un move (no el air-hit-stall genérico): frena la caída en seco y sostiene al
+## jugador `duration` segundos exactos, sin depender del contador de combo ni de air_stall_scale.
+## No consume el doble salto: la ventana existe justamente para que el jugador lo gaste.
+## Lo usa el Y cargado aéreo del Mazo, que al conectar lanza al enemigo y se queda flotando.
+func hover(duration: float) -> void:
+	if _body.is_on_floor():
+		return
+	_air_stall_until = maxf(_air_stall_until, World.now() + duration)
+	_body.vertical_velocity = 0.0
+	_body.air_state = PlayerLegacy.AirState.AIRBORNE
+
+func register_air_hit_stall(scale := 1.0) -> void:
+	if _body.is_on_floor():
+		return
+	var t := _body.tuning
+	if World.now() - _last_stall_time > t.air_stall_combo_window:
+		_stall_count = 0
+	_stall_count += 1
+	_last_stall_time = World.now()
+	var duration := minf(t.air_stall_base + t.air_stall_per_hit * (_stall_count - 1), t.air_stall_max) * scale
+	_air_stall_until = maxf(_air_stall_until, World.now() + duration)
+	# Congela la caída (velocity negativa → 0) pero preserva una subida CHICA (ej. el hop del
+	# primer spin de la rama espera): así el air-hit no mata el impulso vertical. El cap evita
+	# amplificar un salto: sin él, un golpe justo tras un doble salto conservaba toda la velocidad
+	# del salto y con la gravedad baja del stall el jugador salía disparado.
+	_body.vertical_velocity = clampf(_body.vertical_velocity, 0.0, t.air_stall_max_rise)
+	_body.air_state = PlayerLegacy.AirState.AIRBORNE
+
+func reset_air_stall() -> void:
+	_air_stall_until = 0.0
+	_aerial_attack_until = 0.0
+	_stall_count = 0
+
+## Cancela el launcher (al dashear/bumpear/swing): apaga flotación y stall.
+func cancel() -> void:
+	is_launched = false
+	_float_until = 0.0
+	_fall_until = 0.0
+	reset_air_stall()
