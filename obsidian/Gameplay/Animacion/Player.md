@@ -59,9 +59,11 @@ Blend con la locomoción, no un one-shot aislado: sale del suelo, sostiene en el
 | Sostenido en el aire | `NinjaJump_Idle` |
 | Aterrizaje | `NinjaJump_Land` |
 
-> [!warning] Pendientes de resolver — confirmados jugando
-> 1. **El maniqui mira al reves**: en locomocion, salto y espada encara 180° al contrario del movimiento. Causa probable: el esqueleto UAL (estilo Unreal, huesos `hand_r`/`hand_l`) mira **+Z** y el forward del Player es **-Z** (convencion Godot). Arreglo candidato: rotar el nodo `Visual` 180° en Y (en `player.tscn` o en el `_ready` del controlador) y re-verificar `face_wall` del wall slide, que hoy compensa sobre la orientacion invertida. El enemigo usa el mismo maniqui y esta igual de invertido (ver [[Animacion]]).
-> 2. **El wall slide se ve horizontal y debe ser vertical**: los clips `Slide_Start`/`Slide`/`Slide_Exit` de UAL2 son un derrape de PISO (el personaje deslizando acostado), asi que contra la pared el maniqui queda horizontal. Hay que hacerlo vertical: rotar la pose/maniqui para que deslice de pie contra el muro (o reemplazar por una pose vertical propia — UAL no trae clip de wall slide). Re-tunear junto con `face_wall`.
+> [!warning] Pendiente de resolver — confirmado jugando
+> **El wall slide se ve horizontal y debe ser vertical**: los clips `Slide_Start`/`Slide`/`Slide_Exit` de UAL2 son un derrape de PISO (el personaje deslizando acostado), asi que contra la pared el maniqui queda horizontal. Hay que hacerlo vertical: rotar la pose/maniqui para que deslice de pie contra el muro (o reemplazar por una pose vertical propia — UAL no trae clip de wall slide). Re-tunear junto con `face_wall`.
+
+> [!note] Resuelto: el maniqui miraba 180° al reves
+> El esqueleto UAL (estilo Unreal) mira **+Z** y el forward del Player es **-Z**. Fix: el `UAL2_Standard` lleva 180° en Y **dentro** de `Visual` (en `player.tscn`, y lo mismo en `grounded_enemy.tscn` para el enemigo) — en el hijo y no en `Visual` porque el controlador rota/resetea `Visual` durante el wall slide. Consecuencia: el `look_at` de `_face_wall_normal` apunta al reves de lo que el maniqui encara (documentado en el codigo). El `UAL2_Ragdoll` NO se roto: su pose acostada esta aprobada jugando — si al transicionar se ve espejado, aplicarle el mismo giro. Pendiente de re-validar jugando.
 
 ## Arma en mano (agregado post-plan, opción A)
 

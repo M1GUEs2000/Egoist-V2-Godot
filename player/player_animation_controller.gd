@@ -330,10 +330,13 @@ func _update_slide_visual() -> bool:
 
 ## [[Wall Slide y Wall Jump]]: el maniquí rota según la dirección de la pared, no queda
 ## fijo al forward del player. Solo gira el Visual: el forward de gameplay no se toca.
+## El maniquí UAL (estilo Unreal) mira +Z, por eso va con 180° en Y dentro de Visual
+## (en player.tscn) — y por eso acá el look_at apunta al REVÉS de lo que se quiere que
+## el maniquí encare: face_wall=true → look_at hacia AFUERA de la pared.
 func _face_wall_normal(wall_normal: Vector3) -> void:
 	if _visual == null:
 		return
-	var facing := -wall_normal if face_wall else wall_normal
+	var facing := wall_normal if face_wall else -wall_normal
 	facing.y = 0.0
 	if facing.length_squared() < 0.0001:
 		return

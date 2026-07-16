@@ -173,6 +173,7 @@ mesh = SubResource("CapsuleMesh_body")
 [node name="Visual" type="Node3D" parent="." unique_id=78676613]
 
 [node name="UAL2_Standard" parent="Visual" unique_id=365811475 instance=ExtResource("26_ual2")]
+transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 0, 0, 0)
 
 [node name="AnimationController" type="Node" parent="." unique_id=2070076192]
 script = ExtResource("27_anim_controller")
