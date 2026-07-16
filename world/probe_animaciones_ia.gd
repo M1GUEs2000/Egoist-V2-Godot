@@ -37,7 +37,33 @@ func _ready() -> void:
 	assert(_animation_player.has_animation(_clip("air_stun_animation")))
 	assert(_animation_player.has_animation(_clip("push_animation")))
 	assert(_animation_player.has_animation(_clip("death_animation")))
+	_assert_weapon_in_hand()
 	await _run_states()
+
+## Arma en mano: copia visual colgada del hueso y arma orbital invisible con hitbox vivo.
+func _assert_weapon_in_hand() -> void:
+	var skeleton := _find_skeleton(_enemy.get_node("Visual"))
+	assert(skeleton != null)
+	var attachment := skeleton.get_node_or_null("HandAttachment") as BoneAttachment3D
+	assert(attachment != null)
+	assert(attachment.bone_name == StringName(_controller.get("hand_bone_name")))
+	var copy := attachment.get_node_or_null("MeleeAttackHandVisual") as Node3D
+	assert(copy != null and copy.get_child_count() == 1)  # BladeMesh
+	var blade := _enemy.get_node("MeleeAttack/Hand/Pivot/BladeMesh") as MeshInstance3D
+	assert(blade != null and not blade.visible)
+	assert(_enemy.get_node("MeleeAttack/Hand/Pivot/BladeHitbox") != null)
+	print("PROBE animaciones_ia=arma_en_mano")
+
+func _find_skeleton(root: Node) -> Skeleton3D:
+	if root == null:
+		return null
+	if root is Skeleton3D:
+		return root as Skeleton3D
+	for child in root.get_children():
+		var found := _find_skeleton(child)
+		if found != null:
+			return found
+	return null
 
 func _run_states() -> void:
 	await _expect_phase("idle", _clip("idle_animation"), 1.5)

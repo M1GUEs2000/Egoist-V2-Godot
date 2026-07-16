@@ -12,11 +12,9 @@ hito: H1
 
 # Animacion
 
-> [!warning] Pendiente de resolver — confirmado jugando
-> **La espada del enemigo no esta anclada a la mano**: los clips de combate (`Sword_Regular_Combo`, `Sword_Block`) animan al maniqui con la mano vacia — no existe arma visible. Arreglo candidato: replicar la opcion A del player (`BoneAttachment3D` en `hand_r` con el mesh del arma; ver [[Player]] seccion "Arma en mano"), recordando el `UAL2_Ragdoll` que es un maniqui aparte.
-
-> [!note] Resuelto: el maniqui enemigo miraba 180° al reves
-> Mismo fix que el player (ver [[Player]]): `UAL2_Standard` con 180° en Y dentro de `Visual` en `grounded_enemy.tscn`. El `UAL2_Ragdoll` no se roto (pose aprobada jugando). Pendiente de re-validar jugando.
+> [!note] Resueltos (pendientes de re-validar jugando)
+> 1. **El maniqui miraba 180° al reves**: mismo fix que el player (ver [[Player]]) — `UAL2_Standard` con 180° en Y dentro de `Visual` en `grounded_enemy.tscn`. El `UAL2_Ragdoll` no se roto (pose aprobada jugando).
+> 2. **La espada ya esta anclada a la mano**: opcion A del player replicada en `EnemyAnimationController._setup_hand_attachment` — `BoneAttachment3D` en `hand_r` con una copia visual del `BladeMesh` de cada ataque (`*/Hand/Pivot`), y el arma orbital invisible con su `BladeHitbox` intacto (el daño no cambia). Por codigo, asi lo heredan todos los prefabs (ultra agresivo, hibrido, rift, world switch). Efecto lateral bueno: durante el ragdoll el arma se oculta con el `Visual` en vez de quedar flotando suelta. Grip tuneable: `hand_bone_name`, `hand_attach_offset`, `hand_attach_rotation_degrees`.
 
 `EnemyAnimationController` es una capa visual de `GroundedEnemy`. Traduce estados ya resueltos de IA y combate a clips UAL sin mover el `CharacterBody3D`, abrir hitboxes ni decidir impactos. El piloto es `ReactiveEnemyA` en `lvl_1_v_0_1`.
 

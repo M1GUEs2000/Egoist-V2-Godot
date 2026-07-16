@@ -24,6 +24,13 @@ const UAL1_ANIMATIONS := [&"Idle", &"Walk", &"Jog_Fwd", &"Sprint", &"Roll", &"De
 @export_range(0.0, 2.0, 0.01) var ground_stun_end := 0.4
 @export_range(0.0, 2.0, 0.01) var air_stun_start := 0.15
 @export_range(0.0, 2.0, 0.01) var air_stun_end := 0.25
+## Arma en mano (misma opcion A que el player, ver boveda Animacion/Player): una COPIA
+## visual del arma cuelga del hueso de la mano y acompaña el clip; el mesh orbital que
+## barre con la Hand procedural queda invisible pero su Hitbox sigue intacto — el daño no
+## cambia. Offset/rotacion para acomodar el grip.
+@export var hand_bone_name: StringName = &"hand_r"
+@export var hand_attach_offset := Vector3.ZERO
+@export var hand_attach_rotation_degrees := Vector3.ZERO
 
 var _enemy: GroundedEnemy
 var _animation_player: AnimationPlayer
@@ -59,7 +66,71 @@ func _ready() -> void:
 		_enemy.push_started.connect(_on_push_started)
 	if not _enemy.ragdoll_recovered.is_connected(_on_ragdoll_recovered):
 		_enemy.ragdoll_recovered.connect(_on_ragdoll_recovered)
+	_setup_hand_attachment()
 	_play_loop(idle_animation)
+
+# ---- Arma en mano (BoneAttachment3D sobre el hueso de la mano) ----
+
+## Cuelga del hueso una copia visual del arma de cada ataque melee y oculta el mesh
+## orbital (su Hitbox hermano sigue barriendo: el daño no cambia).
+func _setup_hand_attachment() -> void:
+	var skeleton := _find_skeleton(_enemy.get_node_or_null("Visual"))
+	if skeleton == null:
+		return
+	var attachment := BoneAttachment3D.new()
+	attachment.name = "HandAttachment"
+	skeleton.add_child(attachment)
+	attachment.bone_name = hand_bone_name
+	var copies := 0
+	for pivot in _weapon_pivots():
+		var copy := _build_hand_copy(pivot)
+		if copy != null:
+			attachment.add_child(copy)
+			copies += 1
+	if copies == 0:
+		attachment.queue_free()
+
+## Pivots de arma de los ataques del enemigo (MeleeAttack/Hand/Pivot y familia).
+func _weapon_pivots() -> Array[Node3D]:
+	var out: Array[Node3D] = []
+	for child in _enemy.get_children():
+		var pivot := child.get_node_or_null("Hand/Pivot") as Node3D
+		if pivot != null:
+			out.append(pivot)
+	return out
+
+## Copia los MeshInstance3D del pivot preservando su transform local; duplicate() comparte
+## mesh y materiales por referencia.
+func _build_hand_copy(pivot: Node3D) -> Node3D:
+	var copy_root := Node3D.new()
+	copy_root.name = pivot.get_parent().get_parent().name + "HandVisual"
+	var found := false
+	for child in pivot.get_children():
+		var mesh := child as MeshInstance3D
+		if mesh == null:
+			continue
+		var mesh_copy := mesh.duplicate() as MeshInstance3D
+		mesh_copy.visible = true
+		copy_root.add_child(mesh_copy)
+		mesh.visible = false  # el arma orbital ya no se ve; su hitbox sigue barriendo
+		found = true
+	if not found:
+		copy_root.free()
+		return null
+	copy_root.position = hand_attach_offset
+	copy_root.rotation_degrees = hand_attach_rotation_degrees
+	return copy_root
+
+func _find_skeleton(root: Node) -> Skeleton3D:
+	if root == null:
+		return null
+	if root is Skeleton3D:
+		return root as Skeleton3D
+	for child in root.get_children():
+		var found := _find_skeleton(child)
+		if found != null:
+			return found
+	return null
 
 func _physics_process(_delta: float) -> void:
 	if _enemy == null or _animation_player == null:
