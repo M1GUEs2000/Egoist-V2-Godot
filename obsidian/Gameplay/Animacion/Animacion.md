@@ -6,7 +6,7 @@ tags:
   - animacion
   - sistema
 status: active
-system_status: E1
+system_status: E2
 hito: H1
 ---
 

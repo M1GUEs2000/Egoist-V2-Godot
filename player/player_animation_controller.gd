@@ -61,6 +61,13 @@ const UAL1_ANIMATIONS := [&"Idle", &"Walk", &"Sprint"]
 @export_range(0.0, 1.5, 0.01) var land_hold_time := 0.4
 ## El maniquí encara la pared durante el wall slide (false = de espaldas a la pared).
 @export var face_wall := true
+## El clip UAL Slide es un deslizamiento de suelo. Este giro local lo pone erguido
+## contra el muro sin alterar la orientación física del Player.
+@export_range(-180.0, 180.0, 1.0) var wall_slide_tilt_degrees := -90.0
+## Suaviza la transición visual de salto a wall slide; no afecta el estado mecánico.
+@export_range(0.0, 0.5, 0.01) var wall_slide_orientation_blend_time := 0.18
+## Velocidad mínima sobre la pared para orientar la pose hacia el movimiento real.
+@export_range(0.0, 2.0, 0.01) var wall_slide_orientation_min_speed := 0.15
 
 enum AirPhase { NONE, START, LOOP }
 
@@ -144,7 +151,7 @@ func _physics_process(_delta: float) -> void:
 		if World.now() < _override_ends_at:
 			return
 		_release_override()
-	if _update_slide_visual():
+	if _update_slide_visual(_delta):
 		return
 	if _update_air_visual():
 		return
@@ -305,7 +312,7 @@ func _stop_stun_visual() -> void:
 # ---- Capa 2: wall slide ----
 
 ## True si esta capa es dueña del frame (deslizando o saliendo del slide).
-func _update_slide_visual() -> bool:
+func _update_slide_visual(delta: float) -> bool:
 	if _player.wall_slide.is_sliding:
 		if not _slide_active:
 			_slide_active = true
@@ -316,7 +323,7 @@ func _update_slide_visual() -> bool:
 				or _animation_player.current_animation != slide_start_animation:
 			# Entrada terminada — o pisada por un override de arma: sostiene el loop.
 			_play_loop(slide_loop_animation)
-		_face_wall_normal(_player.wall_slide.wall_normal)
+		_face_wall_normal(_player.wall_slide.wall_normal, delta)
 		return true
 	if _slide_active:
 		_slide_active = false
@@ -343,14 +350,31 @@ func _update_slide_visual() -> bool:
 ## El maniquí UAL (estilo Unreal) mira +Z, por eso va con 180° en Y dentro de Visual
 ## (en player.tscn) — y por eso acá el look_at apunta al REVÉS de lo que se quiere que
 ## el maniquí encare: face_wall=true → look_at hacia AFUERA de la pared.
-func _face_wall_normal(wall_normal: Vector3) -> void:
+func _face_wall_normal(wall_normal: Vector3, delta: float) -> void:
 	if _visual == null:
 		return
 	var facing := wall_normal if face_wall else -wall_normal
 	facing.y = 0.0
 	if facing.length_squared() < 0.0001:
 		return
-	_visual.look_at(_visual.global_position + facing.normalized(), Vector3.UP)
+	var target_transform := _visual.global_transform.looking_at(
+			_visual.global_position + facing.normalized(), Vector3.UP)
+	# look_at alinea el frente del maniquí con la normal; el giro local convierte la
+	# pose horizontal de Slide en una pose vertical, apoyada contra esa pared.
+	target_transform.basis = target_transform.basis * Basis(
+			Vector3.RIGHT, deg_to_rad(wall_slide_tilt_degrees))
+	# El cuerpo apunta hacia su desplazamiento sobre el plano del muro: conserva el
+	# impulso lateral de entrada y se endereza con los pies abajo al dominar la caída.
+	var wall_velocity := _player.velocity.slide(wall_normal)
+	if wall_velocity.length() >= wall_slide_orientation_min_speed:
+		var default_slide_direction := -target_transform.basis.z
+		var turn := default_slide_direction.signed_angle_to(
+				wall_velocity.normalized(), wall_normal)
+		target_transform.basis = Basis(wall_normal, turn) * target_transform.basis
+	var blend_weight := 1.0
+	if wall_slide_orientation_blend_time > 0.0:
+		blend_weight = clampf(delta / wall_slide_orientation_blend_time, 0.0, 1.0)
+	_visual.global_basis = _visual.global_basis.slerp(target_transform.basis, blend_weight)
 
 func _stop_slide_rotation() -> void:
 	if _visual != null:

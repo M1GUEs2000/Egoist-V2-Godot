@@ -6,7 +6,7 @@ tags:
   - animacion
   - sistema
 status: active
-system_status: E1
+system_status: E2
 hito: H1
 ---
 
@@ -59,8 +59,8 @@ Blend con la locomoción, no un one-shot aislado: sale del suelo, sostiene en el
 | Sostenido en el aire | `NinjaJump_Idle` |
 | Aterrizaje | `NinjaJump_Land` |
 
-> [!warning] Pendiente de resolver — confirmado jugando
-> **El wall slide se ve horizontal y debe ser vertical**: los clips `Slide_Start`/`Slide`/`Slide_Exit` de UAL2 son un derrape de PISO (el personaje deslizando acostado), asi que contra la pared el maniqui queda horizontal. Hay que hacerlo vertical: rotar la pose/maniqui para que deslice de pie contra el muro (o reemplazar por una pose vertical propia — UAL no trae clip de wall slide). Re-tunear junto con `face_wall`.
+> [!success] Wall slide visual aprobado jugando
+> Los clips de piso de UAL2 (`Slide_Start`/`Slide`/`Slide_Exit`) se reorientan visualmente contra la normal del muro. La entrada mezcla el giro durante `wall_slide_orientation_blend_time`; la pose sigue la velocidad proyectada sobre la pared y termina con los pies hacia abajo al dominar la caida. Knobs: `wall_slide_tilt_degrees`, `wall_slide_orientation_blend_time` y `wall_slide_orientation_min_speed`.
 
 > [!note] Resuelto: el maniqui miraba 180° al reves
 > El esqueleto UAL (estilo Unreal) mira **+Z** y el forward del Player es **-Z**. Fix: el `UAL2_Standard` lleva 180° en Y **dentro** de `Visual` (en `player.tscn`, y lo mismo en `grounded_enemy.tscn` para el enemigo) — en el hijo y no en `Visual` porque el controlador rota/resetea `Visual` durante el wall slide. Consecuencia: el `look_at` de `_face_wall_normal` apunta al reves de lo que el maniqui encara (documentado en el codigo). El `UAL2_Ragdoll` NO se roto: su pose acostada esta aprobada jugando — si al transicionar se ve espejado, aplicarle el mismo giro. Pendiente de re-validar jugando.
