@@ -11,7 +11,7 @@ status: active
 system_status: E3
 hito: H2
 ---
-
+	
 # Mazo / Morningstar
 
 Arma de mas dano. Controla masas. Tiene bastante knockback. Tumba a los enemigos. Velocidad lenta.
