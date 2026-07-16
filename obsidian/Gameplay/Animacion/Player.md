@@ -59,6 +59,15 @@ Blend con la locomoción, no un one-shot aislado: sale del suelo, sostiene en el
 | Sostenido en el aire | `NinjaJump_Idle` |
 | Aterrizaje | `NinjaJump_Land` |
 
+> [!warning] Pendiente de resolver — el maniqui mira al reves (confirmado jugando)
+> En locomocion, salto y espada el maniqui encara 180° al contrario del movimiento. Causa probable: el esqueleto UAL (estilo Unreal, huesos `hand_r`/`hand_l`) mira **+Z** y el forward del Player es **-Z** (convencion Godot). Arreglo candidato: rotar el nodo `Visual` 180° en Y (en `player.tscn` o en el `_ready` del controlador) y re-verificar `face_wall` del wall slide, que hoy compensa sobre la orientacion invertida. El enemigo usa el mismo maniqui: revisar si alli tambien esta invertido o como lo resuelve.
+
+## Arma en mano (agregado post-plan, opción A)
+
+El maniqui empuña una **copia visual** del arma: `PlayerAnimationController` crea en runtime un `BoneAttachment3D` sobre el hueso `hand_r` del esqueleto UAL y le cuelga duplicados de los meshes del arma (`BladeMesh` de la Espada; `HandleMesh`+`HeadMesh` del Mazo). Los meshes orbitales (los de `Hand/Pivot` que barren proceduralmente) quedan **invisibles pero con sus hitboxes intactos**: el daño no cambia. La copia comparte materiales por referencia, asi que el glow de carga se ve en la mano; y sigue la visibilidad del arma activa (slot X/Y).
+
+Compromiso aceptado (H1): la hoja **visible** acompaña al clip, pero el volumen que **golpea** sigue el barrido procedural — no coinciden exactamente hasta que existan marcadores de impacto (H3). Knobs para acomodar el grip: `hand_bone_name`, `hand_attach_offset`, `hand_attach_rotation_degrees` (exports del controlador), pendientes de tunear mirando el juego.
+
 ## Stun (agregado post-plan)
 
 No estaba en el plan original; espeja al [[Animacion|piloto de enemigos]]: al entrar (o extenderse) el stun se reproduce un tramo del clip y la pose final queda congelada hasta que el stun termina. Capa de prioridad máxima del controlador (gana al golpe de arma, al slide y al aire). Tramos como exports (`ground_stun_start/end`, `air_stun_start/end`), pendientes de tunear jugando.

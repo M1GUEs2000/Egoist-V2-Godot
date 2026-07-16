@@ -30,6 +30,13 @@ const UAL1_ANIMATIONS := [&"Idle", &"Walk", &"Sprint"]
 @export var slide_start_animation: StringName = &"Slide_Start"
 @export var slide_loop_animation: StringName = &"Slide"
 @export var slide_exit_animation: StringName = &"Slide_Exit"
+# Arma en mano (opción A): una COPIA visual de los meshes del arma cuelga del hueso de la
+# mano vía BoneAttachment3D y acompaña la animación; los meshes orbitales quedan invisibles
+# pero sus hitboxes siguen barriendo — el daño no cambia. La copia comparte los materiales
+# (el glow de carga se ve en la mano). Offset/rotación para acomodar el grip, a tunear.
+@export var hand_bone_name: StringName = &"hand_r"
+@export var hand_attach_offset := Vector3.ZERO
+@export var hand_attach_rotation_degrees := Vector3.ZERO
 # Stun: fuera del plan original de la bóveda — espeja al enemigo (EnemyAnimationController):
 # tramo del clip y pose final congelada mientras dure el stun.
 @export var ground_stun_animation: StringName = &"Zombie_Scratch"
@@ -70,6 +77,8 @@ var _stun_visual_active := false
 var _stun_animation_frozen := false
 var _stun_segment_end := 0.0
 var _stun_segment_ends_at := -INF
+var _hand_attachment: BoneAttachment3D
+var _hand_copies := {}  # WeaponBase → Node3D (copia visual en la mano)
 
 func _ready() -> void:
 	_player = get_parent() as Player
@@ -95,10 +104,14 @@ func _ready() -> void:
 	var stun := _player.get_node_or_null("Stun") as PlayerStun
 	if stun != null and not stun.stunned_started.is_connected(_on_stunned_started):
 		stun.stunned_started.connect(_on_stunned_started)
+	# Diferido: espera a que los _ready de las armas corran (glow de carga incluido) para
+	# que las copias en mano compartan sus materiales ya preparados.
+	_setup_hand_attachment.call_deferred()
 	_play_loop(idle_animation)
 
 func _on_slots_changed(_slot_x: WeaponBase, _slot_y: WeaponBase) -> void:
 	_connect_weapons()
+	_build_missing_hand_copies()
 
 ## Señal hacia arriba: cada arma avisa qué tramo de clip muestra su golpe.
 func _connect_weapons() -> void:
@@ -114,6 +127,7 @@ func _connect_weapons() -> void:
 func _physics_process(_delta: float) -> void:
 	if _player == null or _animation_player == null:
 		return
+	_sync_hand_copies_visibility()
 	# Stun o dash cancelan el golpe en curso: soltamos el override. El stun tiene capa
 	# propia (abajo); el dash no tiene clip en el plan y cae a aire/locomoción.
 	if _player.is_stunned() or _player.dash.is_dashing:
@@ -158,6 +172,80 @@ func _release_override() -> void:
 		return
 	_override_active = false
 	_animation_player.speed_scale = 1.0
+
+# ---- Arma en mano (BoneAttachment3D sobre el hueso de la mano) ----
+
+## Construye el attachment y una copia visual por arma. Los meshes orbitales (los que
+## barren con la Hand procedural) quedan invisibles: sus Hitbox hermanos siguen intactos.
+func _setup_hand_attachment() -> void:
+	var skeleton := _find_skeleton(_visual)
+	if skeleton == null:
+		push_warning("Sin Skeleton3D bajo Visual: el arma no se adjunta a la mano.")
+		return
+	_hand_attachment = BoneAttachment3D.new()
+	_hand_attachment.name = "HandAttachment"
+	skeleton.add_child(_hand_attachment)
+	_hand_attachment.bone_name = hand_bone_name
+	_build_missing_hand_copies()
+
+## Un arma equipada después (menú de loadout) también gana su copia en mano.
+func _build_missing_hand_copies() -> void:
+	if _hand_attachment == null:
+		return
+	for child in _player.get_children():
+		var weapon := child as WeaponBase
+		if weapon == null or weapon in _hand_copies:
+			continue
+		var copy := _build_hand_copy(weapon)
+		if copy != null:
+			_hand_attachment.add_child(copy)
+			_hand_copies[weapon] = copy
+	_sync_hand_copies_visibility()
+
+## Copia solo los MeshInstance3D del Pivot (BladeMesh / HandleMesh+HeadMesh), preservando
+## sus transforms locales — el grip queda en el origen del hueso. duplicate() comparte mesh
+## y materiales por referencia: el glow de carga del arma se ve en la copia.
+func _build_hand_copy(weapon: WeaponBase) -> Node3D:
+	var pivot := weapon.get_node_or_null("Hand/Pivot")
+	if pivot == null:
+		return null
+	var copy_root := Node3D.new()
+	copy_root.name = weapon.name + "HandVisual"
+	var found := false
+	for child in pivot.get_children():
+		var mesh := child as MeshInstance3D
+		if mesh == null:
+			continue
+		var mesh_copy := mesh.duplicate() as MeshInstance3D
+		mesh_copy.visible = true
+		copy_root.add_child(mesh_copy)
+		mesh.visible = false  # la hoja orbital ya no se ve; su hitbox sigue barriendo
+		found = true
+	if not found:
+		copy_root.free()
+		return null
+	copy_root.position = hand_attach_offset
+	copy_root.rotation_degrees = hand_attach_rotation_degrees
+	return copy_root
+
+## La copia en mano sigue la visibilidad del arma (PlayerCombat muestra solo la activa).
+func _sync_hand_copies_visibility() -> void:
+	for weapon: WeaponBase in _hand_copies:
+		var copy: Node3D = _hand_copies[weapon]
+		if is_instance_valid(weapon) and is_instance_valid(copy) \
+				and copy.visible != weapon.visible:
+			copy.visible = weapon.visible
+
+func _find_skeleton(root: Node) -> Skeleton3D:
+	if root == null:
+		return null
+	if root is Skeleton3D:
+		return root as Skeleton3D
+	for child in root.get_children():
+		var found := _find_skeleton(child)
+		if found != null:
+			return found
+	return null
 
 # ---- Capa de stun (prioridad máxima, mismo patrón que EnemyAnimationController) ----
 

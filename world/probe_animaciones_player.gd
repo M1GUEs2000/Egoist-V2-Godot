@@ -9,7 +9,7 @@ extends Node3D
 
 const PLAYER_SCENE := preload("res://player/player.tscn")
 
-const SECTION_COUNT := 6
+const SECTION_COUNT := 7
 
 var _player: Player
 var _controller: Node
@@ -39,6 +39,9 @@ func _ready() -> void:
 	assert(_sword != null)
 	assert(_mace != null)
 	_assert_clips()
+	# El attachment de mano se arma por call_deferred: darle un frame de proceso.
+	await get_tree().process_frame
+	_run_hand_attachment()
 	await _run_locomotion()
 	await _run_jump()
 	await _run_wall_slide()
@@ -68,6 +71,46 @@ func _assert_clips() -> void:
 		assert(_animation_player.has_animation(clip))
 	assert(_animation_player.has_animation(Mace.ANIM_HEAVY))
 	print("PROBE animaciones_player=clips_presentes")
+
+# ---- Arma en mano: copia visual en el hueso, orbitales invisibles con hitbox vivo ----
+
+func _run_hand_attachment() -> void:
+	var skeleton: Skeleton3D = null
+	var stack: Array[Node] = [_visual]
+	while not stack.is_empty() and skeleton == null:
+		var node: Node = stack.pop_back()
+		if node is Skeleton3D:
+			skeleton = node as Skeleton3D
+		else:
+			stack.append_array(node.get_children())
+	assert(skeleton != null)
+	var attachment := skeleton.get_node_or_null("HandAttachment") as BoneAttachment3D
+	assert(attachment != null)
+	assert(attachment.bone_name == StringName(_controller.get(&"hand_bone_name")))
+	var sword_copy := attachment.get_node_or_null("SwordHandVisual") as Node3D
+	var mace_copy := attachment.get_node_or_null("MasoHandVisual") as Node3D
+	assert(sword_copy != null and sword_copy.get_child_count() == 1)  # BladeMesh
+	assert(mace_copy != null and mace_copy.get_child_count() == 2)  # HandleMesh + HeadMesh
+	# Los meshes orbitales quedaron invisibles pero sus hitboxes hermanos siguen ahi.
+	var blade := _sword.get_node("Hand/Pivot/BladeMesh") as MeshInstance3D
+	assert(blade != null and not blade.visible)
+	assert(_sword.get_node("Hand/Pivot/BladeHitbox") != null)
+	var head := _mace.get_node("Hand/Pivot/HeadMesh") as MeshInstance3D
+	assert(head != null and not head.visible)
+	# La copia sigue la visibilidad del arma activa (PlayerCombat muestra una a la vez).
+	_sword.visible = true
+	_mace.visible = false
+	_tick_controller()
+	assert(sword_copy.visible and not mace_copy.visible)
+	_mace.visible = true
+	_sword.visible = false
+	_tick_controller()
+	assert(mace_copy.visible and not sword_copy.visible)
+	_sword.visible = true
+	_mace.visible = false
+	_tick_controller()
+	print("PROBE animaciones_player=arma_en_mano")
+	_sections_done += 1
 
 # ---- Locomocion: Idle / Walk / Sprint por velocidad ----
 
