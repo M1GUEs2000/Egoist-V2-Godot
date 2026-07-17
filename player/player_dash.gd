@@ -169,13 +169,31 @@ func _end_dash(apply_exit_bop := false) -> void:
 		_exit_bop_vertical_speed = 0.0
 
 func _apply_exit_bop() -> void:
+	var has_bop := _exit_bop_velocity.length_squared() > 0.0001 \
+			or absf(_exit_bop_vertical_speed) > 0.0001
 	if _exit_bop_velocity.length_squared() > 0.0001:
 		_body.add_momentum(_exit_bop_velocity)
 	if absf(_exit_bop_vertical_speed) > 0.0001:
 		_body.vertical_velocity = _exit_bop_vertical_speed
 		_body.air_state = Player.AirState.AIRBORNE
+	if has_bop:
+		_burst_exit_bop()
 	_exit_bop_velocity = Vector3.ZERO
 	_exit_bop_vertical_speed = 0.0
+
+## Estallido verde en el momento en que el bop del bloque verde empuja al player (color del dash
+## desde World, no hardcodeado). Se cuelga del padre del player para sobrevivir al frame.
+func _burst_exit_bop() -> void:
+	var t := _body.tuning
+	if not t.dash_bop_burst_enabled:
+		return
+	var host := _body.get_parent()
+	if host == null:
+		host = _body
+	World.spawn_color_burst(host, _body.global_position + Vector3.UP,
+			World.COLOR_TRAVERSAL_DASH, World.COLOR_TRAVERSAL_DASH_EMISSION,
+			t.dash_bop_burst_amount, t.dash_bop_burst_speed, t.dash_bop_burst_gravity,
+			t.dash_bop_burst_lifetime, t.dash_bop_burst_size)
 
 func _set_particles(active: bool) -> void:
 	if _particles != null and _particles.emitting != active:

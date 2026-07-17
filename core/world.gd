@@ -69,6 +69,53 @@ static func paint_all_surfaces(root: Node, material: Material) -> void:
 		for surface in mesh.mesh.get_surface_count():
 			mesh.set_surface_override_material(surface, material)
 
+## Estallido one-shot de motas de un color, en `position` global. Se cuelga de `host` (que debe
+## estar en el arbol) y se libera solo al terminar. Motas unshaded + billboard + additive: puro
+## color que suma luz. Lo usan el bloque de traversal al golpearlo y el bop de salida del dash
+## verde (ver TraversalBlock y PlayerDash).
+static func spawn_color_burst(host: Node, position: Vector3, color: Color, emission: Color,
+		amount: int, speed: float, gravity: float, lifetime: float, size: float) -> void:
+	if host == null or amount <= 0:
+		return
+	var particles := GPUParticles3D.new()
+	particles.emitting = false
+	particles.one_shot = true
+	particles.explosiveness = 1.0  # todas las motas salen en el mismo frame = estallido
+	particles.amount = amount
+	particles.lifetime = lifetime
+	particles.local_coords = false
+
+	var process := ParticleProcessMaterial.new()
+	process.emission_shape = ParticleProcessMaterial.EMISSION_SHAPE_SPHERE
+	process.emission_sphere_radius = 0.4
+	process.direction = Vector3(0.0, 1.0, 0.0)
+	process.spread = 180.0  # esfera completa: sale para todos lados
+	process.initial_velocity_min = speed * 0.4
+	process.initial_velocity_max = speed
+	process.gravity = Vector3(0.0, -gravity, 0.0)
+	process.scale_min = 0.6
+	process.scale_max = 1.0
+	particles.process_material = process
+
+	var mesh := QuadMesh.new()
+	mesh.size = Vector2(size, size)
+	particles.draw_pass_1 = mesh
+
+	var material := StandardMaterial3D.new()
+	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	material.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED
+	material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	material.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+	material.emission_enabled = true
+	material.emission = emission
+	material.albedo_color = color
+	mesh.material = material
+
+	host.add_child(particles)
+	particles.global_position = position
+	particles.emitting = true
+	particles.finished.connect(particles.queue_free)  # one_shot no se libera solo
+
 ## Color base de una pieza segun el mundo al que pertenece.
 static func world_color(kind: Kind) -> Color:
 	return COLOR_LIVING if kind == Kind.LIVING else COLOR_DEAD

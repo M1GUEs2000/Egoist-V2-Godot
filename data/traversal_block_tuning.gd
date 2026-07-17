@@ -38,6 +38,20 @@ class_name TraversalBlockTuning extends Resource
 ## Lado de cada mota en metros.
 @export_range(0.01, 0.5, 0.01) var particle_size := 0.07
 
+@export_group("Explosion al golpe")
+## Estallido de motas del color del bloque cada vez que lo golpean. Una explosion por feature.
+@export var burst_enabled := true
+## Cantidad de motas por feature en cada golpe.
+@export_range(0, 128, 1) var burst_amount := 24
+## Velocidad de salida de las motas en m/s. Mas alto = explosion mas amplia.
+@export var burst_speed := 7.0
+## Gravedad que tira las motas al piso despues de estallar (m/s^2 del emisor, no la del mundo).
+@export var burst_gravity := 9.0
+## Cuanto vive cada mota del estallido, en segundos.
+@export_range(0.1, 3.0, 0.1) var burst_lifetime := 0.6
+## Lado de cada mota del estallido en metros.
+@export_range(0.01, 0.5, 0.01) var burst_size := 0.12
+
 @export_group("Flecha de direccion (bloque verde)")
 ## Largo de la vara, en metros, pegada a la cara -Z del bloque.
 @export var arrow_shaft_length := 0.6

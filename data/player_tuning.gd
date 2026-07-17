@@ -183,6 +183,18 @@ class_name PlayerTuning extends Resource
 @export var dash_hit_vertical_offset := 0.6
 ## StunSettings del golpe del dodge (hoy: potencia 0, el dodge no stunea).
 @export var dash_stun: StunSettings
+## Estallido verde al aplicarse el bop de salida del bloque verde (empuje horizontal/vertical).
+@export var dash_bop_burst_enabled := true
+## Cantidad de motas del estallido de salida.
+@export_range(0, 128, 1) var dash_bop_burst_amount := 24
+## Velocidad de salida de las motas en m/s.
+@export var dash_bop_burst_speed := 7.0
+## Gravedad que tira las motas al piso tras estallar (m/s^2 del emisor).
+@export var dash_bop_burst_gravity := 9.0
+## Cuanto vive cada mota del estallido, en segundos.
+@export_range(0.1, 3.0, 0.1) var dash_bop_burst_lifetime := 0.6
+## Lado de cada mota del estallido en metros.
+@export_range(0.01, 0.5, 0.01) var dash_bop_burst_size := 0.12
 
 @export_group("Launcher")
 ## Al terminar de subir por un launch: segundos flotando en el pico con float_gravity.

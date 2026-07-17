@@ -1,11 +1,19 @@
+@tool
 class_name TraversalBlock extends Node3D
 ## Bloque componible de traversal. Cada instancia activa una o varias funciones por export.
+## @tool solo para previsualizar la flecha del dash verde en el viewport del editor; el gameplay
+## corre normal (ver la guarda `Engine.is_editor_hint()` en `_ready` y `_process`).
 
 @export var tuning: TraversalBlockTuning
 
 @export_group("Caracteristicas")
 @export var enable_launch := false
-@export var enable_dash := false
+## Al togglearlo en el editor, la flecha de preview aparece/desaparece en el viewport (solo verde).
+@export var enable_dash := false:
+	set(value):
+		enable_dash = value
+		if Engine.is_editor_hint() and is_node_ready():
+			_refresh_editor_arrow()
 @export var enable_meter := false
 @export var enable_action_curse := false
 @export var enable_world_switch := false
@@ -51,6 +59,11 @@ var _dash_arrow: Node3D
 func _ready() -> void:
 	if tuning == null:
 		tuning = TraversalBlockTuning.new()
+	if Engine.is_editor_hint():
+		# En el editor solo dibujamos la flecha de preview; nada de wiring de gameplay
+		# (Health, Hurtbox, WorldManager) que en modo @tool no tiene sentido y romperia.
+		_refresh_editor_arrow()
+		return
 	_configure_health()
 	_hurtbox.hit.connect(_on_hit)
 	_health.died.connect(_on_died)
@@ -71,6 +84,8 @@ func _setup_light() -> void:
 	add_child(_light)
 
 func _process(_delta: float) -> void:
+	if Engine.is_editor_hint():
+		return
 	_update_glow()
 
 func _configure_health() -> void:
@@ -82,6 +97,7 @@ func _configure_health() -> void:
 		_break_on_death.free_owner = false
 
 func _on_hit(from: Node, _damage: float) -> void:
+	_burst_impact()  # estallido de color en cada golpe, aunque este sea el golpe que lo rompe
 	activate(from)
 
 ## Dispara todas las features activas del bloque sobre quien lo activa. Mismo efecto sea por
@@ -135,6 +151,26 @@ func _apply_dash(player: Player) -> void:
 			boost_existing_bump_momentum, dash_deals_damage)
 	# El dash conserva la inclinacion; el bop se aplica solo cuando termina.
 	player.set_dash_exit_bop(dash_dir, dash_bop_forward_speed, dash_vertical_bop_speed)
+
+## Estallido de motas al recibir un golpe: una explosion one-shot por feature, cada una del
+## color puro de esa feature (mismo criterio que el derrame hacia abajo).
+func _burst_impact() -> void:
+	if not tuning.burst_enabled or tuning.burst_amount <= 0:
+		return
+	var colors := _feature_colors()
+	var emissions := _feature_emissions()
+	for i in range(mini(colors.size(), emissions.size())):
+		_spawn_burst(colors[i], emissions[i])
+
+## Un estallido del centro del bloque, colgado del PADRE (no de self): si el golpe rompe el
+## bloque (BreakOnDeath), la explosion sobrevive hasta apagarse.
+func _spawn_burst(color: Color, emission: Color) -> void:
+	var host := get_parent()
+	if host == null:
+		host = self
+	World.spawn_color_burst(host, global_position + Vector3(0.0, 0.55, 0.0), color, emission,
+			tuning.burst_amount, tuning.burst_speed, tuning.burst_gravity,
+			tuning.burst_lifetime, tuning.burst_size)
 
 func _rebuild_glow_segments() -> void:
 	for child in _glow_segments.get_children():
@@ -276,6 +312,18 @@ func _repaint_light(colors: Array[Color]) -> void:
 		blended += color
 	_light.light_color = blended / float(colors.size())
 	_light.omni_range = tuning.light_range
+
+## Preview del viewport (solo editor): reconstruye la flecha cuando el bloque es verde y la
+## saca si se apaga enable_dash, para orientarla sin entrar a jugar. En runtime la flecha la
+## arma _ready una sola vez (la flecha real solo existe con enable_dash, igual que aca).
+func _refresh_editor_arrow() -> void:
+	if tuning == null:
+		tuning = TraversalBlockTuning.new()
+	if _dash_arrow != null:
+		_dash_arrow.queue_free()
+		_dash_arrow = null
+	if enable_dash:
+		_build_dash_arrow()
 
 ## Cono + vara semitransparente pegada a la cara -Z del bloque: marca hacia donde empuja el
 ## dash sin depender de por donde llegue el jugador. Vive fija en local; rotar el TraversalBlock

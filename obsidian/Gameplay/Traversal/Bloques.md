@@ -26,7 +26,7 @@ Objetos golpeables de traversal.
 | Caracteristica | Efecto | Color |
 |---|---|---|
 | Launch / bump | Suma momentum horizontal, aplica bump vertical, restaura doble salto y airdash. | Rojo |
-| Dash | Fuerza dash hacia la cara **-Z local del bloque** (fija, no depende de por donde llega el jugador; rotar el `TraversalBlock` en el editor cambia el rumbo, incluida la inclinacion vertical). Una flecha cono+vara semitransparente en esa cara muestra el rumbo. Al terminar naturalmente, aplica un bop corto: momentum hacia adelante en la proyeccion horizontal de la flecha (`dash_bop_forward_speed`) y empuje hacia arriba (`dash_vertical_bop_speed`); ambos son exports por instancia y `0` los desactiva. Si el dash se cancela, no hay bop. El dash **daña al atravesar** enemigos (`dash_deals_damage`, prende el `DashHitbox` del player). | Verde |
+| Dash | Fuerza dash hacia la cara **-Z local del bloque** (fija, no depende de por donde llega el jugador; rotar el `TraversalBlock` en el editor cambia el rumbo, incluida la inclinacion vertical). Una flecha cono+vara semitransparente en esa cara muestra el rumbo; el script es `@tool`, asi que la flecha se **previsualiza en el viewport del editor** y aparece/desaparece al togglear `enable_dash` (solo el bloque verde la dibuja). Al terminar naturalmente, aplica un bop corto: momentum hacia adelante en la proyeccion horizontal de la flecha (`dash_bop_forward_speed`) y empuje hacia arriba (`dash_vertical_bop_speed`); ambos son exports por instancia y `0` los desactiva. Si el dash se cancela, no hay bop. Cuando ese bop empuja al player (al terminar el dash) sale un **estallido verde** en el player, tuneado en `PlayerTuning` (`dash_bop_burst_*`). El dash **daña al atravesar** enemigos (`dash_deals_damage`, prende el `DashHitbox` del player). | Verde |
 | Meter | Suma barras de meter al jugador. | Celeste |
 | Maldicion | Al romperse, la proxima accion cambia de mundo. | Amarillo |
 | World switch | Cambia de mundo al golpearlo. | Color del mundo destino |
@@ -39,6 +39,8 @@ Objetos golpeables de traversal.
 - `hits_to_break = 0` significa indestructible. Valores mayores usan `Health` + `BreakOnDeath` para romperse tras esa cantidad de golpes.
 - El launch ahora alimenta el modelo de [[Momentum y Bump]]: encadenar bloques compone exceso hasta `momentum_max_speed`, y el exceso se drena por superficie en vez de morir de golpe al aterrizar.
 - Un bloque con `enable_dash` tambien se puede activar sin golpearlo: [[brazo-traversal|Brazo Traversal]] lo marca a distancia y teletransporta al jugador encima (`TraversalBlock.activate()`, mismo efecto que un golpe).
+- **Estallido al golpe**: cada impacto (`_on_hit`) lanza una explosion one-shot de motas **por feature**, cada una del color puro de esa feature. Sobrevive aunque el golpe rompa el bloque (se cuelga del padre). Knobs en `traversal_block_tuning.tres`, grupo *Explosion al golpe* (`burst_*`).
+- El estallido lo arma `World.spawn_color_burst()` — helper estatico compartido entre el bloque y el bop verde del dash (`PlayerDash`), para no duplicar el armado de partículas.
 
 ## Spike wall
 
