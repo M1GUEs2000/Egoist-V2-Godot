@@ -139,7 +139,13 @@ func _physics_process(delta: float) -> void:
 		# se borra para que al soltarse el lock no reaparezca el rumbo previo al salto.
 		locomotion.set_air_velocity(Vector3.ZERO)
 
-	vertical_velocity += tuning.gravity * launcher.gravity_scale() * delta
+	# Freeze de caida del Brazo (solo la vertical): mientras dure, la caida se congela en 0 sin
+	# tocar el horizontal; al soltar, launcher restaura el momentum de caida previo (ver
+	# PlayerLauncher.consume_air_freeze).
+	if launcher.consume_air_freeze():
+		vertical_velocity = 0.0
+	else:
+		vertical_velocity += tuning.gravity * launcher.gravity_scale() * delta
 
 	var horizontal_with_momentum := wall_slide.apply_slide_velocity(horizontal + bump_velocity, input_dir, delta)
 	horizontal_with_momentum = floor_slide.apply_slide_velocity(horizontal_with_momentum, input_dir, delta)
@@ -283,6 +289,11 @@ func fire_action_world_switch() -> void:
 
 func register_air_hit_stall(scale := 1.0) -> void:
 	launcher.register_air_hit_stall(scale)
+
+## Golpe aereo del Brazo: pausa la caida `duration` seg y la retoma completa (vertical), y decelera
+## el momentum horizontal por `horizontal_keep` (ver PlayerLauncher.register_arm_air_freeze).
+func register_arm_air_freeze(duration: float, horizontal_keep: float) -> void:
+	launcher.register_arm_air_freeze(duration, horizontal_keep)
 
 func notify_aerial_attack(duration: float) -> void:
 	launcher.notify_aerial_attack(duration)

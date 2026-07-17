@@ -24,8 +24,23 @@ Uso del [[Brazo]] dentro del combate. Su funcion no es hacer de arma nueva, sino
 (mismo [[Lock On]] de combos), si no el enemigo mas centrado en el cono de mira (mismo target que
 usa el snap del golpe normal sin lock). Daño y poise bajos (`damage`, `stun` en `ArmTuning`);
 genera meter propio al conectar (`meter_gain_on_hit`). `max_taps` seguidos antes de forzar
-`cooldown_duration` segundos de bloqueo. El resto de esta nota (brazo cargado, sostenimiento
-aereo, golpe a objetos) es diseño a futuro, todavia no implementado.
+`cooldown_duration` segundos de bloqueo.
+
+**Reaccion aerea propia** (si el tap conecta con el jugador en el aire): distinta y mucho mas corta
+que el air stall del arma (`PlayerTuning.air_stall_*`, que flota y resetea la caida). Dos efectos
+separados, ambos en `arm_tuning.tres`:
+
+- **Vertical → pausa que conserva**: congela la caida `air_freeze_duration` seg (0.3) y al soltar
+  la retoma con el momentum vertical **completo** previo. No flota ni resetea. Implementado como un
+  gate en `Player._physics_process` sobre `PlayerLauncher.consume_air_freeze` (mantiene la vertical
+  en 0 durante la ventana y restaura al terminar).
+- **Horizontal → freno que decrece**: el momentum `bump` se **decelera** en el acto por
+  `air_horizontal_keep` (0-1; 0.5 = lo parte a la mitad cada golpe, 1.0 = no frena, 0.0 = lo mata).
+  No es pausa: cada golpe encadenado lo baja mas.
+
+Ambos knobs viven en `ArmTuning` (propios del Brazo, no comparten los del arma) y estan pendientes
+de tunear jugando. El resto de esta nota (brazo cargado, sostenimiento aereo con agarre del
+enemigo, golpe a objetos) es diseño a futuro, todavia no implementado.
 
 ## Intencion
 

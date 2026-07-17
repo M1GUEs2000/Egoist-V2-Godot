@@ -206,6 +206,11 @@ func _resolve_target() -> EnemyBase:
 	return _player.lock_on.nearest_in_cone(_player.forward())
 
 func _on_hit(hurtbox: Hurtbox, _died: bool) -> void:
+	# Reaccion aerea propia del Brazo: pausa corta de la caida (retoma la vertical completa) + freno
+	# del momentum horizontal (decelera cada golpe). El guard de is_on_floor vive en el launcher;
+	# is_airborne evita el passthrough en el caso terrestre.
+	if _player.is_airborne():
+		_player.register_arm_air_freeze(tuning.air_freeze_duration, tuning.air_horizontal_keep)
 	if _player.meter != null:
 		_player.meter.gain_bars(tuning.meter_gain_on_hit)
 	_spawn_impact_vfx(hurtbox)

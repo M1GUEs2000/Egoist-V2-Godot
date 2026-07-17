@@ -17,6 +17,14 @@ var _aerial_attack_until := 0.0
 var _last_stall_time := -999.0
 var _stall_count := 0
 
+# Freeze de caida del Brazo (aire): a diferencia del air stall del arma, NO flota ni resetea. La
+# VERTICAL se congela un instante (pausa) y al soltar retoma la caida con el momentum COMPLETO
+# previo. El HORIZONTAL en cambio DECELERA: cada golpe le baja la velocidad de momentum (bump) por
+# un factor, no lo conserva. Ver register_arm_air_freeze / consume_air_freeze.
+var _air_freeze_until := 0.0
+var _frozen_vertical := 0.0
+var _air_freeze_pending_restore := false
+
 func setup(body: Player) -> void:
 	_body = body
 
@@ -89,10 +97,42 @@ func register_air_hit_stall(scale := 1.0) -> void:
 	_body.vertical_velocity = clampf(_body.vertical_velocity, 0.0, t.air_stall_max_rise)
 	_body.air_state = Player.AirState.AIRBORNE
 
+## Freeze de caida del Brazo al conectar en el aire (ver Gameplay/Brazo). Dos efectos distintos:
+## - VERTICAL: guarda la velocidad de caida actual y la congela `duration` segundos (pausa);
+##   consume_air_freeze la restaura COMPLETA al soltar. Si ya hay un freeze activo solo extiende la
+##   ventana sin re-capturar (el vertical ya vale 0 durante el freeze).
+## - HORIZONTAL: DECELERA el momentum (bump) por `horizontal_keep` (0-1) en el acto — cada golpe lo
+##   baja mas (no es una pausa: es un freno que decrece). 1.0 = no frena, 0.0 = lo mata.
+func register_arm_air_freeze(duration: float, horizontal_keep: float) -> void:
+	if _body.is_on_floor():
+		return
+	_body.bump_velocity *= clampf(horizontal_keep, 0.0, 1.0)
+	if duration <= 0.0:
+		return
+	if not is_air_frozen():
+		_frozen_vertical = _body.vertical_velocity
+	_air_freeze_until = maxf(_air_freeze_until, World.now() + duration)
+	_air_freeze_pending_restore = true
+
+func is_air_frozen() -> bool:
+	return World.now() < _air_freeze_until
+
+## Lo llama el glue cada frame: mientras dure el freeze devuelve true (el glue mantiene la caida
+## en 0); al terminar, restaura una sola vez el momentum de caida previo y devuelve false.
+func consume_air_freeze() -> bool:
+	if is_air_frozen():
+		return true
+	if _air_freeze_pending_restore:
+		_air_freeze_pending_restore = false
+		_body.vertical_velocity = _frozen_vertical
+	return false
+
 func reset_air_stall() -> void:
 	_air_stall_until = 0.0
 	_aerial_attack_until = 0.0
 	_stall_count = 0
+	_air_freeze_until = 0.0
+	_air_freeze_pending_restore = false
 
 ## Cancela el launcher (al dashear/bumpear/swing): apaga flotación y stall.
 func cancel() -> void:

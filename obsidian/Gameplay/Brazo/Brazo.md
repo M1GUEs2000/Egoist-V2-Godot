@@ -56,6 +56,9 @@ No es un disparo de arma tradicional. La palabra "disparo" describe la accion de
 - El objetivo pasivo prioriza combate: si hay un enemigo en el cono de mira/lock, el tap le
   pega; si no, marca el bloque de dash mas cercano en su propio cono/rango de traversal. El
   lock-on pasivo del brazo (punto morado, `ArmMarker`) es el mismo para ambos casos.
+- Golpe aereo con reaccion propia sobre el movimiento del jugador: pausa corta que conserva la
+  caida (vertical) + freno que decelera el momentum horizontal, ambos tuneables y separados del
+  air stall del arma. Ver [[brazo-combate|Brazo Combate]].
 
 ## Relacionado
 

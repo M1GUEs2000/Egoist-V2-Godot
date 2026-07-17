@@ -20,6 +20,15 @@ class_name ArmTuning extends Resource
 @export var hitbox_radius := 0.35
 ## Meter que gana un golpe conectado. Propio y bajo, independiente de WeaponTuning/PlayerTuning.
 @export var meter_gain_on_hit := 1.0
+## Segundos que se congela la CAIDA (vertical) del jugador al conectar el Brazo en el aire.
+## Distinto y mucho mas corto que el air stall del arma (PlayerTuning.air_stall_*): no flota ni
+## resetea el momentum — detiene la caida un instante y la retoma con la velocidad vertical previa
+## COMPLETA. 0 = sin pausa vertical.
+@export var air_freeze_duration := 0.3
+## Fraccion del momentum HORIZONTAL (bump) que sobrevive cada golpe aereo del Brazo: a diferencia
+## de la vertical (pausa que conserva), la horizontal DECELERA — cada golpe la frena. 1.0 = no
+## frena, 0.5 = la parte a la mitad por golpe, 0.0 = la mata.
+@export_range(0.0, 1.0) var air_horizontal_keep := 0.5
 
 @export_group("Traversal (bloques verdes)")
 ## Alcance del brazo para marcar bloques de dash (verdes). Propio, no comparte el
