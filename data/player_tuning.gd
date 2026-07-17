@@ -42,6 +42,10 @@ class_name PlayerTuning extends Resource
 @export var wall_slide_stick_fall_speed := 0.35
 ## Velocidad máxima de caída deslizando, después de la fase pegado (m/s).
 @export var wall_slide_max_fall_speed := 3.4
+## Velocidad máxima HORIZONTAL (a lo largo del muro) mientras deslizás, en m/s. Topa lo que podés
+## arrastrar por la pared —y por lo tanto lo que le entra al wall jump—; NO incluye el empuje contra
+## el muro (press). La caída la topa wall_slide_max_fall_speed aparte.
+@export var wall_slide_max_horizontal_speed := 20.0
 ## Fracción de la gravedad aplicada mientras eslidea, tanto subiendo como cayendo
 ## (0 = no cae/no frena la subida, 1 = gravedad completa). Gobierna la altura del arco.
 @export_range(0.0, 1.0) var wall_slide_gravity_scale := 0.35
@@ -57,16 +61,26 @@ class_name PlayerTuning extends Resource
 ## llegás lento). 0 = sin empuje. Se nota junto con un `wall_slide_momentum_decay` bajo,
 ## que conserva el lateral durante toda la bajada.
 @export var wall_slide_stick_push := 0.0
-## Impulso vertical del wall jump (m/s). Junto con away_speed define el ángulo vertical del rebote.
-@export var wall_slide_wall_jump_up_speed := 7.2
-## Impulso horizontal perpendicular a la pared del wall jump (m/s). Junto con up_speed
-## define el ángulo vertical; junto con along_speed, el desvío horizontal.
-@export var wall_slide_wall_jump_away_speed := 4.8
-## Componente lateral del wall jump cuando el input traía dirección a lo largo del muro (m/s).
-## 0 = siempre sales perpendicular exacto.
-@export var wall_slide_wall_jump_along_speed := 2.0
+## Ángulo MÍNIMO de salida respecto a la cara de la pared, en grados. Es el piso: nunca salís a
+## menos de esto (evita rozar el muro). Cuanto más rápido vas A LO LARGO del muro (respecto a
+## move_speed), más te acercás a este ángulo (rasante); sin velocidad lateral salís perpendicular
+## (90°, recto/para atrás).
+@export_range(0.0, 90.0) var wall_slide_wall_jump_min_angle := 35.0
+# La velocidad que manda el wall jump es la que llevás A LO LARGO de la pared (el momentum real que
+# encadenar conserva y compone; NO cuenta el empuje contra el muro). HORIZONTAL = max(esa_velocidad *
+# h_boost, h_base) → con piso, siempre despega. VERTICAL = esa_velocidad * v_boost → SIN piso.
+## Multiplicador HORIZONTAL: >1 = encadenar acelera el avance (topado por momentum_max_speed).
+@export var wall_slide_wall_jump_h_boost := 1.1
+## Piso HORIZONTAL (m/s): empujón de salida mínimo aunque llegues casi sin velocidad lateral.
+@export var wall_slide_wall_jump_h_base := 5.0
+## Multiplicador VERTICAL: la subida = tu velocidad a lo largo del muro × esto, SIN piso (a velocidad
+## 0 no hay despegue vertical). Rápido → más alto, lento → más bajo.
+@export var wall_slide_wall_jump_v_boost := 1.1
 ## Tiempo en que el rebote manda: bloquea el input de movimiento y el re-agarre de pared.
 @export var wall_slide_wall_jump_lock_time := 0.2
+## DEBUG: muestra una flecha de ~2 m mientras deslizás, apuntando al ángulo al que te va a lanzar el
+## wall jump ahora mismo (ayuda visual para tunear). Apagar para jugar limpio.
+@export var wall_slide_show_jump_arrow := true
 
 @export_group("Enemy bounce")
 ## Impulso vertical del rebote sobre enemigos (m/s). Encadenar enemigos no aumenta esta altura.
