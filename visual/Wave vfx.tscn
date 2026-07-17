@@ -1,0 +1,27 @@
+[gd_scene format=3 uid="uid://bn8tiepmjm1vt"]
+
+[ext_resource type="Script" uid="uid://c77qmiarrjp5j" path="res://visual/flipbook_vfx.gd" id="1_fb"]
+[ext_resource type="Texture2D" uid="uid://c6jim1sfr10ij" path="res://assets/assets_por_aprobar/VFX/brackeys_vfx_bundle/brackeys_vfx_bundle/predrawn/wavy_purple_6x5.png" id="2_5288g"]
+[ext_resource type="Shader" uid="uid://ci288cujfatju" path="res://visual/flipbook_vfx.gdshader" id="2_shader"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_fb"]
+render_priority = 0
+shader = ExtResource("2_shader")
+shader_parameter/flipbook = ExtResource("2_5288g")
+shader_parameter/columns = 6
+shader_parameter/rows = 5
+shader_parameter/frame = 0
+shader_parameter/tint_color = Color(0.9647059, 0.33333334, 1, 1)
+shader_parameter/brightness = 1.0
+
+[sub_resource type="QuadMesh" id="QuadMesh_fb"]
+
+[node name="FlipbookVFX" type="Node3D" unique_id=95336508]
+script = ExtResource("1_fb")
+texture = ExtResource("2_5288g")
+fps = 24.0
+tint_color = Color(0.9647059, 0.33333334, 1, 1)
+
+[node name="Quad" type="MeshInstance3D" parent="." unique_id=1336937306]
+material_override = SubResource("ShaderMaterial_fb")
+mesh = SubResource("QuadMesh_fb")

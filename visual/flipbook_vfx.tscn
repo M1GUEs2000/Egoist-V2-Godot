@@ -1,0 +1,21 @@
+[gd_scene load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://visual/flipbook_vfx.gd" id="1_fb"]
+[ext_resource type="Shader" path="res://visual/flipbook_vfx.gdshader" id="2_shader"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_fb"]
+shader = ExtResource("2_shader")
+shader_parameter/columns = 6
+shader_parameter/rows = 5
+shader_parameter/frame = 0
+shader_parameter/tint_color = Color(1, 1, 1, 1)
+shader_parameter/brightness = 1.0
+
+[sub_resource type="QuadMesh" id="QuadMesh_fb"]
+
+[node name="FlipbookVFX" type="Node3D"]
+script = ExtResource("1_fb")
+
+[node name="Quad" type="MeshInstance3D" parent="."]
+material_override = SubResource("ShaderMaterial_fb")
+mesh = SubResource("QuadMesh_fb")

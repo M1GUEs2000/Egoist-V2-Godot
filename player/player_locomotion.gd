@@ -75,8 +75,17 @@ func tick(delta: float) -> Vector3:
 		set_facing(dir)
 	var target := dir * _body.tuning.move_speed
 	if _body.is_on_floor():
+		# En tierra, un golpe en curso bloquea el input de movimiento: solo manda el lunge del
+		# ataque. La dirección ya quedó fijada al entrar (attack_step, hacia el lock/forward).
+		if is_attacking():
+			_air_velocity = Vector3.ZERO
+			return Vector3.ZERO
 		_air_velocity = target  # despegar (salto o caída) arranca con la velocidad de carrera
 		return target
+	# En aire, un golpe en curso tampoco deja steerear con el input, pero preserva el momentum
+	# aéreo tal cual (no lo frena a cero): el platforming depende de conservar esa inercia.
+	if is_attacking():
+		return _air_velocity
 	_air_velocity = _air_velocity.move_toward(target, _body.tuning.air_acceleration * delta)
 	return _air_velocity
 

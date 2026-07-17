@@ -48,3 +48,10 @@ class_name WeaponTuning extends Resource
 @export var parry_poise_charged_x := 6.0
 ## Poise que mete un parry hecho con el CARGADO Y (aéreo o suelo comparten valor).
 @export var parry_poise_charged_y := 8.0
+
+@export_group("VFX de impacto")
+## Efecto (ParticleBurstVFX, FlipbookVFX o Binbun) que se instancia en cada golpe conectado.
+## null = sin VFX. Contrato: one_shot/play()/finished (ver VfxInjector).
+@export var hit_vfx_scene: PackedScene
+## Escala del VFX de impacto al instanciarse.
+@export var hit_vfx_scale := 1.0

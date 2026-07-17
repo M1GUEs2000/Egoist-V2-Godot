@@ -40,3 +40,29 @@ class_name ArmTuning extends Resource
 ## Segundos de cooldown del brazo tras teletransportar y activar un bloque de dash. Evita
 ## encadenar teletransportes instantaneos entre bloques verdes seguidos.
 @export var traversal_cooldown_duration := 1.0
+
+@export_group("VFX")
+## Efecto que vive permanentemente sobre el hombro izquierdo Y que aparece en cada impacto del
+## brazo (una sola escena para los dos usos). Cambialo por cualquier escena de VFX; si el nodo
+## raiz expone `one_shot`/`play()` (como los packs Binbun) se maneja el loop/one-shot solo. Si
+## es null, no se instancia nada.
+@export var vfx_scene: PackedScene
+## Hueso del esqueleto UAL donde cuelga el aura permanente. `clavicle_l` = hombro izquierdo.
+@export var vfx_aura_bone: StringName = &"clavicle_l"
+## Offset local (m) del aura respecto al hueso. +Y la sube "justo arriba del hombro".
+@export var vfx_aura_offset := Vector3(0.0, 0.2, 0.0)
+## Escala del aura permanente. El efecto de fabrica es grande (~1.5 m); bajalo para que quepa en
+## el hombro. A tunear mirando el juego.
+@export var vfx_aura_scale := 0.15
+## Escala del VFX one-shot que aparece en el punto de impacto. A tunear mirando el juego.
+@export var vfx_impact_scale := 0.25
+## Si esta activo, pinta el VFX (aura e impacto) con los colores de abajo. Solo funciona en
+## efectos que expongan primary_color/secondary_color/emission (los packs Binbun lo hacen). En
+## false, el efecto conserva el color con el que viene.
+@export var vfx_tint := false
+## Color primario (nucleo) del efecto cuando vfx_tint esta activo.
+@export var vfx_primary_color := Color(1.0, 0.8, 0.2)
+## Color secundario (bordes/humo) del efecto cuando vfx_tint esta activo.
+@export var vfx_secondary_color := Color(1.0, 0.4, 0.1)
+## Intensidad de emision (glow). Mas alto = mas brillante. Solo si vfx_tint esta activo.
+@export var vfx_emission := 4.0

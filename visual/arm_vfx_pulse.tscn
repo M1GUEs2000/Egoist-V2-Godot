@@ -1,0 +1,57 @@
+[gd_scene format=3 uid="uid://ccg2qrwq3kse7"]
+
+[ext_resource type="Script" uid="uid://bap6bnkhexwcb" path="res://visual/particle_burst_vfx.gd" id="1_burst"]
+[ext_resource type="Texture2D" uid="uid://c0tqggawmf1h2" path="res://assets/assets_por_aprobar/VFX/brackeys_vfx_bundle/brackeys_vfx_bundle/particles/alpha/star_08_a.png" id="1_x0i07"]
+
+[sub_resource type="Gradient" id="Gradient_pulse"]
+offsets = PackedFloat32Array(0, 0.6, 1)
+colors = PackedColorArray(1, 1, 1, 1, 1, 1, 1, 0.6, 1, 1, 1, 0)
+
+[sub_resource type="GradientTexture1D" id="GradientTexture1D_pulse"]
+gradient = SubResource("Gradient_pulse")
+
+[sub_resource type="Curve" id="Curve_pulse"]
+_data = [Vector2(0, 0.2), 0.0, 0.0, 0, 0, Vector2(1, 1.4), 0.0, 0.0, 0, 0]
+point_count = 2
+
+[sub_resource type="CurveTexture" id="CurveTexture_pulse"]
+curve = SubResource("Curve_pulse")
+
+[sub_resource type="ParticleProcessMaterial" id="PPM_pulse"]
+emission_shape = 2
+emission_sphere_radius = 0.05
+spread = 180.0
+gravity = Vector3(0, 0, 0)
+radial_accel_min = 2.0
+radial_accel_max = 3.0
+scale_curve = SubResource("CurveTexture_pulse")
+color_ramp = SubResource("GradientTexture1D_pulse")
+
+[sub_resource type="StandardMaterial3D" id="Mat_pulse"]
+transparency = 1
+shading_mode = 0
+vertex_color_use_as_albedo = true
+albedo_color = Color(1, 0.54901963, 1, 1)
+albedo_texture = ExtResource("1_x0i07")
+billboard_mode = 3
+particles_anim_h_frames = 1
+particles_anim_v_frames = 1
+particles_anim_loop = false
+
+[sub_resource type="QuadMesh" id="QuadMesh_pulse"]
+material = SubResource("Mat_pulse")
+size = Vector2(0.5, 0.5)
+
+[node name="VfxArmPulse" type="GPUParticles3D" unique_id=651456840]
+amount = 5
+lifetime = 0.8
+speed_scale = 0.1
+explosiveness = 1.0
+randomness = 0.1
+fixed_fps = 24
+process_material = SubResource("PPM_pulse")
+draw_pass_1 = SubResource("QuadMesh_pulse")
+script = ExtResource("1_burst")
+texture = ExtResource("1_x0i07")
+tint_color = Color(1, 0.54901963, 1, 1)
+brightness = 30.0

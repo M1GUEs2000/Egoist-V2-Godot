@@ -312,6 +312,8 @@ func _on_hit(hurtbox: Hurtbox, died: bool) -> void:
 	if _armed_push != null:
 		_push_target(hurtbox, _armed_push)
 	register_weapon_hit(hurtbox, died)
+	VfxInjector.spawn_impact(tuning.hit_vfx_scene, _player.get_parent(), hurtbox.global_position,
+			tuning.hit_vfx_scale)
 
 # ---- Progresión ----
 

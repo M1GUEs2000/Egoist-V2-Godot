@@ -72,6 +72,42 @@ func setup(player: Player) -> void:
 	_hitbox.damage = tuning.damage
 	_hitbox.stun = tuning.stun
 	_hitbox.landed.connect(_on_hit)
+	_setup_aura()
+
+## Aura permanente del brazo: instancia `vfx_scene` colgada de un BoneAttachment3D sobre el
+## hombro izquierdo del maniqui (mismo patron que la copia de arma en mano del
+## PlayerAnimationController) y la deja en loop. Solo visual.
+func _setup_aura() -> void:
+	if tuning.vfx_scene == null:
+		return
+	var skeleton := _find_skeleton(_player)
+	if skeleton == null:
+		push_warning("PlayerArm: sin Skeleton3D bajo el player; el aura del brazo no se adjunta.")
+		return
+	var attach := BoneAttachment3D.new()
+	attach.name = "ArmVfxAttachment"
+	skeleton.add_child(attach)
+	attach.bone_name = tuning.vfx_aura_bone
+	var aura := tuning.vfx_scene.instantiate()
+	attach.add_child(aura)
+	if aura is Node3D:
+		var n := aura as Node3D
+		n.position = tuning.vfx_aura_offset
+		n.scale = Vector3.ONE * tuning.vfx_aura_scale
+	VfxInjector.apply_look(aura, tuning.vfx_tint, tuning.vfx_primary_color,
+			tuning.vfx_secondary_color, tuning.vfx_emission)
+	VfxInjector.play(aura, true)
+
+func _find_skeleton(root: Node) -> Skeleton3D:
+	if root == null:
+		return null
+	if root is Skeleton3D:
+		return root as Skeleton3D
+	for child in root.get_children():
+		var found := _find_skeleton(child)
+		if found != null:
+			return found
+	return null
 
 ## Un tap de combate no pega mas rapido que `tuning.tap_cadence`: si todavia no toca, se guarda
 ## en `_pending_taps` en vez de perderse (ver _flush_tap_buffer), capado por el margen que quede
@@ -169,6 +205,15 @@ func _resolve_target() -> EnemyBase:
 		return _player.lock_on.current_target
 	return _player.lock_on.nearest_in_cone(_player.forward())
 
-func _on_hit(_hurtbox: Hurtbox, _died: bool) -> void:
+func _on_hit(hurtbox: Hurtbox, _died: bool) -> void:
 	if _player.meter != null:
 		_player.meter.gain_bars(tuning.meter_gain_on_hit)
+	_spawn_impact_vfx(hurtbox)
+
+## Mismo VFX que el aura, pero one-shot y clavado en el punto de impacto (se agrega al mundo, no
+## al brazo, para que se quede quieto). Se auto-libera al terminar. Solo visual.
+func _spawn_impact_vfx(hurtbox: Hurtbox) -> void:
+	var at := hurtbox.global_position if hurtbox != null else _hitbox.global_position
+	VfxInjector.spawn_impact(tuning.vfx_scene, _player.get_parent(), at, tuning.vfx_impact_scale,
+			tuning.vfx_tint, tuning.vfx_primary_color, tuning.vfx_secondary_color,
+			tuning.vfx_emission)

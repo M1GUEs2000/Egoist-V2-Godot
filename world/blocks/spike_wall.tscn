@@ -93,3 +93,4 @@ shape = SubResource("BoxShape3D_trigger")
 
 [node name="WorldMembership" type="Node" parent="." unique_id=806684307]
 script = ExtResource("2_membership")
+paint_prototype_material = true

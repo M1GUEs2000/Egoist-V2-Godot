@@ -2,8 +2,8 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://cb2pvvk3givyx"
-path.s3tc="res://.godot/imported/texture_10.png-c77b31017c9af0d648743962665aaf50.s3tc.ctex"
+uid="uid://ed44j8f3a8us"
+path.bptc="res://.godot/imported/story_studio_02_1k.hdr-6e28fc36b6eadb2fe0e50a21de2b4bfa.bptc.ctex"
 metadata={
 "imported_formats": ["s3tc_bptc"],
 "vram_texture": true
@@ -11,8 +11,8 @@ metadata={
 
 [deps]
 
-source_file="res://assets/textures/kenney_prototype-textures/PNG/Green/texture_10.png"
-dest_files=["res://.godot/imported/texture_10.png-c77b31017c9af0d648743962665aaf50.s3tc.ctex"]
+source_file="res://assets/BinbunVFX_Vol2/shared/story_studio_02_1k.hdr"
+dest_files=["res://.godot/imported/story_studio_02_1k.hdr-6e28fc36b6eadb2fe0e50a21de2b4bfa.bptc.ctex"]
 
 [params]
 

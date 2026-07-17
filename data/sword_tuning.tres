@@ -7,7 +7,8 @@
 [sub_resource type="Resource" id="Resource_810ig"]
 script = ExtResource("2_stun")
 poise_damage = 10.0
-grounded = 0.4
+grounded = 0.8
+airborne = 0.8
 metadata/_custom_type_script = "uid://w0b3i18w442a"
 
 [sub_resource type="Resource" id="Resource_swordpush"]
@@ -30,7 +31,7 @@ aerial_charged_down_speed = 40.0
 aerial_charged_player_height = 1.0
 aerial_charged_meet_height = 1.0
 launcher_height = 5.0
-swing_time = 0.43
+swing_time = 0.4
 stun = SubResource("Resource_swordstun")
 hand_radius = 1.0
 air_wait_spin_hop = 5.0

@@ -1,0 +1,9 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="PackedScene" path="res://visual/particle_burst_vfx.tscn" id="1_burst"]
+[ext_resource type="Texture2D" uid="uid://b6xiltf0ie5pd" path="res://assets/assets_por_aprobar/VFX/brackeys_vfx_bundle/brackeys_vfx_bundle/particles/alpha/slash_01_a.png" id="2_tex"]
+
+[node name="VfxSlashBurst" instance=ExtResource("1_burst")]
+texture = ExtResource("2_tex")
+amount = 10
+lifetime = 0.25

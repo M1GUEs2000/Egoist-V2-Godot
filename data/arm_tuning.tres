@@ -2,13 +2,13 @@
 
 [ext_resource type="Script" uid="uid://cj14fn3tnv6va" path="res://data/arm_tuning.gd" id="1_tuning"]
 [ext_resource type="Resource" uid="uid://eyi1a88usmmc" path="res://data/arm_stun.tres" id="2_stun"]
+[ext_resource type="PackedScene" uid="uid://ccg2qrwq3kse7" path="res://visual/arm_vfx_pulse.tscn" id="3_vk5ia"]
 
 [resource]
 script = ExtResource("1_tuning")
 stun = ExtResource("2_stun")
 max_taps = 1000
 cooldown_duration = 0.0
-tap_cadence = 0.15
 travel_time = 0.3
 hitbox_radius = 1.0
 meter_gain_on_hit = 0.01
@@ -17,3 +17,11 @@ traversal_lock_half_angle = 100.0
 traversal_lock_vertical_half_angle = 45.0
 teleport_duration = 0.1
 traversal_cooldown_duration = 0.0
+vfx_scene = ExtResource("3_vk5ia")
+vfx_aura_offset = Vector3(0, 0.965, 0)
+vfx_aura_scale = 1.02
+vfx_impact_scale = 2.385
+vfx_tint = true
+vfx_primary_color = Color(0.72176015, 0.2037946, 0.729114, 1)
+vfx_secondary_color = Color(0.93217206, 0.5851327, 0.88586533, 1)
+vfx_emission = 0.61
