@@ -20,20 +20,20 @@ Esta nota es el indice del sistema. El detalle vive en una subnota por modulo o 
 
 | Pieza | Modulos | Estado | Nota |
 |---|---|---|---|
-| Movimiento base | `Player`, `PlayerLocomotion` | E2 | [[Movimiento Base]] |
-| Dash / airdash | `PlayerDash` | E2 | [[Dash y Airdash]] |
+| Movimiento base | `Player`, `PlayerLocomotion` | E3 | [[Movimiento Base]] |
+| Dash / airdash | `PlayerDash` | E4 | [[Dash y Airdash]] |
 | Launcher / aire | `PlayerLauncher` | E2 | [[Launcher y Aire]] |
 | Momentum por bump | `Player.bump()` | E1 | [[Momentum y Bump]] |
 | Wall slide / wall jump | `PlayerWallSlide` | E1 | [[Wall Slide y Wall Jump]] |
-| Floor slide por plataforma | `PlayerFloorSlide`, `FloorSlideSurface`, `FloorSlideTuning` | E0 | [[Floor Slide]] |
+| Floor slide por plataforma | `PlayerFloorSlide`, `FloorSlideSurface`, `FloorSlideTuning` | E1 | [[Floor Slide]] |
 | Rebote en enemigos | `PlayerEnemyBounce` | E1 | [[Rebote en Enemigos]] |
-| Reset aereo por kill / carga | `PlayerAirKillReset` | E1 | [[Reset Aereo por Kill]] |
+| Reset aereo por kill / carga | `PlayerAirKillReset` | E3 | [[Reset Aereo por Kill]] |
 | World switch | `WorldManager`, `WorldMembership`, `WorldSwitchTrigger`, `ActionWorldSwitchModifier` | E2 | [[World Switch]] |
-| Grieta | `WorldRift`, `WorldRiftTuning`, `RiftSpawner` | E0 | [[Grieta]] |
+| Grieta | `WorldRift`, `WorldRiftTuning`, `RiftSpawner` | E3 | [[Grieta]] |
 | Bloques traversal | `TraversalBlock`, `BreakOnDeath`, `SpikeWall` | E2 | [[Bloques]] |
 | Cadenas | `PlayerSwing` | E0 | [[Cadenas]] |
 | Occlusion fade de camara | `CameraOcclusionFade` | E2 | [[Occlusion Fade de Camara]] |
-| Landing indicator | `LandingIndicator` | E3 | [[Landing Indicator]] |
+| Landing indicator | `LandingIndicator` | E4 | [[Landing Indicator]] |
 | Colores de mundo | `World.world_color()` | E2 | [[Colores de mundo]] |
 
 ## Reglas madre del nodo

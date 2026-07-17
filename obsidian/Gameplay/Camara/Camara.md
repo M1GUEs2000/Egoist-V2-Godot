@@ -6,7 +6,7 @@ tags:
   - sistema
   - camara
 status: active
-system_status: E1
+system_status: E3
 hito: H1
 ---
 
@@ -20,8 +20,8 @@ stick dentro de un rango acotado. No incluye el occlusion fade (vive aparte, ver
 
 | Pieza | Modulos | Estado | Nota |
 |---|---|---|---|
-| Follow isometrico + rotacion por stick | `CameraRig` (`visual/camera_rig.gd`) | E1 | Esta nota |
-| Tuning | `CameraTuning` (`data/camera_tuning.gd`, instancia `data/camera_tuning.tres`) | E1 | Esta nota |
+| Follow isometrico + rotacion por stick | `CameraRig` (`visual/camera_rig.gd`) | E3 | Esta nota |
+| Tuning | `CameraTuning` (`data/camera_tuning.gd`, instancia `data/camera_tuning.tres`) | E3 | Esta nota |
 
 ## Comportamiento
 

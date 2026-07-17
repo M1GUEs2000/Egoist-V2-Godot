@@ -6,7 +6,7 @@ tags:
   - sistema
   - traversal
 status: active
-system_status: E0
+system_status: E1
 hito: H1
 ---
 

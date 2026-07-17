@@ -20,3 +20,6 @@ views:
       - system_status
       - hito
       - status
+    sort:
+      - property: file.name
+        direction: ASC
