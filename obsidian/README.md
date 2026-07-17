@@ -52,6 +52,7 @@ La boveda se navega por nodos. Primero se lee este README, despues [[Arquitectur
 | [[Exploracion]] | Runas, consumibles, secretos y recompensas opcionales. |
 | [[Animacion]] | Pipeline UAL, enemigo animado H1 y retarget/personaje final H3. |
 | [[Blender Pipeline]] | Regla de arte, targets tecnicos y workflow por asset. |
+| [[Direccion de Arte]] | Estilo visual objetivo (H3): 3D pixel art estilo t3ssel8r — stack tecnico e impacto en camara/glow. |
 | [[tareas]] | Hub del kanban: subtareas por estado (pendientes, en progreso, completadas). |
 | [[hitos]] | Los hitos H0-H5 en un solo nodo: metas, puerta de salida y roadmap. |
 | [[ideas]] | Ideas potenciales, no comprometidas. |

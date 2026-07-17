@@ -12,6 +12,10 @@ hito: H3
 
 El arte final empieza en H3. Antes de eso, placeholders y greybox.
 
+El estilo objetivo es el 3D pixel art (ver [[Direccion de Arte]]): este pipeline
+produce los modelos que ese estilo renderiza — el workflow de displacement con
+noise + decimate planar de esa nota entra en el paso de modelado low-poly.
+
 ## Targets
 
 | Asset | Tris | Textura |
@@ -39,6 +43,7 @@ El arte final empieza en H3. Antes de eso, placeholders y greybox.
 
 ## Relacionado
 
+- [[Direccion de Arte]]
 - [[Personaje y Mascara]]
 - [[Playa Arte]]
 - [[Enemigos Arte]]
