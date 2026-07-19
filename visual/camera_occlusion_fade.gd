@@ -47,7 +47,7 @@ func _physics_process(_delta: float) -> void:
 		var collider := hit["collider"] as Node
 		if collider == null:
 			continue
-		for mesh in collider.find_children("*", "MeshInstance3D", true, false):
+		for mesh in _meshes_of(collider):
 			occluding[mesh] = true
 			_last_occluding[mesh] = World.now()
 			_fade_mesh(mesh)
@@ -60,6 +60,25 @@ func _physics_process(_delta: float) -> void:
 			continue
 		_restore_mesh(mesh)
 		_last_occluding.erase(mesh)
+
+## Mallas que le corresponden a un collider golpeado por el rayo.
+## Hay dos jerarquias segun de donde venga la pared:
+##   - armada a mano: StaticBody3D padre, MeshInstance3D hijo -> se busca hacia abajo;
+##   - importada de .blend (sufijo -col): MeshInstance3D padre, StaticBody3D hijo -> hacia arriba.
+## Sin el caso "hacia arriba" las paredes de assets/models/walls nunca se desvanecian.
+func _meshes_of(collider: Node) -> Array[MeshInstance3D]:
+	var found: Array[MeshInstance3D] = []
+	for mesh in collider.find_children("*", "MeshInstance3D", true, false):
+		found.append(mesh as MeshInstance3D)
+	if not found.is_empty():
+		return found
+	var ancestor := collider.get_parent()
+	while ancestor != null:
+		if ancestor is MeshInstance3D:
+			found.append(ancestor as MeshInstance3D)
+			break
+		ancestor = ancestor.get_parent()
+	return found
 
 func _fade_mesh(mesh: MeshInstance3D) -> void:
 	if _faded.has(mesh):

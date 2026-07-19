@@ -11,6 +11,7 @@
 [ext_resource type="PackedScene" uid="uid://cfhiggial63t4" path="res://enemies/grounded_enemy.tscn" id="9_ica1u"]
 [ext_resource type="PackedScene" uid="uid://yxqtvxwuiily" path="res://enemies/flying_enemy.tscn" id="10_ica1u"]
 [ext_resource type="PackedScene" uid="uid://d10r8vuqovxh5" path="res://assets/models/walls/wall_curve.tscn" id="11_gkdlb"]
+[ext_resource type="PackedScene" uid="uid://d3jtgfi3oqa6g" path="res://assets/models/walls/wall_spiral.tscn" id="12_28ist"]
 
 [sub_resource type="Environment" id="Environment_ica1u"]
 background_mode = 1
@@ -929,3 +930,6 @@ transform = Transform3D(1.9176035, -0.04719024, 2.1078587, 0.022401256, 2.849580
 
 [node name="wall_curve2" parent="." unique_id=1697106755 instance=ExtResource("11_gkdlb")]
 transform = Transform3D(2.7525377, -0.04719007, 0.73743165, 0.04230946, 2.8495803, 0.02442738, -0.73772764, -0.012644533, 2.7528338, 89.768524, 11.680189, -180.9772)
+
+[node name="wall_spiral" parent="." unique_id=1798899393 instance=ExtResource("12_28ist")]
+transform = Transform3D(-0.37321106, 0, 0.92774653, 0, 1, 0, -0.92774653, 0, -0.37321106, 207.29393, 58.85685, -331.33292)
