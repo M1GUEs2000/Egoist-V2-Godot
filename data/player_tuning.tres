@@ -16,7 +16,7 @@ up_speed = 10.0
 
 [resource]
 script = ExtResource("1_tuning")
-move_speed = 9.0
+move_speed = 10.0
 jump_force = 17.0
 wall_slide_press_speed = 10.0
 wall_slide_input_dot = 0.3
@@ -31,7 +31,7 @@ wall_slide_stick_push = 7.0
 wall_slide_wall_jump_min_angle = 45.0
 wall_slide_wall_jump_h_boost = 1.2
 wall_slide_wall_jump_h_base = 20.0
-wall_slide_wall_jump_v_boost = 0.9
+wall_slide_wall_jump_v_boost = 1.0
 wall_slide_wall_jump_lock_time = 0.35
 enemy_bounce_up_speed = 12.0
 enemy_bounce_away_speed = 17.0

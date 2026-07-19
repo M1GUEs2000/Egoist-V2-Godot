@@ -374,6 +374,10 @@ func _update_wall_impulse(input_dir: Vector3, normal: Vector3, delta: float) -> 
 		_impulse_velocity = _impulse_velocity.move_toward(
 			target, _impulse_tuning.acceleration * delta)
 	_body.vertical_velocity = _impulse_velocity.y
+	# El emisor visual sigue el punto de contacto cada frame; no queda abandonado en el origen
+	# de una pared curva o larga.
+	if _impulse_surface != null:
+		_impulse_surface.set_impulse_active(true, _body.global_position, normal)
 
 ## True solo si el jugador dirige el stick claramente HACIA AFUERA de la pared (alineado con
 ## la normal). Input neutro devuelve false → el slide se mantiene sin apretar (assist).

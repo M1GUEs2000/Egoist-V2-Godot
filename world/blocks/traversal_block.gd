@@ -416,9 +416,11 @@ func _build_dash_arrow() -> void:
 
 ## Trayectoria completa del dash verde: tramo recto (dash_distance por la cara -Z del bloque,
 ## con su inclinacion si esta rotado) seguido del arco balistico del bop de salida, si tiene
-## velocidad. Mismo origen y direccion que _apply_dash / _build_dash_arrow.
+## velocidad. Mismo origen y direccion que _apply_dash / _build_dash_arrow: to_global() en vez
+## de sumar un offset fijo en global_position, para que respete la escala del bloque (varios
+## bloques de la escena estan escalados 2x-5x; sumar un offset plano los desalineaba del todo).
 func _build_dash_trajectory() -> void:
-	var origin := global_position + Vector3(0.0, 0.55, 0.0)
+	var origin := to_global(Vector3(0.0, 0.55, -0.5))
 	var dash_dir := (-global_transform.basis.z).normalized()
 	var dash_end := origin + dash_dir * dash_distance
 	var points := PackedVector3Array([origin, dash_end])
@@ -434,7 +436,7 @@ func _build_dash_trajectory() -> void:
 ## fija la cara -Z del bloque, la misma convencion que ya usa el dash, solo para poder dibujar
 ## algo util en el editor.
 func _build_launch_trajectory() -> void:
-	var origin := global_position + Vector3(0.0, 0.55, 0.0)
+	var origin := to_global(Vector3(0.0, 0.55, 0.0))
 	var forward := -global_transform.basis.z
 	var horizontal_dir := Vector3(forward.x, 0.0, forward.z)
 	if horizontal_dir.length_squared() < 0.0001:

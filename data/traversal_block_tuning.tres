@@ -1,5 +1,6 @@
 [gd_resource type="Resource" script_class="TraversalBlockTuning" format=3 uid="uid://dx62a8crs57t2"]
 
+[ext_resource type="Resource" uid="uid://bkryybe060oiv" path="res://data/player_tuning.tres" id="1_owkqu"]
 [ext_resource type="Script" uid="uid://bldln6ethnu4a" path="res://data/traversal_block_tuning.gd" id="1_tuning"]
 
 [resource]
@@ -14,3 +15,5 @@ down_light_angle_degrees = 20.0
 down_light_max_energy = 6.0
 particle_lifetime = 2.0
 particle_fall_speed = 6.0
+burst_amount = 82
+burst_size = 0.31
