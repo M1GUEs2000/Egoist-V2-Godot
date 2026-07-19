@@ -171,6 +171,13 @@ func _resolve_player(from: Node) -> Player:
 		player = get_tree().get_first_node_in_group("player") as Player
 	return player
 
+## Pone la camara detras del jugador en el sentido opuesto a `direction` (ver
+## CameraRig.snap_behind), para que el jugador siempre vea hacia donde lo manda el launch/dash.
+func _snap_camera_behind(direction: Vector3) -> void:
+	var camera_rig := get_tree().get_first_node_in_group("camera_rig") as CameraRig
+	if camera_rig != null:
+		camera_rig.snap_behind(direction)
+
 func _apply_launch(player: Player) -> void:
 	var dir := player.locomotion.last_move_dir
 	if dir.length_squared() < 0.0001:
@@ -178,6 +185,7 @@ func _apply_launch(player: Player) -> void:
 	player.bump(dir, horizontal_speed, vertical_speed)
 	player.restore_double_jump()
 	player.restore_airdash()
+	_snap_camera_behind(dir)
 
 ## Empuja siempre hacia la cara -Z del bloque (misma convencion que Player.forward()), sin
 ## importar por donde llego el jugador: rotarlo en el editor cambia el rumbo, incluida Y.
@@ -190,6 +198,7 @@ func _apply_dash(player: Player) -> void:
 			boost_existing_bump_momentum, dash_deals_damage)
 	# El dash conserva la inclinacion; el bop se aplica solo cuando termina.
 	player.set_dash_exit_bop(dash_dir, dash_bop_forward_speed, dash_vertical_bop_speed)
+	_snap_camera_behind(dash_dir)
 
 ## Estallido de motas al recibir un golpe: una explosion one-shot por feature, cada una del
 ## color puro de esa feature (mismo criterio que el derrame hacia abajo).

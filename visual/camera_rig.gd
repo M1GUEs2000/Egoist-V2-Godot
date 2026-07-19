@@ -109,6 +109,17 @@ func push_vertical_limit(limit: float) -> void:
 func pop_vertical_limit(limit: float) -> void:
 	_vertical_overrides.erase(limit)
 
+## Fuerza el yaw libre para que la camara quede detras del jugador en el sentido opuesto a
+## `direction` (lo usa TraversalBlock al activar launch/dash, para que el jugador siempre vea
+## hacia donde lo mandan). Solo mueve `_yaw_offset`; `_move_to` interpola la posicion con el
+## damping de siempre, no es un teletransporte de camara.
+func snap_behind(direction: Vector3) -> void:
+	var horizontal := Vector3(-direction.x, 0.0, -direction.z)
+	if horizontal.length_squared() < 0.0001 or tuning == null:
+		return
+	var yaw := rad_to_deg(atan2(horizontal.x, horizontal.z))
+	_yaw_offset = wrapf(yaw - tuning.center_yaw, -180.0, 180.0)
+
 func _update_yaw_offset(delta: float) -> void:
 	var input := Input.get_axis("camera_left", "camera_right")
 	if absf(input) > tuning.input_deadzone:
