@@ -26,6 +26,7 @@ Movimiento de pared implementado como modulo componible `PlayerWallSlide` (nodo 
 - Mientras eslidea se aplica una presion constante contra la pared (`wall_slide_press_speed`) que sostiene el contacto fisico.
 - El personaje brilla verde mientras esta pegado (override de emision en el mesh; `glow_color` / `glow_energy` en el nodo `WallSlide`). El bloom ya existe (`WorldEnvironment` con glow en `test_scene`, ver [[Combate]]).
 - Ademas levanta polvo mientras eslidea: emisor `WallSlideDust` (`GPUParticles3D`) hijo del player, que `PlayerWallSlide` prende/apaga en sync con el glow (arranca en `update_after_move`, corta en `cancel`). Look tuneable en el `ParticleProcessMaterial` del emisor. *(2026-07-10)*
+- **Wall Impulse:** un `StaticBody3D` con hijo `WallImpulseSurface` y su `WallImpulseTuning` convierte el wall slide en un carril. Captura el primer input horizontal tangencial para escoger el **sentido**, ignora el stick posterior, anula la caida y arranca con `initial_speed`; despues acelera con `acceleration` hasta `max_speed`. En una curva, el vector se recalcula como la tangente de la normal actual conservando el sentido inicial, asi no pierde velocidad al pasar de tramo curvo a recto dentro del mismo mesh. `angle_degrees` inclina el carril respecto a esa tangente: `0` horizontal, negativo baja y positivo sube. La velocidad del carril puede superar el tope normal del wall slide; al perder contacto se entrega como momentum aereo y vuelve a respetar `momentum_max_speed`. Un `GPUParticles3D` verde asignado al export `particles` de la superficie se prende solo mientras el impulso esta activo. *(2026-07-19)*
 - Se cancela al tocar suelo, dashear, ser lanzado, recibir bump o entrar en stun.
 - API: `apply_slide_velocity`, `update_after_move`, `try_wall_jump`, `cancel`, `blocks_move_input`.
 
@@ -42,9 +43,9 @@ Movimiento de pared implementado como modulo componible `PlayerWallSlide` (nodo 
 
 ## Verificacion
 
-Chequeo de regresion headless: `world/wall_slide_probe.tscn` (cae pegado a una pared con input sostenido y cuenta transiciones del estado de slide).
+Chequeos de regresion headless: `world/wall_slide_probe.tscn` (cae pegado a una pared con input sostenido y cuenta transiciones del estado de slide) y `world/wall_impulse_probe.tscn` (captura el primer input tangencial y verifica que no cambie al alterar el stick).
 
-Estado **E3**. Slide: assist (no depende del stick, gracia coyote) + arco genuino por gravedad reducida simetrica + empuje horizontal al enganchar (`wall_slide_stick_push`) + control lateral recortado (`wall_slide_steer_control`). Wall jump: rebote por velocidad tangente con angulo emergente (piso `wall_slide_wall_jump_min_angle`) y encadenado que acelera (horizontal con piso, vertical puro multiplicativo). Tutupa lo esta tuneando por feel con la flecha de debug. Edge case conocido: con `wall_slide_gravity_scale` bajo un wall-entry con mucho momentum vertical puede trepar de mas (subir el knob si pasa).
+Estado **E3**. Aprobado jugando: slide assist (no depende del stick, gracia coyote), arco genuino, control lateral y Wall Impulse (carril horizontal/inclinado que sigue curvas). Wall jump conserva rebote por velocidad tangente con angulo emergente y encadenado que acelera. Faltan juice y edge cases; el tuning por pared de Wall Impulse (`initial_speed`, `acceleration`, `max_speed`, `angle_degrees`) queda disponible para iterar sin tocar codigo.
 
 ## Relacionado
 

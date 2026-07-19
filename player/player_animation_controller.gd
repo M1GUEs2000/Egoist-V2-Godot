@@ -374,7 +374,12 @@ func _face_wall_normal(wall_normal: Vector3, delta: float) -> void:
 	var blend_weight := 1.0
 	if wall_slide_orientation_blend_time > 0.0:
 		blend_weight = clampf(delta / wall_slide_orientation_blend_time, 0.0, 1.0)
-	_visual.global_basis = _visual.global_basis.slerp(target_transform.basis, blend_weight)
+	# slerp convierte ambas Basis a Quaternion: tras componer tilt + giro sobre la
+	# pared pueden quedar con un error decimal de ortogonalidad. Normalizarlas aquÃ­
+	# evita el error de Godot sin cambiar la orientaciÃ³n visual buscada.
+	var current_basis := _visual.global_basis.orthonormalized()
+	var target_basis := target_transform.basis.orthonormalized()
+	_visual.global_basis = current_basis.slerp(target_basis, blend_weight)
 
 func _stop_slide_rotation() -> void:
 	if _visual != null:

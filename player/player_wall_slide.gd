@@ -7,6 +7,10 @@ class_name PlayerWallSlide extends Node
 
 var is_sliding := false
 var wall_normal := Vector3.ZERO
+## True mientras el slide esta usando una WallImpulseSurface y ya capturo direccion.
+var is_impulsing := false
+## Direccion horizontal fija tomada del primer input tangencial valido en la pared actual.
+var impulse_direction := Vector3.ZERO
 
 var _body: Player
 var _stick_until := -999.0
@@ -14,6 +18,9 @@ var _ignore_until := -999.0
 var _move_lock_until := -999.0
 var _grace_until := -999.0
 var _wall_tangent_velocity := Vector3.ZERO
+var _impulse_velocity := Vector3.ZERO
+var _impulse_surface: WallImpulseSurface
+var _impulse_tuning: WallImpulseTuning
 var _mesh: MeshInstance3D
 var _glow_material: StandardMaterial3D
 var _glow_active := false
@@ -38,7 +45,7 @@ func apply_slide_velocity(horizontal_velocity: Vector3, input_dir: Vector3, delt
 		return horizontal_velocity
 	# Assist: el slide ya no exige apretar HACIA la pared; solo se corta si el jugador
 	# dirige el stick EN CONTRA (se despega a propósito). Input neutro mantiene el deslice.
-	if _presses_away_from_wall(input_dir, wall_normal):
+	if not is_impulsing and _presses_away_from_wall(input_dir, wall_normal):
 		cancel()
 		return horizontal_velocity
 
@@ -47,11 +54,15 @@ func apply_slide_velocity(horizontal_velocity: Vector3, input_dir: Vector3, delt
 	# el arco sube, frena y vuelve; entrando en caída, se ralentiza y sigue bajando. Antes
 	# solo se reducía al caer, así que el momentum de subida moría a gravedad completa y no
 	# había arco genuino.
-	_body.vertical_velocity += -t.gravity * (1.0 - t.wall_slide_gravity_scale) * delta
-	if World.now() < _stick_until:
-		_body.vertical_velocity = maxf(_body.vertical_velocity, -t.wall_slide_stick_fall_speed)
+	if is_impulsing:
+		# Wall Impulse es un carril horizontal: la pared sostiene la altura del player.
+		_body.vertical_velocity = 0.0
 	else:
-		_body.vertical_velocity = maxf(_body.vertical_velocity, -t.wall_slide_max_fall_speed)
+		_body.vertical_velocity += -t.gravity * (1.0 - t.wall_slide_gravity_scale) * delta
+		if World.now() < _stick_until:
+			_body.vertical_velocity = maxf(_body.vertical_velocity, -t.wall_slide_stick_fall_speed)
+		else:
+			_body.vertical_velocity = maxf(_body.vertical_velocity, -t.wall_slide_max_fall_speed)
 
 	# Momentum de entrada: se conserva al enganchar y decae a cero con `wall_slide_momentum_decay`
 	# (el arco lateral que se endereza con el tiempo).
@@ -65,7 +76,18 @@ func apply_slide_velocity(horizontal_velocity: Vector3, input_dir: Vector3, delt
 	steer.y = 0.0
 	steer *= t.wall_slide_steer_control
 	# Velocidad a lo largo del muro (steer vivo + momentum de entrada), topada por su cap propio.
-	var along_wall := (steer + _wall_tangent_velocity).limit_length(t.wall_slide_max_horizontal_speed)
+	_update_wall_impulse(input_dir, wall_normal, delta)
+	# Wall Impulse conserva su primer rumbo: una vez capturado, el stick posterior no
+	# puede desviar el empuje. El momentum de entrada aun se mezcla de forma natural.
+	if is_impulsing:
+		steer = Vector3.ZERO
+	var max_horizontal_speed := t.wall_slide_max_horizontal_speed
+	if _impulse_tuning != null:
+		max_horizontal_speed = maxf(max_horizontal_speed, _impulse_tuning.max_speed)
+	var impulse_horizontal := _impulse_velocity
+	impulse_horizontal.y = 0.0
+	var along_wall := (steer + _wall_tangent_velocity + impulse_horizontal).limit_length(
+			max_horizontal_speed)
 	# Presion constante contra la pared: sin esto el movimiento queda paralelo al muro,
 	# se pierde el contacto (is_on_wall) y el estado de slide titila frame a frame.
 	return along_wall - wall_normal * t.wall_slide_press_speed
@@ -77,18 +99,19 @@ func update_after_move(horizontal_velocity: Vector3, input_dir: Vector3) -> void
 		cancel()
 		return
 
-	var normal := _find_wall_normal()
+	var normal: Vector3 = _find_wall_normal()
 	var has_wall := normal.length_squared() >= 0.0001 and _body.is_on_wall()
 	if not has_wall:
 		# Contacto perdido: ventana de gracia (coyote) antes de cortar, así el estado no
 		# titila en esquinas o micro-separaciones; se mantiene con la última normal conocida.
 		if is_sliding and World.now() < _grace_until:
 			return
+		_carry_impulse_into_air()
 		cancel()
 		return
 
 	# Solo corta si el jugador se dirige EN CONTRA de la pared (ver apply_slide_velocity).
-	if _presses_away_from_wall(input_dir, normal):
+	if not is_impulsing and _presses_away_from_wall(input_dir, normal):
 		cancel()
 		return
 
@@ -116,6 +139,7 @@ func update_after_move(horizontal_velocity: Vector3, input_dir: Vector3) -> void
 		_wall_tangent_velocity = entry
 		_set_glow(true)
 		_set_dust(true)
+	_set_impulse_surface(_find_wall_impulse_surface())
 	_update_arrow()
 
 func try_wall_jump(_input_dir: Vector3) -> bool:
@@ -177,9 +201,19 @@ func cancel() -> void:
 	is_sliding = false
 	wall_normal = Vector3.ZERO
 	_wall_tangent_velocity = Vector3.ZERO
+	impulse_direction = Vector3.ZERO
+	_impulse_velocity = Vector3.ZERO
+	_impulse_tuning = null
+	is_impulsing = false
+	_set_impulse_surface(null)
 	_set_glow(false)
 	_set_dust(false)
 	_update_arrow()
+
+func _carry_impulse_into_air() -> void:
+	if _body == null or not is_impulsing or _impulse_velocity.length_squared() < 0.0001:
+		return
+	_body.add_momentum(_impulse_velocity)
 
 func _set_glow(active: bool) -> void:
 	if _mesh == null or active == _glow_active:
@@ -256,6 +290,90 @@ func _find_wall_normal() -> Vector3:
 		if normal.length_squared() >= 0.0001:
 			return normal.normalized()
 	return Vector3.ZERO
+
+func _find_wall_impulse_surface() -> WallImpulseSurface:
+	for index in range(_body.get_slide_collision_count()):
+		var collision := _body.get_slide_collision(index)
+		if collision == null:
+			continue
+		var collider := collision.get_collider() as CollisionObject3D
+		if collider != null and (collider.collision_layer & World.LAYER_WORLD) == 0:
+			continue
+		var normal := collision.get_normal()
+		if absf(normal.y) <= 0.2:
+			var surface := _wall_impulse_surface_for(collider)
+			if surface != null:
+				return surface
+	return null
+
+func _wall_impulse_surface_for(collider: CollisionObject3D) -> WallImpulseSurface:
+	if collider == null:
+		return null
+	for child in collider.get_children():
+		if child is WallImpulseSurface:
+			return child as WallImpulseSurface
+	return null
+
+func _set_impulse_surface(surface: WallImpulseSurface) -> void:
+	if surface == _impulse_surface:
+		return
+	if _impulse_surface != null:
+		_impulse_surface.set_impulse_active(false)
+	_impulse_surface = surface
+	# Al pasar de la curva marcada a una pared recta sin marcador, el carril sigue vivo:
+	# conserva rumbo, velocidad y altura hasta que el wall slide pierda contacto por completo.
+	if is_impulsing:
+		if surface != null and surface.tuning != null:
+			_impulse_tuning = surface.tuning
+			surface.set_impulse_active(true)
+		return
+	impulse_direction = Vector3.ZERO
+	_impulse_velocity = Vector3.ZERO
+	_impulse_tuning = null
+	is_impulsing = false
+
+func _update_wall_impulse(input_dir: Vector3, normal: Vector3, delta: float) -> void:
+	# La pared toma SOLO el primer input que tenga componente a lo largo del muro.
+	# Input directo hacia/afuera de la pared no define rumbo porque no es horizontal tangencial.
+	var captured_now := false
+	if not is_impulsing:
+		if _impulse_surface == null or _impulse_surface.tuning == null:
+			return
+		var tangent_input := input_dir.slide(normal)
+		tangent_input.y = 0.0
+		if tangent_input.length_squared() < 0.0001:
+			return
+		impulse_direction = tangent_input.normalized()
+		is_impulsing = true
+		captured_now = true
+		_impulse_tuning = _impulse_surface.tuning
+		# El carril manda: la velocidad de entrada no debe curvar el rumbo capturado.
+		_wall_tangent_velocity = Vector3.ZERO
+		_impulse_velocity = impulse_direction * _impulse_tuning.initial_speed
+		_impulse_surface.set_impulse_active(true)
+	if _impulse_tuning == null:
+		return
+	# El primer input elige el SENTIDO, pero en una curva el vector debe seguir la tangente
+	# local de la pared. Si conservaramos el vector mundial original, cada cambio de normal
+	# proyectaria parte de la velocidad contra el muro y el player se frenaria.
+	var wall_tangent := Vector3.UP.cross(normal)
+	wall_tangent.y = 0.0
+	if wall_tangent.length_squared() > 0.0001:
+		wall_tangent = wall_tangent.normalized()
+		if wall_tangent.dot(impulse_direction) < 0.0:
+			wall_tangent = -wall_tangent
+		impulse_direction = wall_tangent
+	# El angulo gira la tangente alrededor de la normal: 0 = horizontal; negativo apunta
+	# hacia abajo y positivo hacia arriba. La vertical se entrega al motor por separado.
+	var travel_direction := impulse_direction.rotated(
+			normal, deg_to_rad(_impulse_tuning.angle_degrees)).normalized()
+	if captured_now:
+		_impulse_velocity = travel_direction * _impulse_tuning.initial_speed
+	else:
+		var target := travel_direction * _impulse_tuning.max_speed
+		_impulse_velocity = _impulse_velocity.move_toward(
+			target, _impulse_tuning.acceleration * delta)
+	_body.vertical_velocity = _impulse_velocity.y
 
 ## True solo si el jugador dirige el stick claramente HACIA AFUERA de la pared (alineado con
 ## la normal). Input neutro devuelve false → el slide se mantiene sin apretar (assist).

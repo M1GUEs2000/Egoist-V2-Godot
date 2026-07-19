@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="WallImpulseTuning" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/wall_impulse_tuning.gd" id="1_tuning"]
+
+[resource]
+script = ExtResource("1_tuning")
+acceleration = 18.0
+initial_speed = 5.0
+angle_degrees = 0.0
+max_speed = 16.0
