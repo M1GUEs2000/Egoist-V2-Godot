@@ -10,7 +10,7 @@ status: active
 # Integraciones
 
 Registro de todo lo externo que usa el proyecto: herramientas, motores, plugins
-y asistentes. Si se agrega o quita una dependencia externa, se actualiza aca. *(2026-07-08)*
+y asistentes. Si se agrega o quita una dependencia externa, se actualiza aca. *(2026-07-18)*
 
 ## Motor y arte
 
@@ -30,7 +30,15 @@ y asistentes. Si se agrega o quita una dependencia externa, se actualiza aca. *(
 | Nombre | Que es | Uso en Egoist |
 |---|---|---|
 | Claude (Claude Code) | Asistente de codigo/agente | Desarrollo, documentacion, boveda |
-| Codex | Asistente de codigo | Desarrollo |
+| Codex | Asistente de codigo de OpenAI (modelo por defecto `gpt-5.6-terra`) | Delegacion de tareas en paralelo/background desde Claude Code — investigacion, fixes puntuales, segunda opinion/revision de codigo |
+| RTK | Proxy CLI que filtra/comprime la salida de comandos de terminal (`git`, `grep`, `ls`, etc.) antes de que llegue al contexto del asistente | Hook activo en Claude Code (`PreToolUse`), reduce tokens de sesion sin tocar el codigo del proyecto |
+
+### Codex — detalle
+
+- **Acceso**: CLI oficial (`@openai/codex`), logueado con cuenta ChatGPT.
+- **Modelo**: `gpt-5.6-terra` fijado en `~/.codex/config.toml` (`model_reasoning_effort = "medium"`).
+- **Integracion con Claude Code**: plugin `codex-plugin-cc` (marketplace `openai/codex-plugin-cc`). Expone comandos `/codex:review`, `/codex:adversarial-review`, `/codex:rescue`, `/codex:status`, `/codex:result`, `/codex:cancel` y el subagente `codex:codex-rescue`, que permiten delegarle trabajo a Codex sin salir de la sesion de Claude Code.
+- **Alcance**: Codex no tiene visibilidad de la conversacion de Claude Code ni de quien lo invoca — solo recibe la tarea puntual que se le delega.
 
 ## LimboAI — detalle
 
