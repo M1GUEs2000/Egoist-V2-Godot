@@ -16,6 +16,10 @@ class_name CameraRig extends Node3D
 ## del jugador hacia el target según `tuning.lock_focus_weight` — encuadra a los dos, como en
 ## Dark Souls.
 ##
+## Wall slide: mientras el jugador está pegado a una pared el stick no rota la cámara; el yaw se
+## acomoda solo a la normal del muro corrida `wall_slide_yaw_offset` grados hacia el lado que va
+## quedando atrás, para ver a lo largo del carril en vez de la pared de frente (ver `_update_wall_yaw`).
+##
 ## Seguimiento vertical: el punto de mira sigue al target en Y solo dentro de
 ## `tuning.vertical_follow_limit` metros desde la última altura "asentada" (`_vertical_anchor`,
 ## que se re-ancla solo mientras el target está dentro del tope). Pasado el tope se congela: el
@@ -30,6 +34,13 @@ var _yaw_offset := 0.0
 var _vertical_anchor := 0.0
 var _vertical_anchor_set := false
 var _vertical_overrides: Array[float] = []
+## Lado del muro hacia el que se corre la cámara en wall slide (-1/+1; 0 = todavía sin rumbo).
+var _wall_side := 0.0
+## Cuán vertical es el movimiento sobre la pared (0 = lateral, 1 = caída seca → encuadre 2D).
+var _wall_vertical_blend := 0.0
+
+## Rapidez mínima a lo largo del muro para (re)definir el lado del encuadre de wall slide.
+const WALL_SIDE_MIN_SPEED := 0.5
 
 func _ready() -> void:
 	add_to_group("camera_rig")  # CameraVerticalZone me encuentra por grupo
@@ -48,10 +59,11 @@ func _physics_process(delta: float) -> void:
 	if enemy != null:
 		_update_locked(delta, enemy)
 	else:
-		_update_free(delta)
+		_update_free(delta, player)
 
-func _update_free(delta: float) -> void:
-	_update_yaw_offset(delta)
+func _update_free(delta: float, player: Player) -> void:
+	if not _update_wall_yaw(delta, player):
+		_update_yaw_offset(delta)
 	var yaw := tuning.center_yaw + _yaw_offset
 	var offset := Basis(Vector3.UP, deg_to_rad(yaw)) \
 			* (Basis(Vector3.RIGHT, deg_to_rad(-tuning.pitch)) * Vector3(0.0, 0.0, tuning.distance))
@@ -119,6 +131,64 @@ func snap_behind(direction: Vector3) -> void:
 		return
 	var yaw := rad_to_deg(atan2(horizontal.x, horizontal.z))
 	_yaw_offset = wrapf(yaw - tuning.center_yaw, -180.0, 180.0)
+
+## Encuadre de wall slide: mientras el jugador está pegado a una pared, el yaw deja de salir del
+## stick y se planta en la normal del muro corrida `wall_slide_yaw_offset` grados hacia el lado que
+## el jugador va DEJANDO ATRÁS — así la pared queda en diagonal y ve hacia donde se mueve, en vez
+## de tener el muro plano de frente. El lado sale de la velocidad a lo largo del muro (en Wall
+## Impulse, del rumbo capturado); si no hay tangente clara todavía se conserva el último lado, así
+## el encuadre no salta de un lado al otro al arrancar. Devuelve false si no aplica (yaw normal).
+func _update_wall_yaw(delta: float, player: Player) -> bool:
+	if player == null or not tuning.wall_slide_frame_enabled or not player.wall_slide.is_sliding:
+		_wall_side = 0.0
+		_wall_vertical_blend = 0.0
+		return false
+	var normal := player.wall_slide.wall_normal
+	if normal.length_squared() < 0.0001:
+		return false
+	var wall_tangent := Vector3.UP.cross(normal)
+	wall_tangent.y = 0.0
+	if wall_tangent.length_squared() < 0.0001:
+		return false
+	wall_tangent = wall_tangent.normalized()
+
+	var horizontal := player.velocity
+	horizontal.y = 0.0
+	var side_speed := horizontal.slide(normal).dot(wall_tangent)
+	# Movimiento sobre el plano de la pared: cuánto de lo que hacés es recorrido lateral y cuánto
+	# es pura caída/subida. Por debajo del mínimo el encuadre se sostiene como está (un tramo casi
+	# quieto no debe hacer bailar el ángulo).
+	var motion := Vector2(absf(side_speed), absf(player.velocity.y))
+	if motion.length() > tuning.wall_slide_motion_min_speed:
+		if absf(side_speed) > WALL_SIDE_MIN_SPEED:
+			_wall_side = signf(side_speed)
+		# 0 = recorrido puramente lateral → `wall_slide_yaw_offset`.
+		# 1 = caída/subida vertical seca → `wall_slide_vertical_yaw_offset` (encuadre 2D).
+		_wall_vertical_blend = clampf(motion.angle() / (PI * 0.5), 0.0, 1.0)
+	if _wall_side == 0.0:
+		# Todavía sin rumbo (típico de una caída seca recién enganchada): se elige el lado que
+		# menos giro exige desde donde está la cámara, así el encuadre entra sin latigazo.
+		var alignment := wall_tangent.dot(_camera_direction())
+		_wall_side = -signf(alignment) if not is_zero_approx(alignment) else 1.0
+
+	var offset_angle := deg_to_rad(lerpf(tuning.wall_slide_yaw_offset,
+			tuning.wall_slide_vertical_yaw_offset, _wall_vertical_blend))
+	# La cámara se para sobre la normal y se corre hacia -movimiento: queda detrás del recorrido.
+	var camera_dir := (normal * cos(offset_angle)
+			- wall_tangent * _wall_side * sin(offset_angle)).normalized()
+	var target_offset := wrapf(rad_to_deg(atan2(camera_dir.x, camera_dir.z)) - tuning.center_yaw,
+			-180.0, 180.0)
+	# Por el camino corto: la diferencia se envuelve antes de interpolar, si no un cruce por ±180
+	# manda la cámara a dar la vuelta larga alrededor del jugador.
+	var diff := wrapf(target_offset - _yaw_offset, -180.0, 180.0)
+	_yaw_offset = wrapf(_yaw_offset + diff * clampf(tuning.wall_slide_yaw_damping * delta, 0.0, 1.0),
+			-180.0, 180.0)
+	return true
+
+## Dirección horizontal en la que está parada la cámara respecto al target, según el yaw actual.
+func _camera_direction() -> Vector3:
+	var yaw := deg_to_rad(tuning.center_yaw + _yaw_offset)
+	return Vector3(sin(yaw), 0.0, cos(yaw))
 
 func _update_yaw_offset(delta: float) -> void:
 	var input := Input.get_axis("camera_left", "camera_right")

@@ -6,3 +6,5 @@
 script = ExtResource("1_tuning")
 pitch = 40.0
 yaw_speed = 194.0
+wall_slide_yaw_offset = 70.0
+wall_slide_yaw_damping = 20.0

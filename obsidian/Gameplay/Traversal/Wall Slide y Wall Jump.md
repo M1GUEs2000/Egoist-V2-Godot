@@ -27,6 +27,8 @@ Movimiento de pared implementado como modulo componible `PlayerWallSlide` (nodo 
 - El personaje brilla verde mientras esta pegado (override de emision en el mesh; `glow_color` / `glow_energy` en el nodo `WallSlide`). El bloom ya existe (`WorldEnvironment` con glow en `test_scene`, ver [[Combate]]).
 - Ademas levanta polvo mientras eslidea: emisor `WallSlideDust` (`GPUParticles3D`) hijo del player, que `PlayerWallSlide` prende/apaga en sync con el glow (arranca en `update_after_move`, corta en `cancel`). Look tuneable en el `ParticleProcessMaterial` del emisor. *(2026-07-10)*
 - **Wall Impulse:** un `StaticBody3D` con hijo `WallImpulseSurface` y su `WallImpulseTuning` convierte el wall slide en un carril. Captura el primer input horizontal tangencial para escoger el **sentido**, ignora el stick posterior, anula la caida y arranca con `initial_speed`; despues acelera con `acceleration` hasta `max_speed`. En una curva, el vector se recalcula como la tangente de la normal actual conservando el sentido inicial, asi no pierde velocidad al pasar de tramo curvo a recto dentro del mismo mesh. `angle_degrees` inclina el carril respecto a esa tangente: `0` horizontal, negativo baja y positivo sube. La velocidad del carril puede superar el tope normal del wall slide; al perder contacto se entrega como momentum aereo y vuelve a respetar `momentum_max_speed`. **Particulas:** `WallImpulseSurface` inyecta una senal verde aditiva permanente: crea un emisor por cada `MeshInstance3D` de la pared y lo dimensiona con el AABB real, asi las motas caen de toda la geometria desde el inicio. Una segunda rafaga movil y una `OmniLight3D` verde siguen el punto de contacto y elevan el brillo al interactuar; no lleva ni requiere nodos manuales. Sus knobs (`particles_enabled`, cantidad, vida, tamano, rapidez, energia idle/activa y luz) viven en el mismo `.tres` de la pared. *(2026-07-19)*
+- Mientras eslidea, la camara se planta sola frente a la pared en vez de responder al stick, y se
+  abre a vista 2D cuando la bajada es vertical seca (ver [[Camara]]).
 - Se cancela al tocar suelo, dashear, ser lanzado, recibir bump o entrar en stun.
 - API: `apply_slide_velocity`, `update_after_move`, `try_wall_jump`, `cancel`, `blocks_move_input`.
 
@@ -52,4 +54,5 @@ Estado **E3**. Aprobado jugando: slide assist (no depende del stick, gracia coyo
 - [[Movimiento Base]]
 - [[Launcher y Aire]]
 - [[Momentum y Bump]]
+- [[Camara]]
 - [[Traversal]]
