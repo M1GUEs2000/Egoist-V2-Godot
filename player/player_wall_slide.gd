@@ -370,9 +370,13 @@ func _update_wall_impulse(input_dir: Vector3, normal: Vector3, delta: float) -> 
 	if captured_now:
 		_impulse_velocity = travel_direction * _impulse_tuning.initial_speed
 	else:
-		var target := travel_direction * _impulse_tuning.max_speed
-		_impulse_velocity = _impulse_velocity.move_toward(
-			target, _impulse_tuning.acceleration * delta)
+		# La curvatura solo ROTA el rumbo, nunca lo frena: se conserva la rapidez actual sobre
+		# la tangente nueva y la aceleracion trabaja solo sobre la magnitud. (Perseguir con
+		# move_toward un vector objetivo recorta la cuerda del giro y en curva sostenida la
+		# rapidez decae sin que ningun input lo pida.)
+		var speed := move_toward(_impulse_velocity.length(), _impulse_tuning.max_speed,
+				_impulse_tuning.acceleration * delta)
+		_impulse_velocity = travel_direction * speed
 	_body.vertical_velocity = _impulse_velocity.y
 	# El emisor visual sigue el punto de contacto cada frame; no queda abandonado en el origen
 	# de una pared curva o larga.
