@@ -6,13 +6,15 @@
 
 [sub_resource type="Resource" id="Resource_m478f"]
 script = ExtResource("3_7jh45")
-acceleration = 62.77
-initial_speed = 15.525
-angle_degrees = 6.0
-max_speed = 39.5
+acceleration = 10.0
+initial_speed = 10.0
+angle_degrees = 11.0
+max_speed = 60.0
 particle_amount = 97
 particle_lifetime = 1.1500000000000001
-particle_size = 0.31
+particle_size = 0.34
+particle_light_energy = 3.3
+particle_light_range = 7.0
 metadata/_custom_type_script = "uid://dii12ftr8vwyc"
 
 [node name="wall_spiral" unique_id=1798899393 instance=ExtResource("1_rqmqk")]

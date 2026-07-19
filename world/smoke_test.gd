@@ -601,12 +601,14 @@ func _ready() -> void:
 	enemy_far.queue_free()
 	await get_tree().process_frame  # confirma el free antes de la siguiente ronda de targets
 
-	# Lock-on vertical: el rango/angulo sigue siendo 3D, asi que un enemigo aereo dentro del
-	# cono vertical se lockea igual que uno a ras de piso.
-	var vertical_half_angle := maxf(player.tuning.lock_vertical_half_angle - 10.0, 1.0)
+	# Lock-on vertical: el cono de adquisición es UNO SOLO y 3D (`lock_half_angle`), medido como
+	# distancia angular al centro de pantalla; ya no hay filtro vertical separado. Un enemigo aéreo
+	# dentro de ese cono se lockea igual que uno a ras de piso. Sin Camera3D en el smoke, el cono
+	# nace en el player y se mide contra su forward (fallback de `_best_camera_target`).
+	var inside_angle := maxf(player.tuning.lock_half_angle - 10.0, 1.0)
 	var enemy_aerial_ok := EnemyBase.new()
 	add_child(enemy_aerial_ok)
-	enemy_aerial_ok.global_position = lock_origin + lock_fwd * 3.0 + Vector3.UP * (3.0 * tan(deg_to_rad(vertical_half_angle)))
+	enemy_aerial_ok.global_position = lock_origin + lock_fwd * 3.0 + Vector3.UP * (3.0 * tan(deg_to_rad(inside_angle)))
 	await get_tree().process_frame
 	player.lock_on.toggle_lock()
 	assert(player.lock_on.current_target == enemy_aerial_ok)
@@ -614,8 +616,8 @@ func _ready() -> void:
 	enemy_aerial_ok.queue_free()
 	await get_tree().process_frame
 
-	# Un enemigo demasiado arriba queda fuera del cono vertical: el lock-on no lo toma.
-	var too_high_angle := player.tuning.lock_vertical_half_angle + 15.0
+	# Un enemigo demasiado arriba queda fuera del cono: el lock-on no lo toma.
+	var too_high_angle := player.tuning.lock_half_angle + 15.0
 	var enemy_aerial_too_high := EnemyBase.new()
 	add_child(enemy_aerial_too_high)
 	enemy_aerial_too_high.global_position = lock_origin + lock_fwd * 3.0 + Vector3.UP * (3.0 * tan(deg_to_rad(too_high_angle)))
@@ -628,12 +630,15 @@ func _ready() -> void:
 	# Ciclado (camera_left/camera_right) mientras hay lock: salta al vecino en rango, izquierda
 	# y derecha respecto al forward de cámara (aquí igual al del player: no hay Camera3D en el
 	# smoke, `_camera_forward()` cae al fallback `_body.forward()`).
+	# El offset lateral sale del cono para que ambos entren con margen: a ±2m fijos quedaban a 33.7°
+	# contra un cono de 35, o sea que cualquier recalibración del lock los sacaba y el test moría.
+	var side_offset := 3.0 * tan(deg_to_rad(maxf(player.tuning.lock_half_angle - 15.0, 1.0)))
 	var enemy_left := EnemyBase.new()
 	add_child(enemy_left)
-	enemy_left.global_position = lock_origin + lock_fwd * 3.0 + player.global_basis.x * -2.0
+	enemy_left.global_position = lock_origin + lock_fwd * 3.0 + player.global_basis.x * -side_offset
 	var enemy_right := EnemyBase.new()
 	add_child(enemy_right)
-	enemy_right.global_position = lock_origin + lock_fwd * 3.0 + player.global_basis.x * 2.0
+	enemy_right.global_position = lock_origin + lock_fwd * 3.0 + player.global_basis.x * side_offset
 	await get_tree().process_frame
 	player.lock_on.toggle_lock()
 	assert(player.lock_on.current_target != null)

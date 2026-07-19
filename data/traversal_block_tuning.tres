@@ -15,5 +15,3 @@ down_light_angle_degrees = 20.0
 down_light_max_energy = 6.0
 particle_lifetime = 2.0
 particle_fall_speed = 6.0
-burst_amount = 82
-burst_size = 0.31

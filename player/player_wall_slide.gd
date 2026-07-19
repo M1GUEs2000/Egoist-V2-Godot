@@ -188,8 +188,13 @@ func _wall_jump_velocity(normal: Vector3) -> Vector3:
 	# HORIZONTAL = max(velocidad_a_lo_largo * h_boost, h_base): tiene piso, siempre despega hacia
 	# afuera. VERTICAL = velocidad_a_lo_largo * v_boost: SIN piso (a velocidad 0 no hay subida). El
 	# techo horizontal lo pone momentum_max_speed dentro de set_momentum, sin cambiar la dirección.
-	var h_speed := maxf(along_speed * t.wall_slide_wall_jump_h_boost, t.wall_slide_wall_jump_h_base)
-	var v_speed := along_speed * t.wall_slide_wall_jump_v_boost
+	# Topes tuneables: a velocidades muy altas (Wall Impulse, cadenas largas) el rebote no puede
+	# escalar sin límite o el player sale disparado. Se capan aquí, así la flecha de debug los refleja.
+	var h_speed := minf(
+			maxf(along_speed * t.wall_slide_wall_jump_h_boost, t.wall_slide_wall_jump_h_base),
+			t.wall_slide_wall_jump_max_h_speed)
+	var v_speed := minf(along_speed * t.wall_slide_wall_jump_v_boost,
+			t.wall_slide_wall_jump_max_v_speed)
 	return exit_dir * h_speed + Vector3.UP * v_speed
 
 ## Durante el rebote el impulso de la pared manda: el input de movimiento queda

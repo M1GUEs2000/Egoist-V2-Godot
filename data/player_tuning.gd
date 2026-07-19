@@ -76,6 +76,12 @@ class_name PlayerTuning extends Resource
 ## Multiplicador VERTICAL: la subida = tu velocidad a lo largo del muro × esto, SIN piso (a velocidad
 ## 0 no hay despegue vertical). Rápido → más alto, lento → más bajo.
 @export var wall_slide_wall_jump_v_boost := 1.1
+## Tope HORIZONTAL del rebote (m/s): por encima de esto el wall jump no empuja más fuerte, aunque
+## llegues lanzado (Wall Impulse, cadenas largas). Evita salir disparado a velocidades absurdas.
+@export var wall_slide_wall_jump_max_h_speed := 30.0
+## Tope VERTICAL del rebote (m/s): subida máxima del wall jump por más velocidad que traigas.
+## Referencia: jump_force es la subida del salto normal.
+@export var wall_slide_wall_jump_max_v_speed := 17.0
 ## Tiempo en que el rebote manda: bloquea el input de movimiento y el re-agarre de pared.
 @export var wall_slide_wall_jump_lock_time := 0.2
 ## DEBUG: muestra una flecha de ~2 m mientras deslizás, apuntando al ángulo al que te va a lanzar el
@@ -231,10 +237,19 @@ class_name PlayerTuning extends Resource
 @export_group("Lock-on")
 ## Rango máximo 3D para adquirir target (ex LockOnTargeting.maxRange).
 @export var lock_max_range := 12.0
-## Tolerancia respecto a la mira, en grados, medida en el plano horizontal (ex LockOnTargeting.lockHalfAngle).
-@export var lock_half_angle := 45.0
-## Tolerancia vertical del lock-on por encima/debajo del plano horizontal, en grados (enemigos aereos/GroundLocomotion en distinto nivel).
+## Cono de adquisición del lock-on, en grados: distancia angular máxima al CENTRO DE PANTALLA
+## (se mide desde la cámara, no desde el jugador — ver LockOn._best_camera_target). Cono circular,
+## no separa horizontal de vertical. Referencia: el FOV vertical de la escena es 60, o sea que ~35
+## ya cubre pantalla completa; más alto que eso deja de filtrar y lockea cosas fuera de cuadro.
+@export var lock_half_angle := 35.0
+## Tolerancia vertical del SNAP DE ATAQUE por encima/debajo del plano horizontal, en grados
+## (enemigos aereos/GroundLocomotion en distinto nivel). Solo lo usa LockOn.nearest_in_cone; el
+## lock-on ya no lo mira. En 90 queda desactivado de hecho (atan2 nunca lo supera).
 @export var lock_vertical_half_angle := 35.0
+## Cono horizontal del snap del golpe sin lock, en grados, medido desde el jugador contra su
+## propio forward (ex LockOnTargeting.lockHalfAngle). Separado de `lock_half_angle` porque ese
+## vive en el marco de la cámara: mezclarlos hacía que tunear el lock-on moviera el feel del golpe.
+@export var attack_snap_half_angle := 60.0
 ## Si es true, el reticle solo se muestra con armas afuera (el auto-aim del golpe
 ## y el snap de movimiento funcionan igual, tengan armas afuera o no).
 @export var lock_require_weapons_out := true

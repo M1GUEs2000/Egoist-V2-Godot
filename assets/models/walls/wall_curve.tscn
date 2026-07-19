@@ -6,9 +6,9 @@
 
 [sub_resource type="Resource" id="Resource_m478f"]
 script = ExtResource("3_u1emy")
-acceleration = 40.0
+acceleration = 30.0
 initial_speed = 10.0
-max_speed = 30.0
+max_speed = 50.0
 particle_emission_energy = 10.5
 particle_idle_emission_energy = 4.0
 particle_light_energy = 7.4

@@ -54,6 +54,11 @@ func cycle_target(direction: int) -> void:
 
 ## Enemigo más cercano dentro del cono de `direction` (rango + ángulo horizontal/vertical),
 ## SIN tocar el lock activo. Lo usa PlayerLocomotion para el snap del golpe cuando no hay lock.
+##
+## Acá el cono SÍ nace en el jugador y se mide contra un eje del jugador (`direction`), así que los
+## dos marcos coinciden y la geometría es correcta. Por eso usa sus propios tuneables
+## (`attack_snap_half_angle`/`lock_vertical_half_angle`) y no los del lock-on, que vive en el marco
+## de la cámara: compartirlos hacía que recalibrar uno rompiera el feel del otro.
 func nearest_in_cone(direction: Vector3) -> EnemyBase:
 	var dir := direction
 	dir.y = 0.0
@@ -69,7 +74,7 @@ func nearest_in_cone(direction: Vector3) -> EnemyBase:
 		var horiz_dist := horiz.length()
 		if horiz_dist < 0.01:
 			continue
-		if rad_to_deg(dir.angle_to(horiz)) > _body.tuning.lock_half_angle:
+		if rad_to_deg(dir.angle_to(horiz)) > _body.tuning.attack_snap_half_angle:
 			continue
 		var vertical_angle := rad_to_deg(atan2(to.y, horiz_dist))
 		if absf(vertical_angle) > _body.tuning.lock_vertical_half_angle:
@@ -121,23 +126,29 @@ func _target_still_valid(target: EnemyBase) -> bool:
 		return false
 	return (target.global_position - _body.global_position).length() <= _body.tuning.lock_max_range
 
-## El enemigo en rango más centrado respecto al forward de cámara (dentro del cono de
-## `lock_half_angle`/`lock_vertical_half_angle`): "lockea lo que estás mirando", no el más cercano.
+## El enemigo en rango más centrado en PANTALLA: "lockea lo que estás mirando".
+##
+## El ángulo se mide desde la POSICIÓN de la cámara contra su forward 3D, así que equivale a la
+## distancia angular al centro del viewport (la cámara hace look_at del jugador, ver CameraRig),
+## y `lock_half_angle` es un cono circular alrededor de ese centro.
+##
+## Antes el vector nacía en el jugador pero se comparaba contra el eje de la cámara: dos marcos
+## de referencia distintos mezclados. Como la cámara mira al jugador desde atrás y arriba, todo
+## enemigo que apareciera a los costados o por debajo del jugador en pantalla daba >90° y se
+## descartaba — con half_angle 60 quedaba lockeable solo el 34% del plano alrededor del jugador,
+## y ningún valor arreglaba eso porque la magnitud medida no era "qué tan centrado está".
 func _best_camera_target() -> EnemyBase:
-	var cam_fwd := _camera_forward()
+	# Sin Camera3D (smokes/probes) se cae al marco del jugador: origen y eje coherentes entre sí.
+	var origin := _cam.global_position if _cam != null else _body.global_position
+	var fwd := -_cam.global_basis.z if _cam != null else _body.forward()
 	var best: EnemyBase = null
 	var best_angle := INF
 	for enemy in _targets_in_range():
-		var to := enemy.global_position - _body.global_position
-		var horiz := to
-		horiz.y = 0.0
-		if horiz.length_squared() < 0.0001:
+		var to := enemy.global_position - origin
+		if to.length_squared() < 0.0001:
 			continue
-		var angle := rad_to_deg(cam_fwd.angle_to(horiz))
+		var angle := rad_to_deg(fwd.angle_to(to))
 		if angle > _body.tuning.lock_half_angle:
-			continue
-		var vertical_angle := rad_to_deg(atan2(to.y, horiz.length()))
-		if absf(vertical_angle) > _body.tuning.lock_vertical_half_angle:
 			continue
 		if angle < best_angle:
 			best_angle = angle
