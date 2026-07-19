@@ -19,7 +19,6 @@ gravity = -40.0
 [sub_resource type="Resource" id="Resource_macestun"]
 script = ExtResource("2_stun")
 poise_damage = 6.0
-grounded = 0.45
 airborne = 0.9
 
 [sub_resource type="Resource" id="Resource_macefreeze"]
@@ -55,7 +54,7 @@ air_y_bounce_enemy_gravity = -30.0
 air_y_ground_launch_height = 3.6
 air_y_bounce_angle = 40.619
 air_freeze_stun = SubResource("Resource_maceairfreeze")
-swing_time = 0.3
+swing_time = 0.5
 stun = SubResource("Resource_macestun")
 air_step_time = 0.09
 air_stall_scale = 1.8

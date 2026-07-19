@@ -1,6 +1,6 @@
-[gd_scene load_steps=10 format=3]
+[gd_scene format=3 uid="uid://yxqtvxwuiily"]
 
-[ext_resource type="Script" path="res://enemies/flying_enemy.gd" id="1_enemy"]
+[ext_resource type="Script" uid="uid://dm2ctw14hsmld" path="res://enemies/flying_enemy.gd" id="1_enemy"]
 [ext_resource type="Script" uid="uid://coemg5ljdfu7t" path="res://combat/health.gd" id="2_health"]
 [ext_resource type="Script" uid="uid://dvxrsptoplacw" path="res://combat/hurtbox.gd" id="3_hurtbox"]
 [ext_resource type="Script" uid="uid://cr2mf5ypgksws" path="res://core/world_membership.gd" id="4_membership"]
@@ -15,6 +15,11 @@ height = 1.1
 [sub_resource type="StandardMaterial3D" id="Mat_body"]
 albedo_color = Color(0.22, 0.55, 0.88, 1)
 
+[sub_resource type="StandardMaterial3D" id="Mat_eye"]
+albedo_color = Color(1, 0.35, 0.12, 1)
+emission_enabled = true
+emission = Color(1, 0.08, 0.01, 1)
+
 [sub_resource type="BoxMesh" id="BoxMesh_wing"]
 size = Vector3(1.7, 0.08, 0.55)
 
@@ -23,59 +28,53 @@ albedo_color = Color(0.5, 0.82, 1, 1)
 emission_enabled = true
 emission = Color(0.08, 0.28, 0.65, 1)
 
-[sub_resource type="StandardMaterial3D" id="Mat_eye"]
-albedo_color = Color(1, 0.35, 0.12, 1)
-emission_enabled = true
-emission = Color(1, 0.08, 0.01, 1)
-
-[node name="FlyingEnemy" type="CharacterBody3D"]
+[node name="FlyingEnemy" type="CharacterBody3D" unique_id=2054669416]
 script = ExtResource("1_enemy")
 hostility = 0
 normal_color = Color(0.22, 0.55, 0.88, 1)
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+[node name="CollisionShape3D" type="CollisionShape3D" parent="." unique_id=90996040]
 shape = SubResource("SphereShape_body")
 
-[node name="Visual" type="Node3D" parent="."]
+[node name="Visual" type="Node3D" parent="." unique_id=1674440842]
 
-[node name="Body" type="MeshInstance3D" parent="Visual"]
+[node name="Body" type="MeshInstance3D" parent="Visual" unique_id=661179917]
 mesh = SubResource("SphereMesh_body")
 surface_material_override/0 = SubResource("Mat_body")
 
-[node name="Eye" type="MeshInstance3D" parent="Visual"]
-position = Vector3(0, 0.08, -0.53)
-scale = Vector3(0.3, 0.3, 0.15)
+[node name="Eye" type="MeshInstance3D" parent="Visual" unique_id=1665366842]
+transform = Transform3D(0.3, 0, 0, 0, 0.3, 0, 0, 0, 0.15, 0, 0.08, -0.53)
 mesh = SubResource("SphereMesh_body")
 surface_material_override/0 = SubResource("Mat_eye")
 
-[node name="LeftWingPivot" type="Node3D" parent="Visual"]
-position = Vector3(-0.35, 0, 0)
+[node name="LeftWingPivot" type="Node3D" parent="Visual" unique_id=334502834]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.35, 0, 0)
 
-[node name="Wing" type="MeshInstance3D" parent="Visual/LeftWingPivot"]
-position = Vector3(-0.85, 0, 0)
+[node name="Wing" type="MeshInstance3D" parent="Visual/LeftWingPivot" unique_id=1251273558]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.85, 0, 0)
 mesh = SubResource("BoxMesh_wing")
 surface_material_override/0 = SubResource("Mat_wing")
 
-[node name="RightWingPivot" type="Node3D" parent="Visual"]
-position = Vector3(0.35, 0, 0)
+[node name="RightWingPivot" type="Node3D" parent="Visual" unique_id=253770179]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.35, 0, 0)
 
-[node name="Wing" type="MeshInstance3D" parent="Visual/RightWingPivot"]
-position = Vector3(0.85, 0, 0)
+[node name="Wing" type="MeshInstance3D" parent="Visual/RightWingPivot" unique_id=128911683]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.85, 0, 0)
 mesh = SubResource("BoxMesh_wing")
 surface_material_override/0 = SubResource("Mat_wing")
 
-[node name="Health" type="Node" parent="."]
+[node name="Health" type="Node" parent="." unique_id=1906197470]
 script = ExtResource("2_health")
-max_health = 24.0
+max_health = 50.0
 
-[node name="WorldMembership" type="Node" parent="."]
+[node name="WorldMembership" type="Node" parent="." unique_id=410482387]
 script = ExtResource("4_membership")
 mode = 1
 affiliation = 1
 hide_when_inactive = false
 
-[node name="Hurtbox" type="Area3D" parent="."]
+[node name="Hurtbox" type="Area3D" parent="." unique_id=1461108498]
 script = ExtResource("3_hurtbox")
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="Hurtbox"]
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Hurtbox" unique_id=588667392]
 shape = SubResource("SphereShape_body")

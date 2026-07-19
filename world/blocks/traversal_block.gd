@@ -1,34 +1,60 @@
 @tool
 class_name TraversalBlock extends Node3D
 ## Bloque componible de traversal. Cada instancia activa una o varias funciones por export.
-## @tool solo para previsualizar la flecha del dash verde en el viewport del editor; el gameplay
-## corre normal (ver la guarda `Engine.is_editor_hint()` en `_ready` y `_process`).
+## @tool solo para previsualizar en el viewport del editor la flecha del dash verde y la
+## trayectoria completa de dash/launch; el gameplay corre normal (ver la guarda
+## `Engine.is_editor_hint()` en `_ready` y `_process`).
 
 @export var tuning: TraversalBlockTuning
 
 @export_group("Caracteristicas")
-@export var enable_launch := false
-## Al togglearlo en el editor, la flecha de preview aparece/desaparece en el viewport (solo verde).
+## Al togglearlo en el editor, la parabola de preview (roja) aparece/desaparece en el viewport.
+@export var enable_launch := false:
+	set(value):
+		enable_launch = value
+		if Engine.is_editor_hint() and is_node_ready():
+			_refresh_editor_previews()
+## Al togglearlo en el editor, la flecha y la trayectoria de preview (verde) aparecen/desaparecen.
 @export var enable_dash := false:
 	set(value):
 		enable_dash = value
 		if Engine.is_editor_hint() and is_node_ready():
-			_refresh_editor_arrow()
+			_refresh_editor_previews()
 @export var enable_meter := false
 @export var enable_action_curse := false
 @export var enable_world_switch := false
 
 @export_group("Launch / bump")
-@export var horizontal_speed := 15.0
-@export var vertical_speed := 20.0
+@export var horizontal_speed := 15.0:
+	set(value):
+		horizontal_speed = value
+		if Engine.is_editor_hint() and is_node_ready():
+			_refresh_editor_previews()
+@export var vertical_speed := 20.0:
+	set(value):
+		vertical_speed = value
+		if Engine.is_editor_hint() and is_node_ready():
+			_refresh_editor_previews()
 
 @export_group("Dash")
-@export var dash_distance := 4.0
+@export var dash_distance := 4.0:
+	set(value):
+		dash_distance = value
+		if Engine.is_editor_hint() and is_node_ready():
+			_refresh_editor_previews()
 @export var dash_duration := 0.12
 ## Empujon horizontal extra al salir, en la proyeccion de la flecha. 0 = sin empujon.
-@export var dash_bop_forward_speed := 4.0
+@export var dash_bop_forward_speed := 4.0:
+	set(value):
+		dash_bop_forward_speed = value
+		if Engine.is_editor_hint() and is_node_ready():
+			_refresh_editor_previews()
 ## Pequeno impulso vertical que queda al terminar el dash. 0 = sin rebote.
-@export var dash_vertical_bop_speed := 4.0
+@export var dash_vertical_bop_speed := 4.0:
+	set(value):
+		dash_vertical_bop_speed = value
+		if Engine.is_editor_hint() and is_node_ready():
+			_refresh_editor_previews()
 @export var boost_existing_bump_momentum := false
 ## Si el dash forzado por el bloque verde prende el DashHitbox del player y daña al atravesar.
 @export var dash_deals_damage := true
@@ -50,6 +76,8 @@ var _down_lights: Array[SpotLight3D] = []
 var _down_particles: Array[GPUParticles3D] = []
 var _down_particle_materials: Array[StandardMaterial3D] = []
 var _dash_arrow: Node3D
+var _dash_trajectory: Node3D
+var _launch_trajectory: Node3D
 
 @onready var _health: Health = $Health
 @onready var _hurtbox: Hurtbox = $Hurtbox
@@ -60,9 +88,13 @@ func _ready() -> void:
 	if tuning == null:
 		tuning = TraversalBlockTuning.new()
 	if Engine.is_editor_hint():
-		# En el editor solo dibujamos la flecha de preview; nada de wiring de gameplay
-		# (Health, Hurtbox, WorldManager) que en modo @tool no tiene sentido y romperia.
-		_refresh_editor_arrow()
+		# En el editor solo dibujamos los previews (flecha + trayectorias); nada de wiring de
+		# gameplay (Health, Hurtbox, WorldManager) que en modo @tool no tiene sentido y romperia.
+		# Las trayectorias se hornean en espacio global (top_level), asi que necesitan
+		# reconstruirse cuando el bloque se mueve o rota en el editor, no solo al tocar un
+		# export: sin esto quedaban congeladas en la posicion de cuando se instancio el bloque.
+		set_notify_transform(true)
+		_refresh_editor_previews()
 		return
 	_configure_health()
 	_hurtbox.hit.connect(_on_hit)
@@ -87,6 +119,13 @@ func _process(_delta: float) -> void:
 	if Engine.is_editor_hint():
 		return
 	_update_glow()
+
+## set_notify_transform(true) en _ready pide este aviso cuando el bloque se mueve/rota en el
+## editor (gizmo o inspector). Las trayectorias estan horneadas en global, asi que sin esto se
+## quedaban pegadas en la posicion vieja hasta cerrar y reabrir la escena.
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_TRANSFORM_CHANGED and Engine.is_editor_hint() and is_node_ready():
+		_refresh_editor_previews()
 
 func _configure_health() -> void:
 	if hits_to_break > 0:
@@ -313,17 +352,26 @@ func _repaint_light(colors: Array[Color]) -> void:
 	_light.light_color = blended / float(colors.size())
 	_light.omni_range = tuning.light_range
 
-## Preview del viewport (solo editor): reconstruye la flecha cuando el bloque es verde y la
-## saca si se apaga enable_dash, para orientarla sin entrar a jugar. En runtime la flecha la
-## arma _ready una sola vez (la flecha real solo existe con enable_dash, igual que aca).
-func _refresh_editor_arrow() -> void:
+## Preview del viewport (solo editor): reconstruye flecha + trayectorias cuando cambia una
+## feature o un knob que las afecta, para tunear sin entrar a jugar. En runtime nada de esto
+## se arma (ver _ready).
+func _refresh_editor_previews() -> void:
 	if tuning == null:
 		tuning = TraversalBlockTuning.new()
 	if _dash_arrow != null:
 		_dash_arrow.queue_free()
 		_dash_arrow = null
+	if _dash_trajectory != null:
+		_dash_trajectory.queue_free()
+		_dash_trajectory = null
+	if _launch_trajectory != null:
+		_launch_trajectory.queue_free()
+		_launch_trajectory = null
 	if enable_dash:
 		_build_dash_arrow()
+		_build_dash_trajectory()
+	if enable_launch:
+		_build_launch_trajectory()
 
 ## Cono + vara semitransparente pegada a la cara -Z del bloque: marca hacia donde empuja el
 ## dash sin depender de por donde llegue el jugador. Vive fija en local; rotar el TraversalBlock
@@ -365,6 +413,118 @@ func _build_dash_arrow() -> void:
 			-0.5 - tuning.arrow_shaft_length - tuning.arrow_head_length * 0.5)
 	head.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	_dash_arrow.add_child(head)
+
+## Trayectoria completa del dash verde: tramo recto (dash_distance por la cara -Z del bloque,
+## con su inclinacion si esta rotado) seguido del arco balistico del bop de salida, si tiene
+## velocidad. Mismo origen y direccion que _apply_dash / _build_dash_arrow.
+func _build_dash_trajectory() -> void:
+	var origin := global_position + Vector3(0.0, 0.55, 0.0)
+	var dash_dir := (-global_transform.basis.z).normalized()
+	var dash_end := origin + dash_dir * dash_distance
+	var points := PackedVector3Array([origin, dash_end])
+	# El bop de salida solo empuja horizontal (ver Player.set_exit_bop): se pierde la
+	# inclinacion del dash en ese tramo, igual que en gameplay real.
+	var bop_horizontal := Vector3(dash_dir.x, 0.0, dash_dir.z)
+	var bop_dir := bop_horizontal.normalized() if bop_horizontal.length_squared() > 0.0001 else Vector3.ZERO
+	points.append_array(_sample_ballistic_arc(dash_end, bop_dir, dash_bop_forward_speed, dash_vertical_bop_speed))
+	_dash_trajectory = _build_trajectory_tube(points, World.COLOR_TRAVERSAL_DASH, World.COLOR_TRAVERSAL_DASH_EMISSION)
+
+## Trayectoria completa del launch/bump: parabola balistica desde horizontal_speed/vertical_speed.
+## La direccion real en gameplay depende del input del jugador (last_move_dir); el preview asume
+## fija la cara -Z del bloque, la misma convencion que ya usa el dash, solo para poder dibujar
+## algo util en el editor.
+func _build_launch_trajectory() -> void:
+	var origin := global_position + Vector3(0.0, 0.55, 0.0)
+	var forward := -global_transform.basis.z
+	var horizontal_dir := Vector3(forward.x, 0.0, forward.z)
+	if horizontal_dir.length_squared() < 0.0001:
+		horizontal_dir = Vector3.FORWARD
+	else:
+		horizontal_dir = horizontal_dir.normalized()
+	var points := PackedVector3Array([origin])
+	points.append_array(_sample_ballistic_arc(origin, horizontal_dir, horizontal_speed, vertical_speed))
+	_launch_trajectory = _build_trajectory_tube(points, World.COLOR_TRAVERSAL_LAUNCH, World.COLOR_TRAVERSAL_LAUNCH_EMISSION)
+
+## Muestrea una parabola balistica desde `start` hasta que vuelve a esa altura, leyendo gravedad
+## y frenado de momentum en vivo de tuning.player_tuning (ver _trajectory_gravity /
+## _trajectory_horizontal_decay). No incluye el punto inicial (el llamador ya lo tiene). Sin
+## impulso vertical o sin PlayerTuning asignado no hay forma de cerrar la parabola, asi que no
+## dibuja nada.
+func _sample_ballistic_arc(start: Vector3, horizontal_dir: Vector3, h_speed: float, v_speed: float) -> PackedVector3Array:
+	var points := PackedVector3Array()
+	var gravity := _trajectory_gravity()
+	if gravity >= 0.0 or v_speed <= 0.0:
+		return points
+	var t_total := -2.0 * v_speed / gravity
+	var segments := maxi(tuning.trajectory_segments, 1)
+	for i in range(1, segments + 1):
+		var t := t_total * float(i) / float(segments)
+		var vertical := v_speed * t + 0.5 * gravity * t * t
+		var offset := horizontal_dir * _horizontal_distance(h_speed, t) + Vector3(0.0, vertical, 0.0)
+		points.append(start + offset)
+	return points
+
+## Distancia horizontal recorrida en `t` segundos con velocidad inicial `h_speed` que frena
+## linealmente a _trajectory_horizontal_decay() m/s^2 (integra Player._bleed_momentum, que usa
+## move_toward: la velocidad baja pareja hasta 0 y se queda ahi, nunca reversa).
+func _horizontal_distance(h_speed: float, t: float) -> float:
+	var decay := _trajectory_horizontal_decay()
+	if decay <= 0.0:
+		return h_speed * t
+	var t_stop := h_speed / decay
+	if t <= t_stop:
+		return h_speed * t - 0.5 * decay * t * t
+	return h_speed * t_stop - 0.5 * decay * t_stop * t_stop
+
+## 0.0 (parabola degenerada, _sample_ballistic_arc no dibuja nada) si no hay PlayerTuning
+## asignado en tuning.player_tuning.
+func _trajectory_gravity() -> float:
+	if tuning.player_tuning == null:
+		return 0.0
+	return tuning.player_tuning.gravity
+
+## Mismo calculo que Player._bleed_momentum en el aire: move_speed / momentum_bleed_seconds_per_unit
+## da el rate base, escalado por momentum_bleed_air (siempre airborne durante el arco).
+func _trajectory_horizontal_decay() -> float:
+	var t := tuning.player_tuning
+	if t == null:
+		return 0.0
+	var rate := t.move_speed / maxf(0.001, t.momentum_bleed_seconds_per_unit)
+	return rate * t.momentum_bleed_air
+
+## Tubo generico para dibujar una polilinea 3D en el viewport del editor: un CylinderMesh por
+## segmento, mismo patron que _build_dash_arrow. `top_level = true` porque los puntos ya vienen
+## en espacio global (no hay que heredar la rotacion del bloque de nuevo).
+func _build_trajectory_tube(points: PackedVector3Array, color: Color, emission: Color) -> Node3D:
+	var container := Node3D.new()
+	add_child(container)
+	container.top_level = true
+	var material := StandardMaterial3D.new()
+	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	material.albedo_color = Color(color, tuning.trajectory_alpha)
+	material.emission_enabled = true
+	material.emission = emission
+	material.cull_mode = BaseMaterial3D.CULL_DISABLED
+	for i in range(points.size() - 1):
+		var a := points[i]
+		var b := points[i + 1]
+		var segment_dir := b - a
+		var length := segment_dir.length()
+		if length < 0.001:
+			continue
+		var segment := MeshInstance3D.new()
+		var mesh := CylinderMesh.new()
+		mesh.top_radius = tuning.trajectory_line_radius
+		mesh.bottom_radius = tuning.trajectory_line_radius
+		mesh.height = length
+		segment.mesh = mesh
+		segment.set_surface_override_material(0, material)
+		segment.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		container.add_child(segment)
+		segment.global_transform = Transform3D(
+				Basis(Quaternion(Vector3.UP, segment_dir.normalized())), a + segment_dir * 0.5)
+	return container
 
 func _update_glow() -> void:
 	var player := get_tree().get_first_node_in_group("player") as Node3D

@@ -63,3 +63,15 @@ class_name TraversalBlockTuning extends Resource
 @export_range(0.05, 0.5, 0.01) var arrow_head_radius := 0.16
 ## Transparencia de la flecha: 0 invisible, 1 solida.
 @export_range(0.0, 1.0, 0.05) var arrow_alpha := 0.55
+
+@export_group("Trayectoria de preview (bloque rojo/verde)")
+## Fuente real de gravedad y frenado de momentum para la parabola de preview: se lee en vivo
+## (gravity, move_speed, momentum_bleed_seconds_per_unit, momentum_bleed_air), asi que si se
+## destunea el player el preview no se desincroniza. Default apunta al recurso real del juego.
+@export var player_tuning: PlayerTuning = preload("res://data/player_tuning.tres")
+## Radio del tubo que dibuja la trayectoria.
+@export_range(0.01, 0.3, 0.01) var trajectory_line_radius := 0.04
+## Transparencia de la trayectoria: 0 invisible, 1 solida.
+@export_range(0.0, 1.0, 0.05) var trajectory_alpha := 0.45
+## Cantidad de segmentos de la curva del launch (mas = mas suave, mas caro solo en editor).
+@export_range(4, 64, 1) var trajectory_segments := 20

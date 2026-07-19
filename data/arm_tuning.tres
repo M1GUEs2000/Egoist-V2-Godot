@@ -26,4 +26,4 @@ vfx_impact_scale = 2.385
 vfx_tint = true
 vfx_primary_color = Color(0.72176015, 0.2037946, 0.729114, 1)
 vfx_secondary_color = Color(0.93217206, 0.5851327, 0.88586533, 1)
-vfx_emission = 0.61
+vfx_emission = 2.285
