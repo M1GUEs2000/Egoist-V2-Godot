@@ -190,12 +190,12 @@ func _on_jump() -> void:
 	elif _can_double_jump:
 		_set_double_jump_available(false)
 		# El doble salto sale SIEMPRE con gravedad normal: cierra la ventana de caida lenta
-		# (air-hit-stall y hover de un move) antes de aplicar jump_force. Sin esto, saltar dentro
+		# (air-hit-stall y hover de un move) antes de aplicar second_jump_force. Sin esto, saltar dentro
 		# de esa ventana subia con air_stall_float_gravity (0.1 = -4 m/s^2 contra -40) y el mismo
-		# jump_force llegaba diez veces mas alto. air_stall_max_rise no alcanzaba: capea la
+		# second_jump_force llegaba diez veces mas alto. air_stall_max_rise no alcanzaba: capea la
 		# velocidad al REGISTRAR el stall, no la de un salto posterior.
 		launcher.reset_air_stall()
-		vertical_velocity = tuning.jump_force
+		vertical_velocity = tuning.second_jump_force
 		air_state = AirState.AIRBORNE
 
 func _on_dodge() -> void:

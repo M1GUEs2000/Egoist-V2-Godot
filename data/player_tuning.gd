@@ -20,8 +20,10 @@ class_name PlayerTuning extends Resource
 @export var attack_step_distance := 0.7
 
 @export_group("Jump")
-## Velocidad vertical inicial del salto y del doble salto, en m/s.
+## Velocidad vertical inicial del salto desde el suelo, en m/s.
 @export var jump_force := 8.0
+## Velocidad vertical inicial del doble salto, en m/s. Independiente del salto desde el suelo.
+@export var second_jump_force := 8.0
 
 @export_group("Wall slide")
 ## Velocidad mínima de empuje CONTRA la pared para engancharse al slide (m/s).

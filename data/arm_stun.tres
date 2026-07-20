@@ -4,6 +4,6 @@
 
 [resource]
 script = ExtResource("1_stun")
-poise_damage = 0.75
-grounded = 0.7
+poise_damage = 0.1
+grounded = 0.3
 airborne = 0.3
