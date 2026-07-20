@@ -13,9 +13,6 @@ metadata/_custom_type_script = "uid://w0b3i18w442a"
 
 [sub_resource type="Resource" id="Resource_swordpush"]
 script = ExtResource("3_push")
-distance = 15.0
-angle_degrees = 25.0
-fall_height = 6.0
 
 [sub_resource type="Resource" id="Resource_swordstun"]
 script = ExtResource("2_stun")
@@ -42,7 +39,7 @@ hand_radius = 1.0
 air_step_time = 0.2
 air_wait_branch_threshold = 0.2
 air_spike_down_speed = 40.0
-air_wait_spin_hop = 6.0
+air_wait_spin_hop = 7.0
 air_stall_scale = 1.1
 push = SubResource("Resource_swordpush")
 push_at = 0.65

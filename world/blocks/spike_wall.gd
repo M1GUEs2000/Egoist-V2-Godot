@@ -22,7 +22,7 @@ class_name SpikeWall extends StaticBody3D
 ## Inclinacion del arco del pinche, en grados. Cambia la forma, no donde cae.
 @export var enemy_push_angle := 15.0
 ## Metros que el enemigo termina por debajo del punto de impacto.
-@export var enemy_push_fall_height := 0.0
+@export var enemy_push_fall_height := 5.0
 @export var hit_cooldown := 0.35
 @export var hazard_stun_color := Color(1.0, 0.08, 0.12, 1.0)
 

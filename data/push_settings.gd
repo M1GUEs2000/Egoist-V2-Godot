@@ -14,16 +14,18 @@ class_name PushSettings extends Resource
 
 ## Metros que avanza en horizontal antes de caer recto. Es el knob principal: "este golpe
 ## manda al enemigo a 20 metros". Verificable mirando la pantalla.
-@export var distance := 8.0
+@export var distance := 15.0
 ## Inclinacion inicial del arco, en grados sobre la horizontal. NO cambia donde cae (eso lo
 ## fija `distance`): cambia la FORMA del recorrido. Bajo = rasante y se comba tarde; alto =
 ## sube mas y cae picado. Ojo con angulos altos en distancias cortas: el cuerpo puede gastar
 ## `fall_height` antes de llegar, y ahi cae recto a mitad de camino sin cumplir la distancia.
-@export_range(1.0, 80.0) var angle_degrees := 15.0
+@export_range(1.0, 80.0) var angle_degrees := 25.0
 ## Metros que el cuerpo termina POR DEBAJO del punto de impacto. No es un techo: es el
 ## presupuesto de caida. Al agotarlo se corta el horizontal y baja a plomo. 0 = aterriza a la
 ## misma altura desde la que salio.
-@export var fall_height := 0.0
+## Con 5 el arco pica al final (baja mas empinado de lo que subio) y, si el enemigo estaba
+## parado en el piso, aterriza antes de completar `distance`: no le sobran 5 m para caer.
+@export var fall_height := 5.0
 ## Cierre del arco, en m/s^2 (negativo). No mueve el punto de caida —ya lo fija `distance`—
 ## sino el TIEMPO de vuelo: mas negativo = mismo recorrido pero mas rapido y seco.
 @export var gravity := -20.0
