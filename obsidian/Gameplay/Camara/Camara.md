@@ -52,12 +52,18 @@ stick dentro de un rango acotado. No incluye el occlusion fade (vive aparte, ver
   a mandar. El lock-on tiene prioridad: lockeado manda el encuadre de combate. *(2026-07-19)*
 - **Seguimiento vertical con tope**: la camara sigue al target en Y solo dentro de
   `vertical_follow_limit` metros desde la ultima altura "asentada" (`CameraRig._vertical_anchor`,
-  que se re-ancla mientras el target esta dentro del tope). Pasado el tope se congela: el jugador
-  sale de cuadro en vertical (sube/baja) en vez de que la camara lo persiga sin fin — pensado para
-  tramos donde se sube mucho de golpe (Brazo, launcher). `vertical_follow_limit <= 0` desactiva el
-  tope (sigue siempre, comportamiento previo al rework). `CameraVerticalZone` (`visual/camera_vertical_zone.gd`,
-  Area3D en capa jugador) apila un tope distinto por area via `CameraRig.push_vertical_limit`/
-  `pop_vertical_limit` (grupo `"camera_rig"`); zonas anidadas usan la mas reciente.
+  que se re-ancla mientras el target esta dentro del tope). Pasado el tope el jugador sale de cuadro
+  en vertical (sube/baja) en vez de que la camara lo persiga — pensado para tramos donde se sube
+  mucho de golpe (Brazo, launcher). El ancla mide **siempre** la altura del jugador, tambien con
+  lock activo: el encuadre lockeado hereda el desplazamiento resultante en vez de anclarse al punto
+  de mira, que con un target alto arrastraria el encuadre hacia arriba. Fuera del tope el ancla no
+  queda fija: cede hacia el jugador a `vertical_recover_speed` m/s — y solo lo que sobra del tope,
+  nunca lo adelanta ni cruza de lado — asi un tramo corto se frena igual pero una caida sostenida
+  recupera el encuadre. `vertical_recover_speed = 0` deja el tope sin retorno;
+  `vertical_follow_limit <= 0` lo desactiva por completo (sigue siempre).
+  `CameraVerticalZone` (`visual/camera_vertical_zone.gd`, Area3D en capa jugador) apila un tope
+  distinto por area via `CameraRig.push_vertical_limit`/`pop_vertical_limit` (grupo `"camera_rig"`);
+  zonas anidadas usan la mas reciente. *(2026-07-19)*
 
 ## Input
 
@@ -81,7 +87,8 @@ Acciones nuevas en `project.godot`:
 | `lock_focus_weight` | Con lock activo, cuanto se corre el punto de mira del jugador hacia el target (0=jugador, 1=target) |
 | `lock_zoom_min_distance` / `lock_zoom_max_distance` | Con lock activo, rango de distancia de la camara (zoom in/out) segun separacion jugador-target (ver [[Lock On]]) |
 | `lock_zoom_near_separation` / `lock_zoom_far_separation` | Separacion (metros) que mapea a `lock_zoom_min_distance`/`lock_zoom_max_distance` |
-| `vertical_follow_limit` | Tope en metros del seguimiento vertical antes de congelarse (<=0 = sin tope). Default 10 |
+| `vertical_follow_limit` | Tope en metros del seguimiento vertical (<=0 = sin tope). Default 10 |
+| `vertical_recover_speed` | Velocidad (m/s) con que el encuadre vuelve a alcanzar al jugador pasado el tope. 0 = tope sin retorno. Default 8 |
 | `wall_slide_frame_enabled` | Interruptor del encuadre de wall slide; false deja el yaw como lo dejo el jugador |
 | `wall_slide_yaw_offset` | Grados desde la normal con recorrido lateral. 0 = detras del jugador con la pared de frente; 90 = pared de canto. Default 45 |
 | `wall_slide_vertical_yaw_offset` | Grados desde la normal con movimiento vertical seco (90 = vista 2D). Igualarlo a `wall_slide_yaw_offset` desactiva la apertura. Default 90 |
@@ -93,6 +100,8 @@ Acciones nuevas en `project.godot`:
 - Tunear jugando: `yaw_speed` de la rotacion libre y si la falta de recentrado se siente bien.
 - Tunear jugando el encuadre de pared: `wall_slide_yaw_damping` (transicion lateral↔2D) y si el
   90° pleno aplana demasiado la lectura de profundidad. *(pendiente de probar)*
+- Tunear jugando `vertical_recover_speed`: cuanto tiempo aguanta el jugador fuera de cuadro en una
+  caida larga antes de que la camara ceda. *(pendiente de probar)*
 - Centro por area: definir el mecanismo (zona/trigger) que varie `center_yaw` segun donde
   este el jugador.
 

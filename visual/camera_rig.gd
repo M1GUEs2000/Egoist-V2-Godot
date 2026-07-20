@@ -22,7 +22,8 @@ class_name CameraRig extends Node3D
 ##
 ## Seguimiento vertical: el punto de mira sigue al target en Y solo dentro de
 ## `tuning.vertical_follow_limit` metros desde la última altura "asentada" (`_vertical_anchor`,
-## que se re-ancla solo mientras el target está dentro del tope). Pasado el tope se congela: el
+## que mide siempre la altura del JUGADOR — también con lock activo — y se re-ancla solo mientras
+## el target está dentro del tope). Pasado el tope se congela: el
 ## jugador sale de cuadro en vertical en vez de que la cámara lo persiga sin fin. `CameraVerticalZone`
 ## puede apilar un tope distinto por área (`push_vertical_limit`/`pop_vertical_limit`).
 
@@ -68,7 +69,7 @@ func _update_free(delta: float, player: Player) -> void:
 	var offset := Basis(Vector3.UP, deg_to_rad(yaw)) \
 			* (Basis(Vector3.RIGHT, deg_to_rad(-tuning.pitch)) * Vector3(0.0, 0.0, tuning.distance))
 	var follow_point := target.global_position
-	follow_point.y = _clamp_vertical(follow_point.y)
+	follow_point.y = _clamp_vertical(follow_point.y, delta)
 	_move_to(follow_point + offset, follow_point, delta)
 
 ## Encuadra jugador + target: mantiene el yaw libre actual (no orbita a la espalda del jugador)
@@ -82,7 +83,10 @@ func _update_locked(delta: float, enemy: EnemyBase) -> void:
 	var offset := Basis(Vector3.UP, deg_to_rad(yaw)) \
 			* (Basis(Vector3.RIGHT, deg_to_rad(-tuning.pitch)) * Vector3(0.0, 0.0, lock_distance))
 	var focus := target.global_position.lerp(enemy.global_position, tuning.lock_focus_weight)
-	focus.y = _clamp_vertical(focus.y)
+	# El ancla vertical mide SIEMPRE la altura del jugador, nunca la del punto de mira: si se
+	# anclara al lerp, un target alto la dejaría arriba y al soltar el lock el jugador quedaría
+	# fuera del tope con el ancla ya congelada (la cámara no volvía a bajar nunca).
+	focus.y += _clamp_vertical(target.global_position.y, delta) - target.global_position.y
 	_move_to(focus + offset, focus, delta)
 
 func _move_to(desired: Vector3, look_at_point: Vector3, delta: float) -> void:
@@ -99,9 +103,12 @@ func _move_to(desired: Vector3, look_at_point: Vector3, delta: float) -> void:
 func _current_vertical_limit() -> float:
 	return _vertical_overrides.back() if not _vertical_overrides.is_empty() else tuning.vertical_follow_limit
 
-## Sigue a `true_y` mientras esté a `limit` metros o menos del ancla; más allá, congela el ancla
-## y clampea — la cámara deja de subir/bajar hasta que el target vuelva a estar cerca de esa altura.
-func _clamp_vertical(true_y: float) -> float:
+## Sigue a `true_y` mientras esté a `limit` metros o menos del ancla; más allá, la cámara deja de
+## subir/bajar y el target se va de cuadro en vertical. Pasado el tope el ancla no se congela seca:
+## deriva hacia `true_y` a `vertical_recover_speed` m/s, así un tramo corto (launcher, Brazo) se
+## frena igual pero una caída larga termina recuperando el encuadre en vez de dejar la cámara
+## clavada para siempre. Con `vertical_recover_speed = 0` vuelve a congelarse sin retorno.
+func _clamp_vertical(true_y: float, delta: float) -> float:
 	if not _vertical_anchor_set:
 		_vertical_anchor = true_y
 		_vertical_anchor_set = true
@@ -109,8 +116,13 @@ func _clamp_vertical(true_y: float) -> float:
 	if limit <= 0.0:
 		_vertical_anchor = true_y
 		return true_y
-	if absf(true_y - _vertical_anchor) <= limit:
+	var excursion := true_y - _vertical_anchor
+	if absf(excursion) <= limit:
 		_vertical_anchor = true_y
+	elif tuning.vertical_recover_speed > 0.0:
+		# Se cede solo lo que sobra del tope: el ancla nunca adelanta al target ni cruza de lado.
+		var slack := absf(excursion) - limit
+		_vertical_anchor += signf(excursion) * minf(tuning.vertical_recover_speed * delta, slack)
 	return clampf(true_y, _vertical_anchor - limit, _vertical_anchor + limit)
 
 ## Apila un tope distinto (lo usa `CameraVerticalZone` al entrar el jugador). Con zonas anidadas

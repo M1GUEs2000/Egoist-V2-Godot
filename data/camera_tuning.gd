@@ -61,3 +61,8 @@ class_name CameraTuning extends Resource
 ## vez de que la cámara lo persiga (ej. subiendo agarrado de algo). <= 0 desactiva el tope (sigue
 ## siempre, como antes). Sobreescribible por área con `CameraVerticalZone`.
 @export_range(0.0, 60.0, 0.5) var vertical_follow_limit := 10.0
+## Una vez pasado el tope, a que velocidad (m/s) la camara termina cediendo y te vuelve a
+## alcanzar. Existe para que una caida larga no te deje fuera de cuadro para siempre: el tope
+## sigue frenando los tramos cortos (launcher, Brazo), pero si te alejas y no volves, la camara
+## arranca a seguirte. 0 = congelamiento permanente (comportamiento viejo). Mas alto = cede antes.
+@export_range(0.0, 60.0, 0.5) var vertical_recover_speed := 8.0
