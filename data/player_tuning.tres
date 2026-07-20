@@ -66,4 +66,5 @@ inactive_weapon_angle = -60.0
 air_stall_base = 10.0
 air_stall_per_hit = 0.01
 air_stall_float_gravity = 0.1
+air_stall_momentum_keep = 0.204
 aerial_whiff_fall_gravity = 0.8

@@ -76,6 +76,12 @@ func notify_aerial_attack(duration: float) -> void:
 func hover(duration: float) -> void:
 	if _body.is_on_floor():
 		return
+	# Frena la CAÍDA, nunca una subida. El hang de un move puede llegar con delay (la explosión
+	# del sweet spot sale ~0.33s después del golpe): si para entonces el jugador ya gastó el
+	# doble salto, poner la vertical en 0 se lo mataba a mitad de ascenso, y abrir la ventana de
+	# gravedad baja sobre esa subida lo mandaba disparado. Subiendo por lo suyo, el hover no va.
+	if _body.vertical_velocity > 0.0:
+		return
 	_air_stall_until = maxf(_air_stall_until, World.now() + duration)
 	_body.vertical_velocity = 0.0
 	_body.air_state = Player.AirState.AIRBORNE
