@@ -8,16 +8,24 @@ class_name HUD extends CanvasLayer
 @onready var _meter_bars: HBoxContainer = $Root/VBox/MeterBars
 @onready var _double_jump_icon: Label = $Root/VBox/AirResourceRow/DoubleJumpIcon
 @onready var _airdash_icon: Label = $Root/VBox/AirResourceRow/AirDashIcon
+@onready var _arm_tap_row: HBoxContainer = $Root/VBox/ArmTapRow
 @onready var _state_label: Label = $Root/VBox/StateLabel
 @onready var _loadout_menu: ActionLoadoutMenu = $ActionLoadoutMenu
 
 const AIR_RESOURCE_ACTIVE_ALPHA := 1.0
 const AIR_RESOURCE_INACTIVE_ALPHA := 0.35
 
+## Un icono por golpe de brazo disponible (ver PlayerArm.taps_changed). Morado: el mismo del
+## marcador de lock-on pasivo del Brazo (Mat_arm_marker en player.tscn).
+const ARM_TAP_COLOR := Color(0.62, 0.25, 0.95)
+const ARM_TAP_SPENT_COLOR := Color(0.32, 0.34, 0.36, 0.35)
+const ARM_TAP_ICON_SIZE := Vector2(16.0, 16.0)
+
 var _player: Player
 var _health: Health
 var _meter: PlayerMeter
 var _meter_segments: Array[ProgressBar] = []
+var _arm_tap_icons: Array[ColorRect] = []
 
 func _ready() -> void:
 	layer = 10
@@ -45,10 +53,14 @@ func _bind_player() -> void:
 		player.double_jump_changed.connect(_on_double_jump_changed)
 	if player.dash != null and not player.dash.airdash_changed.is_connected(_on_airdash_changed):
 		player.dash.airdash_changed.connect(_on_airdash_changed)
+	if player.arm != null and not player.arm.taps_changed.is_connected(_on_arm_taps_changed):
+		player.arm.taps_changed.connect(_on_arm_taps_changed)
 
 	_update_health()
 	_on_meter_changed(_meter.meter(), _meter.bars())
 	_update_air_resource_icons()
+	if player.arm != null:
+		_on_arm_taps_changed(player.arm.taps_available(), player.arm.max_taps())
 	if _loadout_menu != null:
 		_loadout_menu.setup(player)
 
@@ -106,6 +118,29 @@ func _rebuild_meter(max_bars: int) -> void:
 		segment.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		_meter_bars.add_child(segment)
 		_meter_segments.append(segment)
+
+## Un icono morado por golpe de brazo: encendidos los que quedan, apagados los gastados. Mientras
+## corre el cooldown quedan todos apagados y se encienden de golpe al recuperarse.
+func _on_arm_taps_changed(available: int, max_taps: int) -> void:
+	if _arm_tap_icons.size() != max_taps:
+		_rebuild_arm_taps(max_taps)
+	for index in range(_arm_tap_icons.size()):
+		_arm_tap_icons[index].color = ARM_TAP_COLOR if index < available else ARM_TAP_SPENT_COLOR
+
+func _rebuild_arm_taps(max_taps: int) -> void:
+	for icon in _arm_tap_icons:
+		icon.queue_free()
+	_arm_tap_icons.clear()
+
+	for index in range(max_taps):
+		var icon := ColorRect.new()
+		icon.name = "ArmTapIcon%d" % (index + 1)
+		icon.color = ARM_TAP_COLOR
+		icon.custom_minimum_size = ARM_TAP_ICON_SIZE
+		icon.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_arm_tap_row.add_child(icon)
+		_arm_tap_icons.append(icon)
 
 func _update_air_resource_icons() -> void:
 	if _player == null:

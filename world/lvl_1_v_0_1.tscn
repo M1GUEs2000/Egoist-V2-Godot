@@ -64,7 +64,7 @@ points = PackedVector3Array(-1, 0, -1, -1, 0, 1, 1, 0, -1, 1, 0, 1)
 [node name="Lvl1 v0_1" type="Node3D" unique_id=149798636]
 
 [node name="Player" parent="." unique_id=1407604159 instance=ExtResource("1_ay86g")]
-transform = Transform3D(0.7241705, 0, 0.689621, 0, 1, 0, -0.689621, 0, 0.7241705, -4.886777, 54.054405, -20.159664)
+transform = Transform3D(0.7241705, 0, 0.689621, 0, 1, 0, -0.689621, 0, 0.7241705, 223.49797, 79.34113, -350.48746)
 
 [node name="CameraRig" type="Node3D" parent="." unique_id=1612751166]
 script = ExtResource("5_ktyo2")
@@ -93,6 +93,11 @@ script = ExtResource("7_5bvi1")
 
 [node name="ReactiveEnemyA" parent="." unique_id=1176923943 instance=ExtResource("9_ica1u")]
 transform = Transform3D(0.7066589, -0.035595715, 0.7066589, 0.025169998, 0.9993663, 0.025169998, -0.70710695, 0, 0.70710695, -4.445176, 51.833492, -10.451716)
+hostility = 1
+normal_color = Color(0.95, 0.7, 0.2, 1)
+
+[node name="ReactiveEnemyA2" parent="." unique_id=945853126 instance=ExtResource("9_ica1u")]
+transform = Transform3D(0.7066589, -0.035595715, 0.7066589, 0.025169998, 0.9993663, 0.025169998, -0.70710695, 0, 0.70710695, 231.04614, 77.30366, -333.36188)
 hostility = 1
 normal_color = Color(0.95, 0.7, 0.2, 1)
 
@@ -188,16 +193,7 @@ dash_vertical_bop_speed = 20.0
 hits_to_break = 50
 
 [node name="WorldSwitchPickup10" parent="Traversal Cubes" unique_id=1719028768 instance=ExtResource("8_3ypg5")]
-transform = Transform3D(1.7517124, -0.44626018, -0.9692711, 0, 4.9215784, -0.36545295, 0.9857004, 0.7930599, 1.7225156, 46.99833, 41.18007, -76.133606)
-enable_dash = true
-dash_distance = 20.0
-dash_duration = 0.3
-dash_bop_forward_speed = 20.0
-dash_vertical_bop_speed = 20.0
-hits_to_break = 50
-
-[node name="WorldSwitchPickup13" parent="Traversal Cubes" unique_id=1017938931 instance=ExtResource("8_3ypg5")]
-transform = Transform3D(1.7517124, 5.1398343e-09, -0.9857004, -2.3867506e-09, 5.0049996, -3.2422894e-11, 0.9857004, 2.9848573e-09, 1.7517124, 46.99833, 41.18007, -76.133606)
+transform = Transform3D(1.7517124, -0.44626018, -0.9692711, 0, 4.9215784, -0.36545295, 0.9857004, 0.7930599, 1.7225156, 47.56143, 41.18007, -75.81674)
 enable_dash = true
 dash_distance = 20.0
 dash_duration = 0.3
@@ -244,6 +240,15 @@ hits_to_break = 50
 [node name="WorldSwitchPickup19" parent="Traversal Cubes" unique_id=238394932 instance=ExtResource("8_3ypg5")]
 transform = Transform3D(1.158847, -1.1920928e-07, -1.642308, -1.41208965e-08, 5.004999, 2.0275431e-08, 1.642308, -1.1552085e-15, 1.158847, 164.22693, 35.04025, -307.2846)
 enable_dash = true
+dash_distance = 34.0
+dash_duration = 0.3
+dash_bop_forward_speed = 50.0
+dash_vertical_bop_speed = 10.0
+hits_to_break = 50
+
+[node name="WorldSwitchPickup20" parent="Traversal Cubes" unique_id=195901788 instance=ExtResource("8_3ypg5")]
+transform = Transform3D(-1.454796, -1.1920928e-07, -1.3869646, -7.637276e-08, 5.004999, 2.635721e-08, 1.3869646, -1.6925584e-16, -1.454796, 244.58255, 77.08498, -314.99423)
+enable_launch = true
 dash_distance = 34.0
 dash_duration = 0.3
 dash_bop_forward_speed = 50.0
@@ -581,6 +586,78 @@ mode = 1
 paint_prototype_material = true
 metadata/_custom_type_script = "uid://cr2mf5ypgksws"
 
+[node name="Plataforma 10x10_12" type="StaticBody3D" parent="." unique_id=276764091]
+transform = Transform3D(1.6705918, 0, 1.099601, 0, 2, 0, -1.099601, 0, 1.6705918, 225.50224, 73.042786, -330.645)
+metadata/_edit_group_ = true
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Plataforma 10x10_12" unique_id=671882684]
+transform = Transform3D(10, 0, 0, 0, 1, 0, 0, 0, 10, 0, 0, 0)
+mesh = SubResource("BoxMesh_ica1u")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Plataforma 10x10_12" unique_id=854696560]
+transform = Transform3D(10, 0, 0, 0, 1, 0, 0, 0, 10, 0, 0, 0)
+shape = SubResource("ConvexPolygonShape3D_s5n7p")
+
+[node name="WorldMembership" type="Node" parent="Plataforma 10x10_12" unique_id=2013260325]
+script = ExtResource("4_e571o")
+mode = 1
+paint_prototype_material = true
+metadata/_custom_type_script = "uid://cr2mf5ypgksws"
+
+[node name="Plataforma 10x10_15" type="StaticBody3D" parent="." unique_id=628698789]
+transform = Transform3D(1.6705918, 0, 1.099601, 0, 2, 0, -1.099601, 0, 1.6705918, 274.88657, 73.042786, -278.20914)
+metadata/_edit_group_ = true
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Plataforma 10x10_15" unique_id=551102494]
+transform = Transform3D(10, 0, 0, 0, 1, 0, 0, 0, 10, 0, 0, 0)
+mesh = SubResource("BoxMesh_ica1u")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Plataforma 10x10_15" unique_id=892654473]
+transform = Transform3D(10, 0, 0, 0, 1, 0, 0, 0, 10, 0, 0, 0)
+shape = SubResource("ConvexPolygonShape3D_s5n7p")
+
+[node name="WorldMembership" type="Node" parent="Plataforma 10x10_15" unique_id=1328467148]
+script = ExtResource("4_e571o")
+mode = 1
+paint_prototype_material = true
+metadata/_custom_type_script = "uid://cr2mf5ypgksws"
+
+[node name="Plataforma 10x10_13" type="StaticBody3D" parent="." unique_id=1333701203]
+transform = Transform3D(1.6705918, 0, 1.099601, 0, 2, 0, -1.099601, 0, 1.6705918, 241.28183, 73.042786, -341.03128)
+metadata/_edit_group_ = true
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Plataforma 10x10_13" unique_id=1468050938]
+transform = Transform3D(10, 0, 0, 0, 1, 0, 0, 0, 10, 0, 0, 0)
+mesh = SubResource("BoxMesh_ica1u")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Plataforma 10x10_13" unique_id=1411430691]
+transform = Transform3D(10, 0, 0, 0, 1, 0, 0, 0, 10, 0, 0, 0)
+shape = SubResource("ConvexPolygonShape3D_s5n7p")
+
+[node name="WorldMembership" type="Node" parent="Plataforma 10x10_13" unique_id=1103547646]
+script = ExtResource("4_e571o")
+mode = 1
+paint_prototype_material = true
+metadata/_custom_type_script = "uid://cr2mf5ypgksws"
+
+[node name="Plataforma 10x10_14" type="StaticBody3D" parent="." unique_id=1089881442]
+transform = Transform3D(1.6705918, 0, 1.099601, 0, 2, 0, -1.099601, 0, 1.6705918, 230.3446, 73.042786, -357.6479)
+metadata/_edit_group_ = true
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Plataforma 10x10_14" unique_id=741922666]
+transform = Transform3D(10, 0, 0, 0, 1, 0, 0, 0, 10, 0, 0, 0)
+mesh = SubResource("BoxMesh_ica1u")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Plataforma 10x10_14" unique_id=2126798747]
+transform = Transform3D(10, 0, 0, 0, 1, 0, 0, 0, 10, 0, 0, 0)
+shape = SubResource("ConvexPolygonShape3D_s5n7p")
+
+[node name="WorldMembership" type="Node" parent="Plataforma 10x10_14" unique_id=1806049473]
+script = ExtResource("4_e571o")
+mode = 1
+paint_prototype_material = true
+metadata/_custom_type_script = "uid://cr2mf5ypgksws"
+
 [node name="Plataforma 10x10_4" type="StaticBody3D" parent="." unique_id=1528770060]
 transform = Transform3D(1.4142135, 0, 1.4142135, 0, 2, 0, -1.4142135, 0, 1.4142135, 120.295654, 1.5815496, 9.35345)
 metadata/_edit_group_ = true
@@ -855,16 +932,21 @@ script = ExtResource("4_e571o")
 paint_prototype_material = true
 metadata/_custom_type_script = "uid://cr2mf5ypgksws"
 
+[node name="FlyingEnemy2" parent="." unique_id=2054669416 instance=ExtResource("10_ica1u")]
+transform = Transform3D(-1.7924753, 0.13956152, -0.08691591, 0.14321634, 1.7927265, -0.07497055, 0.08075192, -0.081572585, -1.7963367, 263.72598, 77.517334, -296.78503)
+hostility = 2
+poise_max = 1.0
+
+[node name="FlyingEnemy3" parent="." unique_id=1896433955 instance=ExtResource("10_ica1u")]
+transform = Transform3D(-1.7924753, 0.13956152, -0.08691591, 0.14321634, 1.7927265, -0.07497055, 0.08075192, -0.081572585, -1.7963367, 231.98622, 80.896164, -338.3211)
+hostility = 2
+poise_max = 1.0
+
 [node name="Rebote con bumps" type="Node3D" parent="." unique_id=598547048]
 transform = Transform3D(0.70710677, 0, 0.56922096, 0, 1, 0, -0.70710677, 0, 0.56922096, 70.42668, 16.747145, -57.870174)
 
 [node name="FlyingEnemy" parent="Rebote con bumps" unique_id=1175298367 instance=ExtResource("10_ica1u")]
 transform = Transform3D(-0.6593484, -0.7370517, 0.14836818, 0.0712905, 0.13516074, 0.9882548, -0.74844885, 0.6621823, -0.036573067, 62.755096, -3.1851177, -77.012955)
-hostility = 2
-poise_max = 1.0
-
-[node name="FlyingEnemy2" parent="Rebote con bumps" unique_id=2054669416 instance=ExtResource("10_ica1u")]
-transform = Transform3D(-0.65934837, -0.13947985, -0.73878497, 0.07129055, -0.98981154, 0.12324726, -0.74844885, 0.028594702, 0.6625745, 213.03459, 36.820526, -43.515835)
 hostility = 2
 poise_max = 1.0
 
@@ -905,7 +987,7 @@ paint_prototype_material = true
 metadata/_custom_type_script = "uid://cr2mf5ypgksws"
 
 [node name="Pared rebote 1_6" type="StaticBody3D" parent="Rebote con bumps" unique_id=638768839]
-transform = Transform3D(0.9881338, 0, 0.15359579, 0, 3.4, 0, -0.15359579, 0, 0.9881338, 54.65552, 33.81411, -62.247578)
+transform = Transform3D(0.9881338, 0, 0.15359579, 0, 3.4, 0, -0.15359579, 0, 0.9881338, 54.65552, 25.97535, -62.247578)
 metadata/_edit_group_ = true
 
 [node name="MeshInstance3D" type="MeshInstance3D" parent="Rebote con bumps/Pared rebote 1_6" unique_id=1546968510]
@@ -923,7 +1005,7 @@ paint_prototype_material = true
 metadata/_custom_type_script = "uid://cr2mf5ypgksws"
 
 [node name="Pared rebote 1_7" type="StaticBody3D" parent="Rebote con bumps" unique_id=1134021931]
-transform = Transform3D(0.9881337, 0, 0.15359576, 0, 5.715, 0, -0.15359576, 0, 0.9881337, 47.806458, -26.313599, -52.386097)
+transform = Transform3D(0.9881337, 0, 0.15359576, 0, 5.715, 0, -0.15359576, 0, 0.9881337, 46.71531, -18.294674, -59.405807)
 metadata/_edit_group_ = true
 
 [node name="MeshInstance3D" type="MeshInstance3D" parent="Rebote con bumps/Pared rebote 1_7" unique_id=390316514]

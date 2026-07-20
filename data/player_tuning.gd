@@ -286,6 +286,12 @@ class_name PlayerTuning extends Resource
 ## jugador salía disparado. Debe quedar al nivel del hop intencional (air_wait_spin_hop = 5) y por
 ## debajo de jump_force (8).
 @export var air_stall_max_rise := 5.0
+## Fracción del momentum HORIZONTAL que sobrevive a cada golpe aéreo normal conectado contra un
+## enemigo (0 = te clavás en seco, 1 = intacto). Contraparte horizontal del freno vertical del
+## stall. COMPONE por golpe: con 0.3, el 2º golpe deja 0.09 y el 3º 0.027, así el combo aéreo te
+## ancla progresivamente. Corta las dos fuentes: la inercia del input y el bump (wall jump, rebote,
+## push). Los ataques CARGADOS no lo aplican: dueñan su propio desplazamiento.
+@export_range(0.0, 1.0) var air_stall_momentum_keep := 0.3
 ## Escala de gravedad al atacar en el aire SIN conectar: cae MÁS fuerte que lo normal.
 @export var aerial_whiff_fall_gravity := 1.6
 

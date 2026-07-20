@@ -124,6 +124,13 @@ static func can_damage_enemy(attacker: EnemyBase, target: EnemyBase) -> bool:
 # antes del contacto real y ahi arranca el ragdoll (RigidBody capsula) para que se vea natural.
 # Tras rodar `ragdoll_getup_delay` segundos el cuerpo se para. Greybox: ragdoll de cuerpo unico
 # (la capsula rueda), no por huesos — el ragdoll por PhysicalBone es upgrade de H3.
+#
+# APAGADO (2026-07-19): con `use_ragdoll` en false el cuerpo aterriza de pie y se endereza, sin
+# fase fisica. La pose acostada del VUELO no se toca: solo desaparece el rodar en el piso.
+## Fase fisica al aterrizar acostado. Apagada: se sentia clanky (el getup dura 1.53 s pero el
+## control vuelve a la IA en ragdoll_getup_delay = 0.5, el maniqui del RigidBody rueda congelado en
+## una pose, y hay swap de modelo). Prendela para volver al ragdoll sin tocar nada mas.
+@export var use_ragdoll := false
 ## Angulo de la pose acostada durante el vuelo, en grados. 90 = horizontal pleno.
 @export var lie_angle := 90.0
 ## Segundos que el cuerpo rueda como RigidBody en el piso antes de pararse. Es el "se para en X".
@@ -677,7 +684,13 @@ func _provoke_nearby(attacker: Node) -> void:
 			enemy.react_to_enemy_attack(attacker)
 
 func _update_combat_state() -> void:
-	if combat_state == CombatState.STUNNED and World.now() >= _stunned_until:
+	# EN EL AIRE EL STUN NO VENCE: un cuerpo desplazado (launch/push/spike) sigue stuneado hasta
+	# TOCAR EL PISO, aunque su reloj ya haya expirado. Sin esto el stun moria a media caida y con el
+	# se caian push/slam/slam_bounce/slam_arc, que exigen is_stunned(): el juggle se cortaba solo
+	# mientras el enemigo seguia visiblemente por el aire. `_airborne_until` es fijo, asi que la
+	# caida arranca igual cuando toca (no hay deadlock), y airborne_max_time sigue de tope duro.
+	# Generaliza lo que _do_bounce_arc ya hacia a mano para el pique del Mazo. *(2026-07-19)*
+	if combat_state == CombatState.STUNNED and World.now() >= _stunned_until and not is_airborne():
 		combat_state = CombatState.NORMAL
 		_reset_stun_reaction()
 		_refresh_visual_state()
@@ -706,10 +719,12 @@ func _update_airborne(delta: float) -> void:
 	# acostado arranca justo antes del contacto real y se ve mas natural (anticipacion). Solo
 	# cuenta despues de haber salido del rango una vez (si no, un push desde el piso dispararia
 	# en el frame 0). Los pushes bajos que nunca salen del rango caen por is_on_floor().
+	# Sin ragdoll la anticipacion no aplica: no hay swap fisico que adelantar, y aterrizar antes de
+	# tiempo solo dejaria al cuerpo enderezandose flotando. Manda is_on_floor().
 	var sensed := ground_sense != null and ground_sense.has_overlapping_bodies()
 	if not sensed:
 		_left_ground_once = true
-	var early_ground := _lying and _left_ground_once and sensed
+	var early_ground := use_ragdoll and _lying and _left_ground_once and sensed
 	if is_on_floor() or early_ground or World.now() >= _airborne_until + airborne_max_time:
 		if _slam_bounce:
 			_do_bounce()
@@ -801,10 +816,11 @@ func _rotate_visual_to(target: Quaternion, pivot: Vector3, duration: float) -> v
 ## toma la posta con la velocidad y un giro para rodar. El rigid body SOLO existe aca, en el piso.
 func _start_ragdoll() -> void:
 	_bouncing = false
-	if ragdoll_body == null:
-		# Escena sin nodo Ragdoll: cae al comportamiento normal (fallback defensivo, como el resto
-		# de modulos opcionales por get_node_or_null).
-		_lying = false
+	if not use_ragdoll or ragdoll_body == null:
+		# Ragdoll apagado, o escena sin nodo Ragdoll (fallback defensivo, como el resto de modulos
+		# opcionales por get_node_or_null): aterriza de pie. _set_lying (no `_lying = false` a secas)
+		# porque hay que DESHACER la pose acostada del vuelo; sin eso el cuerpo camina horizontal.
+		_set_lying(false)
 		_land()
 		return
 	_ragdolling = true

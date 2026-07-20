@@ -14,6 +14,10 @@ class_name PlayerArm extends Node
 
 @export var tuning: ArmTuning
 
+## Cambio en los taps de combate disponibles (los que quedan antes del cooldown). Lo escucha el
+## HUD para dibujar un icono por golpe. Se emite tanto al gastar como al recuperarse el cooldown.
+signal taps_changed(available: int, max_taps: int)
+
 var _taps_used := 0
 var _cooldown_until := -999.0
 var _traversal_cooldown_until := -999.0
@@ -38,6 +42,7 @@ func _ready() -> void:
 ## no depende de armas afuera ni de estar atacando, a diferencia del reticle de combate (ver
 ## LockOn._process). Prioriza enemigo (igual que _try_tap); si no hay, marca el bloque de dash.
 func _process(_delta: float) -> void:
+	_refresh_cooldown()
 	if _player == null:
 		return
 	_flush_tap_buffer()
@@ -51,14 +56,43 @@ func _process(_delta: float) -> void:
 	if block != null:
 		_marker.global_position = block.global_position + Vector3.UP * tuning.traversal_marker_height
 
-## Flush de la cola de taps bufferizados, al ritmo de `tuning.tap_cadence`.
+## Taps de combate que quedan antes de entrar en cooldown. Los encolados ya estan comprometidos,
+## asi que cuentan como gastados: lo que devuelve esto es lo que el jugador todavia puede apretar.
+func taps_available() -> int:
+	return maxi(0, tuning.max_taps - _taps_used - _pending_taps)
+
+func max_taps() -> int:
+	return tuning.max_taps
+
+## Devuelve los taps cuando se cumplio el cooldown. Vive en _process y NO dentro de _tap_enemy: el
+## guard de _try_tap corta antes de llegar a pegar cuando no hay margen, asi que si la recuperacion
+## dependiera de un tap el brazo quedaba muerto para siempre despues del primer cooldown.
+func _refresh_cooldown() -> void:
+	if _taps_used < tuning.max_taps or World.now() < _cooldown_until:
+		return
+	_taps_used = 0
+	_notify_taps()
+
+func _notify_taps() -> void:
+	taps_changed.emit(taps_available(), tuning.max_taps)
+
+## Flush de la cola de taps bufferizados, al ritmo de `tuning.tap_cadence`. El stun descarta la
+## cola entera: _input ya no deja encolar mientras estas aturdido, pero sin esto los taps que
+## entraron ANTES del golpe seguian saliendo durante el stun.
 func _flush_tap_buffer() -> void:
+	if _player.is_stunned():
+		if _pending_taps > 0:
+			_pending_taps = 0
+			_notify_taps()
+		return
 	if _pending_taps <= 0 or World.now() < _next_tap_ready_at:
 		return
 	_pending_taps -= 1
 	var target := _resolve_target()
 	if target != null:
-		_fire_tap(target)  # si el target ya no existe, el tap en cola se pierde (no hay a quien pegarle)
+		_fire_tap(target)
+	else:
+		_notify_taps()  # el tap en cola se pierde (no hay a quien pegarle): devuelve su lugar
 
 func _input(event: InputEvent) -> void:
 	if _player != null and _player.is_stunned():
@@ -122,6 +156,7 @@ func _try_tap() -> void:
 			_fire_tap(target)
 		else:
 			_pending_taps += 1
+			_notify_taps()
 		return
 	var block := _nearest_dash_block()
 	if block != null:
@@ -134,15 +169,14 @@ func _fire_tap(target: EnemyBase) -> void:
 
 func _tap_enemy(target: EnemyBase) -> void:
 	if _taps_used >= tuning.max_taps:
-		if World.now() < _cooldown_until:
-			return  # en cooldown: el apreton no hace nada
-		_taps_used = 0  # cooldown cumplido: vuelve a habilitarse
+		return  # sin margen: la recuperacion la hace _refresh_cooldown, no este camino
 
 	# Se gasta el tap ACA (antes del await): si no, taps mas rapidos que travel_time se
 	# colarian todos antes de que el primero llegue a incrementar el contador.
 	_taps_used += 1
 	if _taps_used >= tuning.max_taps:
 		_cooldown_until = World.now() + tuning.cooldown_duration
+	_notify_taps()
 
 	_swing_id += 1
 	var id := _swing_id
@@ -168,7 +202,8 @@ func _teleport_and_activate(block: TraversalBlock) -> void:
 	else:
 		_player.global_position = landing
 	await get_tree().create_timer(maxf(0.01, tuning.teleport_duration)).timeout
-	block.activate(_player)
+	if is_instance_valid(block):  # el bloque puede morir durante el viaje
+		block.activate(_player)
 
 ## Bloque de dash (verde) más cercano dentro del cono/rango propio del brazo para traversal
 ## (`tuning.traversal_lock_*`, separado del rango de combate para no atarlos entre sí).

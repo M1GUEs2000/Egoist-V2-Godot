@@ -80,10 +80,17 @@ func hover(duration: float) -> void:
 	_body.vertical_velocity = 0.0
 	_body.air_state = Player.AirState.AIRBORNE
 
-func register_air_hit_stall(scale := 1.0) -> void:
+## `cuts_momentum` false = golpe CARGADO: frena la caída como cualquier otro, pero no le toca el
+## momentum horizontal (los cargados dueñan su propio desplazamiento: dash, auto-launch, spike).
+func register_air_hit_stall(scale := 1.0, cuts_momentum := true) -> void:
 	if _body.is_on_floor():
 		return
 	var t := _body.tuning
+	# Contraparte horizontal del freno vertical de abajo: el golpe come momentum en las dos fuentes
+	# (inercia del input y bump), así conectar en el aire ancla al jugador en vez de dejarlo viajando.
+	if cuts_momentum:
+		_body.bump_velocity *= clampf(t.air_stall_momentum_keep, 0.0, 1.0)
+		_body.locomotion.scale_air_velocity(t.air_stall_momentum_keep)
 	if World.now() - _last_stall_time > t.air_stall_combo_window:
 		_stall_count = 0
 	_stall_count += 1

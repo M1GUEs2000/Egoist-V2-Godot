@@ -50,10 +50,12 @@ func _physics_process(delta: float) -> void:
 	_update_wings()
 
 func apply_stun(duration: float, feedback_color := Color.TRANSPARENT) -> void:
+	var was_combat_airborne := is_airborne()
 	super.apply_stun(duration, feedback_color)
-	if not is_stunned():
+	if not is_stunned() or was_combat_airborne:
 		return
-	# El enemigo volador se queda suspendido: no usa el retroceso ni la inclinacion de suelo.
+	# En su vuelo normal se queda suspendido y aleteando. Si un launcher, push o spike ya lo
+	# convirtio en AIRBORNE, EnemyBase conserva pose acostada, caida y ragdoll.
 	velocity = Vector3.ZERO
 	if _stun_tween != null:
 		_stun_tween.kill()

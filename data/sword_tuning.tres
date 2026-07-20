@@ -7,8 +7,8 @@
 [sub_resource type="Resource" id="Resource_810ig"]
 script = ExtResource("2_stun")
 poise_damage = 10.0
-grounded = 0.8
-airborne = 0.8
+grounded = 0.9
+airborne = 0.9
 metadata/_custom_type_script = "uid://w0b3i18w442a"
 
 [sub_resource type="Resource" id="Resource_swordpush"]
@@ -23,8 +23,10 @@ grounded = 0.35
 
 [resource]
 script = ExtResource("1_tuning")
+combo_window = 0.8
 ground_wait_branch_threshold = 0.2
-charged_dash_distance = 10.0
+charged_dash_distance = 9.0
+charged_dash_duration = 0.13
 charged_dash_damage = 5.0
 charged_dash_stun = SubResource("Resource_810ig")
 aerial_charged_down_speed = 40.0
@@ -34,8 +36,12 @@ launcher_height = 5.0
 swing_time = 0.4
 stun = SubResource("Resource_swordstun")
 hand_radius = 1.0
-air_wait_spin_hop = 5.0
+air_step_time = 0.2
+air_wait_branch_threshold = 0.2
+air_wait_spin_hop = 6.0
+air_stall_scale = 1.1
 push = SubResource("Resource_swordpush")
+push_at = 0.65
 parry_poise_normal = 6.0
 parry_poise_charged_x = 9.0
 parry_poise_charged_y = 12.0

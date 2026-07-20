@@ -141,6 +141,7 @@ func _run_states() -> void:
 	assert(is_zero_approx(_animation_player.speed_scale))
 	print("PROBE animaciones_ia=push_hit_knockback_completo")
 
+	_enemy.use_ragdoll = true  # apagado por default (feel): este bloque prueba la fase fisica
 	_enemy._start_ragdoll()
 	await get_tree().physics_frame
 	var ragdoll := _enemy.get_node("Ragdoll") as RigidBody3D

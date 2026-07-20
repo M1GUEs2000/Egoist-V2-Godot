@@ -95,6 +95,13 @@ func tick(delta: float) -> Vector3:
 func set_air_velocity(v: Vector3) -> void:
 	_air_velocity = Vector3(v.x, 0.0, v.z)
 
+## Come una fracción de la inercia aérea sin borrarla (air-hit-stall: cada golpe aéreo conectado
+## frena el momentum horizontal). Distinto de set_air_velocity, que la reemplaza de cuajo.
+## Si el jugador sigue apretando la dirección, move_toward la reconstruye a air_acceleration: esto
+## mata el impulso que TRAÍA, no la capacidad de volver a moverse.
+func scale_air_velocity(factor: float) -> void:
+	_air_velocity *= clampf(factor, 0.0, 1.0)
+
 ## Lunge: el jugador encara la dirección de ataque (target lockeado si existe, si no su
 ## forward) y avanza un poco durante el golpe.
 func attack_step(duration: float) -> void:

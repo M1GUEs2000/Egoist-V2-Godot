@@ -212,9 +212,11 @@ func _boost_bump_momentum() -> void:
 	)
 	_body.set_momentum(_dash_dir * boosted)
 
+## Golpe del dash ofensivo: frena la caida, pero NO le come el momentum horizontal — el
+## desplazamiento del dash es el move (ver PlayerLauncher.register_air_hit_stall).
 func _on_dash_hit(hurtbox: Hurtbox, _died: bool) -> void:
 	if hurtbox.triggers_air_hit_stall:
-		_register_air_hit_stall.call()
+		_register_air_hit_stall.call(1.0, false)
 
 func _set_airdash_available(available: bool) -> void:
 	if _can_airdash == available:

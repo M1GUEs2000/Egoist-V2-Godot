@@ -29,12 +29,14 @@ Prototipo aereo de greybox. Patrulla de izquierda a derecha alrededor de su punt
 
 ## Stun aereo
 
-El stun de suelo no se usa tal cual: inclina el `Visual` completo y detiene el loop propio, por lo que las alas quedaban laterales y congeladas. `FlyingEnemy` conserva el feedback de stun del `EnemyBase`, pero:
+El stun durante su vuelo normal no se usa tal cual: inclina el `Visual` completo y detiene el loop propio, por lo que las alas quedaban laterales y congeladas. `FlyingEnemy` conserva el feedback de stun del `EnemyBase`, pero:
 
 - queda suspendido en su posicion, sin retroceso terrestre;
 - restaura el `Visual` vertical;
 - sigue aleteando mientras dura el stun;
 - reanuda la patrulla al terminar.
+
+Cuando un launcher, push o spike ya lo deja en `AIRBORNE`, no anula la reaccion base: conserva la pose acostada, la caida y el aterrizaje en ragdoll. La escena compone `GroundSense` y `Ragdoll` igual que el contrato de `EnemyBase`.
 
 ## Pendiente
 

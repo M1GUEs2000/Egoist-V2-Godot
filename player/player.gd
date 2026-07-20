@@ -287,8 +287,8 @@ func apply_stun(duration: float = -1.0, mode := PlayerStun.Mode.STILL,
 func fire_action_world_switch() -> void:
 	action_world_switch.fire_action()
 
-func register_air_hit_stall(scale := 1.0) -> void:
-	launcher.register_air_hit_stall(scale)
+func register_air_hit_stall(scale := 1.0, cuts_momentum := true) -> void:
+	launcher.register_air_hit_stall(scale, cuts_momentum)
 
 ## Golpe aereo del Brazo: pausa la caida `duration` seg y la retoma completa (vertical), y decelera
 ## el momentum horizontal por `horizontal_keep` (ver PlayerLauncher.register_arm_air_freeze).

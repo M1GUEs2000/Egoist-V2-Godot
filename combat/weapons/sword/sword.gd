@@ -49,6 +49,11 @@ func setup(player: Player) -> void:
 		if hitbox != null:
 			hitbox.landed.connect(_on_aerial_charged_y_hit)
 
+## La Y cargada aérea usa el MISMO hitbox que los taps: sin este flag, su auto-launch se comería
+## el corte de momentum del air-hit-stall.
+func is_charged_move_active() -> bool:
+	return _aerial_charged_y_active
+
 func tap(_slot: World.Slot) -> void:
 	_tap_combo()
 
@@ -163,8 +168,9 @@ func _run_charged_dash_window() -> void:
 
 ## Solo alimenta el meter (sin _window_hits: no es parte de un combo aéreo). Un kill en la
 ## ventana del cargado devuelve la barra completa (gain_on_kill lo resuelve).
+## El dash cargado no frena el momentum del jugador: el desplazamiento ES el move.
 func _on_charged_dash_hit(hurtbox: Hurtbox, died: bool) -> void:
-	register_weapon_hit(hurtbox, died)
+	register_weapon_hit(hurtbox, died, false)
 
 # ---- Coreografía (swing/swing_up/_play_swing/_play_spin viven en WeaponBase) ----
 

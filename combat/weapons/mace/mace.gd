@@ -29,6 +29,9 @@ var _air_y_hit_enemy_in_air := false
 # Move de compromiso en curso (vueltas del X cargado terrestre): mientras esta activo,
 # tap/hold se ignoran para que pegar NO cancele las vueltas a mitad. Ver boveda Armas/Mazo.
 var _uninterruptible := false
+# Cargado en curso sobre el hitbox de la hoja (vueltas X terrestres / X aereo). Solo exime del corte
+# de momentum del air-hit-stall; NO bloquea input (eso lo hace _uninterruptible, que es otra cosa).
+var _charged_move_active := false
 
 @onready var _launcher_hitbox: Hitbox = $LauncherHitbox
 @onready var _air_slam_hitbox: Hitbox = $AirSlamHitbox
@@ -71,6 +74,11 @@ func hold(slot: World.Slot, level: int) -> void:
 		_hold_y()
 
 ## Solo X usa niveles. Y cargado ignora el nivel de carga por diseno.
+## Los cargados que comparten el hitbox de la hoja con los taps: el corte de momentum aereo los
+## saltea (dueñan su propio desplazamiento). El AOE del Y aereo tiene hitbox propio: ver _on_air_y_hit.
+func is_charged_move_active() -> bool:
+	return _charged_move_active
+
 func charge_level(held_time: float) -> int:
 	var t := _t()
 	var hold_threshold := _player.tuning.input_hold_threshold if _player != null else 0.0
@@ -150,6 +158,7 @@ func _run_charged_spins(level: int) -> void:
 	# Las vueltas son un move de compromiso: pegar durante ellas ya no arranca otro combo
 	# (que las cancelaria via begin_routine). El dodge/dash siguen siendo escape: no pasan por aca.
 	_uninterruptible = true
+	_charged_move_active = true
 	var sweet_spot := level >= t.max_charge_level
 	_player.hold_airborne_for_attack()
 	for spin in range(1, level + 1):
@@ -168,9 +177,11 @@ func _run_charged_spins(level: int) -> void:
 		if not is_routine_current(id):
 			# Algo externo (stun, etc.) tomo control: soltamos el candado y salimos.
 			_uninterruptible = false
+			_charged_move_active = false
 			return
 	reset_hit_profile()
 	_uninterruptible = false
+	_charged_move_active = false
 
 # ---- Personalidad Y: continuidad de combo ----
 
@@ -219,6 +230,7 @@ func _aerial_charged_x(sweet_spot: bool) -> void:
 	var t := _t()
 	var id := begin_routine()
 	reset_hit_profile()
+	_charged_move_active = true
 	_player.notify_aerial_attack(tuning.swing_time)
 	play_visual_clip(ANIM_HEAVY, HEAVY_CHARGED_X_AIR.x, HEAVY_CHARGED_X_AIR.y, tuning.swing_time)
 	_player.vertical_velocity = -absf(t.air_smash_fall_speed)
@@ -227,6 +239,7 @@ func _aerial_charged_x(sweet_spot: bool) -> void:
 	ComboTracker.register_hit()
 	await wait_seconds(tuning.swing_time)
 	if not is_routine_current(id):
+		_charged_move_active = false
 		return
 	if sweet_spot:
 		# La vuelta congelante reusa el tramo de vueltas del X terrestre (el plan no le asigna
@@ -240,8 +253,10 @@ func _aerial_charged_x(sweet_spot: bool) -> void:
 		_player.notify_aerial_attack(t.air_freeze_extra_hang_time)
 		await wait_seconds(t.charged_spin_time)
 		if not is_routine_current(id):
+			_charged_move_active = false
 			return
 	reset_hit_profile()
+	_charged_move_active = false
 
 ## Y aereo: cae en diagonal para interceptar. Si impacta el suelo, estalla un cilindro que
 ## lanza a los enemigos del area. Si impacta un enemigo airborne, estalla el cilindro,
@@ -338,7 +353,8 @@ func _on_air_slam_about_to_hit(hurtbox: Hurtbox) -> void:
 ## _airborne_until=now para caer y debe ser lo ultimo (si el stun corriera despues volveria a
 ## suspenderlo). La rama de suelo (launcher vertical) ya se aplico en _on_air_slam_about_to_hit.
 func _on_air_slam_hit(hurtbox: Hurtbox, died: bool) -> void:
-	register_weapon_hit(hurtbox, died)
+	# Cargado: el rebote arriba-y-adelante ES el move, no se le come el momentum.
+	register_weapon_hit(hurtbox, died, false)
 	if not _air_y_hit_enemy_in_air:
 		return
 	var target: Node = hurtbox.owner_node

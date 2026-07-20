@@ -293,10 +293,11 @@ func _push_target(hurtbox: Hurtbox, settings: PushSettings) -> void:
 
 ## Reacción común a cualquier golpe conectado del arma (hoja, disco, launcher, dash
 ## cargado): air-hit-stall + meter + progresión de kills.
-func register_weapon_hit(hurtbox: Hurtbox, died: bool) -> void:
-	# Conectar en el aire contra algo que lo dispara ralentiza la caída del jugador.
+func register_weapon_hit(hurtbox: Hurtbox, died: bool, cuts_air_momentum := true) -> void:
+	# Conectar en el aire contra algo que lo dispara ralentiza la caída del jugador, y (si el golpe
+	# es normal) le come momentum horizontal. Los cargados pasan cuts_air_momentum = false.
 	if hurtbox.triggers_air_hit_stall:
-		_player.register_air_hit_stall(tuning.air_stall_scale)
+		_player.register_air_hit_stall(tuning.air_stall_scale, cuts_air_momentum)
 	var meter := _player.meter
 	if meter != null:
 		meter.gain_on_hit()
@@ -307,11 +308,17 @@ func register_weapon_hit(hurtbox: Hurtbox, died: bool) -> void:
 			_player.apply_air_kill_reset()
 		on_kill()
 
+## Hay un move CARGADO en curso sobre este hitbox. Lo usa el corte de momentum aéreo para dejar
+## pasar los cargados (que mueven al jugador a propósito). Cada arma lo sobreescribe con su flag;
+## los hitbox exclusivos de un cargado no necesitan esto: llaman register_weapon_hit con false.
+func is_charged_move_active() -> bool:
+	return false
+
 func _on_hit(hurtbox: Hurtbox, died: bool) -> void:
 	_window_hits.append(hurtbox)
 	if _armed_push != null:
 		_push_target(hurtbox, _armed_push)
-	register_weapon_hit(hurtbox, died)
+	register_weapon_hit(hurtbox, died, not is_charged_move_active())
 	VfxInjector.spawn_impact(tuning.hit_vfx_scene, _player.get_parent(), hurtbox.global_position,
 			tuning.hit_vfx_scale)
 

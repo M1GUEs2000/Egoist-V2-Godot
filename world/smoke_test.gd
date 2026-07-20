@@ -542,6 +542,7 @@ func _ready() -> void:
 	var lying_enemy := (load("res://enemies/grounded_enemy.tscn") as PackedScene).instantiate() as EnemyBase
 	add_child(lying_enemy)
 	await get_tree().process_frame
+	lying_enemy.use_ragdoll = true  # apagado por default (feel): este bloque prueba la fase fisica
 	lying_enemy._last_hit_direction = Vector3.RIGHT
 	lying_enemy.apply_stun(0.5)         # sin la reserva quebrada no se lo mueve (ver bloque de poise)
 	lying_enemy.push(Vector3.RIGHT, PushSettings.new())

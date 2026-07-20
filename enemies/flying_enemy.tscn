@@ -8,6 +8,9 @@
 [sub_resource type="SphereShape3D" id="SphereShape_body"]
 radius = 0.55
 
+[sub_resource type="SphereShape3D" id="SphereShape_ground_sense"]
+radius = 0.2
+
 [sub_resource type="SphereMesh" id="SphereMesh_body"]
 radius = 0.55
 height = 1.1
@@ -32,9 +35,16 @@ emission = Color(0.08, 0.28, 0.65, 1)
 script = ExtResource("1_enemy")
 hostility = 0
 normal_color = Color(0.22, 0.55, 0.88, 1)
+ragdoll_getup_delay = 1.0
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="." unique_id=90996040]
 shape = SubResource("SphereShape_body")
+
+[node name="GroundSense" type="Area3D" parent="."]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="GroundSense"]
+position = Vector3(0, -0.4, 0)
+shape = SubResource("SphereShape_ground_sense")
 
 [node name="Visual" type="Node3D" parent="." unique_id=1674440842]
 
@@ -63,9 +73,31 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.85, 0, 0)
 mesh = SubResource("BoxMesh_wing")
 surface_material_override/0 = SubResource("Mat_wing")
 
+[node name="Ragdoll" type="RigidBody3D" parent="."]
+top_level = true
+visible = false
+freeze = true
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Ragdoll"]
+shape = SubResource("SphereShape_body")
+
+[node name="Body" type="MeshInstance3D" parent="Ragdoll"]
+mesh = SubResource("SphereMesh_body")
+surface_material_override/0 = SubResource("Mat_body")
+
+[node name="LeftWing" type="MeshInstance3D" parent="Ragdoll"]
+position = Vector3(-1.2, 0, 0)
+mesh = SubResource("BoxMesh_wing")
+surface_material_override/0 = SubResource("Mat_wing")
+
+[node name="RightWing" type="MeshInstance3D" parent="Ragdoll"]
+position = Vector3(1.2, 0, 0)
+mesh = SubResource("BoxMesh_wing")
+surface_material_override/0 = SubResource("Mat_wing")
+
 [node name="Health" type="Node" parent="." unique_id=1906197470]
 script = ExtResource("2_health")
-max_health = 50.0
+max_health = 100.0
 
 [node name="WorldMembership" type="Node" parent="." unique_id=410482387]
 script = ExtResource("4_membership")
