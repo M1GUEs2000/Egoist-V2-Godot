@@ -49,9 +49,47 @@ class_name WeaponTuning extends Resource
 ## Poise que mete un parry hecho con el CARGADO Y (aéreo o suelo comparten valor).
 @export var parry_poise_charged_y := 8.0
 
+@export_group("Sweet spot (carga)")
+## Segundo de carga en que ABRE la ventana de sweet spot, contado desde el press (no desde el
+## hold threshold). Soltar el cargado dentro de la ventana lo convierte en sweet spot; el efecto
+## extra lo pone cada arma. Es TIMING, no nivel de carga: seguir cargando la deja pasar.
+@export var sweet_spot_start := 0.6
+## Cuanto queda abierta la ventana, en segundos. Ventana = [start, start + duration].
+@export var sweet_spot_duration := 0.4
+## Descuento de meter del cargado si sale en sweet spot. 0.3 = cuesta 30% menos barra.
+@export_range(0.0, 1.0, 0.05) var sweet_spot_meter_discount := 0.3
+
+@export_subgroup("Aura de la ventana")
+## Motas que salen de la hoja mientras la ventana esta abierta: el tell de que hay que soltar
+## AHORA. Mismas motas que los bloques de traversal (unshaded + billboard + additive).
+@export var sweet_spot_particles_enabled := true
+@export var sweet_spot_particle_color := World.COLOR_TRAVERSAL_CURSE
+@export var sweet_spot_particle_emission := World.COLOR_TRAVERSAL_CURSE_EMISSION
+## Motas vivas a la vez. Subirlo densifica el aura.
+@export var sweet_spot_particle_amount := 24
+## Segundos que vive cada mota.
+@export var sweet_spot_particle_lifetime := 0.5
+## Lado del quad de cada mota, en metros.
+@export var sweet_spot_particle_size := 0.13
+## Radio de la esfera alrededor de la hoja donde nacen, en metros.
+@export var sweet_spot_particle_radius := 0.35
+## Cuanto suben flotando, en m/s.
+@export var sweet_spot_particle_rise_speed := 1.6
+
 @export_group("VFX de impacto")
 ## Efecto (ParticleBurstVFX, FlipbookVFX o Binbun) que se instancia en cada golpe conectado.
 ## null = sin VFX. Contrato: one_shot/play()/finished (ver VfxInjector).
 @export var hit_vfx_scene: PackedScene
 ## Escala del VFX de impacto al instanciarse.
 @export var hit_vfx_scale := 1.0
+
+## True si un hold sostenido `held` segundos cae dentro de la ventana de sweet spot.
+## sweet_spot_duration <= 0 desactiva el sweet spot del arma entera.
+func in_sweet_spot(held: float) -> bool:
+	if sweet_spot_duration <= 0.0:
+		return false
+	return held >= sweet_spot_start and held <= sweet_spot_start + sweet_spot_duration
+
+## Multiplicador del costo en barras de un cargado, ya con el descuento del sweet spot.
+func meter_cost_scale(sweet_spot: bool) -> float:
+	return 1.0 - sweet_spot_meter_discount if sweet_spot else 1.0

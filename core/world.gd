@@ -97,10 +97,45 @@ static func spawn_color_burst(host: Node, position: Vector3, color: Color, emiss
 	process.scale_max = 1.0
 	particles.process_material = process
 
+	particles.draw_pass_1 = make_mote_mesh(color, emission, size)
+
+	host.add_child(particles)
+	particles.global_position = position
+	particles.emitting = true
+	particles.finished.connect(particles.queue_free)  # one_shot no se libera solo
+
+## Emisor CONTINUO de las MISMAS motas que el estallido, para colgar de cualquier nodo y
+## prender/apagar con `emitting` (no se libera solo: es del nodo que lo cuelga). Las motas
+## nacen en una esfera de `radius` y suben flotando a `rise_speed` m/s, sin gravedad.
+## Lo usa el aura de la ventana de sweet spot en la hoja (ver WeaponBase).
+static func make_color_motes(color: Color, emission: Color, amount: int, lifetime: float,
+		size: float, radius: float, rise_speed: float) -> GPUParticles3D:
+	var particles := GPUParticles3D.new()
+	particles.emitting = false
+	particles.amount = maxi(1, amount)
+	particles.lifetime = lifetime
+	particles.local_coords = false  # las motas quedan atras: la hoja deja estela al moverse
+
+	var process := ParticleProcessMaterial.new()
+	process.emission_shape = ParticleProcessMaterial.EMISSION_SHAPE_SPHERE
+	process.emission_sphere_radius = radius
+	process.direction = Vector3(0.0, 1.0, 0.0)
+	process.spread = 25.0
+	process.initial_velocity_min = rise_speed * 0.3
+	process.initial_velocity_max = rise_speed
+	process.gravity = Vector3.ZERO
+	process.scale_min = 0.6
+	process.scale_max = 1.0
+	particles.process_material = process
+
+	particles.draw_pass_1 = make_mote_mesh(color, emission, size)
+	return particles
+
+## Una mota: quad unshaded + billboard + additive, puro color que suma luz. Es la receta
+## visual compartida por el estallido de los bloques de traversal y los emisores continuos.
+static func make_mote_mesh(color: Color, emission: Color, size: float) -> QuadMesh:
 	var mesh := QuadMesh.new()
 	mesh.size = Vector2(size, size)
-	particles.draw_pass_1 = mesh
-
 	var material := StandardMaterial3D.new()
 	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	material.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED
@@ -110,11 +145,7 @@ static func spawn_color_burst(host: Node, position: Vector3, color: Color, emiss
 	material.emission = emission
 	material.albedo_color = color
 	mesh.material = material
-
-	host.add_child(particles)
-	particles.global_position = position
-	particles.emitting = true
-	particles.finished.connect(particles.queue_free)  # one_shot no se libera solo
+	return mesh
 
 ## Color base de una pieza segun el mundo al que pertenece.
 static func world_color(kind: Kind) -> Color:

@@ -21,6 +21,9 @@ const HEAVY_AIR_Y_START := 2.40
 const HEAVY_AIR_Y_END := 2.70
 
 var _charged_dash_id := 0
+## El dash cargado en curso salio en sweet spot: junta lo que atraviesa para explotarlo.
+var _sweet_spot_dash := false
+var _sweet_spot_hits: Array[Hurtbox] = []
 var _aerial_charged_y_active := false
 var _aerial_charged_meet_y := 0.0
 
@@ -93,7 +96,11 @@ func _hold_x() -> void:
 	# Move de compromiso: interrumpe el combo en curso y dashea.
 	cancel_routines()
 
-	if _player.meter.spend_charged():
+	# Soltar dentro de la ventana de sweet spot: el dash cuesta menos barra y todo lo que
+	# atraviesa explota despues, lanzado hacia arriba (bóveda Espada, "X cargado sweet spot").
+	_sweet_spot_dash = sweet_spot
+	_sweet_spot_hits.clear()
+	if _player.meter.spend_charged(1, true, tuning.meter_cost_scale(_sweet_spot_dash)):
 		play_visual_clip(ANIM_DASH, 0.0, -1.0, _t().charged_dash_duration)
 		_player.force_dash(_player.forward(), _t().charged_dash_distance, _t().charged_dash_duration, true)
 		_run_charged_dash_window()
@@ -165,12 +172,65 @@ func _run_charged_dash_window() -> void:
 	if id != _charged_dash_id:
 		return  # otro dash cargado ya arrancó: él es dueño del hitbox
 	_charged_dash_hitbox.end_swing()
+	if not _sweet_spot_dash:
+		return
+	await wait_seconds(_t().sweet_spot_explosion_delay)
+	if id != _charged_dash_id:
+		return
+	_explode_sweet_spot_hits()
+
+## Stun de la explosión: el del dash cargado (mismo poise), pero con la duración AÉREA
+## derivada del vuelo en vez de leída del .tres. El launch suspende al enemigo hasta
+## subida + hang (EnemyBase._launch_routine); si el stun dura menos, se despierta flotando a
+## mitad de camino — que es justo lo que pasaba reusando charged_dash_stun tal cual (airborne
+## 0.9 contra un vuelo de 0.15 + 1.0). Atarlo al vuelo lo mantiene coherente aunque después
+## se retoque la altura o el hang; el margen extra es lo único a tunear.
+func _sweet_spot_explosion_stun() -> StunSettings:
+	var t := _t()
+	if t.charged_dash_stun == null:
+		return null
+	var stun: StunSettings = t.charged_dash_stun.duplicate()
+	stun.airborne = World.LAUNCH_RISE_TIME + t.launcher_hang_time + t.sweet_spot_explosion_stun_extra
+	return stun
+
+## Sweet spot del X cargado: cada enemigo que atravesó el dash estalla en su lugar y sale
+## disparado hacia arriba como un launcher. El orden importa: primero el launch (así el daño
+## de la explosión ya lo ve en el aire, mismo criterio que about_to_hit del launcher Y),
+## después el daño, y las motas al final para que salgan aunque el estallido lo mate.
+func _explode_sweet_spot_hits() -> void:
+	var t := _t()
+	var stun := _sweet_spot_explosion_stun()
+	var exploded := false
+	for hurtbox in _sweet_spot_hits:
+		if not is_instance_valid(hurtbox) or not hurtbox.can_receive_hit():
+			continue
+		var target: Node = hurtbox.owner_node
+		if t.sweet_spot_explosion_height > 0.0 and target.has_method("launch"):
+			target.call("launch", t.sweet_spot_explosion_height, t.launcher_hang_time, stun)
+		var died := hurtbox.receive_hit(_player, t.sweet_spot_explosion_damage,
+				_player.forward(), stun)
+		World.spawn_color_burst(_player.get_parent(), hurtbox.global_position,
+				tuning.sweet_spot_particle_color, tuning.sweet_spot_particle_emission,
+				t.sweet_spot_burst_amount, t.sweet_spot_burst_speed,
+				t.sweet_spot_burst_particle_gravity, t.sweet_spot_burst_lifetime,
+				t.sweet_spot_burst_size)
+		register_weapon_hit(hurtbox, died, false)
+		exploded = true
+	_sweet_spot_hits.clear()
+	# Hang extra para mirar el estallido. Va DESPUÉS del loop: un solo hover aunque explote
+	# media pantalla, y solo si algo explotó de verdad (whiff = caés normal).
+	if exploded and t.sweet_spot_air_stall_bonus > 0.0:
+		_player.hover(t.sweet_spot_air_stall_bonus)
 
 ## Solo alimenta el meter (sin _window_hits: no es parte de un combo aéreo). Un kill en la
 ## ventana del cargado devuelve la barra completa (gain_on_kill lo resuelve).
 ## El dash cargado no frena el momentum del jugador: el desplazamiento ES el move.
 func _on_charged_dash_hit(hurtbox: Hurtbox, died: bool) -> void:
 	register_weapon_hit(hurtbox, died, false)
+	# Si el dash salió en sweet spot, lo atravesado queda anotado para estallar después.
+	# Lo que murió con el dash mismo no explota: el hurtbox ya no recibe golpes.
+	if _sweet_spot_dash and not died and hurtbox not in _sweet_spot_hits:
+		_sweet_spot_hits.append(hurtbox)
 
 # ---- Coreografía (swing/swing_up/_play_swing/_play_spin viven en WeaponBase) ----
 

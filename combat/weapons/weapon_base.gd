@@ -39,6 +39,9 @@ signal visual_clip_ended
 
 var level := 1
 var kill_count := 0
+## El cargado que esta saliendo se solto dentro de la ventana de sweet spot (lo arma
+## PlayerCombat al disparar el hold). Cada arma decide que efecto extra le cuelga.
+var sweet_spot := false
 
 var _player: Player
 ## Golpeados de la ventana de daño en curso (el finisher aéreo los spikea/empuja).
@@ -73,6 +76,9 @@ var _thrust_reach := 0.0
 @onready var _blade_mesh: MeshInstance3D = _find_charge_glow_mesh()
 
 var _blade_material: StandardMaterial3D
+## Aura de motas de la ventana de sweet spot: se crea la primera vez que la ventana abre y
+## queda colgada de la hoja, prendiendo/apagando su emitting (ver set_sweet_spot_window).
+var _sweet_spot_motes: GPUParticles3D
 
 func _ready() -> void:
 	if tuning == null:
@@ -360,6 +366,30 @@ func _setup_blade_glow() -> void:
 func set_charge_glow(t: float) -> void:
 	if _blade_material != null:
 		_blade_material.emission_energy_multiplier = clampf(t, 0.0, 1.0) * charge_glow_max_energy
+
+# ---- Sweet spot: ventana de timing al cargar ----
+
+## La ventana de sweet spot esta abierta AHORA (lo llama PlayerCombat mientras se carga):
+## la hoja escupe motas mientras dure. Es el unico aviso de "solta ahora", asi que se prende
+## y se apaga en el mismo frame que la ventana real que lee arm_sweet_spot.
+func set_sweet_spot_window(open: bool) -> void:
+	if not tuning.sweet_spot_particles_enabled:
+		return
+	if _sweet_spot_motes == null:
+		if not open:
+			return  # todavia no hizo falta: no armamos el emisor hasta la primera ventana
+		_sweet_spot_motes = World.make_color_motes(tuning.sweet_spot_particle_color,
+				tuning.sweet_spot_particle_emission, tuning.sweet_spot_particle_amount,
+				tuning.sweet_spot_particle_lifetime, tuning.sweet_spot_particle_size,
+				tuning.sweet_spot_particle_radius, tuning.sweet_spot_particle_rise_speed)
+		_pivot.add_child(_sweet_spot_motes)
+	_sweet_spot_motes.emitting = open
+
+## Marca si el cargado que sale ahora es sweet spot, segun cuanto se sostuvo el press.
+## Lo llama PlayerCombat justo antes de hold(): el arma lee `sweet_spot` en su rutina.
+func arm_sweet_spot(held_time: float) -> void:
+	sweet_spot = tuning.in_sweet_spot(held_time)
+	set_sweet_spot_window(false)
 
 # ---- Launcher genérico (cono/área que lanza antes de golpear, ex ConeLauncherHitbox) ----
 ## Cablea un Hitbox como launcher: nunca se parria, lanza al objetivo ANTES del daño

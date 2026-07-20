@@ -115,6 +115,10 @@ func _fire_hold(weapon: WeaponBase, slot: World.Slot) -> void:
 		_air_charge_fall_applied = true
 		_body.apply_air_charge_fall_control()
 	_attack_kind = AttackKind.CHARGED_X if slot == World.Slot.X else AttackKind.CHARGED_Y
+	# El sweet spot se resuelve con la MISMA lectura que el nivel: held_duration ya dejo de
+	# contar al disparar el hold, asi que un cargado bufferizado no se gana la ventana por
+	# los milisegundos que tardo en ejecutarse.
+	weapon.arm_sweet_spot(buffer.held_duration())
 	weapon.hold(slot, weapon.charge_level(buffer.held_duration()))
 
 ## Poise que inflige un parry hecho AHORA: sale del arma activa (su .tres) segun el tipo del
@@ -139,6 +143,10 @@ func _process(delta: float) -> void:
 	if _charging_weapon != null:
 		var charge_progress := buffer.charge_progress()
 		_charging_weapon.set_charge_glow(charge_progress)
+		# Aura de la ventana de sweet spot. charge_progress vuelve a 0 al soltar, asi que esto
+		# tambien la apaga cuando el press termina sin cargado.
+		_charging_weapon.set_sweet_spot_window(charge_progress >= 1.0
+				and _charging_weapon.tuning.in_sweet_spot(buffer.held_duration()))
 		if not _air_charge_fall_applied and charge_progress >= 1.0:
 			_air_charge_fall_applied = true
 			_body.apply_air_charge_fall_control()

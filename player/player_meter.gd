@@ -53,8 +53,11 @@ func spend_dash() -> bool:
 
 ## Cargado: pide barras completas. Si hay suficientes, las gasta. La ventana de kill
 ## especial queda activa por defecto para la Espada; otras armas pueden desactivarla.
-func spend_charged(bars_to_spend: int = 1, opens_kill_window: bool = true) -> bool:
-	var cost := _body.tuning.meter_charged_cost * float(bars_to_spend)
+## cost_scale abarata el cargado sin tocar cuantas barras pide (1.0 = precio de lista;
+## el sweet spot pasa 0.7 = 30% menos, ver WeaponTuning.meter_cost_scale).
+func spend_charged(bars_to_spend: int = 1, opens_kill_window: bool = true,
+		cost_scale: float = 1.0) -> bool:
+	var cost := _body.tuning.meter_charged_cost * float(bars_to_spend) * maxf(0.0, cost_scale)
 	if bars_to_spend <= 0 or _meter < cost:
 		return false
 	_add(-cost)
