@@ -54,11 +54,12 @@ const UAL1_ANIMATIONS := [&"Idle", &"Walk", &"Sprint"]
 ## Se logra generando en runtime un clip compuesto por golpe (sin AnimationTree). Apagarlo
 ## vuelve al clip de ataque de cuerpo completo también en el aire.
 @export var air_upper_body_blend := true
-## Huesos de la parte BAJA (nombres reales del esqueleto UAL/Unreal, verificados en el .glb):
-## en golpes aéreos estos siguen el loop de salto; todo lo demás (spine_01 hacia arriba)
-## reproduce el clip de ataque. Mover el corte = editar esta lista.
-@export var air_lower_body_bones: PackedStringArray = ["root", "pelvis", "thigh_l", "thigh_r",
-		"calf_l", "calf_r", "foot_l", "foot_r", "ball_l", "ball_r", "ball_leaf_l", "ball_leaf_r"]
+## Huesos de las PIERNAS (nombres reales del esqueleto UAL/Unreal, verificados en el .glb):
+## en golpes aéreos estos siguen el loop de salto. Root y pelvis conservan el clip de ataque
+## para que torso, brazo y espada mantengan su orientación frontal. Mover el corte = editar
+## esta lista.
+@export var air_lower_body_bones: PackedStringArray = ["thigh_l", "thigh_r", "calf_l", "calf_r",
+		"foot_l", "foot_r", "ball_l", "ball_r", "ball_leaf_l", "ball_leaf_r"]
 ## Velocidad horizontal (m/s) mínima para dejar el Idle y caminar.
 @export var moving_speed_threshold := 0.15
 ## Velocidad horizontal (m/s) a partir de la cual el Walk pasa a Sprint. El player corre a
