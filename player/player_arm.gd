@@ -4,7 +4,8 @@ class_name PlayerArm extends Node
 ## Un solo boton (tap) con dos usos segun el target resuelto:
 ## - Combate: golpea al target del lock-on pasivo (lockeado si hay uno, si no el más cercano en
 ##   el cono de mira — mismo target que usa PlayerLocomotion para el snap del golpe normal). Daño
-##   y poise bajos; genera meter propio y bajo al conectar. Gasta tap y entra en cooldown. No pega
+##   y poise bajos; genera meter propio y bajo al conectar. Gasta una carga de una reserva de
+##   `max_taps` que se regenera sola de a una cada `cooldown_duration` (ver _refresh_regen). No pega
 ##   mas rapido que `tuning.tap_cadence`: mashear no acelera, encola los taps de mas en vez de
 ##   perderlos (hasta agotar max_taps).
 ## - Traversal: si no hay enemigo en el cono de combate, marca el bloque de dash (verde) más
@@ -14,12 +15,14 @@ class_name PlayerArm extends Node
 
 @export var tuning: ArmTuning
 
-## Cambio en los taps de combate disponibles (los que quedan antes del cooldown). Lo escucha el
-## HUD para dibujar un icono por golpe. Se emite tanto al gastar como al recuperarse el cooldown.
+## Cambio en la reserva de golpes de combate disponibles. Lo escucha el HUD para dibujar un icono
+## por golpe. Se emite al gastar uno y al regenerarse uno, nunca al encolar (ver taps_available).
 signal taps_changed(available: int, max_taps: int)
 
 var _taps_used := 0
-var _cooldown_until := -999.0
+## Instante en que vuelve el proximo golpe. No es un bloqueo tras agotarse: arranca apenas
+## `_taps_used` sube de 0 y se re-arma solo mientras queden golpes por devolver (ver _refresh_regen).
+var _regen_at := -999.0
 var _traversal_cooldown_until := -999.0
 var _swing_id := 0
 var _player: Player
@@ -42,7 +45,7 @@ func _ready() -> void:
 ## no depende de armas afuera ni de estar atacando, a diferencia del reticle de combate (ver
 ## LockOn._process). Prioriza enemigo (igual que _try_tap); si no hay, marca el bloque de dash.
 func _process(_delta: float) -> void:
-	_refresh_cooldown()
+	_refresh_regen()
 	if _player == null:
 		return
 	_flush_tap_buffer()
@@ -56,21 +59,29 @@ func _process(_delta: float) -> void:
 	if block != null:
 		_marker.global_position = block.global_position + Vector3.UP * tuning.traversal_marker_height
 
-## Taps de combate que quedan antes de entrar en cooldown. Los encolados ya estan comprometidos,
-## asi que cuentan como gastados: lo que devuelve esto es lo que el jugador todavia puede apretar.
+## Golpes de combate que quedan en la reserva. Cuenta SOLO los ya gastados
+## (`_taps_used`, que sube cuando el puño sale de verdad), NO los encolados: el HUD tiene que
+## apagarse al ritmo de los golpes que se ven, no al del boton. Con una cadencia larga los
+## encolados salen bastante despues del apreton y descontarlos aca desfasaba la UI del gameplay.
 func taps_available() -> int:
-	return maxi(0, tuning.max_taps - _taps_used - _pending_taps)
+	return maxi(0, tuning.max_taps - _taps_used)
 
 func max_taps() -> int:
 	return tuning.max_taps
 
-## Devuelve los taps cuando se cumplio el cooldown. Vive en _process y NO dentro de _tap_enemy: el
-## guard de _try_tap corta antes de llegar a pegar cuando no hay margen, asi que si la recuperacion
-## dependiera de un tap el brazo quedaba muerto para siempre despues del primer cooldown.
-func _refresh_cooldown() -> void:
-	if _taps_used < tuning.max_taps or World.now() < _cooldown_until:
+## Regeneracion de golpes: NO es un bloqueo que empieza al quedarte en cero. Basta con no estar
+## completo para que corra el reloj, y cada `cooldown_duration` vuelve UN golpe; si todavia falta
+## alguno, el reloj se re-arma solo. Gastar mientras corre no lo reinicia (el reloj es de la carga
+## que se esta regenerando, no del ultimo apreton).
+## Vive en _process y NO dentro de _tap_enemy: el guard de _try_tap corta antes de llegar a pegar
+## cuando no hay margen, asi que si la recuperacion dependiera de un tap el brazo quedaria muerto
+## para siempre al agotarse.
+func _refresh_regen() -> void:
+	if _taps_used <= 0 or World.now() < _regen_at:
 		return
-	_taps_used = 0
+	_taps_used -= 1
+	if _taps_used > 0:
+		_regen_at = World.now() + tuning.cooldown_duration
 	_notify_taps()
 
 func _notify_taps() -> void:
@@ -81,18 +92,14 @@ func _notify_taps() -> void:
 ## entraron ANTES del golpe seguian saliendo durante el stun.
 func _flush_tap_buffer() -> void:
 	if _player.is_stunned():
-		if _pending_taps > 0:
-			_pending_taps = 0
-			_notify_taps()
+		_pending_taps = 0
 		return
 	if _pending_taps <= 0 or World.now() < _next_tap_ready_at:
 		return
 	_pending_taps -= 1
 	var target := _resolve_target()
 	if target != null:
-		_fire_tap(target)
-	else:
-		_notify_taps()  # el tap en cola se pierde (no hay a quien pegarle): devuelve su lugar
+		_fire_tap(target)  # si el target ya no existe, el tap en cola se pierde (no hay a quien pegarle)
 
 func _input(event: InputEvent) -> void:
 	if _player != null and _player.is_stunned():
@@ -151,17 +158,16 @@ func _try_tap() -> void:
 	var target := _resolve_target()
 	if target != null:
 		if _taps_used + _pending_taps >= tuning.max_taps:
-			return  # sin margen: se pierde (ya esta o va a estar en cooldown)
+			return  # reserva agotada (o comprometida por la cola): el apreton se pierde
 		if _pending_taps == 0 and World.now() >= _next_tap_ready_at:
 			_fire_tap(target)
 		else:
-			_pending_taps += 1
-			_notify_taps()
+			_pending_taps += 1  # sin _notify_taps: el icono se apaga cuando el golpe SALE
 		return
 	var block := _nearest_dash_block()
 	if block != null:
 		_teleport_and_activate(block)
-	# sin enemigo ni bloque marcado: apreton gratis, no gasta tap ni entra en cooldown
+	# sin enemigo ni bloque marcado: apreton gratis, no gasta carga
 
 func _fire_tap(target: EnemyBase) -> void:
 	_next_tap_ready_at = World.now() + tuning.tap_cadence
@@ -169,13 +175,15 @@ func _fire_tap(target: EnemyBase) -> void:
 
 func _tap_enemy(target: EnemyBase) -> void:
 	if _taps_used >= tuning.max_taps:
-		return  # sin margen: la recuperacion la hace _refresh_cooldown, no este camino
+		return  # sin margen: la recuperacion la hace _refresh_regen, no este camino
 
 	# Se gasta el tap ACA (antes del await): si no, taps mas rapidos que travel_time se
 	# colarian todos antes de que el primero llegue a incrementar el contador.
 	_taps_used += 1
-	if _taps_used >= tuning.max_taps:
-		_cooldown_until = World.now() + tuning.cooldown_duration
+	if _taps_used == 1:
+		# Se acaba de romper el full: arranca el reloj de regeneracion. Los gastos siguientes NO lo
+		# reinician — si no, mashear congelaba la recarga y volvia a ser un bloqueo por agotamiento.
+		_regen_at = World.now() + tuning.cooldown_duration
 	_notify_taps()
 
 	_swing_id += 1

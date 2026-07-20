@@ -6,9 +6,12 @@ class_name ArmTuning extends Resource
 @export var damage := 2.0
 ## Poise que come el golpe. Bajo a propósito: casi nunca quiebra por sí solo.
 @export var stun: StunSettings
-## Taps seguidos antes de forzar el cooldown.
+## Golpes de brazo acumulables (cargas). Es el techo de la reserva, no una racha: se gastan de a
+## uno y se regeneran de a uno (ver cooldown_duration).
 @export var max_taps := 5
-## Segundos bloqueado tras agotar max_taps.
+## Segundos que tarda en volver UN golpe. No es un bloqueo por agotamiento: el reloj corre apenas
+## la reserva no esta completa, asi que gastar un solo golpe ya empieza a devolverlo. Si faltan
+## varios se recuperan de a uno cada `cooldown_duration`. Gastar mientras corre no lo reinicia.
 @export var cooldown_duration := 3.0
 ## Segundos minimos entre dos golpes consecutivos (cadencia). Aplastar el input mas rapido que
 ## esto no pega mas rapido: los taps de mas se guardan en cola y salen a este ritmo, sin
