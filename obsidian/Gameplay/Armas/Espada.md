@@ -33,6 +33,7 @@ Arma base / equilibrada. Velocidad media. Sirve para mantener el flujo del comba
 | -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | X X X                | Diagonal, diagonal, hacia abajo.                                                                                                                                                   |
 | X espera X X         | Diagonal, doble vuelta con empuje hacia adelante. La primera vuelta te eleva un poco; el empuje final es un arco tuneable (`push`: velocidad + altura + cierre). *(2026-07-09)*    |
+| X X espera X         | Diagonal, diagonal, plunge: tu y el enemigo golpeado caen juntos hasta el piso a velocidad constante (`air_plunge_down_speed`). El enemigo se alinea a tu altura al conectar (si estaba arriba tuyo baja a tu Y) para dejar servido el rebote. El rebote en enemigo cancela el plunge; el doble salto no sale (ni se gasta) mientras dura. El plunge es reutilizable: `Player.plunge(down_speed)`, cada caller pasa su velocidad. *(2026-07-19)* |
 | X cargado            | Mismo dash que en el piso, pero en el aire.                                                                                                                                        |
 | X cargado sweet spot | Igual que el terrestre. Las explosiones suben a los enemigos afectados como si fuera un launcher.                                                                                  |
 | Y cargado            | Golpe hacia abajo que hace rebotar al enemigo. Implementado 2026-07-02: gasta 1 barra; te auto-lanza hacia arriba y spikea/rebota al enemigo hasta tu altura. Pendiente de probar. |
@@ -57,6 +58,8 @@ Arma base / equilibrada. Velocidad media. Sirve para mantener el flujo del comba
 | `combo_swing_angle` | Arco de los swings 1-2 del combo terrestre. |
 | `strike_angle` | Arco del golpe Y basico, launcher y cargada aerea. |
 | `air_finisher_angle` | Arco del hachazo vertical del finisher aereo. |
+| `air_plunge_down_speed` | Velocidad de caida (m/s constante) del plunge X X espera X, para jugador y enemigo. El umbral de espera reusa `air_wait_branch_threshold`. |
+| `air_finisher_hitbox_v_scale` | Estira verticalmente los hitboxes del finisher aereo (hachazo y plunge) mientras dura el golpe: alto de la hoja y disco aereo como capsula vertical. 1 = sin estirar. |
 | `charged_fallback_angle` | Swing degradado del X cargado sin barra. |
 
 ## Pendiente H1

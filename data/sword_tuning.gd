@@ -72,6 +72,17 @@ class_name SwordTuning extends WeaponTuning
 ## Lado del quad de cada mota, en metros.
 @export var sweet_spot_burst_size := 0.18
 
+## Estira VERTICALMENTE los hitboxes del finisher aéreo (hachazo X X X y plunge X X espera X)
+## mientras dura ese golpe: multiplica el alto de la caja de la hoja y convierte el disco
+## aéreo en una cápsula vertical de esa altura. 1 = sin estirar. No afecta a los otros golpes.
+@export var air_finisher_hitbox_v_scale := 1.5
+
+@export_group("Plunge aéreo (X X espera X)")
+## Velocidad de caída (m/s, constante) del plunge: vos y el enemigo golpeado bajan juntos
+## hasta el piso a esta velocidad (Player.plunge + slam del enemigo). El umbral de espera
+## que activa la rama reusa air_wait_branch_threshold; el rebote en enemigo lo cancela.
+@export var air_plunge_down_speed := 30.0
+
 @export_group("Y cargada aérea (spike + rebote)")
 ## Velocidad del spike hacia el suelo antes de rebotar. La altura del auto-launch y del
 ## rebote reusan el launcher Y (height/hang_time), "lo mismo que un launcher".

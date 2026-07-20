@@ -18,6 +18,8 @@ var poise := Poise.new()
 
 var _can_double_jump := true
 var _dodge_queued := false  # dodge pedido tarde en un golpe: sale al terminarlo
+## Velocidad (m/s) del plunge en curso; 0 = sin plunge. Ver plunge().
+var _plunge_speed := 0.0
 
 @onready var locomotion: PlayerLocomotion = $Locomotion
 @onready var dash: PlayerDash = $Dash
@@ -146,6 +148,10 @@ func _physics_process(delta: float) -> void:
 		vertical_velocity = 0.0
 	else:
 		vertical_velocity += tuning.gravity * launcher.gravity_scale() * delta
+	# Plunge en curso: la caída es constante a la velocidad pedida — pisa gravedad, stall
+	# y hover hasta tocar piso o ser cancelado (rebote en enemigo, dodge, stun, launch).
+	if _plunge_speed > 0.0:
+		vertical_velocity = -_plunge_speed
 
 	var horizontal_with_momentum := wall_slide.apply_slide_velocity(horizontal + bump_velocity, input_dir, delta)
 	horizontal_with_momentum = floor_slide.apply_slide_velocity(horizontal_with_momentum, input_dir, delta)
@@ -156,6 +162,7 @@ func _physics_process(delta: float) -> void:
 	enemy_bounce.update_after_move(horizontal + bump_velocity)
 
 	if is_on_floor():
+		_plunge_speed = 0.0
 		vertical_velocity = -1.0
 		air_state = AirState.GROUNDED
 		dash.restore_airdash()
@@ -186,8 +193,9 @@ func _on_jump() -> void:
 		# haya cortado este frame): no consume ni recarga el doble salto.
 		air_state = AirState.AIRBORNE
 	elif enemy_bounce.try_bounce(locomotion.camera_relative(locomotion.read_move_input())):
+		cancel_plunge()  # el rebote en enemigo ES la cancelación del plunge
 		air_state = AirState.AIRBORNE
-	elif _can_double_jump:
+	elif _can_double_jump and not is_plunging():
 		_set_double_jump_available(false)
 		# El doble salto sale SIEMPRE con gravedad normal: cierra la ventana de caida lenta
 		# (air-hit-stall y hover de un move) antes de aplicar second_jump_force. Sin esto, saltar dentro
@@ -205,6 +213,7 @@ func _on_dodge() -> void:
 		_dodge_queued = true
 		return
 	_dodge_queued = false
+	cancel_plunge()
 	dash.dodge()
 
 # ---- API pública (armas, pickups, combate, traversal) ----
@@ -267,6 +276,7 @@ func apply_stun(duration: float = -1.0, mode := PlayerStun.Mode.STILL,
 	var stun_duration := tuning.default_stun_duration if duration < 0.0 else duration
 	_stun_feedback_color = feedback_color if feedback_color.a > 0.0 else tuning.stun_color
 	_dodge_queued = false
+	cancel_plunge()
 	locomotion.cancel_lunge()
 	wall_slide.cancel()
 	floor_slide.cancel()
@@ -315,6 +325,22 @@ func hold_airborne_for_attack() -> void:
 	if not is_on_floor():
 		air_state = AirState.AIRBORNE
 
+## Plunge REUTILIZABLE (hoy lo usa el finisher aéreo X X espera X de la Espada): clava la
+## caída a `down_speed` m/s constantes hasta tocar el piso. Lo cancelan el rebote en enemigo,
+## el dodge, el stun, un launch o un bump; el doble salto NO sale durante el plunge (y no se
+## gasta). Cada caller pasa su propia velocidad — el knob de la Espada es air_plunge_down_speed.
+func plunge(down_speed: float) -> void:
+	if is_on_floor() or down_speed <= 0.0:
+		return
+	_plunge_speed = down_speed
+	air_state = AirState.AIRBORNE
+
+func is_plunging() -> bool:
+	return _plunge_speed > 0.0
+
+func cancel_plunge() -> void:
+	_plunge_speed = 0.0
+
 ## Pequeño empujón vertical (juice del combo aéreo: la 1ra vuelta de la rama espera
 ## eleva un poco al jugador). No pisa una subida mayor ya en curso.
 func air_hop(speed: float) -> void:
@@ -329,6 +355,7 @@ func set_momentum(v: Vector3) -> void:
 
 func bump(dir: Vector3, h_speed: float, v_speed: float) -> void:
 	_dodge_queued = false
+	cancel_plunge()
 	wall_slide.cancel()
 	floor_slide.cancel()
 	enemy_bounce.cancel()
@@ -343,6 +370,7 @@ func bump(dir: Vector3, h_speed: float, v_speed: float) -> void:
 func force_dash(dir: Vector3, distance: float, duration: float, boost_bump_momentum := false,
 		deals_damage := false) -> void:
 	_dodge_queued = false
+	cancel_plunge()
 	wall_slide.cancel()
 	floor_slide.cancel()
 	enemy_bounce.cancel()
@@ -354,6 +382,7 @@ func set_dash_exit_bop(dir: Vector3, forward_speed: float, vertical_speed: float
 
 func launch(height: float, hang_time: float, rise_time: float = World.LAUNCH_RISE_TIME) -> void:
 	_dodge_queued = false
+	cancel_plunge()
 	wall_slide.cancel()
 	floor_slide.cancel()
 	enemy_bounce.cancel()

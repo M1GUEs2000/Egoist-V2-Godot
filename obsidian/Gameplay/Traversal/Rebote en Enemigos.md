@@ -30,6 +30,7 @@ Rebote manual desde enemigos: el jugador no rebota por contacto, sino al pedir s
 - El stomp (`normal == Vector3.UP`, sin normal horizontal) da solo vertical: `bump_velocity = Vector3.ZERO`, sin reaccion del enemigo y sin bloquear el input de movimiento — no hay impulso horizontal que proteger, y bloquearlo solo quitaria control aereo.
 - El cooldown recuerda al enemigo por `instance_id`, no por referencia: un enemigo muerto se libera (`EnemyBase._die`) mientras su cooldown sigue corriendo.
 - La reaccion del enemigo es un `push` (knockback horizontal + vertical, **sin daño**) via `enemy_bounce_push`, hoy configurado en `player_tuning.tres`. Se llama `push()` con la direccion opuesta a la salida del jugador. Solo en el rebote **lateral**: el stomp no tiene direccion horizontal, asi que no empuja.
+- Un rebote exitoso **cancela el plunge** del jugador (el finisher X X espera X de la [[Espada]]): es su unica salida antes del piso. Durante el plunge el doble salto no sale ni se gasta.
 
 ## Tuning
 

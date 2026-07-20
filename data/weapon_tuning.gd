@@ -3,6 +3,10 @@ class_name WeaponTuning extends Resource
 ## Cada arma concreta lo extiende (SwordTuning) y su instancia .tres vive en data/.
 
 @export var swing_time := 0.1
+## Recovery tras COMPLETAR un combo (finisher incluido), en segundos: ventana muerta en la
+## que no puede arrancar otro combo (terrestre o aéreo; los taps se ignoran). Cortar el
+## combo a mitad no lo cobra, y los cargados X/Y no se bloquean.
+@export var combo_recovery := 0.7
 @export var kills_to_upgrade := 20
 @export var max_level := 3
 @export var stun: StunSettings

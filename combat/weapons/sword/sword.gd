@@ -26,6 +26,16 @@ var _sweet_spot_dash := false
 var _sweet_spot_hits: Array[Hurtbox] = []
 var _aerial_charged_y_active := false
 var _aerial_charged_meet_y := 0.0
+## Rama plunge elegida para el finisher aéreo en curso (la lee _finish_air_combo).
+var _air_plunge_finisher := false
+# Estiramiento vertical de hitboxes del finisher aéreo (ver air_finisher_hitbox_v_scale):
+# la hoja agranda su caja y el disco esférico se cambia por una cápsula vertical mientras
+# dura el golpe. Shapes propios capturados/creados en setup().
+var _blade_shape: BoxShape3D
+var _blade_base_size := Vector3.ZERO
+var _disc_shape_node: CollisionShape3D
+var _disc_sphere: SphereShape3D
+var _disc_capsule: CapsuleShape3D
 
 @onready var _launcher_hitbox: Hitbox = $LauncherHitbox
 @onready var _charged_dash_hitbox: Hitbox = $ChargedDashHitbox
@@ -51,6 +61,19 @@ func setup(player: Player) -> void:
 	for hitbox: Hitbox in [_blade_hitbox, _air_disc_hitbox]:
 		if hitbox != null:
 			hitbox.landed.connect(_on_aerial_charged_y_hit)
+
+	# Shapes propios para el estiramiento del finisher aéreo: la hoja duplica su BoxShape
+	# (el .tscn comparte el recurso entre instancias) y el disco prepara su cápsula gemela.
+	var blade_shape_node := _blade_hitbox.get_node_or_null("CollisionShape3D") as CollisionShape3D
+	if blade_shape_node != null and blade_shape_node.shape is BoxShape3D:
+		_blade_shape = (blade_shape_node.shape as BoxShape3D).duplicate()
+		blade_shape_node.shape = _blade_shape
+		_blade_base_size = _blade_shape.size
+	if _air_disc_hitbox != null:
+		_disc_shape_node = _air_disc_hitbox.get_node_or_null("CollisionShape3D") as CollisionShape3D
+		if _disc_shape_node != null and _disc_shape_node.shape is SphereShape3D:
+			_disc_sphere = _disc_shape_node.shape as SphereShape3D
+			_disc_capsule = CapsuleShape3D.new()
 
 ## La Y cargada aérea usa el MISMO hitbox que los taps: sin este flag, su auto-launch se comería
 ## el corte de momentum del air-hit-stall.
@@ -261,26 +284,91 @@ func _ground_step_clip(step: int, spin: bool) -> StringName:
 				return ANIM_REGULAR_C
 			return ANIM_REGULAR_A if step == 3 else ANIM_REGULAR_B
 
-## Combo AÉREO (bóveda Armas): golpe 1 siempre diagonal; según la espera antes del 2:
-##   X X X          → diagonal, diagonal, hachazo vertical (spikea al suelo)
-##   X (espera) X X → diagonal, vuelta, vuelta (empuja hacia adelante)
+## Combo AÉREO (bóveda Armas): golpe 1 siempre diagonal; según las esperas:
+##   X X X            → diagonal, diagonal, hachazo vertical (spikea al suelo)
+##   X (espera) X X   → diagonal, vuelta, vuelta (empuja hacia adelante)
+##   X X (espera) X   → diagonal, diagonal, PLUNGE: vos y el enemigo golpeado bajan
+##                      juntos al piso (air_plunge_down_speed); un rebote en enemigo
+##                      lo cancela. Misma coreografía/clip que el hachazo.
 func air_steps() -> int:
 	return 3
 
+## Maniquí: espejo del terrestre — A, B y tramo aéreo de Heavy para el hachazo;
+## las vueltas de la rama espera usan C (el mismo clip que las vueltas terrestres).
 func play_air_step(step: int, finisher: bool, wait_branch: bool) -> void:
 	if step == 1:
+		_air_plunge_finisher = false
+		play_visual_clip(ANIM_REGULAR_A, 0.0, -1.0, tuning.swing_time)
 		_play_air_diagonal(-1.0)  # arriba-izq → abajo-der
 		return
 	if wait_branch:
+		play_visual_clip(ANIM_REGULAR_C, 0.0, -1.0, tuning.swing_time)
 		if step == 2:  # primera vuelta: eleva un poco al jugador (juice)
 			_player.air_hop(tuning.air_wait_spin_hop)
 		_play_spin()  # vuelta completa (golpe 2 y finisher)
 		return
-	if finisher:  # hachazo vertical
+	if finisher:  # hachazo vertical — con espera previa (X X espera X) es plunge
+		# El plunge del jugador NO arranca acá: caer durante el swing te saca de rango y el
+		# hitbox no llega al enemigo. Arranca en _finish_air_combo, al cerrar el golpe.
+		_air_plunge_finisher = chain_wait_before_step >= tuning.air_wait_branch_threshold
+		_run_finisher_v_stretch()
+		play_visual_clip(ANIM_HEAVY, HEAVY_AIR_Y_START, HEAVY_AIR_Y_END, tuning.swing_time)
 		var half := _t().air_finisher_angle
 		_play_swing(Quaternion(Vector3.RIGHT, deg_to_rad(-half)), Quaternion(Vector3.RIGHT, deg_to_rad(half)))
 	else:
+		play_visual_clip(ANIM_REGULAR_B, 0.0, -1.0, tuning.swing_time)
 		_play_air_diagonal(1.0)  # arriba-der → abajo-izq
+
+## Rama plunge: los golpeados se ALINEAN a la altura del jugador (si el golpe entró
+## arriba tuyo, el enemigo baja a tu Y) y caen a la MISMA velocidad que vos (slam con
+## air_plunge_down_speed) en vez del spike normal — bajan a la par hasta el piso, lo
+## que deja el rebote en enemigo servido para cancelar el plunge.
+func _finish_air_combo(wait_branch: bool) -> void:
+	if _air_plunge_finisher and not wait_branch:
+		# Recién acá cae el jugador: el swing ya cerró con su ventana de daño completa.
+		# En whiff también caés (move de compromiso, como el dash cargado).
+		_player.plunge(_t().air_plunge_down_speed)
+		for hurtbox in _window_hits.duplicate():
+			var target: Node = hurtbox.owner_node
+			if not target.has_method("slam"):
+				continue
+			# Alinear solo si el slam va a entrar (aéreo y stuneado): sin este guard, un
+			# enemigo parado en el piso se teletransportaría a tu altura sin caer.
+			if _plunge_can_take(target) and target is Node3D:
+				(target as Node3D).global_position.y = _player.global_position.y
+			target.call("slam", _t().air_plunge_down_speed)
+		return
+	super._finish_air_combo(wait_branch)
+
+## Estira los hitboxes del finisher aéreo mientras dura el golpe y los restaura al cerrar.
+## La restauración es incondicional e idempotente: aunque un cargado cancele el combo a
+## mitad, el timer devuelve los shapes base igual (no contamina el golpe siguiente).
+func _run_finisher_v_stretch() -> void:
+	var s := _t().air_finisher_hitbox_v_scale
+	if s <= 1.0:
+		return
+	if _blade_shape != null:
+		_blade_shape.size.y = _blade_base_size.y * s
+	if _disc_capsule != null:
+		_disc_capsule.radius = _disc_sphere.radius
+		_disc_capsule.height = _disc_sphere.radius * 2.0 * s
+		_disc_shape_node.shape = _disc_capsule
+	await wait_seconds(tuning.air_step_time)
+	_restore_finisher_hitboxes()
+
+func _restore_finisher_hitboxes() -> void:
+	if _blade_shape != null:
+		_blade_shape.size = _blade_base_size
+	if _disc_shape_node != null and _disc_sphere != null:
+		_disc_shape_node.shape = _disc_sphere
+
+## Mismas condiciones que EnemyBase.slam, por duck typing (el dummy no tiene todas).
+func _plunge_can_take(target: Node) -> bool:
+	if target.has_method("is_airborne") and not target.call("is_airborne"):
+		return false
+	if target.has_method("is_stunned") and not target.call("is_stunned"):
+		return false
+	return true
 
 ## Diagonal descendente: la mano cruza al frente (giro en Y) mientras baja (inclinación en X).
 func _play_air_diagonal(side: float) -> void:

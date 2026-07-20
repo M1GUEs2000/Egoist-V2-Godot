@@ -49,6 +49,16 @@ const UAL1_ANIMATIONS := [&"Idle", &"Walk", &"Sprint"]
 @export_range(0.0, 2.0, 0.01) var ground_stun_end := 0.4
 @export_range(0.0, 2.0, 0.01) var air_stun_start := 0.15
 @export_range(0.0, 2.0, 0.01) var air_stun_end := 0.25
+## Golpes de arma EN EL AIRE: mezcla por mitades de cuerpo. La parte baja (piernas/pelvis)
+## sostiene la pose del loop de salto y solo el torso/brazos reproducen el clip de ataque.
+## Se logra generando en runtime un clip compuesto por golpe (sin AnimationTree). Apagarlo
+## vuelve al clip de ataque de cuerpo completo también en el aire.
+@export var air_upper_body_blend := true
+## Huesos de la parte BAJA (nombres reales del esqueleto UAL/Unreal, verificados en el .glb):
+## en golpes aéreos estos siguen el loop de salto; todo lo demás (spine_01 hacia arriba)
+## reproduce el clip de ataque. Mover el corte = editar esta lista.
+@export var air_lower_body_bones: PackedStringArray = ["root", "pelvis", "thigh_l", "thigh_r",
+		"calf_l", "calf_r", "foot_l", "foot_r", "ball_l", "ball_r", "ball_leaf_l", "ball_leaf_r"]
 ## Velocidad horizontal (m/s) mínima para dejar el Idle y caminar.
 @export var moving_speed_threshold := 0.15
 ## Velocidad horizontal (m/s) a partir de la cual el Walk pasa a Sprint. El player corre a
@@ -173,6 +183,10 @@ func _on_weapon_clip_started(clip: StringName, start_time: float, end_time: floa
 	if _player.is_stunned():
 		return
 	_stop_slide_rotation()
+	# En el aire: versión compuesta del clip (piernas en pose de salto, torso atacando).
+	# Mismos tiempos/longitud que el original, así el tramo y el escalado no cambian.
+	if air_upper_body_blend and _player.is_airborne():
+		clip = _air_composite_for(clip)
 	var clip_length := _animation_player.get_animation(clip).length
 	var start := clampf(start_time, 0.0, clip_length)
 	var end := clip_length if end_time < 0.0 else clampf(end_time, start, clip_length)
@@ -479,6 +493,46 @@ func _import_ual1_animations() -> void:
 			if source_animation != null:
 				library.add_animation(animation_name, source_animation.duplicate(true))
 	source_root.free()
+
+## Devuelve (creándola la primera vez) la versión aérea del clip de ataque: los tracks de
+## los huesos de air_lower_body_bones se reemplazan por los del loop de salto, así las
+## piernas sostienen la pose de aire mientras el torso ejecuta el golpe. El compuesto
+## conserva la longitud del clip original (los tramos start/end siguen valiendo tal cual);
+## si el loop de salto es más corto, sus piernas sostienen la última pose (es un loop:
+## empieza y termina casi igual). Se cachea en la librería con sufijo propio.
+func _air_composite_for(clip: StringName) -> StringName:
+	var composite_name := StringName(String(clip) + "_AirUpper")
+	if _has_animation(composite_name):
+		return composite_name
+	if not _has_animation(clip) or not _has_animation(jump_loop_animation):
+		return clip
+	var library := _animation_player.get_animation_library(&"")
+	if library == null:
+		return clip
+	var composite := _animation_player.get_animation(clip).duplicate(true) as Animation
+	var jump_clip := _animation_player.get_animation(jump_loop_animation)
+	for i in range(composite.get_track_count() - 1, -1, -1):
+		if _is_lower_body_track(composite.track_get_path(i)):
+			composite.remove_track(i)
+	for i in jump_clip.get_track_count():
+		if _is_lower_body_track(jump_clip.track_get_path(i)):
+			_copy_track(jump_clip, i, composite)
+	library.add_animation(composite_name, composite)
+	return composite_name
+
+## El último subname del path del track es el hueso ("Skeleton3D:thigh_l" → "thigh_l").
+func _is_lower_body_track(path: NodePath) -> bool:
+	if path.get_subname_count() == 0:
+		return false
+	return air_lower_body_bones.has(String(path.get_subname(path.get_subname_count() - 1)))
+
+func _copy_track(source: Animation, index: int, target: Animation) -> void:
+	var t := target.add_track(source.track_get_type(index))
+	target.track_set_path(t, source.track_get_path(index))
+	target.track_set_interpolation_type(t, source.track_get_interpolation_type(index))
+	for k in source.track_get_key_count(index):
+		target.track_insert_key(t, source.track_get_key_time(index, k),
+				source.track_get_key_value(index, k))
 
 func _animation_length(animation: StringName) -> float:
 	if not _has_animation(animation):

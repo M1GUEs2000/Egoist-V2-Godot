@@ -53,6 +53,13 @@ var _window_id := 0
 var _routine_id := 0
 var _combo_playing := false
 var _combo_window_open := false
+## Hasta cuándo dura el recovery post-combo (World.now): ver tuning.combo_recovery.
+var _combo_recovery_until := 0.0
+## Cuánto (s) se esperó entre el fin del golpe anterior y el tap que encadenó el paso
+## actual (0 en el paso 1). La coreografía de cada arma puede leerlo en begin_step para
+## ramificar por espera en CUALQUIER paso, no solo en branch_step (ej: el plunge de la
+## Espada, X X espera X).
+var chain_wait_before_step := 0.0
 var _combo_queued := false
 var _combo_queued_time := 0.0
 var _combo_kind := &""
@@ -159,9 +166,14 @@ func try_queue_combo(kind: StringName) -> bool:
 func run_combo_chain(kind: StringName, steps: int, step_time: float, chain_window: float,
 		branch_step: int, branch_threshold: float,
 		begin_step: Callable, finish := Callable(), wait_branch_extra_steps := 0) -> void:
+	# Recovery post-combo: completar un combo deja esta ventana muerta; los taps que
+	# intentan arrancar otro se ignoran (los cargados no pasan por acá y siguen saliendo).
+	if World.now() < _combo_recovery_until:
+		return
 	var id := begin_routine()
 	_combo_playing = true
 	_combo_kind = kind
+	chain_wait_before_step = 0.0
 	var wait_branch := false
 	var total_steps := steps
 
@@ -181,6 +193,8 @@ func run_combo_chain(kind: StringName, steps: int, step_time: float, chain_windo
 		if finisher:
 			if finish.is_valid():
 				finish.call(wait_branch)
+			# Combo COMPLETO: se cobra el recovery. Cortar la cadena a mitad no lo cobra.
+			_combo_recovery_until = World.now() + tuning.combo_recovery
 			break
 
 		# Ventana de encadene: esperar el siguiente tap o cortar la cadena.
@@ -193,8 +207,9 @@ func run_combo_chain(kind: StringName, steps: int, step_time: float, chain_windo
 		_combo_window_open = false
 		if not _combo_queued:
 			break
+		chain_wait_before_step = maxf(0.0, _combo_queued_time - step_end)
 		if step == branch_step:
-			wait_branch = (_combo_queued_time - step_end) >= branch_threshold
+			wait_branch = chain_wait_before_step >= branch_threshold
 			if wait_branch:
 				total_steps += wait_branch_extra_steps
 		step += 1

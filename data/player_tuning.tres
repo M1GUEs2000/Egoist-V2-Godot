@@ -11,15 +11,15 @@ grounded = 0.35
 
 [sub_resource type="Resource" id="Resource_bouncepush"]
 script = ExtResource("3_push")
-distance = 14.0
-angle_degrees = 45.0
-gravity = -40.0
+distance = 8.0
+angle_degrees = 20.0
+gravity = -5.0
 
 [resource]
 script = ExtResource("1_tuning")
 move_speed = 10.0
 jump_force = 17.0
-second_jump_force = 17.0
+second_jump_force = 20.0
 wall_slide_press_speed = 10.0
 wall_slide_input_dot = 0.3
 wall_slide_stick_time = 0.1
