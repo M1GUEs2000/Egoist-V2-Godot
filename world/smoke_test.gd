@@ -106,10 +106,10 @@ func _ready() -> void:
 	assert(player.vertical_velocity < 0.0)  # gravedad actuando (no hay piso en este test)
 	var y_before := player.global_position.y
 	player.launch(3.0, 0.4)
-	assert(player.launcher.is_launched)
+	assert(player.mover.is_moving())  # el launch ahora es un Mover ascendente (F2)
 	await get_tree().physics_frame
 	await get_tree().physics_frame
-	assert(player.global_position.y > y_before)  # el launcher sube
+	assert(player.global_position.y > y_before)  # el Mover sube
 
 	# Momentum: el exceso drena linealmente; 2x total tarda T, 3x total tarda 2T.
 	var momentum_player := Player.new()
@@ -161,7 +161,7 @@ func _ready() -> void:
 	# Inercia aerea: en el aire el input ya no manda directo — la velocidad de input se
 	# conserva y solo se acerca a su target a air_acceleration (m/s²). Sin stick (headless
 	# no aprieta nada) el target es ZERO: frena gradualmente en vez de cortarse en seco.
-	player.launcher.cancel()
+	player.cancel_launch()
 	player.dash.cancel()
 	player.tuning.air_acceleration = 10.0
 	player.locomotion.set_air_velocity(Vector3.RIGHT * 6.0)
@@ -171,7 +171,7 @@ func _ready() -> void:
 	assert(air_step.is_equal_approx(Vector3.RIGHT * 4.0))
 
 	# EnemyBounce: gracia, stomp, doble salto intacto, cooldown por enemigo y techo global.
-	player.launcher.cancel()
+	player.cancel_launch()
 	player.dash.cancel()
 	player.air_state = Player.AirState.AIRBORNE
 	player.tuning.enemy_bounce_up_speed = 7.2
@@ -278,55 +278,32 @@ func _ready() -> void:
 	assert(player.bump_velocity.is_equal_approx(Vector3.FORWARD * dash_block.dash_bop_forward_speed))
 	assert(is_equal_approx(player.vertical_velocity, dash_block.dash_vertical_bop_speed))
 
-	# AirKillReset: cargar en aire reduce cada vez menos la caida vertical; una kill aerea
-	# resetea la secuencia junto con doble salto y airdash.
+	# Carga aerea: cuelga al jugador con un Floater (sin desgaste por uso — cada carga abre la
+	# misma ventana). AirKillReset ya solo devuelve doble salto y airdash.
 	player.air_state = Player.AirState.AIRBORNE
-	player.tuning.air_charge_fall_reduction_steps = [1.0, 0.8, 0.5, 0.1]
+	player.tuning.air_charge_float_duration = 0.35
+	player.tuning.air_charge_float_fall_scale = 0.15
+	player.floater.cancel_float()
 	player.vertical_velocity = -20.0
-	player.apply_air_charge_fall_control()
-	assert(is_equal_approx(player.vertical_velocity, 0.0))
-	player.vertical_velocity = -20.0
-	player.apply_air_charge_fall_control()
-	assert(is_equal_approx(player.vertical_velocity, -4.0))
-	player.vertical_velocity = -20.0
-	player.apply_air_charge_fall_control()
-	assert(is_equal_approx(player.vertical_velocity, -10.0))
-	player.vertical_velocity = -20.0
-	player.apply_air_charge_fall_control()
-	assert(is_equal_approx(player.vertical_velocity, -18.0))
-	player.vertical_velocity = -20.0
-	player.apply_air_charge_fall_control()
-	assert(is_equal_approx(player.vertical_velocity, -18.0))
-	player.reset_air_charge_fall_control()
-	player.vertical_velocity = -20.0
-	player.apply_air_charge_fall_control()
-	assert(is_equal_approx(player.vertical_velocity, 0.0))
+	player.apply_air_charge_float()
+	assert(player.floater.is_floating())
+	assert(is_equal_approx(player.floater.fall_scale(), 0.15))
 
-	player.vertical_velocity = -20.0
-	player.apply_air_charge_fall_control()
 	player._can_double_jump = false
 	player.dash._can_airdash = false
 	player.apply_air_kill_reset()
 	assert(player._can_double_jump)
 	assert(player.dash._can_airdash)
-	player.vertical_velocity = -20.0
-	player.apply_air_charge_fall_control()
-	assert(is_equal_approx(player.vertical_velocity, 0.0))
 
 	# WeaponBase.arm_push: empuja hits acumulados, hits tardíos, y se desarma al cancelar
 	var push_settings := PushSettings.new()
 	push_settings.distance = 7.0
 	var weapon := _make_test_weapon(player, push_settings)
-	player.vertical_velocity = -20.0
-	player.apply_air_charge_fall_control()
 	player._can_double_jump = false
 	player.dash._can_airdash = false
 	weapon.register_weapon_hit(_make_hurtbox(_make_push_probe()), true)
 	assert(player._can_double_jump)
 	assert(player.dash._can_airdash)
-	player.vertical_velocity = -20.0
-	player.apply_air_charge_fall_control()
-	assert(is_equal_approx(player.vertical_velocity, 0.0))
 
 	var probe_a := _make_push_probe()
 	var hurtbox_a := _make_hurtbox(probe_a)
@@ -394,10 +371,10 @@ func _ready() -> void:
 	# El AOE aereo es un cilindro dimensionado desde tuning (radio + altura), no una esfera.
 	assert(mace._air_slam_shape.shape is CylinderShape3D)
 	assert(is_equal_approx((mace._air_slam_shape.shape as CylinderShape3D).radius, mace_tuning.air_y_aoe_radius))
-	player.launcher.cancel()
+	player.cancel_launch()
 	mace.run_launcher_window(mace._launcher_hitbox, 2.0, 0.1, 0.01, 0.01, false)
 	await get_tree().create_timer(0.04).timeout
-	assert(not player.launcher.is_launched)
+	assert(not player.mover.is_moving())  # launches_player=false: el Mover del player no arranca
 
 	player.meter.gain_bars(2.0)
 	var meter_before_y := player.meter.meter()
@@ -415,7 +392,7 @@ func _ready() -> void:
 	# Y aereo: al clavar un enemigo EN EL AIRE el jugador rebota arriba+adelante ("grados de
 	# rebote", la direccion de la caida), no se queda clavado ni se lanza recto, y NO gasta el
 	# doble salto. Esa es la ventana para perseguir a los enemigos que el AOE rebota a tu altura.
-	player.launcher.cancel()
+	player.cancel_launch()
 	player.air_state = Player.AirState.AIRBORNE
 	player.vertical_velocity = -20.0
 	player.set_momentum(Vector3.RIGHT * 12.0)
@@ -464,6 +441,8 @@ func _ready() -> void:
 	airborne_enemy.velocity = Vector3.FORWARD * 12.0
 	airborne_enemy.apply_stun(0.5)
 	assert(airborne_enemy._airborne_until >= airborne_enemy._stunned_until)
+	# (F3) El hang del juggle lo sostiene el Floater: stunear en el aire tiene que dejarlo flotando.
+	assert(airborne_enemy.floater.is_floating())
 	var airborne_x_before := airborne_enemy.velocity.x
 	airborne_enemy.tick_base(0.1)
 	assert(absf(airborne_enemy.velocity.x) < absf(airborne_x_before))

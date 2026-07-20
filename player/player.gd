@@ -36,6 +36,12 @@ var _plunge_speed := 0.0
 @onready var action_world_switch: ActionWorldSwitchModifier = $ActionWorldSwitchModifier
 @onready var lock_on: LockOn = $LockOn
 @onready var arm: PlayerArm = $Arm
+## Floater (primitiva vertical): politica de caida temporal. Se instancia por codigo en _ready, no
+## es nodo de escena. Ver combat/floater.gd y obsidian/Plan Autoridad Vertical.
+var floater: Floater
+## Mover (primitiva vertical): recorrido por trayectoria; hoy lleva el launcher ascendente (antes
+## PlayerLauncher.start_launch/tick_launch). Se instancia por codigo en _ready. Ver combat/mover.gd.
+var mover: Mover
 @onready var _run_dust: GPUParticles3D = get_node_or_null("RunDust") as GPUParticles3D
 @onready var _mesh: MeshInstance3D = get_node_or_null("Mesh") as MeshInstance3D
 
@@ -60,7 +66,17 @@ func _ready() -> void:
 	floor_slide.setup(self)
 	enemy_bounce.setup(self)
 	air_kill_reset.setup(self)
-	dash.setup(self, locomotion, launcher.register_air_hit_stall, launcher.cancel)
+	floater = Floater.new()
+	floater.name = "Floater"
+	add_child(floater)
+	floater.setup(self)
+	mover = Mover.new()
+	mover.name = "Mover"
+	add_child(mover)
+	mover.setup(self, floater)
+	mover.mover_finished.connect(_on_launch_mover_ended)
+	mover.mover_cancelled.connect(_on_launch_mover_ended)
+	dash.setup(self, locomotion, launcher.register_air_hit_stall, cancel_launch)
 	combat.setup(self)
 	arm.setup(self)
 	stun.stunned_started.connect(_on_stunned_started)
@@ -111,12 +127,12 @@ func _physics_process(delta: float) -> void:
 		_tick_stunned(delta)
 		return
 
-	if launcher.is_launched:
+	if mover.is_moving():
 		_set_run_dust(false)
 		wall_slide.cancel()
 		floor_slide.cancel()
 		enemy_bounce.cancel()
-		launcher.tick_launch(delta)  # el launcher controla el movimiento
+		mover.tick(delta)  # el Mover controla el movimiento (launcher ascendente, ex tick_launch)
 		return
 
 	# Dodge bufferizado (pedido pasado el umbral del golpe): sale apenas el golpe termina.
@@ -141,11 +157,11 @@ func _physics_process(delta: float) -> void:
 		# se borra para que al soltarse el lock no reaparezca el rumbo previo al salto.
 		locomotion.set_air_velocity(Vector3.ZERO)
 
-	# Freeze de caida del Brazo (solo la vertical): mientras dure, la caida se congela en 0 sin
-	# tocar el horizontal; al soltar, launcher restaura el momentum de caida previo (ver
-	# PlayerLauncher.consume_air_freeze).
-	if launcher.consume_air_freeze():
-		vertical_velocity = 0.0
+	# Politica vertical de los ataques: UNA sola, el Floater. Sostiene el hang del sweet spot, el
+	# air-hit-stall del combo aereo y el freeze del Brazo — los tres son lo mismo (una ventana con
+	# su escala de caida), asi que ninguno tiene sistema propio.
+	if floater.is_floating():
+		vertical_velocity = floater.apply_fall(vertical_velocity, tuning.gravity, delta)
 	else:
 		vertical_velocity += tuning.gravity * launcher.gravity_scale() * delta
 	# Plunge en curso: la caída es constante a la velocidad pedida — pisa gravedad, stall
@@ -168,7 +184,7 @@ func _physics_process(delta: float) -> void:
 		dash.restore_airdash()
 		_set_double_jump_available(true)
 		launcher.reset_air_stall()
-		air_kill_reset.reset_air_charge_fall_control()
+		floater.cancel_float()  # aterrizar corta el hang del Floater igual que el air stall viejo
 		wall_slide.cancel()
 	else:
 		air_state = AirState.AIRBORNE
@@ -203,6 +219,7 @@ func _on_jump() -> void:
 		# second_jump_force llegaba diez veces mas alto. air_stall_max_rise no alcanzaba: capea la
 		# velocidad al REGISTRAR el stall, no la de un salto posterior.
 		launcher.reset_air_stall()
+		floater.cancel_float()  # el doble salto sale con gravedad normal: cierra el hang del Floater
 		vertical_velocity = tuning.second_jump_force
 		air_state = AirState.AIRBORNE
 
@@ -227,11 +244,13 @@ func has_double_jump() -> bool:
 func restore_airdash() -> void:
 	dash.restore_airdash()
 
-func apply_air_charge_fall_control() -> void:
-	air_kill_reset.apply_air_charge_fall_control()
-
-func reset_air_charge_fall_control() -> void:
-	air_kill_reset.reset_air_charge_fall_control()
+## Empezar una carga en el aire cuelga al jugador con un Floater, igual que cualquier otro ataque
+## que sostiene. Antes era un freno de caida propio con desgaste por uso (air_charge_fall_control);
+## ahora es el mismo primitivo que todo lo demas y sin escalado.
+func apply_air_charge_float() -> void:
+	if is_on_floor():
+		return
+	floater.start_float(tuning.air_charge_float_duration, tuning.air_charge_float_fall_scale)
 
 func apply_air_kill_reset() -> void:
 	air_kill_reset.apply_air_kill_reset()
@@ -282,6 +301,8 @@ func apply_stun(duration: float = -1.0, mode := PlayerStun.Mode.STILL,
 	floor_slide.cancel()
 	enemy_bounce.cancel()
 	launcher.cancel()
+	mover.cancel_mover(Mover.CancelReason.STUN)  # el stun corta un launch en curso
+	floater.cancel_float()  # el stun corta cualquier hang del Floater
 	dash.cancel()
 	if combat != null:
 		combat.cancel_input()
@@ -306,17 +327,31 @@ func fire_action_world_switch() -> void:
 func register_air_hit_stall(scale := 1.0, cuts_momentum := true) -> void:
 	launcher.register_air_hit_stall(scale, cuts_momentum)
 
-## Golpe aereo del Brazo: pausa la caida `duration` seg y la retoma completa (vertical), y decelera
-## el momentum horizontal por `horizontal_keep` (ver PlayerLauncher.register_arm_air_freeze).
-func register_arm_air_freeze(duration: float, horizontal_keep: float) -> void:
-	launcher.register_arm_air_freeze(duration, horizontal_keep)
+## Golpe aereo del Brazo. VERTICAL: un Floater de hold total (`fall_scale` 0) por `duration` seg —
+## el mismo primitivo que el resto de los ataques, sin sistema propio. A diferencia del freeze viejo
+## que reemplaza, al terminar la ventana la caida arranca de 0 en vez de retomar la velocidad previa.
+## HORIZONTAL: decelera el momentum (bump) por `horizontal_keep` (0-1) en el acto; no es una pausa,
+## es un freno que decrece con cada golpe, y por eso no es asunto del Floater.
+func register_arm_air_hit(duration: float, horizontal_keep: float) -> void:
+	if is_on_floor():
+		return
+	bump_velocity *= clampf(horizontal_keep, 0.0, 1.0)
+	floater.start_float(duration, 0.0)
 
 func notify_aerial_attack(duration: float) -> void:
 	launcher.notify_aerial_attack(duration)
 
-## Hang propio de un move: frena la caída y sostiene al jugador, sin gastarle el doble salto.
-func hover(duration: float) -> void:
-	launcher.hover(duration)
+## Pide un Floater para el propio jugador (lo usa un ataque que quiere colgarlo en el aire). Frena
+## la caída como el viejo hover: no actúa en piso ni pisa una subida, y snapea la vertical a 0 para
+## que el hang se lea como una pausa real. `fall_scale` 0 = hold total; 0.15 = deriva lenta (como el
+## air stall). No gasta el doble salto: la ventana existe para que el jugador lo use. La duración y el
+## fall_scale los define el ataque (por arma/ataque, en su tuning). Ver combat/floater.gd.
+func request_float(duration: float, fall_scale: float) -> void:
+	if is_on_floor() or vertical_velocity > 0.0:
+		return
+	vertical_velocity = 0.0
+	air_state = AirState.AIRBORNE
+	floater.start_float(duration, fall_scale)
 
 func attack_step(duration: float) -> void:
 	locomotion.attack_step(duration)
@@ -360,6 +395,8 @@ func bump(dir: Vector3, h_speed: float, v_speed: float) -> void:
 	floor_slide.cancel()
 	enemy_bounce.cancel()
 	launcher.cancel()
+	mover.cancel_mover(Mover.CancelReason.SUPERSEDED)  # un bump corta un launch en curso
+	floater.cancel_float()  # un bump (knockback/rebote) corta el hang del Floater
 	dash.cancel()
 	var horizontal := Vector3(dir.x, 0.0, dir.z)
 	if horizontal.length_squared() > 0.0001:
@@ -388,7 +425,36 @@ func launch(height: float, hang_time: float, rise_time: float = World.LAUNCH_RIS
 	enemy_bounce.cancel()
 	stun.cancel()
 	dash.cancel()
-	launcher.start_launch(height, hang_time, rise_time)
+	floater.cancel_float()  # un launch nuevo reemplaza cualquier hang del Floater en curso
+	# Mover ascendente (ex launcher.start_launch/tick_launch): sube `height` a velocidad constante en
+	# `rise_time` y al terminar detona su Floater (el hang del launcher). `hang_time` es para el
+	# ENEMIGO; el jugador flota con sus propios knobs, igual que el launcher viejo lo ignoraba.
+	var s := MoverSettings.new()
+	s.direction = Vector3.UP
+	s.distance = height
+	s.speed = height / maxf(0.01, rise_time)
+	s.acceleration = 0.0
+	s.stop_on = MoverSettings.STOP_ON_DISTANCE
+	# Float del jugador tras la subida: el launcher viejo tenia dos fases (float 0.15@0.30, fall
+	# 0.30@0.85). F2 las colapsa en un Floater unico (duracion total al fall_scale de la fase float).
+	# Mapeo feel-sensible: retunear launcher_float_duration/gravity/fall_duration si hace falta.
+	s.float_duration = tuning.launcher_float_duration + tuning.launcher_fall_duration
+	s.float_fall_scale = tuning.launcher_float_gravity
+	air_state = AirState.AIRBORNE
+	vertical_velocity = 0.0
+	mover.start_mover(s)
+
+## El Mover del launcher termino o se cancelo: sincroniza la vertical del glue (el Mover maneja
+## velocity directo; el resto del player usa vertical_velocity). La deja en 0 para que el Floater del
+## hang —que el propio Mover ya detono al terminar— y la gravedad arranquen limpios.
+func _on_launch_mover_ended(_reason: int) -> void:
+	vertical_velocity = 0.0
+
+## Cancela un launch en curso (Mover ascendente) y el estado aereo del launcher viejo (air-stall,
+## float). Lo usan el dash (via callback en dash.setup), el bump y los resets de estado.
+func cancel_launch() -> void:
+	mover.cancel_mover(Mover.CancelReason.SUPERSEDED)
+	launcher.cancel()
 
 func _tick_stunned(delta: float) -> void:
 	wall_slide.cancel()

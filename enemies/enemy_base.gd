@@ -64,6 +64,9 @@ static func can_damage_enemy(attacker: EnemyBase, target: EnemyBase) -> bool:
 
 @export var airborne_gravity := -20.0
 @export var airborne_max_time := 4.0
+## Tope de distancia del Mover de spike (slam). El spike termina de verdad al tocar el piso
+## (STOP_ON_FLOOR); esto es solo la red de seguridad para que nunca baje infinito si no hay suelo.
+@export var airborne_max_fall_distance := 100.0
 @export var death_destroy_delay := 0.4
 @export var normal_color := Color(0.9, 0.2, 0.2, 1.0)
 @export var inactive_color := Color(0.55, 0.55, 0.55, 1.0)
@@ -196,12 +199,26 @@ var _own_materials: Dictionary[MeshInstance3D, StandardMaterial3D] = {}
 @onready var ground_sense: Area3D = get_node_or_null("GroundSense") as Area3D
 @onready var ragdoll_body: RigidBody3D = get_node_or_null("Ragdoll") as RigidBody3D
 @onready var _body_shape: CollisionShape3D = get_node_or_null("CollisionShape3D") as CollisionShape3D
+## Floater (primitiva vertical): politica de caida temporal. Se instancia por codigo en _ready, no
+## es nodo de escena (asi no hay que tocar cada escena de enemigo). Ver combat/floater.gd.
+var floater: Floater
+## Mover (primitiva vertical): recorrido por trayectoria; hoy lleva la subida del launch (ex
+## _launch_routine). Se instancia por codigo en _ready. Ver combat/mover.gd.
+var mover: Mover
 
 func _ready() -> void:
 	add_to_group("enemy")
 	collision_layer = World.LAYER_ENEMY
 	collision_mask = World.LAYER_WORLD | World.LAYER_PLAYER | World.LAYER_ENEMY
 	_air_gravity = airborne_gravity
+	floater = Floater.new()
+	floater.name = "Floater"
+	add_child(floater)
+	floater.setup(self)
+	mover = Mover.new()
+	mover.name = "Mover"
+	add_child(mover)
+	mover.setup(self, floater)
 	poise.poise_max = poise_max
 	poise.armor_bonus = armor_poise_bonus
 	poise.decay_per_second = poise_decay_per_second
@@ -424,6 +441,11 @@ func apply_stun(duration: float, feedback_color := Color.TRANSPARENT) -> void:
 	if is_airborne():
 		# Suspendido mientras dure el stun (juggle): cae cuando el stun termina.
 		# airborne_max_time NO va aca; es solo el tope de seguridad en _update_airborne.
+		# (F3) El hold ahora lo sostiene el Floater, con hold total como el `_airborne_until` viejo.
+		# La renovacion del Floater es max(actual, ahora+duracion), igual que la del timer que
+		# reemplaza, asi que el juggle sigue acumulando y nunca acorta un hang mas largo en curso.
+		if floater != null:
+			floater.start_float(_stunned_until - World.now(), 0.0)
 		_airborne_until = maxf(_airborne_until, _stunned_until)
 		# Golpeado en el aire = queda acostado (el hang no se toca, solo la pose).
 		_lying = true
@@ -468,8 +490,20 @@ func launch(height: float, hang_time: float, stun: StunSettings = null,
 		_set_lying(true)
 	_air_gravity = airborne_gravity  # el launcher cae con la gravedad propia del enemigo
 	velocity = Vector3.ZERO
-	_launch_id += 1
-	_launch_routine(_launch_id, height, hang_time)
+	# Mover ascendente (ex _launch_routine): sube `height` a velocidad constante en LAUNCH_RISE_TIME y
+	# al terminar detona el Floater del hang (hold total `hang_time`). `_airborne_until = now` apaga el
+	# hold viejo (ahora sostiene el Floater) y deja airborne_max_time contando como tope de seguridad.
+	_airborne_until = World.now()
+	_cancel_air_hold()  # el hang del launch nuevo manda: no hereda el hold del juggle anterior
+	var s := MoverSettings.new()
+	s.direction = Vector3.UP
+	s.distance = height
+	s.speed = height / maxf(0.01, World.LAUNCH_RISE_TIME)
+	s.acceleration = 0.0
+	s.stop_on = MoverSettings.STOP_ON_DISTANCE
+	s.float_duration = hang_time
+	s.float_fall_scale = 0.0  # hold total en el tope, como el _airborne_until viejo
+	mover.start_mover(s)
 	return true
 
 func _launch_routine(id: int, height: float, hang_time: float) -> void:
@@ -485,11 +519,23 @@ func _launch_routine(id: int, height: float, hang_time: float) -> void:
 		return
 	_airborne_until = World.now() + hang_time
 
+## Spike al piso: Mover DOWN que termina al tocar suelo. Antes era `velocity.y = -down_speed` mas la
+## gravedad acumulando (la bajada aceleraba); el Mover baja a velocidad CONSTANTE, igual que el
+## plunge del jugador con el que este spike va a la par. Sin Floater al final: al tocar el piso
+## manda el aterrizaje (o el rebote, si `_slam_bounce` quedo armado).
 func slam(down_speed: float) -> void:
 	if not can_receive_hit() or not is_stunned() or not is_airborne() or _ragdolling:
 		return
 	_airborne_until = World.now()
-	velocity.y = -absf(down_speed)
+	_cancel_air_hold()
+	var s := MoverSettings.new()
+	s.direction = Vector3.DOWN
+	s.distance = airborne_max_fall_distance
+	s.speed = absf(down_speed)
+	s.acceleration = 0.0
+	s.stop_on = MoverSettings.STOP_ON_DISTANCE | MoverSettings.STOP_ON_FLOOR
+	s.float_duration = 0.0
+	mover.start_mover(s)
 
 ## Rebote VERTICAL: baja y, al tocar el piso, sube a una altura objetivo con hang. Lo usa el Y
 ## cargado aereo de la Espada (spike + rebote hasta tu altura).
@@ -544,6 +590,7 @@ func push(direction: Vector3, settings: PushSettings) -> void:
 	# pedida. airborne_max_time queda solo como tope de seguridad en _update_airborne.
 	_air_gravity = settings.gravity
 	_airborne_until = World.now()
+	_cancel_air_hold()
 	_push_settings = settings
 	_push_bounced = false
 	_start_push_arc(direction.normalized(), settings.distance)
@@ -747,6 +794,13 @@ func _update_combat_state() -> void:
 	# poise queda congelado: no decae el acumulado ni corre el recovery_time. Ver combat/poise.gd.
 	poise.set_paused(is_airborne() or is_stunned() or _ragdolling)
 
+## Apaga el hang del Floater. Va junto a cada `_airborne_until = World.now()`: los moves que se
+## adueñan de la vertical (slam, push, pique) tienen que matar el hold del juggle, si no el
+## Floater del stun les sostiene la vertical en 0 y el desplazamiento nunca sale.
+func _cancel_air_hold() -> void:
+	if floater != null:
+		floater.cancel_float()
+
 func _begin_airborne() -> void:
 	if air_state == AirState.AIRBORNE:
 		return
@@ -761,7 +815,17 @@ func _update_airborne(delta: float) -> void:
 	# DISTANCIA, y frenar el horizontal a media trayectoria lo haria caer corto siempre.
 	if is_stunned() and not _bouncing and not _push_active:
 		_tick_stun_knockback(delta)
-	if World.now() < _airborne_until and velocity.y <= 0.0:
+	if mover != null and mover.is_moving():
+		# Mover (nuevo): durante la subida del launch el Mover es dueno del movimiento (ex
+		# _launch_routine). Corre antes que todo: sin gravedad, sin hold, sin deteccion de aterrizaje.
+		mover.tick(delta)
+		return
+	if floater != null and floater.is_floating():
+		# Floater (nuevo): politica de caida del ataque. Prioridad sobre el hold de _airborne_until.
+		# Lo detona el Mover al terminar la subida (hang del launch); mientras esta activo sostiene
+		# la vertical y el resto de _update_airborne (aterrizaje, push arc) sigue corriendo.
+		velocity.y = floater.apply_fall(velocity.y, _air_gravity, delta)
+	elif World.now() < _airborne_until and velocity.y <= 0.0:
 		velocity.y = 0.0
 	else:
 		velocity.y += _air_gravity * delta
@@ -816,6 +880,7 @@ func _do_bounce_arc() -> void:
 	_bouncing = true
 	_air_gravity = _bounce_gravity  # el arco cae con la gravedad del pique
 	_airborne_until = World.now()   # sin hang: arco balistico puro
+	_cancel_air_hold()
 	velocity = _bounce_dir * _bounce_forward_speed
 	velocity.y = _bounce_up_speed
 	_set_lying(true)
@@ -827,6 +892,7 @@ func _do_bounce_arc() -> void:
 func _land() -> void:
 	air_state = AirState.GROUNDED
 	velocity = Vector3.ZERO
+	_cancel_air_hold()  # tocar el piso corta el hang, igual que en el Player
 	_bouncing = false
 	_push_active = false
 	_push_bounced = false

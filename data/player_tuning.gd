@@ -297,7 +297,10 @@ class_name PlayerTuning extends Resource
 ## Escala de gravedad al atacar en el aire SIN conectar: cae MÁS fuerte que lo normal.
 @export var aerial_whiff_fall_gravity := 1.6
 
-@export_group("Air charge fall")
-## Reduccion de caida al empezar cargas en el aire. 1.0 reinicia la caida a 0; 0.8 deja
-## el 20% de la velocidad vertical negativa; al agotarse la lista se repite el ultimo valor.
-@export var air_charge_fall_reduction_steps: Array[float] = [1.0, 0.8, 0.5, 0.1]
+@export_group("Air charge float")
+## Cargar en el aire cuelga al jugador con un Floater (mismo primitivo que el resto). Reemplaza al
+## viejo freno de caida escalonado: ya no hay "desgaste" por uso, cada carga aerea abre la misma
+## ventana. El desgaste queda como idea futura del Floater. 0 = cargar en aire no sostiene.
+@export var air_charge_float_duration := 0.35
+## Escala de caida durante esa ventana. 0 = hold total; 0.15 = deriva lenta (como el air stall).
+@export_range(0.0, 1.0) var air_charge_float_fall_scale := 0.15

@@ -113,7 +113,7 @@ func _on_press(weapon: WeaponBase, slot: World.Slot) -> void:
 func _fire_hold(weapon: WeaponBase, slot: World.Slot) -> void:
 	if not _air_charge_fall_applied:
 		_air_charge_fall_applied = true
-		_body.apply_air_charge_fall_control()
+		_body.apply_air_charge_float()
 	_attack_kind = AttackKind.CHARGED_X if slot == World.Slot.X else AttackKind.CHARGED_Y
 	# El sweet spot se resuelve con la MISMA lectura que el nivel: held_duration ya dejo de
 	# contar al disparar el hold, asi que un cargado bufferizado no se gana la ventana por
@@ -149,7 +149,7 @@ func _process(delta: float) -> void:
 				and _charging_weapon.tuning.in_sweet_spot(buffer.held_duration()))
 		if not _air_charge_fall_applied and charge_progress >= 1.0:
 			_air_charge_fall_applied = true
-			_body.apply_air_charge_fall_control()
+			_body.apply_air_charge_float()
 	if weapons_out():
 		return
 	for weapon in _weapons():

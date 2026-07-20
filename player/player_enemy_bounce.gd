@@ -29,7 +29,7 @@ func update_after_move(horizontal_velocity: Vector3) -> void:
 			return
 
 func try_bounce(input_dir: Vector3) -> bool:
-	if _body == null or _body.is_on_floor() or _body.launcher.is_launched or _body.dash.is_dashing:
+	if _body == null or _body.is_on_floor() or _body.mover.is_moving() or _body.dash.is_dashing:
 		return false
 	if World.now() - _last_contact_time > _body.tuning.enemy_bounce_grace:
 		return false

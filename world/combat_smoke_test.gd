@@ -5,6 +5,8 @@ extends Node3D
 ## (ver combat/poise.gd), no golpe a golpe.
 
 func _ready() -> void:
+	_test_movement_contracts()
+	_test_floater_logic()
 	await _test_poise_meter()
 	_test_enemy_damage_affinity()
 
@@ -95,6 +97,10 @@ func _ready() -> void:
 	parry_enemy.resolve_parry(player, Vector3.FORWARD)
 	assert(is_equal_approx(parry_enemy.health.current, hp_before))  # el parry NO hace HP, solo poise
 	assert(parry_enemy.is_stunned())                                # quebro: entro al estado
+	# F1: un Floater sobre el enemigo NO toca el contrato de stun — sigue stuneado (juggleable).
+	parry_enemy.floater.start_float(0.5, 0.0)
+	assert(parry_enemy.floater.is_floating())
+	assert(parry_enemy.is_stunned())
 	assert(parry_enemy._stun_feedback_color.is_equal_approx(parry_enemy.parry_tuning.cyan_color))
 	assert(parry_enemy.incoming_damage_multiplier() > 1.0)          # ventana vulnerable abierta
 
@@ -290,6 +296,81 @@ func _ready() -> void:
 
 	print("COMBAT SMOKE OK")
 	get_tree().quit()
+
+## Contratos F0 de Mover/Floater (ver obsidian/Plan Autoridad Vertical). Todavia SIN comportamiento:
+## esto fija la superficie tipada (campos, metodos, senales, razones) antes de migrar en F1/F2. No
+## invoca start_float/start_mover (aun son stubs que avisan): solo verifica que la API exista.
+func _test_movement_contracts() -> void:
+	# MoverSettings: perfil de recorrido. DISTANCE es el default seguro; los stop_on son flags.
+	var settings := MoverSettings.new()
+	assert(settings.stop_on == MoverSettings.STOP_ON_DISTANCE)
+	assert(settings.distance > 0.0)                 # tope de seguridad siempre positivo
+	assert(is_equal_approx(settings.float_duration, 0.0))  # 0 = no pide Floater por defecto
+	var combo := MoverSettings.STOP_ON_WALL | MoverSettings.STOP_ON_ENEMY
+	assert(combo & MoverSettings.STOP_ON_WALL)      # los bits se combinan sin pisarse
+	assert(combo & MoverSettings.STOP_ON_ENEMY)
+	assert(not (combo & MoverSettings.STOP_ON_FLOOR))
+
+	# Floater: primitiva vertical #1. Arranca inerte y expone su contrato completo.
+	var floater := Floater.new()
+	assert(floater.has_method("setup"))
+	assert(floater.has_method("start_float"))
+	assert(floater.has_method("cancel_float"))
+	assert(floater.has_method("is_floating"))
+	assert(not floater.is_floating())
+	floater.free()
+
+	# Mover: primitiva vertical #2. Contrato + senales + razones tipadas de fin/cancelacion.
+	var mover := Mover.new()
+	assert(mover.has_method("setup"))
+	assert(mover.has_method("start_mover"))
+	assert(mover.has_method("cancel_mover"))
+	assert(mover.has_method("is_moving"))
+	assert(not mover.is_moving())
+	assert(mover.has_signal("mover_finished"))
+	assert(mover.has_signal("mover_cancelled"))
+	assert(Mover.FinishReason.DISTANCE != Mover.FinishReason.FLOOR)   # razones de fin distintas
+	assert(Mover.CancelReason.STUN != Mover.CancelReason.SUPERSEDED)  # razones de cancel distintas
+	# start/cancel alternan is_moving() (F2). El recorrido en si (tick) necesita un cuerpo con
+	# move_and_slide, asi que su feel se valida jugando, no aca.
+	mover.start_mover(MoverSettings.new())
+	assert(mover.is_moving())
+	mover.cancel_mover(Mover.CancelReason.SUPERSEDED)
+	assert(not mover.is_moving())
+	mover.free()
+
+## Comportamiento F1 del Floater (ver combat/floater.gd): renovacion del timer con max(), el ultimo
+## fall_scale gana, cancelacion, escala de caida e independencia entre instancias. Logica pura del
+## componente, sin cuerpo ni frames de fisica.
+func _test_floater_logic() -> void:
+	var f := Floater.new()
+	f.setup(null)  # el cuerpo no participa en la logica de tiempo
+	assert(not f.is_floating())
+	f.start_float(1.0, 0.15)
+	assert(f.is_floating())
+	assert(is_equal_approx(f.fall_scale(), 0.15))
+	# Renovar con MENOS tiempo no acorta (gana el max); el fall_scale adopta el ultimo que escribe.
+	f.start_float(0.5, 0.6)
+	assert(f.is_floating())
+	assert(is_equal_approx(f.fall_scale(), 0.6))
+	f.start_float(0.0, 0.9)                          # duration <= 0 es no-op
+	assert(is_equal_approx(f.fall_scale(), 0.6))
+	# apply_fall: 0.0 = hold total (siempre 0); intermedio = suma la gravedad escalada.
+	f.start_float(1.0, 0.0)
+	assert(is_equal_approx(f.apply_fall(-9.0, -40.0, 0.1), 0.0))
+	f.start_float(1.0, 0.5)
+	assert(is_equal_approx(f.apply_fall(-3.0, -40.0, 0.1), -3.0 + -40.0 * 0.5 * 0.1))
+	f.cancel_float()
+	assert(not f.is_floating())
+	f.free()
+
+	# Independencia: cada cuerpo tiene su propio timer, no se comparten.
+	var a := Floater.new()
+	var b := Floater.new()
+	a.start_float(1.0, 0.0)
+	assert(a.is_floating() and not b.is_floating())
+	a.free()
+	b.free()
 
 ## El medidor solo, sin escenas: acumulacion, armadura, degradacion y drenaje.
 func _test_poise_meter() -> void:
