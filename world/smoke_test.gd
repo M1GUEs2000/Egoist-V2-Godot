@@ -315,7 +315,7 @@ func _ready() -> void:
 
 	# WeaponBase.arm_push: empuja hits acumulados, hits tardíos, y se desarma al cancelar
 	var push_settings := PushSettings.new()
-	push_settings.horizontal_speed = 7.0
+	push_settings.distance = 7.0
 	var weapon := _make_test_weapon(player, push_settings)
 	player.vertical_velocity = -20.0
 	player.apply_air_charge_fall_control()

@@ -12,8 +12,8 @@ airborne = 1.2
 
 [sub_resource type="Resource" id="Resource_macefinalpush"]
 script = ExtResource("3_push")
-horizontal_speed = 22.0
-up_speed = 15.0
+distance = 22.0
+angle_degrees = 34.0
 gravity = -40.0
 
 [sub_resource type="Resource" id="Resource_macestun"]
@@ -29,8 +29,8 @@ airborne = 1.4
 
 [sub_resource type="Resource" id="Resource_macepush"]
 script = ExtResource("3_push")
-horizontal_speed = 18.0
-up_speed = 8.0
+distance = 13.0
+angle_degrees = 24.0
 gravity = -40.0
 
 [resource]

@@ -27,9 +27,11 @@ func push(direction: Vector3, settings: PushSettings) -> void:
 	if settings == null:
 		settings = PushSettings.new()
 	direction.y = 0.0
+	# Mismo arco geometrico que EnemyBase.push: distancia + angulo, nada de velocidades a mano.
+	var speeds := settings.solve_speeds()
 	if direction.length_squared() > 0.0001:
-		_horizontal_velocity = direction.normalized() * settings.horizontal_speed
-	_vertical_velocity = absf(settings.up_speed)
+		_horizontal_velocity = direction.normalized() * speeds.x
+	_vertical_velocity = speeds.y
 	gravity = settings.gravity  # el dummy tambien respeta el arco del push
 	_airborne_until = World.now() + 4.0
 

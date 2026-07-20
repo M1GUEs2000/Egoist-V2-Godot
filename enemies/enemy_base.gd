@@ -167,6 +167,10 @@ var _bounce_up_speed := 0.0
 var _bounce_forward_speed := 0.0
 var _bounce_gravity := -30.0
 var _launch_id := 0
+var _push_settings: PushSettings
+var _push_active := false     # hay un arco de push vivo (aun le queda presupuesto de caida)
+var _push_cut_y := 0.0        # altura a la que se agota el arco y pasa a caida vertical
+var _push_bounced := false    # ya gasto su unico rebote de pared
 var _air_gravity := 0.0  # gravedad del vuelo actual; el push la override con su propio arco
 var _stun_tween: Tween
 var _squash_tween: Tween
@@ -412,6 +416,10 @@ func apply_stun(duration: float, feedback_color := Color.TRANSPARENT) -> void:
 	stun_started.emit(is_airborne())
 	# El golpe cancela el push (u otro impulso) en curso y lo reemplaza por un retroceso
 	# corto propio del stun, sin acumular momentum previo.
+	# El arco del push muere ACA: su distancia ya no manda, asi que vuelve a correr el decay del
+	# stun (que _update_airborne saltea mientras _push_active). Sin esto el retroceso del golpe
+	# nuevo se quedaba sin freno y el cuerpo seguia de largo con el momentum del arco viejo.
+	_push_active = false
 	_apply_stun_knockback()
 	if is_airborne():
 		# Suspendido mientras dure el stun (juggle): cae cuando el stun termina.
@@ -532,16 +540,57 @@ func push(direction: Vector3, settings: PushSettings) -> void:
 	if settings == null:
 		settings = PushSettings.new()  # defaults seguros si el arma no configuro su push
 	_begin_airborne()
-	# Sin hang: el push es un arco balistico (sube por up_speed y cae por su gravedad).
-	# airborne_max_time queda solo como tope de seguridad en _update_airborne.
+	# Sin hang: el push es un arco balistico que sale al angulo pedido y aterriza a la distancia
+	# pedida. airborne_max_time queda solo como tope de seguridad en _update_airborne.
 	_air_gravity = settings.gravity
 	_airborne_until = World.now()
-	velocity = direction.normalized() * settings.horizontal_speed
-	velocity.y = absf(settings.up_speed)
+	_push_settings = settings
+	_push_bounced = false
+	_start_push_arc(direction.normalized(), settings.distance)
 	# Empujado = cae acostado. Un push sobre un enemigo en el piso tambien lo acuesta: entra igual
 	# a AIRBORNE (arco bajo), sigue su trayectoria y el ragdoll arranca al tocar el suelo.
 	_set_lying(true)
 	push_started.emit()
+
+## Resuelve la velocidad inicial del arco desde la geometria (ver PushSettings): el tiro sale a
+## `angle_degrees` y tiene que pasar por (distance, -fall_height) medido desde ACA. Con el angulo
+## y ese punto fijos hay una sola v0 posible, asi que no se tunea ninguna velocidad a mano.
+## Se llama tanto en el push original como en el rebote de pared (misma forma, otra distancia).
+func _start_push_arc(direction: Vector3, distance: float) -> void:
+	var speeds := _push_settings.solve_speeds(distance)
+	velocity = direction * speeds.x
+	velocity.y = speeds.y
+	_push_active = true
+	# Presupuesto de caida del arco NUEVO: el rebote de pared reinicia su propia altura desde
+	# donde choco, no hereda lo que le quedaba al anterior.
+	_push_cut_y = global_position.y - maxf(0.0, _push_settings.fall_height)
+
+## Gastada la altura, el arco murio: se corta el horizontal y el cuerpo baja a plomo el resto.
+func _tick_push_arc() -> void:
+	if not _push_active or global_position.y > _push_cut_y:
+		return
+	_push_active = false
+	velocity.x = 0.0
+	velocity.z = 0.0
+
+## Choque contra pared a mitad del arco: la devuelve `wall_bounce_distance` metros reflejando
+## contra la normal. Un solo bote por push (_push_bounced): con rebotes encadenados un pasillo
+## angosto deja al enemigo en ping-pong eterno, porque la distancia del bote no decae.
+func _tick_push_wall_bounce() -> void:
+	if not _push_active or _push_bounced or _push_settings == null:
+		return
+	if _push_settings.wall_bounce_distance <= 0.0:
+		return
+	for i in get_slide_collision_count():
+		var normal := get_slide_collision(i).get_normal()
+		if absf(normal.y) > 0.7:
+			continue  # piso/techo: no es pared, lo resuelve el aterrizaje
+		var away := Vector3(normal.x, 0.0, normal.z)
+		if away.length_squared() < 0.0001:
+			continue
+		_push_bounced = true
+		_start_push_arc(away.normalized(), _push_settings.wall_bounce_distance)
+		return
 
 ## Base: un enemigo sin ataques no se puede parriar. GroundedEnemy lo sobreescribe consultando
 ## sus MeleeAttack (la ventana mid-swing) y, si alguno estaba en ventana, llama resolve_parry.
@@ -708,13 +757,17 @@ func _begin_airborne() -> void:
 func _update_airborne(delta: float) -> void:
 	# Durante el pique el arco es dueño del horizontal: el decay del stun lo frenaria y mataria el
 	# rebote genuino. Por eso _bouncing lo saltea (sigue stuneado, pero sin comerse la velocidad).
-	if is_stunned() and not _bouncing:
+	# El push tampoco se come el decay, por la misma razon que el pique: su arco garantiza una
+	# DISTANCIA, y frenar el horizontal a media trayectoria lo haria caer corto siempre.
+	if is_stunned() and not _bouncing and not _push_active:
 		_tick_stun_knockback(delta)
 	if World.now() < _airborne_until and velocity.y <= 0.0:
 		velocity.y = 0.0
 	else:
 		velocity.y += _air_gravity * delta
+	_tick_push_arc()
 	move_and_slide()
+	_tick_push_wall_bounce()
 	# La esfera GroundSense siente el piso un pelo antes que los pies: el ragdoll de un cuerpo
 	# acostado arranca justo antes del contacto real y se ve mas natural (anticipacion). Solo
 	# cuenta despues de haber salido del rango una vez (si no, un push desde el piso dispararia
@@ -775,6 +828,8 @@ func _land() -> void:
 	air_state = AirState.GROUNDED
 	velocity = Vector3.ZERO
 	_bouncing = false
+	_push_active = false
+	_push_bounced = false
 	_air_gravity = airborne_gravity  # limpia el override del push para el proximo vuelo
 
 ## Acuesta al enemigo: la pose horizontal del vuelo (push o stun aereo). Reusa el mismo eje que
