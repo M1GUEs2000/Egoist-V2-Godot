@@ -260,7 +260,7 @@ player_stun_push_speed = 2.0
 [node name="Hand" type="Node3D" parent="MeleeAttack" unique_id=1729610825]
 
 [node name="Pivot" type="Node3D" parent="MeleeAttack/Hand" unique_id=691455168]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -1)
+transform = Transform3D(0.72, 0, 0, 0, 0.72, 0, 0, 0, 0.72, 0, 0, -1)
 
 [node name="BladeMesh" type="MeshInstance3D" parent="MeleeAttack/Hand/Pivot" unique_id=307906946]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.55)

@@ -11,7 +11,7 @@ grounded = 0.35
 
 [sub_resource type="Resource" id="Resource_bouncepush"]
 script = ExtResource("3_push")
-horizontal_speed = 14.0
+horizontal_speed = 10.0
 up_speed = 10.0
 
 [resource]
@@ -37,7 +37,6 @@ wall_slide_wall_jump_max_v_speed = 25.0
 wall_slide_wall_jump_lock_time = 0.35
 enemy_bounce_up_speed = 12.0
 enemy_bounce_away_speed = 17.0
-enemy_bounce_momentum_keep = 0.274
 enemy_bounce_push = SubResource("Resource_bouncepush")
 gravity = -40.0
 momentum_bleed_seconds_per_unit = 0.4
