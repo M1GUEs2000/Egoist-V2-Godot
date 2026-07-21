@@ -27,10 +27,6 @@ radius = 1.6
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_dxisi"]
 
-[sub_resource type="CylinderShape3D" id="CylinderShape3D_air_slam"]
-height = 7.0
-radius = 7.657715
-
 [node name="Maso" type="Node3D" unique_id=703914882]
 script = ExtResource("1_mace")
 tuning = ExtResource("2_tuning")
@@ -73,11 +69,3 @@ script = ExtResource("3_hitbox")
 transform = Transform3D(1, 0, 0, 0, 0.787, 0, 0, 0, 1, 0, -0.032795757, -0.056803823)
 shape = SubResource("BoxShape3D_dxisi")
 debug_color = Color(0.6117647, 0.39607844, 0, 0.8117647)
-
-[node name="AirSlamHitbox" type="Area3D" parent="." unique_id=491503571]
-transform = Transform3D(1.2, 0, 0, 0, 0.5, 0, 0, 0, 1.2, 0.055367947, 0, 0.09573227)
-script = ExtResource("3_hitbox")
-
-[node name="CollisionShape3D" type="CollisionShape3D" parent="AirSlamHitbox" unique_id=871335587]
-transform = Transform3D(0.9999779, 0, 0, 0, 0.9999779, 0, 0, 0, 0.9999779, 0, 3.4999971, 0)
-shape = SubResource("CylinderShape3D_air_slam")

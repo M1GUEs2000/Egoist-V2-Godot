@@ -58,7 +58,12 @@ Mover/Floater anterior, salvo el perfil preparado por ese mismo golpe antes del 
 
 Espada usa Mover/Floater para sus rutas verticales, incluido hop, finisher y plunge. El Float por
 impacto aereo vive en `WeaponTuning`, el whiff conserva gravedad normal y el rebote del Y aereo esta
-desactivado. Mace no forma parte del loadout activo.
+desactivado. Mazo se reconstruyo sobre el mismo contrato (2026-07-21): su launcher terrestre pide un
+`MoverSettings` propio para el enemigo (antes lo tenia cableado en null y no elevaba a nadie); su Y
+cargado aereo se borro por completo en vez de migrarlo, porque dependia de un rebote balistico que
+necesita el "bouncer" todavia sin diseñar (ver [[Plan Autoridad Vertical]] F5). El ground pound de su
+X cargado aereo sigue escribiendo `vertical_velocity` directo a proposito: es una caida recta, no un
+arco balistico.
 
 ## Mano orbital
 

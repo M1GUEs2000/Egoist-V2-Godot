@@ -3,6 +3,12 @@ class_name MaceTuning extends WeaponTuning
 ## Arma de más daño, más knockback, más lenta que la Espada (ver SwordTuning para
 ## el mismo patrón). Tamaños de hitboxes (cabeza, smash, launcher) viven como shapes
 ## en mace.tscn, igual que en sword.tscn.
+##
+## Reconstruido sobre el contrato Mover/Floater (obsidian/Plan Autoridad Vertical):
+## el Y cargado aereo (caida diagonal + AOE + rebote balistico) no forma parte de este
+## build porque depende de un "bouncer" que todavia no existe. En el aire, Y cargado
+## cae al combo aereo normal, como cualquier cargado sin barra. Si el bouncer se
+## implementa mas adelante, ese move se diseña de nuevo desde cero.
 
 @export_group("Combo X")
 @export var combo_window := 0.7
@@ -46,14 +52,13 @@ class_name MaceTuning extends WeaponTuning
 @export var ground_y_launcher_delay := 0.04
 ## Tamano del hitbox del launcher terrestre, en metros (X/Y/Z).
 @export var ground_y_launcher_size := Vector3(3.0, 2.0, 3.0)
-## Altura a la que el launcher terrestre manda enemigos, en metros.
-@export var ground_y_launcher_height := 4.5
-## Tiempo que los enemigos quedan suspendidos tras el launcher terrestre, en segundos.
-@export var ground_y_launcher_hang_time := 1.1
 ## Duracion del hitbox del launcher terrestre, en segundos.
 @export var ground_y_launcher_duration := 0.22
 ## Si el launcher terrestre tambien hace dano ademas de elevar.
 @export var ground_y_launcher_deals_damage := true
+## Recorrido vertical que pide el ENEMIGO golpeado (Mover UP + Floater del hang). El jugador
+## no recibe perfil propio: "eleva enemigos pero no al jugador" (bóveda Mazo).
+@export var ground_y_launcher_enemy_mover: MoverSettings
 
 @export_group("Aéreo")
 # El golpe 2 del tap X aereo arma el `push` heredado de WeaponTuning (mismo campo que usa el
@@ -62,43 +67,11 @@ class_name MaceTuning extends WeaponTuning
 ## Alcance del jab con el mango (golpe 1 del combo aereo X), en metros: la mano extiende el
 ## brazo esta distancia hacia adelante. Golpe corto de preparacion, sin push.
 @export var air_handle_reach := 1.2
-## Caída forzada del X cargado aéreo (ground pound).
+## Caída forzada del X cargado aéreo (ground pound). Escritura directa de vertical_velocity
+## sancionada por el plan (obsidian/Plan Autoridad Vertical, fase F5): es una caida recta, no
+## un arco balistico, y no depende del bouncer.
 @export var air_smash_fall_speed := 22.0
-## Angulo de caida del Y cargado aereo, en grados bajo el horizonte. 90 = vertical puro.
-@export_range(1.0, 89.0) var air_y_fall_angle := 58.0
-## Velocidad total de la caida diagonal del Y cargado aereo, en m/s.
-@export var air_y_fall_speed := 24.0
-## Radio del cilindro del AOE aereo que se dispara al impactar enemigo o suelo, en metros.
-@export var air_y_aoe_radius := 3.5
-## Altura del cilindro del AOE aereo, en metros: tolerancia vertical para alcanzar
-## enemigos en el aire y en el suelo dentro del radio (ver Mazo: hitbox cilindrico).
-@export var air_y_aoe_height := 7.0
-## Velocidad a la que el AOE aereo clava a los enemigos contra el suelo antes de rebotarlos
-## (verbo slam_bounce), en m/s. Analogo al aerial_charged_down_speed de la Espada.
-@export var air_y_down_speed := 30.0
-## Pique del enemigo golpeado en el aire (slam_bounce): velocidad hacia ARRIBA del arco, en m/s.
-@export var air_y_bounce_enemy_up_speed := 15.0
-## Pique del enemigo: velocidad hacia ADELANTE del arco (en tu direccion), en m/s. Junto con
-## up_speed y gravity define la forma del rebote (mas forward = mas rasante y lejos).
-@export var air_y_bounce_enemy_forward_speed := 9.0
-## Gravedad del arco del pique del enemigo, en m/s^2 (negativa). Mas fuerte = pique mas corto y seco.
-@export var air_y_bounce_enemy_gravity := -35.0
-## Altura minima del rebote cuando el AOE explota contra enemigos en el suelo.
-## Evita que "volver a tu altura" sea altura de piso y termine sin elevarlos.
-@export var air_y_ground_launch_height := 4.5
-## Tiempo que los enemigos quedan suspendidos a tu altura tras rebotar, en segundos.
-@export var air_y_launcher_hang_time := 1.1
-## Duracion del AOE aereo una vez impacta enemigo o suelo, en segundos.
-@export var air_y_aoe_duration := 0.18
-## Tiempo maximo que puede durar la caida diagonal antes de apagarse sola, en segundos.
-@export var air_y_max_fall_time := 1.2
-## Rebote del jugador al clavar un enemigo en el aire: angulo por encima de la horizontal, en grados.
-## Fijo, independiente del angulo de caida: 45 = sale a 45° arriba-adelante (en la direccion de la caida).
-@export_range(1.0, 89.0) var air_y_bounce_angle := 45.0
-## Rebote del jugador al clavar un enemigo en el aire: velocidad TOTAL del rebote, en m/s. El angulo
-## lo fija air_y_bounce_angle; esto es solo la fuerza. No gasta el doble salto.
-@export var air_y_bounce_speed := 25.0
-## Sweet spot aéreo (X cargado con vuelta final / Y cargado): congela a los golpeados
-## y extiende el tiempo airborne del jugador mediante su futura ruta Mover/Floater.
+## Sweet spot aéreo (X cargado con vuelta final): congela a los golpeados y extiende el
+## tiempo airborne del jugador mediante su Floater.
 @export var air_freeze_stun: StunSettings
 @export var air_freeze_extra_hang_time := 0.5

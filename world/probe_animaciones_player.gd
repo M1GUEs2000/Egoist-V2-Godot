@@ -304,9 +304,9 @@ func _run_mace() -> void:
 	print("PROBE animaciones_player=mazo_x_cargado_vuelta")
 	await _wait_override_release()
 
-	# Y aereo: tramo estirado a la caida y CORTADO por end_visual_clip al estallar antes.
-	_mace.play_visual_clip(Mace.ANIM_HEAVY, Mace.HEAVY_CHARGED_Y_AIR.x,
-			Mace.HEAVY_CHARGED_Y_AIR.y, 2.0)
+	# Y cargado terrestre: tramo propio, cortado por end_visual_clip como cualquier otro golpe.
+	_mace.play_visual_clip(Mace.ANIM_HEAVY, Mace.HEAVY_CHARGED_Y_GROUND.x,
+			Mace.HEAVY_CHARGED_Y_GROUND.y, 2.0)
 	_tick_controller()
 	assert(_animation_player.current_animation == Mace.ANIM_HEAVY)
 	await _hold(0.3)
@@ -314,7 +314,7 @@ func _run_mace() -> void:
 	_tick_controller()
 	assert(is_equal_approx(_animation_player.speed_scale, 1.0))
 	assert(_animation_player.current_animation == _clip(&"idle_animation"))
-	print("PROBE animaciones_player=mazo_y_aereo_cortado")
+	print("PROBE animaciones_player=mazo_y_terrestre_cortado")
 	_sections_done += 1
 
 # ---- Interrupciones: stun y dash sueltan el clip de arma ----

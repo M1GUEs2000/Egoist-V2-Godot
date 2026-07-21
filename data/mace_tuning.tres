@@ -3,6 +3,7 @@
 [ext_resource type="Script" uid="uid://dovrlefoxx4qi" path="res://data/mace_tuning.gd" id="1_tuning"]
 [ext_resource type="Script" uid="uid://w0b3i18w442a" path="res://data/stun_settings.gd" id="2_stun"]
 [ext_resource type="Script" uid="uid://cprdodv3kypq1" path="res://data/push_settings.gd" id="3_push"]
+[ext_resource type="Script" uid="uid://dsps3sxfd8wmx" path="res://data/mover_settings.gd" id="4_mover"]
 
 [sub_resource type="Resource" id="Resource_maceairfreeze"]
 script = ExtResource("2_stun")
@@ -33,6 +34,12 @@ distance = 13.0
 angle_degrees = 24.0
 gravity = -40.0
 
+[sub_resource type="Resource" id="Resource_ground_y_launcher_enemy_mover"]
+script = ExtResource("4_mover")
+distance = 3.6
+speed = 24.0
+float_duration = 1.1
+
 [resource]
 script = ExtResource("1_tuning")
 smash_angle = 50.0
@@ -43,16 +50,9 @@ charged_final_push = SubResource("Resource_macefinalpush")
 ground_y_dash_distance = 4.0
 ground_y_dash_duration = 0.15
 ground_y_launcher_size = Vector3(5, 2, 5)
-ground_y_launcher_height = 3.6
+ground_y_launcher_enemy_mover = SubResource("Resource_ground_y_launcher_enemy_mover")
 air_handle_reach = 1.0
 air_smash_fall_speed = 25.0
-air_y_fall_angle = 26.0
-air_y_fall_speed = 40.0
-air_y_down_speed = 20.0
-air_y_bounce_enemy_up_speed = 20.0
-air_y_bounce_enemy_gravity = -30.0
-air_y_ground_launch_height = 3.6
-air_y_bounce_angle = 40.619
 air_freeze_stun = SubResource("Resource_maceairfreeze")
 swing_time = 0.5
 stun = SubResource("Resource_macestun")

@@ -438,13 +438,35 @@ Limpieza NO-bouncer hecha en este batch (2026-07-20):
 
 Trabajo original de F5 (queda para cuando se retome, depende del bouncer):
 
-- [ ] Migrar Mazo, hazards y toda otra fuente que escriba vertical directamente.
+- [x] Migrar Mazo, hazards y toda otra fuente que escriba vertical directamente. **Resuelto
+  parcialmente (2026-07-21), ver "Actualizacion Mazo" abajo**: el launcher terrestre ya pide
+  `MoverSettings` real; el ground pound del X cargado aereo queda como excepcion sancionada (caida
+  recta, no arco balistico). Hazards y otras fuentes quedan fuera de este batch.
   (El **Brazo ya esta migrado**: se adelanto en F3, ver esa fase.)
 - [ ] Arcos balisticos del Mazo (`slam_arc` y rebotes): el Mover lineal no los cubre. Se resuelven
   con un "bouncer" (Mover en modo balistico: lanza velocidad + gravedad propia hasta `FLOOR`).
   Diseñar e implementar ese modo es parte de esta fase, o se agenda aparte si crece.
-- [ ] Actualizar [[Combate]], [[Espada]], [[Stun]], [[Reset Aereo por Kill]] y esta nota con
-  nombres finales.
+- [x] Actualizar [[Combate]], [[Espada]], [[Stun]], [[Reset Aereo por Kill]] y esta nota con
+  nombres finales. **[[Combate]] y [[Mazo]] actualizados (2026-07-21) con el estado nuevo del Mazo.**
+
+### Actualizacion Mazo (2026-07-21)
+
+Reconstruccion completa de `Mace`/`MaceTuning` sobre este contrato, sin esperar al bouncer:
+
+- **Y cargado aereo QUITADO, no pospuesto con codigo intacto.** El batch F5 original (2026-07-20)
+  habia dejado `_aerial_hold_y`, `_burst_air_slam`, `_on_air_slam_about_to_hit`, `_on_air_slam_hit` y
+  el nodo `AirSlamHitbox` **intactos** para re-enchufar cuando existiera el bouncer. Se decidio
+  borrar ese codigo entero en vez de sostenerlo muerto: simular un arco balistico con un Mover lineal
+  viola el contrato (`references/contrato-armas.md`), y no hay fecha para el bouncer. Cuando se
+  diseñe, este move se piensa de nuevo desde cero. Sostener Y en el aire sigue cayendo al combo
+  aereo normal, igual que antes.
+- **Launcher terrestre (Y cargado en tierra) corregido.** Tenia un bug silencioso: `_hold_y` llamaba
+  `run_vertical_window(_launcher_hitbox, null, null, ...)`, asi que el hitbox pegaba pero nunca pedia
+  Mover para el enemigo golpeado — pese a que el diseño documentado siempre fue "eleva enemigos pero
+  no al jugador". Ahora pide `MaceTuning.ground_y_launcher_enemy_mover` (Mover UP + Floater del hang),
+  mismo patron que `Sword.ground_charged_y_enemy_mover`. El jugador sigue sin perfil vertical propio;
+  el paso corto es horizontal (`Player.force_dash`).
+- Ver [[Mazo]] para el detalle completo y el estado E0-E4 actualizado (E2, pendiente de playtest).
 
 Salida: no quedan escrituras verticales de combate fuera de Mover, Floater, gravedad base, salto y
 stun. No quedan nombres legacy para sostener aire.
