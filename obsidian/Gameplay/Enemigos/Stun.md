@@ -121,6 +121,14 @@ rebotar sobre un enemigo **no lo desplaza** salvo que ya este stuneado. El jugad
 > [!important]
 > Un golpe que aplica stun mientras el enemigo esta `AIRBORNE` (por `launch` o `push`) cancela el impulso previo, aplica un retroceso corto propio del stun y extiende `_airborne_until` hasta que termine el stun (`maxf(_airborne_until, _stunned_until)`) — queda suspendido en el aire, no cae hasta que el stun expira. `airborne_max_time` sigue siendo solo el tope de seguridad de caida, no compite con esta extension.
 
+## Autoridad vertical
+
+Un ataque que vaya a desplazar al enemigo pide `request_mover(settings, stun, starts_lying, true)`
+en `about_to_hit`. El gate consulta poise sin consumirlo; el dano posterior aplica el stun viendo al
+objetivo ya aereo. Cuando llega otro golpe, `EnemyBase.cancel_vertical_control()` corta el Mover y
+Floater anteriores. Solo el perfil preparado por el mismo golpe se preserva para no cancelarse a si
+mismo. Un `request_float` requiere un enemigo aereo y quebrado/stuneado.
+
 ## Acostado y ragdoll de aterrizaje
 
 > [!important]

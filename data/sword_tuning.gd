@@ -1,6 +1,6 @@
 class_name SwordTuning extends WeaponTuning
 ## Tuning de la Espada (ex SwordWeapon.cs). Instancia editable: data/sword_tuning.tres.
-## Los tamaños de los hitboxes (hoja, disco aéreo, launcher) viven como shapes en
+## Los tamaños de los hitboxes (hoja, disco aéreo, vertical) viven como shapes en
 ## sword.tscn, igual que la cápsula del player.
 
 @export_group("Combo X")
@@ -10,7 +10,7 @@ class_name SwordTuning extends WeaponTuning
 @export var ground_wait_branch_threshold := 0.3
 
 @export_group("Swings (ángulos)")
-## Barrido del golpe Y básico (tap, launcher y cargada aérea).
+## Barrido del golpe Y básico (tap, vertical y cargada aérea).
 @export var strike_angle := 150.0
 ## Medio arco de los swings 1-2 del combo terrestre (de -esto a +esto).
 @export var combo_swing_angle := 70.0
@@ -30,15 +30,10 @@ class_name SwordTuning extends WeaponTuning
 @export var thrust_reach := 1.0
 
 @export_group("X cargado (dash sweet spot)")
-## Recorrido del dash cargado del JUGADOR (ex force_dash → Mover EXCLUSIVO). direction se fija al
-## soltar (forward del jugador); distance/speed dan alcance y velocidad; stop_on deberia ser
-## Distance|Wall (atraviesa enemigos, frena en pared). Los flags pass_through_enemies/boost_momentum/
-## keep_exit_inertia/emit_dash_particles son los extras portados de force_dash. El daño NO sale de
-## aca: lo pone el hitbox propio del dash (charged_dash_* de abajo). La duracion del golpe/animacion
-## se deriva de distance/speed, no hay un knob de duracion aparte.
-@export var charged_dash_mover: MoverSettings
+@export var charged_dash_distance := 5.0
+@export var charged_dash_duration := 0.14
 ## El dash cargado tiene su PROPIO hitbox (en la espada), separado del dash de movimiento
-## del dodge: su daño/stun/tamaño se tunean acá, no en PlayerTuning ni en el Mover.
+## del dodge: su daño/stun/tamaño se tunean acá, no en PlayerTuning.
 @export var charged_dash_damage := 1.0
 @export var charged_dash_hit_radius := 1.1
 @export var charged_dash_stun: StunSettings
@@ -49,20 +44,15 @@ class_name SwordTuning extends WeaponTuning
 @export var sweet_spot_explosion_delay := 0.18
 ## Dano extra que mete la explosion, aparte del dano del propio dash.
 @export var sweet_spot_explosion_damage := 1.0
-## Altura a la que la explosion levanta a cada enemigo, en metros (es un launcher: reusa el
-## hang_time del launcher Y). Ponerlo en 0 deja la explosion sin empuje vertical.
-@export var sweet_spot_explosion_height := 4.5
-## Segundos de stun que le sobran al enemigo DESPUES de completar el vuelo de la explosion.
-## El stun de la explosion no se toma tal cual del dash: se estira para cubrir subida + hang
-## enteros y este margen se suma al final, asi el enemigo nunca se despierta suspendido en el
-## aire. Subirlo lo deja mas tiempo vendido al aterrizar; 0 = se despierta justo al caer.
-@export var sweet_spot_explosion_stun_extra := 0.15
-## Hang del sweet spot para el JUGADOR (Floater propio). Cuando la explosion conecta, sostiene al
-## jugador en el aire para ver el estallido en vez de caerse encima. `duration` = segundos de hang
-## PROPIO del move (no escala el air-hit-stall generico ni gasta el doble salto), cuenta desde la
-## explosion encima del stall del dash; 0 = sin hang. `fall_scale` 0 = hold total, 0.15 = deriva
-## lenta (replica el air_stall_float_gravity del hover viejo). Solo aplica en el aire y si duration > 0.
-@export var sweet_spot_player_floater: FloaterSettings
+## Segundos que el jugador queda sostenido en el aire cuando la explosion conecta, para ver
+## el estallido en vez de caerse encima. Es un hang PROPIO del move (no escala el air-hit-stall
+## generico ni gasta el doble salto): cuenta desde la explosion, encima de lo que ya durara el
+## stall del dash. 0 = sin hang extra. Solo aplica en el aire.
+@export var sweet_spot_air_stall_bonus := 0.5
+## fall_scale del Floater del hang (ver combat/floater.gd): 0.0 = hold total (vertical en 0), 1.0 =
+## gravedad normal, intermedio = deriva lenta. 0.15 replica el air_stall_float_gravity que usaba el
+## hover viejo, asi que el feel del sweet spot no cambia. Solo aplica si sweet_spot_air_stall_bonus > 0.
+@export_range(0.0, 1.0) var sweet_spot_float_fall_scale := 0.15
 @export_subgroup("Motas del estallido (solo visual)")
 ## Nada de acá toca fisica ni gameplay: son las motas del estallido de cada enemigo, las
 ## mismas que tira un bloque de traversal al golpearlo (World.spawn_color_burst).
@@ -84,31 +74,29 @@ class_name SwordTuning extends WeaponTuning
 @export var air_finisher_hitbox_v_scale := 1.5
 
 @export_group("Plunge aéreo (X X espera X)")
-## Plunge del JUGADOR: Mover DOWN NO-EXCLUSIVO (poner exclusive = false) — cae recto a `speed` m/s
-## constantes hasta el piso (stop_on Floor|Distance), pero deja vivo el horizontal y el rebote en
-## enemigo que lo cancela. El umbral de espera que activa la rama reusa air_wait_branch_threshold.
-@export var plunge_player_mover: MoverSettings
-## Plunge del ENEMIGO golpeado (slam): Mover DOWN que baja a la par tuya hasta el piso. Su `speed`
-## deberia igualar al del jugador para que bajen juntos; el rebote en enemigo cancela tu plunge.
-@export var plunge_enemy_mover: MoverSettings
+## El Player y el Enemy reciben perfiles Mover descendentes; el del Player no es exclusivo para
+## conservar los contactos de locomoción durante la caída.
 
-@export_group("Y cargada aérea (spike + rebote)")
-## Velocidad del spike hacia el suelo antes de rebotar. La altura del auto-launch y del
-## rebote reusan el launcher Y (height/hang_time), "lo mismo que un launcher".
-@export var aerial_charged_down_speed := 30.0
-## La cargada aerea usa un auto-launch mas lento que el launcher Y normal para que el
-## enemigo alcance el punto de encuentro tras rebotar.
-@export var aerial_charged_player_height := 2.4
-@export var aerial_charged_player_rise_time := 0.32
-@export var aerial_charged_meet_height := 2.2
+@export_group("Y cargado terrestre")
+@export var ground_charged_y_hitbox_duration := 0.18
+@export var ground_charged_y_deals_damage := true
 
-@export_group("Launcher Y")
-## Launcher Y terrestre del ENEMIGO: Mover UP (direction UP, `distance` = altura, `speed` = velocidad
-## de subida, stop_on solo Distance) + el Floater de abajo para el hang en el tope. El jugador tambien
-## se lanza con esta misma altura (su hang sale de PlayerTuning, no de aca).
-@export var launcher_enemy_mover: MoverSettings
-## Hang del launcher para el ENEMIGO: cuanto queda suspendido en el tope (`duration`) y con que caida
-## (`fall_scale` 0 = hold total, como el _airborne_until viejo).
-@export var launcher_enemy_floater: FloaterSettings
-@export var launcher_hitbox_duration := 0.18
-@export var launcher_deals_damage := true
+@export_group("Autoridad vertical")
+## Perfil del Y cargado terrestre para el Player. Incluye su Float final: no depende de PlayerTuning.
+@export var ground_charged_y_player_mover: MoverSettings
+## Perfil del Y cargado terrestre para el Enemy. El arma lo envia junto al Stun que consulta poise.
+@export var ground_charged_y_enemy_mover: MoverSettings
+## Perfil del auto-launch del Player al iniciar Y cargada aerea, incluido su Float final.
+@export var aerial_charged_y_player_mover: MoverSettings
+## Perfil que la explosion del sweet spot pide a cada Enemy antes de cobrar su dano.
+@export var sweet_spot_explosion_enemy_mover: MoverSettings
+## Perfil lineal descendente del Enemy para el spike de Y cargada aerea; corta al tocar piso.
+@export var aerial_charged_y_enemy_spike_mover: MoverSettings
+## Perfil descendente del Enemy para el plunge de Espada; mantiene la misma velocidad que el Player.
+@export var air_plunge_enemy_mover: MoverSettings
+## Perfil parcial del Player para el plunge: controla Y sin apagar sus contactos.
+@export var air_plunge_player_mover: MoverSettings
+## Perfil parcial del hop de la primera vuelta de la rama aérea de espera.
+@export var air_wait_spin_player_mover: MoverSettings
+## Perfil descendente del Enemy para el hachazo aéreo normal de Espada.
+@export var air_finisher_enemy_spike_mover: MoverSettings

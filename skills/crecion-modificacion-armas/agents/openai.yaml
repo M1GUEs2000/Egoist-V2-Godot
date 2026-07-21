@@ -1,0 +1,4 @@
+interface:
+  display_name: "Creacion y modificacion de armas"
+  short_description: "Crea y modifica armas de Egoist V2."
+  default_prompt: "Crea o modifica un arma de Egoist V2 siguiendo los contratos de Mover, Floater y WeaponBase."

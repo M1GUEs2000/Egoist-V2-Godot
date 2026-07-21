@@ -64,19 +64,15 @@ var _combo_queued := false
 var _combo_queued_time := 0.0
 var _combo_kind := &""
 var _swing_tween: Tween
-var _launcher_id := 0
-var _launcher_height := 0.0
-var _launcher_hang_time := 0.0
-var _launcher_starts_lying := false
-# El stun del launcher: el enemigo lo necesita para consultar su poise y decidir si el launch
-# entra (no se lo puede mover si le queda reserva). Ver EnemyBase.launch.
-var _launcher_stun: StunSettings
-# Perfiles explícitos del launcher para el ENEMIGO (Mover de subida + Floater del hang), tal como los
-# define el arma en su tuning. Si son null, EnemyBase.launch cae a los escalares _launcher_height/
-# _launcher_hang_time (Mazo hoy no los pasa; la Espada sí).
-var _launcher_enemy_mover: MoverSettings
-var _launcher_enemy_floater: FloaterSettings
-var _active_launcher_hitbox: Hitbox
+var _air_hit_float_count := 0
+var _last_air_hit_float_time := -999.0
+var _vertical_window_id := 0
+var _vertical_player_mover: MoverSettings
+var _vertical_enemy_mover: MoverSettings
+var _vertical_starts_lying := false
+# El Stun solo consulta el poise antes del dano. El perfil vertical es externo.
+var _vertical_stun: StunSettings
+var _active_vertical_hitbox: Hitbox
 ## Pose de mano desde la que arranca la estocada en curso (ver thrust).
 var _thrust_from := Quaternion.IDENTITY
 var _thrust_reach := 0.0
@@ -110,7 +106,7 @@ func setup(player: Player) -> void:
 		hitbox.share_already_hit(_shared_dedup)
 		hitbox.landed.connect(_on_hit)
 	# Hoja y disco aéreo se parrian (decisión de diseño: v1 solo parriaba la hoja; acá
-	# también el disco). El launcher no (ver Sword.setup).
+	# también el disco). El hitbox vertical no (ver Sword.setup).
 	# ponytail: v1 además solo dejaba parriar en la mitad del propio swing (CanParryAt →
 	# "clash" mutuo). Acá es parriable todo el swing y la ventana estrecha del enemigo ya
 	# acota; afinar el clash mid-swing cuando haya Godot para tunear.
@@ -248,9 +244,7 @@ func _begin_air_step(step: int, finisher: bool, wait_branch: bool) -> void:
 	if finisher and wait_branch:
 		arm_push(tuning.push, tuning.air_step_time * tuning.push_at)
 	_player.attack_step(tuning.air_step_time)  # avanza hacia el lockeado / al frente, igual que en tierra
-	# No flota sí o sí: solo marca "atacando en el aire" → si NO conecta, caés con
-	# más fuerza. El float lo dispara el hitbox al conectar (landed → air-hit-stall).
-	_player.notify_aerial_attack(tuning.air_step_time)
+	# Sin hit no se aplica control vertical: la caída conserva gravedad normal.
 
 ## Solo lo lanzable reacciona (has_method): una pared golpeada se ignora.
 func _finish_air_combo(wait_branch: bool) -> void:
@@ -287,11 +281,11 @@ func end_damage_window() -> void:
 	if _air_disc_hitbox != null:
 		_air_disc_hitbox.end_swing()
 
-func end_launcher_window() -> void:
-	_launcher_id += 1
-	if _active_launcher_hitbox != null:
-		_active_launcher_hitbox.end_swing()
-	_active_launcher_hitbox = null
+func end_vertical_window() -> void:
+	_vertical_window_id += 1
+	if _active_vertical_hitbox != null:
+		_active_vertical_hitbox.end_swing()
+		_active_vertical_hitbox = null
 
 ## Arma el push de esta ventana. Tras `delay` segundos empuja a todo lo golpeado hasta
 ## ese momento y queda armado: lo que conecte después se empuja en el instante del hit.
@@ -317,13 +311,16 @@ func _push_target(hurtbox: Hurtbox, settings: PushSettings) -> void:
 	if is_instance_valid(target) and target.has_method("push"):
 		target.call("push", _player.forward(), settings)
 
-## Reacción común a cualquier golpe conectado del arma (hoja, disco, launcher, dash
+## Reacción común a cualquier golpe conectado del arma (hoja, disco, vertical, dash
 ## cargado): air-hit-stall + meter + progresión de kills.
-func register_weapon_hit(hurtbox: Hurtbox, died: bool, cuts_air_momentum := true) -> void:
+func register_weapon_hit(hurtbox: Hurtbox, died: bool, cuts_air_momentum := true,
+		player_float_duration := 0.0, player_float_fall_scale := 0.0) -> void:
 	# Conectar en el aire contra algo que lo dispara ralentiza la caída del jugador, y (si el golpe
 	# es normal) le come momentum horizontal. Los cargados pasan cuts_air_momentum = false.
-	if hurtbox.triggers_air_hit_stall:
-		_player.register_air_hit_stall(tuning.air_stall_scale, cuts_air_momentum)
+	if player_float_duration > 0.0:
+		_player.request_float(player_float_duration, player_float_fall_scale)
+	elif hurtbox.triggers_air_hit_stall:
+		_register_air_hit_float(cuts_air_momentum)
 	var meter := _player.meter
 	if meter != null:
 		meter.gain_on_hit()
@@ -333,6 +330,21 @@ func register_weapon_hit(hurtbox: Hurtbox, died: bool, cuts_air_momentum := true
 		if _player.is_airborne():
 			_player.apply_air_kill_reset()
 		on_kill()
+
+func _register_air_hit_float(cuts_momentum: bool) -> void:
+	if _player.is_on_floor():
+		return
+	if cuts_momentum:
+		_player.bump_velocity *= clampf(tuning.air_hit_momentum_keep, 0.0, 1.0)
+		_player.locomotion.scale_air_velocity(tuning.air_hit_momentum_keep)
+	if World.now() - _last_air_hit_float_time > tuning.air_hit_float_combo_window:
+		_air_hit_float_count = 0
+	_air_hit_float_count += 1
+	_last_air_hit_float_time = World.now()
+	var duration := minf(tuning.air_hit_float_base + tuning.air_hit_float_per_hit *
+			(_air_hit_float_count - 1), tuning.air_hit_float_max) * tuning.air_stall_scale
+	_player.vertical_velocity = clampf(_player.vertical_velocity, 0.0, tuning.air_hit_float_max_rise)
+	_player.request_float(duration, tuning.air_hit_float_fall_scale)
 
 ## Hay un move CARGADO en curso sobre este hitbox. Lo usa el corte de momentum aéreo para dejar
 ## pasar los cargados (que mueven al jugador a propósito). Cada arma lo sobreescribe con su flag;
@@ -411,57 +423,55 @@ func arm_sweet_spot(held_time: float) -> void:
 	sweet_spot = tuning.in_sweet_spot(held_time)
 	set_sweet_spot_window(false)
 
-# ---- Launcher genérico (cono/área que lanza antes de golpear, ex ConeLauncherHitbox) ----
-## Cablea un Hitbox como launcher: nunca se parria, lanza al objetivo ANTES del daño
+# ---- Ventana vertical genérica (cono/área que mueve antes de golpear) ----
+## Cablea un Hitbox vertical: nunca se parria, mueve al objetivo ANTES del daño
 ## (about_to_hit) así el golpe ya ve is_airborne = true, y alimenta meter/air-hit-stall
 ## al conectar (landed → _on_hit). Cada arma llama esto en su setup() para su propio
-## hitbox de launcher.
-func setup_launcher_hitbox(hitbox: Hitbox, deals_damage: bool, stun_settings: StunSettings,
+## hitbox vertical.
+func setup_vertical_hitbox(hitbox: Hitbox, deals_damage: bool, stun_settings: StunSettings,
 		starts_lying := false) -> void:
 	hitbox.source = _player
 	hitbox.damage = 1.0 if deals_damage else 0.0
 	hitbox.stun = stun_settings
 	hitbox.can_be_parried = false
-	_launcher_stun = stun_settings
-	_launcher_starts_lying = starts_lying
-	hitbox.about_to_hit.connect(_on_launcher_about_to_hit)
+	_vertical_stun = stun_settings
+	_vertical_starts_lying = starts_lying
+	hitbox.about_to_hit.connect(_on_vertical_about_to_hit)
 	hitbox.landed.connect(_on_hit)
 
-## Solo lanza lo lanzable (has_method): una pared o un pickup no salen volando. El enemigo decide
-## si el launch entra: con poise de sobra lo aguanta y no se mueve (EnemyBase.launch).
-func _on_launcher_about_to_hit(hurtbox: Hurtbox) -> void:
+## El perfil del Enemy se pide antes del dano para que el Stun vea al objetivo en el aire.
+func _on_vertical_about_to_hit(hurtbox: Hurtbox) -> void:
 	var target: Node = hurtbox.owner_node
-	if target.has_method("launch"):
-		target.call("launch", _launcher_height, _launcher_hang_time, _launcher_stun,
-				_launcher_starts_lying and target is EnemyBase,
-				_launcher_enemy_mover, _launcher_enemy_floater)
-
-## Ventana de daño del launcher con id-guard: espera `delay` (deja arrancar el swing
-## visual), opcionalmente lanza al player y prende el hitbox `duration` segundos. Arrancar un nuevo
-## launcher invalida cualquier ventana anterior (mismo patrón que begin_damage_window).
-func run_launcher_window(hitbox: Hitbox, height: float, hang_time: float,
-		duration: float, delay := 0.05, launches_player := true,
-		enemy_mover: MoverSettings = null, enemy_floater: FloaterSettings = null) -> void:
-	_launcher_id += 1
-	var id := _launcher_id
-	_launcher_height = height
-	_launcher_hang_time = hang_time
-	_launcher_enemy_mover = enemy_mover
-	_launcher_enemy_floater = enemy_floater
-	await wait_seconds(delay)
-	if id != _launcher_id:
+	if _vertical_enemy_mover == null:
 		return
-	if launches_player:
-		_player.launch(height, hang_time)
-	_active_launcher_hitbox = hitbox
+	if target is EnemyBase:
+		(target as EnemyBase).request_mover(_vertical_enemy_mover, _vertical_stun,
+				_vertical_starts_lying, true)
+	elif target.has_method("request_mover"):
+		target.call("request_mover", _vertical_enemy_mover)
+
+## Ventana de daño vertical con id-guard: espera `delay`, opcionalmente mueve al Player y
+## prende el hitbox `duration` segundos. Una ventana nueva invalida la anterior.
+func run_vertical_window(hitbox: Hitbox, player_mover: MoverSettings, enemy_mover: MoverSettings,
+		duration: float, delay := 0.05, moves_player := true) -> void:
+	_vertical_window_id += 1
+	var id := _vertical_window_id
+	_vertical_player_mover = player_mover
+	_vertical_enemy_mover = enemy_mover
+	await wait_seconds(delay)
+	if id != _vertical_window_id:
+		return
+	if moves_player and _vertical_player_mover != null:
+		_player.request_mover(_vertical_player_mover)
+	_active_vertical_hitbox = hitbox
 	hitbox.begin_swing()
 	ComboTracker.register_hit()
 	await wait_seconds(duration)
-	if id != _launcher_id:
+	if id != _vertical_window_id:
 		return
 	hitbox.end_swing()
-	if _active_launcher_hitbox == hitbox:
-		_active_launcher_hitbox = null
+	if _active_vertical_hitbox == hitbox:
+		_active_vertical_hitbox = null
 
 # ---- Swings procedurales (tweens de quaternion sobre la Hand, sin AnimationPlayer) ----
 ## Genérico para cualquier arma con Hand/Pivot; la coreografía (qué ángulo, qué step) la
@@ -473,7 +483,7 @@ func swing(angle: float) -> void:
 	_swing_axis(angle, Vector3.UP)
 
 ## Swing vertical ascendente (eje X): la mano sube en arco frente al jugador (uppercut
-## del launcher).
+## del golpe vertical).
 func swing_up(angle: float) -> void:
 	_swing_axis(angle, Vector3.RIGHT)
 
@@ -544,7 +554,7 @@ func _kill_swing_tween() -> void:
 func begin_routine() -> int:
 	_routine_id += 1
 	end_damage_window()
-	end_launcher_window()
+	end_vertical_window()
 	_armed_push = null
 	_combo_playing = false
 	_combo_window_open = false

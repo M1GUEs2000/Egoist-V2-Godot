@@ -46,7 +46,7 @@ func available_weapons() -> Array[WeaponBase]:
 	if _body != null:
 		for child in _body.get_children():
 			var weapon := child as WeaponBase
-			if weapon != null and weapon not in out:
+			if weapon != null and weapon is not Mace and weapon not in out:
 				out.append(weapon)
 	for weapon in _weapons():
 		if weapon != null and weapon not in out:

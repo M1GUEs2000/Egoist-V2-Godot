@@ -39,6 +39,13 @@ Arma base / equilibrada. Velocidad media. Sirve para mantener el flujo del comba
 | Y cargado            | Golpe hacia abajo que hace rebotar al enemigo. Implementado 2026-07-02: gasta 1 barra; te auto-lanza hacia arriba y spikea/rebota al enemigo hasta tu altura. Pendiente de probar. |
 | Y cargado sweet spot | Doble rebote con los enemigos que alcance a dar. Sweet spot aun no implementado. El segundo rebote te sube mas a ti y a todos los enemigos afectados                               |
 
+## Autoridad vertical
+
+`SwordTuning` contiene los perfiles `MoverSettings` de cada ruta vertical. Espada los solicita a
+Player y EnemyBase; no escribe velocidad vertical ni llama verbos especializados. El plunge usa
+Mover PARTIAL para Player y TOTAL para Enemy. El hop y los finishers tambien usan perfiles. El
+rebote del Y cargado aereo esta desactivado.
+
 ## Estado Godot
 
 - Implementada como arma procedural hasta H3.

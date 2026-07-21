@@ -204,15 +204,6 @@ class_name PlayerTuning extends Resource
 ## Lado de cada mota del estallido en metros.
 @export_range(0.01, 0.5, 0.01) var dash_bop_burst_size := 0.12
 
-@export_group("Launcher")
-## Al terminar de subir por un launch: segundos flotando en el pico con float_gravity.
-@export var launcher_float_duration := 0.15
-## Escala de gravedad durante el float del pico (bajo = flota).
-@export var launcher_float_gravity := 0.30
-## Segundos extra de float tras el pico (F2 colapsó las dos fases del launcher viejo —float + fall—
-## en un solo Floater: su duración total es launcher_float_duration + este valor).
-@export var launcher_fall_duration := 0.30
-
 @export_group("Meter")
 ## Barras máximas de meter (hasta 5 con mejoras, futuro).
 @export var meter_max_bars := 2
@@ -270,31 +261,10 @@ class_name PlayerTuning extends Resource
 ## Solo aplica en el suelo; el look del polvo vive en el ParticleProcessMaterial del emisor RunDust.
 @export var run_dust_min_speed := 1.5
 
-@export_group("Air hit stall")
-## Duración base del stall (freno de caída) al conectar un golpe en el aire, en segundos.
-@export var air_stall_base := 0.08
-## Duración extra de stall por cada golpe encadenado dentro de la ventana de combo.
-@export var air_stall_per_hit := 0.04
-## Tope de duración del stall por golpe, en segundos.
-@export var air_stall_max := 0.28
-## Ventana entre golpes aéreos para que el stall siga escalando; si pasa más tiempo, el conteo se resetea.
-@export var air_stall_combo_window := 0.75
-## Escala de gravedad durante el stall: conectando golpes en el aire la caída se RALENTIZA.
-@export var air_stall_float_gravity := 0.15
-## Tope de la subida (velocidad vertical positiva) que el stall preserva, en m/s. El stall congela
-## la caída pero NO debe amplificar una subida grande: sin este cap, conectar un golpe justo tras un
-## salto conservaba toda la velocidad del salto (jump_force) y con la gravedad baja del stall el
-## jugador salía disparado. Debe quedar al nivel del hop intencional (air_wait_spin_hop = 5) y por
-## debajo de jump_force (8).
-@export var air_stall_max_rise := 5.0
-## Fracción del momentum HORIZONTAL que sobrevive a cada golpe aéreo normal conectado contra un
-## enemigo (0 = te clavás en seco, 1 = intacto). Contraparte horizontal del freno vertical del
-## stall. COMPONE por golpe: con 0.3, el 2º golpe deja 0.09 y el 3º 0.027, así el combo aéreo te
-## ancla progresivamente. Corta las dos fuentes: la inercia del input y el bump (wall jump, rebote,
-## push). Los ataques CARGADOS no lo aplican: dueñan su propio desplazamiento.
-@export_range(0.0, 1.0) var air_stall_momentum_keep := 0.3
-## Escala de gravedad al atacar en el aire SIN conectar: cae MÁS fuerte que lo normal.
-@export var aerial_whiff_fall_gravity := 1.6
+@export_group("Dash air hit float")
+## Float aplicado cuando el hitbox del dash conecta en el aire.
+@export var dash_air_hit_float_duration := 0.08
+@export_range(0.0, 1.0) var dash_air_hit_float_fall_scale := 0.15
 
 @export_group("Air charge float")
 ## Cargar en el aire cuelga al jugador con un Floater (mismo primitivo que el resto). Reemplaza al

@@ -11,7 +11,7 @@ class_name StunSettings extends Resource
 @export var poise_damage := 1.0
 ## Duracion del stun si quiebra al objetivo en el suelo, en segundos.
 @export var grounded := 1.0
-## Duracion del stun si quiebra al objetivo en el aire (mas larga: sostiene el juggle).
+## Duracion del stun si quiebra al objetivo en el aire. No controla Float ni hang.
 @export var airborne := 1.0
 
 func duration_for(is_airborne: bool) -> float:

@@ -36,6 +36,15 @@ class_name WeaponTuning extends Resource
 ## Player). >1 = arma de pocos golpes pesados; 1.0 = base (Espada).
 @export var air_stall_scale := 1.0
 
+@export_group("Float por impacto aéreo")
+@export var air_hit_float_base := 0.08
+@export var air_hit_float_per_hit := 0.04
+@export var air_hit_float_max := 0.28
+@export var air_hit_float_combo_window := 0.75
+@export_range(0.0, 1.0) var air_hit_float_fall_scale := 0.15
+@export var air_hit_float_max_rise := 5.0
+@export_range(0.0, 1.0) var air_hit_momentum_keep := 0.3
+
 @export_group("Push")
 ## Arco del empujón (velocidad + altura + cierre), inyectable por arma. Lo usa cualquier
 ## ataque que arme un push, en tierra o en el aire — no solo el finisher aéreo.

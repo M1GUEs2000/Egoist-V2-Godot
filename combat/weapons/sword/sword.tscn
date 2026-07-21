@@ -16,7 +16,7 @@ size = Vector3(0.35, 0.35, 1.683789)
 [sub_resource type="SphereShape3D" id="SphereShape3D_air_disc"]
 radius = 1.35
 
-[sub_resource type="BoxShape3D" id="BoxShape3D_launcher"]
+[sub_resource type="BoxShape3D" id="BoxShape3D_vertical"]
 size = Vector3(1.2, 1.4, 1.2)
 
 [sub_resource type="SphereShape3D" id="SphereShape3D_charged_dash"]
@@ -54,12 +54,12 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0.17930734)
 shape = SubResource("SphereShape3D_air_disc")
 debug_color = Color(0.66560966, 0.50965834, 0.13546959, 0.41960785)
 
-[node name="LauncherHitbox" type="Area3D" parent="." unique_id=138822131]
+[node name="VerticalHitbox" type="Area3D" parent="." unique_id=138822131]
 transform = Transform3D(1.385, 0, 0, 0, 1.3797296, -0.12071069, 0, 0.12071069, 1.3797296, 0, 0.9296448, -1.4961276)
 script = ExtResource("3_hitbox")
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="LauncherHitbox" unique_id=1333213508]
-shape = SubResource("BoxShape3D_launcher")
+[node name="CollisionShape3D" type="CollisionShape3D" parent="VerticalHitbox" unique_id=1333213508]
+shape = SubResource("BoxShape3D_vertical")
 debug_color = Color(0.8473857, 0.0009641552, 0.90749025, 0.41960785)
 
 [node name="ChargedDashHitbox" type="Area3D" parent="." unique_id=1780498613]

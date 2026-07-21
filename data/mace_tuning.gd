@@ -99,6 +99,6 @@ class_name MaceTuning extends WeaponTuning
 ## lo fija air_y_bounce_angle; esto es solo la fuerza. No gasta el doble salto.
 @export var air_y_bounce_speed := 25.0
 ## Sweet spot aéreo (X cargado con vuelta final / Y cargado): congela a los golpeados
-## y extiende el tiempo airborne del jugador (Player.notify_aerial_attack).
+## y extiende el tiempo airborne del jugador mediante su futura ruta Mover/Floater.
 @export var air_freeze_stun: StunSettings
 @export var air_freeze_extra_hang_time := 0.5

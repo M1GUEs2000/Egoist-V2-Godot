@@ -49,6 +49,17 @@ Combate del jugador: slots X/Y, espada, hitboxes, parry, meter, combo aereo e in
 - La hoja brilla al cargar un ataque (glow ambar proporcional a `InputBuffer.charge_progress`, tuneable con `charge_glow_color` / `charge_glow_max_energy`). El halo ya existe: `test_scene` tiene un `WorldEnvironment` con glow (HDR threshold 1.0, tonemap Filmic); falta tunear el bloom jugando. *(2026-07-10)*
 - Al empezar una carga en aire, `PlayerAirKillReset` reduce solo la caida vertical negativa segun `PlayerTuning.air_charge_fall_reduction_steps` (`100% -> 80% -> 50% -> 10%` por default). No usa hover ni toca momentum horizontal. Matar en aire resetea la secuencia junto con doble salto y airdash. *(2026-07-10, pendiente de probar)*
 
+## Autoridad vertical
+
+Los ataques deciden los perfiles `MoverSettings` y los datos de `Floater`; Player y EnemyBase solo
+los ejecutan. Un Mover TOTAL toma el cuerpo completo y uno PARTIAL controla solo Y, conservando los
+contactos y la locomocion del Player. Todo golpe nuevo que afecte a un enemigo cancela su
+Mover/Floater anterior, salvo el perfil preparado por ese mismo golpe antes del dano.
+
+Espada usa Mover/Floater para sus rutas verticales, incluido hop, finisher y plunge. El Float por
+impacto aereo vive en `WeaponTuning`, el whiff conserva gravedad normal y el rebote del Y aereo esta
+desactivado. Mace no forma parte del loadout activo.
+
 ## Mano orbital
 
 Toda arma cuelga de una **mano** que orbita alrededor del jugador. El root del arma esta en el origen del player y es el eje de la orbita. *(2026-07-09)*

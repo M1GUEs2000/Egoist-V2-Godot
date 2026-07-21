@@ -45,7 +45,7 @@ func setup(player: Player) -> void:
 	var air_slam_cylinder := _air_slam_shape.shape as CylinderShape3D
 	air_slam_cylinder.radius = t.air_y_aoe_radius
 	air_slam_cylinder.height = t.air_y_aoe_height
-	setup_launcher_hitbox(_launcher_hitbox, t.ground_y_launcher_deals_damage, tuning.stun, true)
+	setup_vertical_hitbox(_launcher_hitbox, t.ground_y_launcher_deals_damage, tuning.stun, true)
 	# El launcher Y terrestre (cargado Y) SI se parria: usa parry_poise_charged_y. El AOE aereo del Y
 	# (AirSlamHitbox) queda sin parriar a proposito: es multi-target, no un golpe unico de compromiso.
 	_launcher_hitbox.can_be_parried = true
@@ -205,7 +205,7 @@ func _hold_y() -> void:
 			tuning.swing_time)
 	swing_up(t.strike_angle)
 	_player.force_dash(_player.forward(), t.ground_y_dash_distance, t.ground_y_dash_duration, false)
-	run_launcher_window(_launcher_hitbox, t.ground_y_launcher_height, t.ground_y_launcher_hang_time,
+	run_vertical_window(_launcher_hitbox, null, null,
 			t.ground_y_dash_duration + t.ground_y_launcher_duration, t.ground_y_launcher_delay, false)
 
 # ---- Aereo ----
@@ -318,7 +318,7 @@ func _contacted_enemy() -> Node:
 func _burst_air_slam(id: int, hit_enemy_in_air: bool) -> void:
 	var t := _t()
 	end_damage_window()
-	end_launcher_window()
+	end_vertical_window()
 	end_visual_clip()  # la caída terminó: suelta el tramo estirado del Y aéreo
 	_air_y_hit_enemy_in_air = hit_enemy_in_air
 	if hit_enemy_in_air:
@@ -337,7 +337,7 @@ func _burst_air_slam(id: int, hit_enemy_in_air: bool) -> void:
 	await wait_seconds(t.air_y_aoe_duration)
 	_air_slam_hitbox.end_swing()
 
-## Rama de SUELO del estallido, ANTES del daño (mismo patron que _on_launcher_about_to_hit): lanza
+## Rama de SUELO del estallido, ANTES del daño (mismo patrón que _on_vertical_about_to_hit): lanza
 ## al enemigo primero, asi receive_hit lo ve airborne y su stun fija _airborne_until al hang, que lo
 ## mantiene suspendido durante la subida. Si el launch corriera despues del stun (en landed), el
 ## enemigo comeria el stun en el piso, la gravedad le ganaria al launch y arrancaria el ragdoll sin

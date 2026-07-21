@@ -159,6 +159,7 @@ var _stun_feedback_color := Color(1.0, 0.9, 0.15, 1.0)
 var _parry_vulnerable_until := -999.0  # ventana cian de daño multiplicado tras un parry
 var _parry_damage_multiplier := 1.0
 var _airborne_until := -999.0
+var _preserve_vertical_on_next_hit := false
 var _airborne_ground_y := 0.0
 var _slam_bounce := false
 var _bounce_ballistic := false
@@ -367,6 +368,11 @@ func _breaks_poise(stun: StunSettings = null) -> bool:
 		return false
 	return poise.would_break(stun.poise_damage, is_armored())
 
+## Gate de autoridad vertical. Un ataque puede iniciar un Mover antes de cobrar el golpe si su stun
+## quebraria el poise; despues del golpe alcanza con que el enemigo ya este stuneado o en ragdoll.
+func can_accept_vertical_control(stun: StunSettings = null) -> bool:
+	return can_receive_hit() and _breaks_poise(stun)
+
 func can_attack() -> bool:
 	return _is_active and not _dead and not is_stunned() and not is_airborne() and not _ragdolling
 
@@ -405,6 +411,10 @@ func take_hit_from_enemy(hits: float = 1.0, hit_direction: Vector3 = Vector3.ZER
 		return false
 	if attacker != null and not can_damage_enemy(attacker, self):
 		return false
+	if _preserve_vertical_on_next_hit:
+		_preserve_vertical_on_next_hit = false
+	else:
+		cancel_vertical_control()
 	if hit_direction.length_squared() > 0.0001:
 		_last_hit_direction = hit_direction.normalized()
 	var died := health.take_damage(hits)
@@ -439,15 +449,9 @@ func apply_stun(duration: float, feedback_color := Color.TRANSPARENT) -> void:
 	_push_active = false
 	_apply_stun_knockback()
 	if is_airborne():
-		# Suspendido mientras dure el stun (juggle): cae cuando el stun termina.
-		# airborne_max_time NO va aca; es solo el tope de seguridad en _update_airborne.
-		# (F3) El hold ahora lo sostiene el Floater, con hold total como el `_airborne_until` viejo.
-		# La renovacion del Floater es max(actual, ahora+duracion), igual que la del timer que
-		# reemplaza, asi que el juggle sigue acumulando y nunca acorta un hang mas largo en curso.
-		if floater != null:
-			floater.start_float(_stunned_until - World.now(), 0.0)
-		_airborne_until = maxf(_airborne_until, _stunned_until)
-		# Golpeado en el aire = queda acostado (el hang no se toca, solo la pose).
+		# El stun cambia el estado de combate, no el plan vertical. El hang solo lo inicia el perfil
+		# del ataque mediante Mover/Floater; asi extender un stun no alarga ni crea una suspension.
+		# Golpeado en el aire = queda acostado, sin alterar el movimiento ya pedido por el ataque.
 		_lying = true
 	_refresh_visual_state()
 
@@ -476,14 +480,11 @@ func set_armored(enabled: bool) -> void:
 ## Lanza al aire. Corre en about_to_hit (ANTES del daño) para que el stun del golpe lo vea ya
 ## airborne y le de la duracion aerea, asi que recibe el `stun` del golpe para consultar el poise:
 ## solo lanza si esa reserva se quiebra. Ver _breaks_poise.
-## `mover_settings`/`floater_settings` (opcionales): perfiles explícitos del recorrido de subida y del
-## hang, tal como los define el ataque en su tuning (la Espada: launcher_enemy_mover/floater). Si vienen,
-## mandan sobre `height`/`hang_time` (que quedan de fallback para llamadores que aún pasan escalares:
-## Mazo, dummy, explosión del sweet spot).
-func launch(height: float, hang_time: float, stun: StunSettings = null,
-		starts_lying := false, mover_settings: MoverSettings = null,
-		floater_settings: FloaterSettings = null) -> bool:
-	if not can_receive_hit() or not _breaks_poise(stun):
+## API ejecutora: el perfil viene completo desde el ataque. Este cuerpo solo valida poise/stun y
+## prepara su fisica; `stun` permite consultar un quiebre que el golpe cobrara enseguida.
+func request_mover(settings: MoverSettings, stun: StunSettings = null,
+		starts_lying := false, preserve_next_hit := false) -> bool:
+	if settings == null or not can_accept_vertical_control(stun):
 		return false
 	# Un cuerpo en ragdoll ya esta quebrado: el golpe lo re-levanta (juggle). Se interrumpe el
 	# ragdoll, el CharacterBody vuelve a mandar donde quedo, y sigue acostado para el nuevo vuelo.
@@ -499,26 +500,41 @@ func launch(height: float, hang_time: float, stun: StunSettings = null,
 	# al terminar detona el Floater del hang (hold total `hang_time`). `_airborne_until = now` apaga el
 	# hold viejo (ahora sostiene el Floater) y deja airborne_max_time contando como tope de seguridad.
 	_airborne_until = World.now()
-	_cancel_air_hold()  # el hang del launch nuevo manda: no hereda el hold del juggle anterior
-	# Perfil de subida: el explícito del ataque (duplicado para no mutar el recurso del tuning) o uno
-	# armado con los escalares de fallback.
-	var s: MoverSettings = mover_settings.duplicate() if mover_settings != null else MoverSettings.new()
-	if mover_settings == null:
-		s.direction = Vector3.UP
-		s.distance = height
-		s.speed = height / maxf(0.01, World.LAUNCH_RISE_TIME)
-		s.acceleration = 0.0
-		s.stop_on = MoverSettings.STOP_ON_DISTANCE
-	# Hang del tope: si vino un FloaterSettings explícito manda; si no, el hang_time escalar (hold total,
-	# como el _airborne_until viejo).
-	if floater_settings != null:
-		s.float_duration = floater_settings.duration
-		s.float_fall_scale = floater_settings.fall_scale
-	elif mover_settings == null:
-		s.float_duration = hang_time
-		s.float_fall_scale = 0.0
-	mover.start_mover(s)
+	_cancel_air_hold()  # el perfil nuevo manda: no hereda el hang del juggle anterior
+	mover.start_mover(settings)
+	_preserve_vertical_on_next_hit = preserve_next_hit
 	return true
+
+## Un nuevo golpe corta la trayectoria y el Float del golpe anterior. El único caso preservado es
+## el Mover que el mismo golpe armó en about_to_hit antes de cobrar su daño.
+func cancel_vertical_control(reason := Mover.CancelReason.ATTACK_RULE) -> void:
+	_preserve_vertical_on_next_hit = false
+	if mover != null:
+		mover.cancel_mover(reason)
+	_cancel_air_hold()
+	_airborne_until = World.now()
+
+## Pide un hang sobre un enemigo ya quebrado y en el aire. Un Float no puede romper poise ni crear
+## vuelo por si mismo: el ataque debe haber aplicado stun/quiebre o iniciado un Mover aceptado.
+func request_float(duration: float, fall_scale: float) -> bool:
+	if duration <= 0.0 or not is_airborne() or not can_accept_vertical_control():
+		return false
+	floater.start_float(duration, fall_scale)
+	return true
+
+## Adaptador temporal para consumidores legacy. Arma el perfil antiguo y lo entrega a la API nueva;
+## las armas migradas pasan MoverSettings completos por request_mover().
+func launch(height: float, hang_time: float, stun: StunSettings = null,
+		starts_lying := false) -> bool:
+	var settings := MoverSettings.new()
+	settings.direction = Vector3.UP
+	settings.distance = height
+	settings.speed = height / maxf(0.01, World.LAUNCH_RISE_TIME)
+	settings.acceleration = 0.0
+	settings.stop_on = MoverSettings.STOP_ON_DISTANCE
+	settings.float_duration = hang_time
+	settings.float_fall_scale = 0.0
+	return request_mover(settings, stun, starts_lying)
 
 func _launch_routine(id: int, height: float, hang_time: float) -> void:
 	var rise_time := World.LAUNCH_RISE_TIME
@@ -537,24 +553,18 @@ func _launch_routine(id: int, height: float, hang_time: float) -> void:
 ## gravedad acumulando (la bajada aceleraba); el Mover baja a velocidad CONSTANTE, igual que el
 ## plunge del jugador con el que este spike va a la par. Sin Floater al final: al tocar el piso
 ## manda el aterrizaje (o el rebote, si `_slam_bounce` quedo armado).
-## `settings` (opcional): perfil DOWN explícito del ataque (la Espada: plunge_enemy_mover). Si viene,
-## manda; si no, se arma con `down_speed` (fallback para el spike del Mazo y el dummy).
-func slam(down_speed: float, settings: MoverSettings = null) -> void:
+func slam(down_speed: float) -> void:
 	if not can_receive_hit() or not is_stunned() or not is_airborne() or _ragdolling:
 		return
 	_airborne_until = World.now()
 	_cancel_air_hold()
-	var s: MoverSettings
-	if settings != null:
-		s = settings
-	else:
-		s = MoverSettings.new()
-		s.direction = Vector3.DOWN
-		s.distance = airborne_max_fall_distance
-		s.speed = absf(down_speed)
-		s.acceleration = 0.0
-		s.stop_on = MoverSettings.STOP_ON_DISTANCE | MoverSettings.STOP_ON_FLOOR
-		s.float_duration = 0.0
+	var s := MoverSettings.new()
+	s.direction = Vector3.DOWN
+	s.distance = airborne_max_fall_distance
+	s.speed = absf(down_speed)
+	s.acceleration = 0.0
+	s.stop_on = MoverSettings.STOP_ON_DISTANCE | MoverSettings.STOP_ON_FLOOR
+	s.float_duration = 0.0
 	mover.start_mover(s)
 
 ## Rebote VERTICAL: baja y, al tocar el piso, sube a una altura objetivo con hang. Lo usa el Y
@@ -814,9 +824,8 @@ func _update_combat_state() -> void:
 	# poise queda congelado: no decae el acumulado ni corre el recovery_time. Ver combat/poise.gd.
 	poise.set_paused(is_airborne() or is_stunned() or _ragdolling)
 
-## Apaga el hang del Floater. Va junto a cada `_airborne_until = World.now()`: los moves que se
-## adueñan de la vertical (slam, push, pique) tienen que matar el hold del juggle, si no el
-## Floater del stun les sostiene la vertical en 0 y el desplazamiento nunca sale.
+## Apaga el Float vertical en curso. Va junto a cada `_airborne_until = World.now()`: los moves que
+## se adueñan de la vertical (slam, push, pique) no deben heredar el Float de un ataque anterior.
 func _cancel_air_hold() -> void:
 	if floater != null:
 		floater.cancel_float()
@@ -841,9 +850,9 @@ func _update_airborne(delta: float) -> void:
 		mover.tick(delta)
 		return
 	if floater != null and floater.is_floating():
-		# Floater (nuevo): politica de caida del ataque. Prioridad sobre el hold de _airborne_until.
-		# Lo detona el Mover al terminar la subida (hang del launch); mientras esta activo sostiene
-		# la vertical y el resto de _update_airborne (aterrizaje, push arc) sigue corriendo.
+		# Floater: politica de caida pedida por el ataque. Prioridad sobre el timer legacy
+		# `_airborne_until`; mientras esta activo sostiene la vertical y el resto de
+		# _update_airborne (aterrizaje, push arc) sigue corriendo.
 		velocity.y = floater.apply_fall(velocity.y, _air_gravity, delta)
 	elif World.now() < _airborne_until and velocity.y <= 0.0:
 		velocity.y = 0.0

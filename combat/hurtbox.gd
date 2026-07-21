@@ -1,4 +1,6 @@
 class_name Hurtbox extends Area3D
+## Los receptores verticales actuales exponen `request_mover` y `request_float`: el ataque entrega
+## el perfil y el duenio lo ejecuta. Los verbos legacy de las notas siguientes son inventario F0.
 ## Lo que las armas golpean (reemplaza IHittable + GetComponentInParent de v1).
 ## Nodo hijo del dueño, en grupo "hurtbox". Rutea el daño al Health hermano y avisa
 ## de CADA golpe con la señal hit (ahí se enganchan reacciones tipo WorldSwitchTrigger,

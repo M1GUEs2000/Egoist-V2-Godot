@@ -26,6 +26,20 @@ freeze. Esos nombres solo pueden quedar como nombres de ataques/coreografias en 
 El alcance es combate y enemigos. Traversal no se toca salvo que hoy dependa directamente de uno
 de los modulos verticales que se retire.
 
+## Estado de cierre
+
+La API vigente es `request_mover(settings)` y `request_float(duration, fall_scale)`. El ataque
+posee el perfil; el receptor ejecuta y cancela. `MoverSettings.Mode.TOTAL` toma el cuerpo completo;
+`PARTIAL` controla solo Y en el tick normal del Player. Todo impacto nuevo sobre un enemigo cancela
+su control vertical anterior, salvo el perfil que ese mismo impacto preparo en `about_to_hit`.
+
+Espada esta migrada a Mover/Floater y el rebote de su Y aereo esta desactivado. PlayerLauncher no
+interviene en el flujo activo de Espada. Mace queda fuera del loadout y se reconstruira desde este
+contrato. Los apartados posteriores conservan el historial de la migracion.
+
+`PlayerLauncher` ya fue eliminado del proyecto, junto con su nodo de escena, adaptador y tuning.
+El Float de impacto del dash vive ahora en `PlayerDash` con tuning propio.
+
 ## Modelo mental
 
 ```text

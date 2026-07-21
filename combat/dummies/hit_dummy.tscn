@@ -16,7 +16,7 @@ albedo_color = Color(0.9, 0.22, 0.18, 1)
 radius = 0.5
 height = 1.9
 
-[node name="HitDummy" type="Node3D"]
+[node name="HitDummy" type="CharacterBody3D"]
 script = ExtResource("1_dummy")
 
 [node name="Mesh" type="MeshInstance3D" parent="."]
@@ -36,5 +36,9 @@ script = ExtResource("4_hurtbox")
 triggers_air_hit_stall = true
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="Hurtbox"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.95, 0)
+shape = SubResource("CapsuleShape3D_hurtbox")
+
+[node name="BodyCollision" type="CollisionShape3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.95, 0)
 shape = SubResource("CapsuleShape3D_hurtbox")
