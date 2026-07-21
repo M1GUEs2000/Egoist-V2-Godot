@@ -36,8 +36,8 @@ Arma base / equilibrada. Velocidad media. Sirve para mantener el flujo del comba
 | X X espera X         | Diagonal, diagonal, plunge: tu y el enemigo golpeado caen juntos hasta el piso a velocidad constante. Cada cuerpo baja con su Mover DOWN del tuning (`plunge_player_mover` / `plunge_enemy_mover`, mismo speed). El enemigo se alinea a tu altura al conectar (si estaba arriba tuyo baja a tu Y) para dejar servido el rebote. El rebote en enemigo cancela el plunge; el doble salto no sale (ni se gasta) mientras dura. El plunge es reutilizable: `Player.plunge(MoverSettings)`. *(2026-07-21)* |
 | X cargado            | Mismo dash que en el piso, pero en el aire.                                                                                                                                        |
 | X cargado sweet spot | Igual que el terrestre. Las explosiones suben a los enemigos afectados como si fuera un launcher.                                                                                  |
-| Y cargado            | Golpe hacia abajo que hace rebotar al enemigo. Implementado 2026-07-02: gasta 1 barra; te auto-lanza hacia arriba y spikea/rebota al enemigo hasta tu altura. Pendiente de probar. |
-| Y cargado sweet spot | Doble rebote con los enemigos que alcance a dar. Sweet spot aun no implementado. El segundo rebote te sube mas a ti y a todos los enemigos afectados                               |
+| Y cargado            | **Desactivado por ahora** (ver Estado Godot): diseño es golpe hacia abajo que hace rebotar al enemigo (auto-lanza al jugador y spikea/rebota al enemigo hasta su altura), pero depende de `slam_bounce`, que espera el "bouncer" sin diseñar. Sostener Y en el aire cae al combo aereo normal. |
+| Y cargado sweet spot | Diseño pendiente (doble rebote, el segundo sube mas a jugador y enemigos): no implementado, bloqueado por lo mismo que el Y cargado.                               |
 
 ## Autoridad vertical
 

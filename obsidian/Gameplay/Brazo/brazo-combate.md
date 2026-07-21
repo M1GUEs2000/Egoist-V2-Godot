@@ -30,10 +30,12 @@ genera meter propio al conectar (`meter_gain_on_hit`). `max_taps` seguidos antes
 que el air stall del arma (`PlayerTuning.air_stall_*`, que flota y resetea la caida). Dos efectos
 separados, ambos en `arm_tuning.tres`:
 
-- **Vertical → pausa que conserva**: congela la caida `air_freeze_duration` seg (0.3) y al soltar
-  la retoma con el momentum vertical **completo** previo. No flota ni resetea. Implementado como un
-  gate en `Player._physics_process` sobre `PlayerLauncher.consume_air_freeze` (mantiene la vertical
-  en 0 durante la ventana y restaura al terminar).
+- **Vertical → Floater de hold total**: `Player.register_arm_air_hit` pide `floater.start_float(air_hang_duration, 0.0)`
+  (0.3s). Mismo primitivo que cualquier otro ataque (ver [[Plan Autoridad Vertical]]), no un sistema
+  propio del brazo. *(2026-07-21, reemplaza el freeze viejo — `PlayerLauncher.consume_air_freeze` /
+  `register_arm_air_freeze` ya no existen)*. Cambio de feel: el freeze retomaba la caida con la
+  velocidad previa completa (se leia como "pausa"); el Floater arranca de 0 al terminar la ventana
+  (se lee como "hang"). El knob se renombro `air_freeze_duration` → `air_hang_duration`.
 - **Horizontal → freno que decrece**: el momentum `bump` se **decelera** en el acto por
   `air_horizontal_keep` (0-1; 0.5 = lo parte a la mitad cada golpe, 1.0 = no frena, 0.0 = lo mata).
   No es pausa: cada golpe encadenado lo baja mas.
