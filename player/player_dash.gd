@@ -144,7 +144,7 @@ func _start_dash(dir: Vector3, distance: float, duration: float, boost_bump_mome
 	_active_distance = maxf(0.01, distance)
 	_active_duration = maxf(0.01, duration)
 	if boost_bump_momentum:
-		_boost_bump_momentum()
+		_boost_bump_momentum(_dash_dir, _active_distance / maxf(0.01, _active_duration))
 	is_dashing = true
 	_timer = _active_duration
 	if pass_through_enemies:
@@ -199,21 +199,29 @@ func _set_particles(active: bool) -> void:
 	if _particles != null and _particles.emitting != active:
 		_particles.emitting = active
 
-func _boost_bump_momentum() -> void:
+func _boost_bump_momentum(dir: Vector3, dash_speed: float) -> void:
 	var horizontal := Vector3(_body.bump_velocity.x, 0.0, _body.bump_velocity.z)
 	if horizontal.length_squared() < 0.01:
 		return
 	var t := _body.tuning
-	var dash_speed := _active_distance / maxf(0.01, _active_duration)
 	var boosted := minf(
 		t.dash_bump_max_speed,
 		horizontal.length() * t.dash_bump_momentum_multiplier
 			+ dash_speed * t.dash_bump_dash_speed_multiplier
 	)
-	_body.set_momentum(_dash_dir * boosted)
+	_body.set_momentum(dir * boosted)
+
+## --- Extras del dash cuando el desplazamiento lo maneja un Mover (dash cargado de la Espada
+## migrado a Mover): el Mover los dispara por hook via Player.on_mover_started/ended, reusando la
+## misma lógica E4 en vez de duplicarla. PlayerDash sigue dueño del boost y de las partículas. ---
+func boost_momentum_along(dir: Vector3, dash_speed: float) -> void:
+	_boost_bump_momentum(dir, dash_speed)
+
+func show_dash_particles(on: bool) -> void:
+	_set_particles(on)
 
 ## Golpe del dash ofensivo: frena la caida, pero NO le come el momentum horizontal — el
-## desplazamiento del dash es el move (ver PlayerLauncher.register_air_hit_stall).
+## desplazamiento del dash es el move (ver Player.register_air_hit_stall).
 func _on_dash_hit(hurtbox: Hurtbox, _died: bool) -> void:
 	if hurtbox.triggers_air_hit_stall:
 		_register_air_hit_stall.call(1.0, false)

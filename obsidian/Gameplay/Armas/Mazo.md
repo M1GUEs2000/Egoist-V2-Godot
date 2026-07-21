@@ -43,6 +43,11 @@ Arma de mas dano. Controla masas. Tiene bastante knockback. Tumba a los enemigos
 (ventanas, daños, ángulos, sweet spots). Combos sobre el mismo motor que la [[Espada]];
 knobs en `mace_tuning.tres`.
 
+- **Y cargado aereo DESACTIVADO temporalmente** *(2026-07-20)*: la caida diagonal + `slam_arc` +
+  rebote diagonal del jugador dependen del "bouncer" balistico, que todavia no existe. Hasta que se
+  implemente, el Y cargado en el aire cae al combo aereo normal. El codigo del move queda intacto.
+  Ver [[Plan Autoridad Vertical]] F5.
+
 - `combat/weapons/mace/mace.gd` define `Mace extends WeaponBase` (no hereda de
   `Sword`): coreografía propia sobre el motor genérico de `WeaponBase`.
 - Sus swings mueven la mano alrededor del jugador, igual que la Espada (ver Mano orbital

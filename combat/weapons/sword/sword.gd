@@ -21,6 +21,9 @@ const HEAVY_AIR_Y_START := 2.40
 const HEAVY_AIR_Y_END := 2.70
 
 var _charged_dash_id := 0
+## Duración del dash cargado en curso, derivada del recorrido (distancia/velocidad de charged_dash_mover):
+## la usan la animación y la ventana de daño para durar exactamente lo que dura el Mover.
+var _charged_dash_time := 0.0
 ## El dash cargado en curso salio en sweet spot: junta lo que atraviesa para explotarlo.
 var _sweet_spot_dash := false
 var _sweet_spot_hits: Array[Hurtbox] = []
@@ -124,8 +127,15 @@ func _hold_x() -> void:
 	_sweet_spot_dash = sweet_spot
 	_sweet_spot_hits.clear()
 	if _player.meter.spend_charged(1, true, tuning.meter_cost_scale(_sweet_spot_dash)):
-		play_visual_clip(ANIM_DASH, 0.0, -1.0, _t().charged_dash_duration)
-		_player.force_dash(_player.forward(), _t().charged_dash_distance, _t().charged_dash_duration, true)
+		# X cargado = Mover EXCLUSIVO hacia adelante (perfil en SwordTuning.charged_dash_mover, ex
+		# force_dash): atraviesa enemigos, frena en pared, con boost/partículas/inercia — todo tuneado en
+		# el recurso. direction se fija acá al forward del jugador; la duración del golpe sale del propio
+		# recorrido (distancia/velocidad). El daño lo pone ChargedDashHitbox (_run_charged_dash_window).
+		var dash: MoverSettings = _t().charged_dash_mover.duplicate()
+		dash.direction = _player.forward()
+		_charged_dash_time = dash.distance / maxf(0.01, dash.speed)
+		play_visual_clip(ANIM_DASH, 0.0, -1.0, _charged_dash_time)
+		_player.dash_mover(dash)
 		_run_charged_dash_window()
 	else:
 		# ponytail: sin barra no hay dash — cae a un swing cargado normal.
@@ -142,14 +152,24 @@ func _hold_y() -> void:
 	# arma el finisher de la rama espera sobrevive y el launcher empuja en vez de lanzar.
 	cancel_routines()
 	# En el aire: Y cargada aérea (auto-launch + spike/rebote), no el launcher terrestre.
+	# DESACTIVADO — Plan Autoridad Vertical F5 (2026-07-20): la Y cargada aérea usa slam_bounce
+	# (rebote balístico del enemigo hasta meet_y), un move del "bouncer" todavía sin implementar.
+	# Hasta que exista el bouncer, el input cae al combo aéreo normal en vez de correr un move a
+	# medio migrar. _aerial_charged_y/_run_aerial_charged_y/_on_aerial_charged_y_hit quedan intactos
+	# para re-enchufarlos. Cae por _tap_combo, que no gasta meter (a diferencia de _aerial_charged_y).
 	if _player.is_airborne():
-		_aerial_charged_y()
+		_tap_combo()
 		return
-	# Launcher terrestre (ex AttackLauncher: solo desde el suelo — ya garantizado acá).
+	# Launcher terrestre (ex AttackLauncher: solo desde el suelo — ya garantizado acá). El enemigo sube
+	# con launcher_enemy_mover y cuelga con launcher_enemy_floater; el player se lanza a la misma altura
+	# (la del Mover) leyendo su propio hang de PlayerTuning. La altura/hang escalares del player salen del
+	# recurso del enemigo para no duplicar el número.
+	var l_mover: MoverSettings = _t().launcher_enemy_mover
+	var l_floater: FloaterSettings = _t().launcher_enemy_floater
 	play_visual_clip(ANIM_HEAVY, HEAVY_GROUND_Y_START, HEAVY_GROUND_Y_END, tuning.swing_time)
 	swing_up(_t().strike_angle)
-	run_launcher_window(_launcher_hitbox, _t().launcher_height, _t().launcher_hang_time,
-			_t().launcher_hitbox_duration)
+	run_launcher_window(_launcher_hitbox, l_mover.distance, l_floater.duration,
+			_t().launcher_hitbox_duration, 0.05, true, l_mover, l_floater)
 
 ## Y cargada en el aire: gasta 1 barra (como la X cargada). El jugador se auto-launcha
 ## (mismos valores que el launcher Y) y los golpeados spikean al suelo y rebotan hasta
@@ -165,7 +185,7 @@ func _run_aerial_charged_y() -> void:
 	var t := _t()
 	_aerial_charged_y_active = true
 	_aerial_charged_meet_y = _player.global_position.y + t.aerial_charged_meet_height
-	_player.launch(t.aerial_charged_player_height, t.launcher_hang_time, t.aerial_charged_player_rise_time)
+	_player.launch(t.aerial_charged_player_height, t.launcher_enemy_floater.duration, t.aerial_charged_player_rise_time)
 	play_visual_clip(ANIM_HEAVY, HEAVY_AIR_Y_START, HEAVY_AIR_Y_END, tuning.swing_time)
 	swing_up(t.strike_angle)
 	begin_damage_window(tuning.swing_time)
@@ -181,17 +201,17 @@ func _on_aerial_charged_y_hit(hurtbox: Hurtbox, _died: bool) -> void:
 		var meet_y := _aerial_charged_meet_y
 		target.call("slam_bounce", _t().aerial_charged_down_speed,
 				func() -> float: return meet_y,
-				_t().launcher_hang_time)
+				_t().launcher_enemy_floater.duration)
 
 # ---- Dash cargado: ventana de daño con hitbox propio de la espada ----
 
-## Prende el hitbox del dash cargado mientras dura el dash (la espada mueve al player vía
-## PlayerDash.force_dash, pero el daño lo pone ESTE hitbox, no el del dodge).
+## Prende el hitbox del dash cargado mientras dura el dash (la espada mueve al player vía el Mover de
+## charged_dash_mover, pero el daño lo pone ESTE hitbox, no el del dodge).
 func _run_charged_dash_window() -> void:
 	_charged_dash_id += 1
 	var id := _charged_dash_id
 	_charged_dash_hitbox.begin_swing()
-	await wait_seconds(_t().charged_dash_duration)
+	await wait_seconds(_charged_dash_time)
 	if id != _charged_dash_id:
 		return  # otro dash cargado ya arrancó: él es dueño del hitbox
 	_charged_dash_hitbox.end_swing()
@@ -213,7 +233,7 @@ func _sweet_spot_explosion_stun() -> StunSettings:
 	if t.charged_dash_stun == null:
 		return null
 	var stun: StunSettings = t.charged_dash_stun.duplicate()
-	stun.airborne = World.LAUNCH_RISE_TIME + t.launcher_hang_time + t.sweet_spot_explosion_stun_extra
+	stun.airborne = World.LAUNCH_RISE_TIME + t.launcher_enemy_floater.duration + t.sweet_spot_explosion_stun_extra
 	return stun
 
 ## Sweet spot del X cargado: cada enemigo que atravesó el dash estalla en su lugar y sale
@@ -229,7 +249,7 @@ func _explode_sweet_spot_hits() -> void:
 			continue
 		var target: Node = hurtbox.owner_node
 		if t.sweet_spot_explosion_height > 0.0 and target.has_method("launch"):
-			target.call("launch", t.sweet_spot_explosion_height, t.launcher_hang_time, stun)
+			target.call("launch", t.sweet_spot_explosion_height, t.launcher_enemy_floater.duration, stun)
 		var died := hurtbox.receive_hit(_player, t.sweet_spot_explosion_damage,
 				_player.forward(), stun)
 		World.spawn_color_burst(_player.get_parent(), hurtbox.global_position,
@@ -241,10 +261,11 @@ func _explode_sweet_spot_hits() -> void:
 		exploded = true
 	_sweet_spot_hits.clear()
 	# Hang extra para mirar el estallido. Va DESPUÉS del loop: un solo Floater aunque explote
-	# media pantalla, y solo si algo explotó de verdad (whiff = caés normal). Migrado a Floater
-	# (F1): antes era _player.hover; ahora el ataque pide el hang con su propio fall_scale.
-	if exploded and t.sweet_spot_air_stall_bonus > 0.0:
-		_player.request_float(t.sweet_spot_air_stall_bonus, t.sweet_spot_float_fall_scale)
+	# media pantalla, y solo si algo explotó de verdad (whiff = caés normal). El perfil (duración +
+	# fall_scale) vive en SwordTuning.sweet_spot_player_floater.
+	var f: FloaterSettings = t.sweet_spot_player_floater
+	if exploded and f != null and f.duration > 0.0:
+		_player.request_float(f.duration, f.fall_scale)
 
 ## Solo alimenta el meter (sin _window_hits: no es parte de un combo aéreo). Un kill en la
 ## ventana del cargado devuelve la barra completa (gain_on_kill lo resuelve).
@@ -289,8 +310,8 @@ func _ground_step_clip(step: int, spin: bool) -> StringName:
 ##   X X X            → diagonal, diagonal, hachazo vertical (spikea al suelo)
 ##   X (espera) X X   → diagonal, vuelta, vuelta (empuja hacia adelante)
 ##   X X (espera) X   → diagonal, diagonal, PLUNGE: vos y el enemigo golpeado bajan
-##                      juntos al piso (air_plunge_down_speed); un rebote en enemigo
-##                      lo cancela. Misma coreografía/clip que el hachazo.
+##                      juntos al piso (plunge_player_mover / plunge_enemy_mover); un rebote
+##                      en enemigo lo cancela. Misma coreografía/clip que el hachazo.
 func air_steps() -> int:
 	return 3
 
@@ -322,13 +343,15 @@ func play_air_step(step: int, finisher: bool, wait_branch: bool) -> void:
 
 ## Rama plunge: los golpeados se ALINEAN a la altura del jugador (si el golpe entró
 ## arriba tuyo, el enemigo baja a tu Y) y caen a la MISMA velocidad que vos (slam con
-## air_plunge_down_speed) en vez del spike normal — bajan a la par hasta el piso, lo
+## plunge_enemy_mover) en vez del spike normal — bajan a la par hasta el piso, lo
 ## que deja el rebote en enemigo servido para cancelar el plunge.
 func _finish_air_combo(wait_branch: bool) -> void:
 	if _air_plunge_finisher and not wait_branch:
 		# Recién acá cae el jugador: el swing ya cerró con su ventana de daño completa.
-		# En whiff también caés (move de compromiso, como el dash cargado).
-		_player.plunge(_t().air_plunge_down_speed)
+		# En whiff también caés (move de compromiso, como el dash cargado). El plunge del jugador y el
+		# slam del enemigo salen de sus perfiles del tuning (bajan a la par: mismo speed).
+		var enemy_mover: MoverSettings = _t().plunge_enemy_mover
+		_player.plunge(_t().plunge_player_mover)
 		for hurtbox in _window_hits.duplicate():
 			var target: Node = hurtbox.owner_node
 			if not target.has_method("slam"):
@@ -337,7 +360,7 @@ func _finish_air_combo(wait_branch: bool) -> void:
 			# enemigo parado en el piso se teletransportaría a tu altura sin caer.
 			if _plunge_can_take(target) and target is Node3D:
 				(target as Node3D).global_position.y = _player.global_position.y
-			target.call("slam", _t().air_plunge_down_speed)
+			target.call("slam", enemy_mover.speed, enemy_mover)
 		return
 	super._finish_air_combo(wait_branch)
 

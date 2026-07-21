@@ -476,8 +476,13 @@ func set_armored(enabled: bool) -> void:
 ## Lanza al aire. Corre en about_to_hit (ANTES del daño) para que el stun del golpe lo vea ya
 ## airborne y le de la duracion aerea, asi que recibe el `stun` del golpe para consultar el poise:
 ## solo lanza si esa reserva se quiebra. Ver _breaks_poise.
+## `mover_settings`/`floater_settings` (opcionales): perfiles explícitos del recorrido de subida y del
+## hang, tal como los define el ataque en su tuning (la Espada: launcher_enemy_mover/floater). Si vienen,
+## mandan sobre `height`/`hang_time` (que quedan de fallback para llamadores que aún pasan escalares:
+## Mazo, dummy, explosión del sweet spot).
 func launch(height: float, hang_time: float, stun: StunSettings = null,
-		starts_lying := false) -> bool:
+		starts_lying := false, mover_settings: MoverSettings = null,
+		floater_settings: FloaterSettings = null) -> bool:
 	if not can_receive_hit() or not _breaks_poise(stun):
 		return false
 	# Un cuerpo en ragdoll ya esta quebrado: el golpe lo re-levanta (juggle). Se interrumpe el
@@ -495,14 +500,23 @@ func launch(height: float, hang_time: float, stun: StunSettings = null,
 	# hold viejo (ahora sostiene el Floater) y deja airborne_max_time contando como tope de seguridad.
 	_airborne_until = World.now()
 	_cancel_air_hold()  # el hang del launch nuevo manda: no hereda el hold del juggle anterior
-	var s := MoverSettings.new()
-	s.direction = Vector3.UP
-	s.distance = height
-	s.speed = height / maxf(0.01, World.LAUNCH_RISE_TIME)
-	s.acceleration = 0.0
-	s.stop_on = MoverSettings.STOP_ON_DISTANCE
-	s.float_duration = hang_time
-	s.float_fall_scale = 0.0  # hold total en el tope, como el _airborne_until viejo
+	# Perfil de subida: el explícito del ataque (duplicado para no mutar el recurso del tuning) o uno
+	# armado con los escalares de fallback.
+	var s: MoverSettings = mover_settings.duplicate() if mover_settings != null else MoverSettings.new()
+	if mover_settings == null:
+		s.direction = Vector3.UP
+		s.distance = height
+		s.speed = height / maxf(0.01, World.LAUNCH_RISE_TIME)
+		s.acceleration = 0.0
+		s.stop_on = MoverSettings.STOP_ON_DISTANCE
+	# Hang del tope: si vino un FloaterSettings explícito manda; si no, el hang_time escalar (hold total,
+	# como el _airborne_until viejo).
+	if floater_settings != null:
+		s.float_duration = floater_settings.duration
+		s.float_fall_scale = floater_settings.fall_scale
+	elif mover_settings == null:
+		s.float_duration = hang_time
+		s.float_fall_scale = 0.0
 	mover.start_mover(s)
 	return true
 
@@ -523,18 +537,24 @@ func _launch_routine(id: int, height: float, hang_time: float) -> void:
 ## gravedad acumulando (la bajada aceleraba); el Mover baja a velocidad CONSTANTE, igual que el
 ## plunge del jugador con el que este spike va a la par. Sin Floater al final: al tocar el piso
 ## manda el aterrizaje (o el rebote, si `_slam_bounce` quedo armado).
-func slam(down_speed: float) -> void:
+## `settings` (opcional): perfil DOWN explícito del ataque (la Espada: plunge_enemy_mover). Si viene,
+## manda; si no, se arma con `down_speed` (fallback para el spike del Mazo y el dummy).
+func slam(down_speed: float, settings: MoverSettings = null) -> void:
 	if not can_receive_hit() or not is_stunned() or not is_airborne() or _ragdolling:
 		return
 	_airborne_until = World.now()
 	_cancel_air_hold()
-	var s := MoverSettings.new()
-	s.direction = Vector3.DOWN
-	s.distance = airborne_max_fall_distance
-	s.speed = absf(down_speed)
-	s.acceleration = 0.0
-	s.stop_on = MoverSettings.STOP_ON_DISTANCE | MoverSettings.STOP_ON_FLOOR
-	s.float_duration = 0.0
+	var s: MoverSettings
+	if settings != null:
+		s = settings
+	else:
+		s = MoverSettings.new()
+		s.direction = Vector3.DOWN
+		s.distance = airborne_max_fall_distance
+		s.speed = absf(down_speed)
+		s.acceleration = 0.0
+		s.stop_on = MoverSettings.STOP_ON_DISTANCE | MoverSettings.STOP_ON_FLOOR
+		s.float_duration = 0.0
 	mover.start_mover(s)
 
 ## Rebote VERTICAL: baja y, al tocar el piso, sube a una altura objetivo con hang. Lo usa el Y

@@ -3,6 +3,19 @@
 [ext_resource type="Script" uid="uid://ri5258b7pe1w" path="res://data/sword_tuning.gd" id="1_tuning"]
 [ext_resource type="Script" uid="uid://w0b3i18w442a" path="res://data/stun_settings.gd" id="2_stun"]
 [ext_resource type="Script" uid="uid://cprdodv3kypq1" path="res://data/push_settings.gd" id="3_push"]
+[ext_resource type="Script" uid="uid://dsps3sxfd8wmx" path="res://data/mover_settings.gd" id="4_mover"]
+[ext_resource type="Script" uid="uid://br6k3bi45tkio" path="res://data/floater_settings.gd" id="5_floater"]
+
+[sub_resource type="Resource" id="Resource_dashmover"]
+script = ExtResource("4_mover")
+distance = 11.0
+speed = 84.61539
+stop_on = 5
+pass_through_enemies = true
+boost_momentum = true
+keep_exit_inertia = true
+emit_dash_particles = true
+metadata/_custom_type_script = "uid://dsps3sxfd8wmx"
 
 [sub_resource type="Resource" id="Resource_810ig"]
 script = ExtResource("2_stun")
@@ -10,6 +23,35 @@ poise_damage = 10.0
 grounded = 0.9
 airborne = 0.9
 metadata/_custom_type_script = "uid://w0b3i18w442a"
+
+[sub_resource type="Resource" id="Resource_launchfloat"]
+script = ExtResource("5_floater")
+duration = 1.0
+metadata/_custom_type_script = "uid://br6k3bi45tkio"
+
+[sub_resource type="Resource" id="Resource_launchmover"]
+script = ExtResource("4_mover")
+distance = 5.0
+speed = 33.33333
+emit_dash_particles = true
+metadata/_custom_type_script = "uid://dsps3sxfd8wmx"
+
+[sub_resource type="Resource" id="Resource_plungeenemy"]
+script = ExtResource("4_mover")
+direction = Vector3(0, -1, 0)
+distance = 100.0
+speed = 30.0
+stop_on = 3
+metadata/_custom_type_script = "uid://dsps3sxfd8wmx"
+
+[sub_resource type="Resource" id="Resource_plungeplayer"]
+script = ExtResource("4_mover")
+direction = Vector3(0, -1, 0)
+distance = 1000.0
+speed = 30.0
+stop_on = 3
+exclusive = false
+metadata/_custom_type_script = "uid://dsps3sxfd8wmx"
 
 [sub_resource type="Resource" id="Resource_swordpush"]
 script = ExtResource("3_push")
@@ -19,22 +61,28 @@ script = ExtResource("2_stun")
 poise_damage = 6.0
 grounded = 0.35
 
+[sub_resource type="Resource" id="Resource_sweetfloat"]
+script = ExtResource("5_floater")
+fall_scale = 0.15
+metadata/_custom_type_script = "uid://br6k3bi45tkio"
+
 [resource]
 script = ExtResource("1_tuning")
 combo_window = 0.8
 ground_wait_branch_threshold = 0.2
-charged_dash_distance = 11.0
-charged_dash_duration = 0.13
+charged_dash_mover = SubResource("Resource_dashmover")
 charged_dash_damage = 5.0
 charged_dash_stun = SubResource("Resource_810ig")
 sweet_spot_explosion_delay = 0.4
-sweet_spot_explosion_height = 2.5
-sweet_spot_air_stall_bonus = 0.0
-air_plunge_down_speed = 20.0
+sweet_spot_explosion_height = 3.5
+sweet_spot_player_floater = SubResource("Resource_sweetfloat")
+plunge_player_mover = SubResource("Resource_plungeplayer")
+plunge_enemy_mover = SubResource("Resource_plungeenemy")
 aerial_charged_down_speed = 40.0
 aerial_charged_player_height = 1.0
 aerial_charged_meet_height = 1.0
-launcher_height = 5.0
+launcher_enemy_mover = SubResource("Resource_launchmover")
+launcher_enemy_floater = SubResource("Resource_launchfloat")
 swing_time = 0.4
 combo_recovery = 0.4
 stun = SubResource("Resource_swordstun")

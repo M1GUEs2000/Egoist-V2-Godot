@@ -209,10 +209,9 @@ class_name PlayerTuning extends Resource
 @export var launcher_float_duration := 0.15
 ## Escala de gravedad durante el float del pico (bajo = flota).
 @export var launcher_float_gravity := 0.30
-## Tras el float: segundos de caída suavizada con fall_gravity antes de gravedad normal.
+## Segundos extra de float tras el pico (F2 colapsó las dos fases del launcher viejo —float + fall—
+## en un solo Floater: su duración total es launcher_float_duration + este valor).
 @export var launcher_fall_duration := 0.30
-## Escala de gravedad durante la caída suavizada post-float.
-@export var launcher_fall_gravity := 0.85
 
 @export_group("Meter")
 ## Barras máximas de meter (hasta 5 con mejoras, futuro).

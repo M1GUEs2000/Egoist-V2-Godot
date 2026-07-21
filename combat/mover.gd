@@ -5,10 +5,15 @@ class_name Mover extends Node
 ## SU dueno. La coordinacion de ambos cuerpos vive en el ataque, que emite una solicitud por cuerpo
 ## (no existe target=BOTH aca).
 ##
-## El cuerpo lo maneja llamando tick(delta) en su bucle de fisica mientras is_moving() (mismo patron
-## que el viejo launcher.tick_launch): el Mover fija velocity y hace move_and_slide, asi corta la
-## gravedad normal durante el recorrido. Al terminar emite mover_finished(reason) y, si el settings
-## pide Floater, lo detona en su propio cuerpo.
+## Dos modos (MoverSettings.exclusive):
+## - EXCLUSIVO: el cuerpo llama tick(delta) mientras is_moving(); el Mover fija velocity y hace
+##   move_and_slide el mismo, cortando gravedad/horizontal/contactos (launcher UP, dash cargado).
+## - NO-EXCLUSIVO: el cuerpo NO llama tick; en su lugar usa non_exclusive_tick(delta) para conocer la
+##   velocidad vertical del eje y la aplica en SU propio move_and_slide (el resto del cuerpo sigue
+##   vivo), y despues llama non_exclusive_after_move() para chequear las condiciones de fin. Es el
+##   plunge: cae recto pero conserva horizontal y el rebote en enemigo que lo cancela.
+## Al terminar (cualquier modo) emite mover_finished(reason) y, si el settings pide Floater, lo
+## detona en su propio cuerpo.
 
 ## Termino con exito: recorrio la distancia o encontro una condicion habilitada en `stop_on`.
 signal mover_finished(reason: int)   # Mover.FinishReason
@@ -50,22 +55,30 @@ func start_mover(settings: MoverSettings) -> void:
 		return
 	if _active:
 		_active = false
+		_apply_end_effects()  # cierra los extras del recorrido anterior (restaura mask, etc.)
 		mover_cancelled.emit(CancelReason.SUPERSEDED)
 	_settings = settings
 	_dir = settings.direction.normalized() if settings.direction.length_squared() > 0.0001 else Vector3.UP
 	_speed = settings.speed
 	_traveled = 0.0
 	_active = true
+	_apply_start_effects()
 
 ## Aborta el recorrido en curso con una CancelReason. No detona el Floater de `settings`.
 func cancel_mover(reason: int) -> void:
 	if not _active:
 		return
 	_active = false
+	_apply_end_effects()
 	mover_cancelled.emit(reason)
 
 func is_moving() -> bool:
 	return _active
+
+## True si el Mover activo se adueña del cuerpo (ver MoverSettings.exclusive). El glue lo consulta
+## para decidir si le cede el frame entero (exclusivo) o solo el eje vertical (no-exclusivo).
+func is_exclusive() -> bool:
+	return _settings == null or _settings.exclusive
 
 ## Un frame de recorrido. Lo llama el cuerpo mientras is_moving(). Acelera (accel puede ser 0),
 ## avanza por `_dir` a la velocidad del frame (recortada para clavar la distancia exacta), y corta
@@ -95,8 +108,56 @@ func tick(delta: float) -> void:
 	if (_settings.stop_on & MoverSettings.STOP_ON_WALL) and _body.is_on_wall():
 		_finish(FinishReason.WALL)
 
+## Modo NO-EXCLUSIVO. Avanza la velocidad del frame (acel) y devuelve la velocidad VERTICAL del eje
+## para que el glue la use en su propio move_and_slide. Para un plunge (`direction` DOWN) devuelve
+## negativo. No mueve el cuerpo ni corta el horizontal: eso queda para el glue.
+func non_exclusive_tick(delta: float) -> float:
+	if not _active or _settings == null or delta <= 0.0:
+		return 0.0
+	_speed += _settings.acceleration * delta
+	if _speed < 0.0:
+		_speed = 0.0
+	_traveled += _speed * delta  # distancia pretendida: sirve de tope de seguridad (razon DISTANCE)
+	return _dir.y * _speed
+
+## Modo NO-EXCLUSIVO. Lo llama el glue DESPUES de su move_and_slide para cerrar el recorrido si
+## cumplio distancia o toco una condicion de `stop_on`. Detona el Floater igual que el modo exclusivo.
+func non_exclusive_after_move() -> void:
+	if not _active:
+		return
+	if _traveled >= _settings.distance:
+		_finish(FinishReason.DISTANCE)
+		return
+	if (_settings.stop_on & MoverSettings.STOP_ON_FLOOR) and _body.is_on_floor():
+		_finish(FinishReason.FLOOR)
+		return
+	if (_settings.stop_on & MoverSettings.STOP_ON_WALL) and _body.is_on_wall():
+		_finish(FinishReason.WALL)
+
 func _finish(reason: int) -> void:
 	_active = false
+	_apply_end_effects()
 	mover_finished.emit(reason)
 	if _settings.float_duration > 0.0 and _floater != null:
 		_floater.start_float(_settings.float_duration, _settings.float_fall_scale)
+
+## Extras de arranque (ver MoverSettings): pass-through lo hace el Mover (mask del cuerpo); boost de
+## momentum y partículas los aplica el dueño por hook (Player), asi el Mover sigue siendo generico y
+## un cuerpo sin esos hooks (EnemyBase) simplemente los ignora.
+func _apply_start_effects() -> void:
+	if _settings == null or _body == null:
+		return
+	if _settings.pass_through_enemies:
+		_body.collision_mask &= ~World.LAYER_ENEMY
+	if _body.has_method("on_mover_started"):
+		_body.on_mover_started(_settings, _dir, _speed)
+
+## Extras de cierre: restaura la mask del pass-through y deja que el dueño aplique inercia de salida /
+## apague partículas. Lo llaman _finish, cancel_mover y el supersede de start_mover.
+func _apply_end_effects() -> void:
+	if _settings == null or _body == null:
+		return
+	if _settings.pass_through_enemies:
+		_body.collision_mask |= World.LAYER_ENEMY
+	if _body.has_method("on_mover_ended"):
+		_body.on_mover_ended(_settings, _dir)

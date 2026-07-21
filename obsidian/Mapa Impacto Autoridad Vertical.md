@@ -16,6 +16,12 @@ inicio de la migracion. Cada fila migra a **Mover** y/o **Floater**. `archivo:li
 
 ## PlayerLauncher — hub vertical del Player (`player/player_launcher.gd`)
 
+> **RESUELTO (2026-07-20, F5):** `PlayerLauncher` **eliminado** (módulo + nodo de escena + `.uid`).
+> El launch migró a `Mover` (F2), el hang de stall/hover al `Floater` (F3); lo único que quedaba
+> —contabilidad del air-hit-stall + ventana de whiff— se plegó dentro de `Player`
+> (`register_air_hit_stall`, `notify_aerial_attack`, `_reset_air_stall`, whiff inline en la gravedad).
+> Knob muerto `launcher_fall_gravity` borrado. Ya no existe hub vertical: solo `Floater` + `Mover`.
+
 Es el nodo que hoy concentra launcher, air-hit-stall, whiff, hover y arm-freeze del Player.
 
 - **Glue** `player/player.gd`: `setup` (58); tick del launcher (114, 119); `gravity_scale()` en la
@@ -88,8 +94,15 @@ inline (11, 21), `push` (484, 548), `launch` (482, 490), lee `_airborne_until` (
 - `player_tuning.gd`: `launcher_float_duration` (209), `launcher_float_gravity` (211),
   `launcher_fall_duration` (213), `launcher_fall_gravity` (215); `air_stall_*` (276-296);
   `aerial_whiff_fall_gravity` (298); `air_charge_fall_reduction_steps` (303).
-- `sword_tuning.gd`: `launcher_height` (97), `launcher_hang_time` (98), `launcher_hitbox_duration`
-  (99), `launcher_deals_damage` (100); `sweet_spot_air_stall_bonus` (59).
+- `sword_tuning.gd`: **RESUELTO (2026-07-21):** los escalares sueltos del sistema vertical se
+  reemplazaron por recursos `MoverSettings`/`FloaterSettings` explícitos, uno por cuerpo, embebidos en
+  `sword_tuning.tres` (lo que pedía el plan: "todo número de feel vive en `.tres`", perfiles como
+  subresources del tuning). `charged_dash_distance/duration` → `charged_dash_mover`;
+  `air_plunge_down_speed` → `plunge_player_mover` + `plunge_enemy_mover`; `launcher_height/hang_time`
+  → `launcher_enemy_mover` + `launcher_enemy_floater`; `sweet_spot_air_stall_bonus/float_fall_scale`
+  → `sweet_spot_player_floater`. Se creó el recurso **`FloaterSettings`** (`data/floater_settings.gd`),
+  simétrico a `MoverSettings`. Quedan como escalares solo `launcher_hitbox_duration`/
+  `launcher_deals_damage` (config de hitbox, no del Mover).
 - `mace_tuning.gd`: `ground_y_launcher_*` (46-56), `air_y_launcher_hang_time` (90),
   `air_freeze_stun` (103), `air_freeze_extra_hang_time` (104).
 - `weapon_tuning.gd`: `air_stall_scale` (37). `arm_tuning.gd`: `air_freeze_duration` (30).
@@ -101,9 +114,10 @@ inline (11, 21), `push` (484, 548), `launch` (482, 490), lee `_airborne_until` (
 |---|---|---|
 | `launch` (Player y Enemy) + `launcher_*` | Mover UP + Floater | F2 |
 | air-hit-stall / whiff / hover del combo aereo normal | Mover(s) o Floater directo (a probar) | F3 |
-| X cargado aereo | Mover `DISTANCE\|WALL` + Floater | F4 |
-| Y cargado aereo (spike/rebote), `slam_bounce` | Movers descendente/ascendente + Floaters | F4 |
-| `plunge`, `push` | Mover propio (push necesita arco → ver F5) | F4 |
+| X cargado (tierra/aire) | Mover EXCLUSIVO `DISTANCE\|WALL` + extras (pass-through/boost/particulas/inercia) | F4 ✓ (2026-07-20) |
+| Y cargado aereo (spike/rebote), `slam_bounce` | Movers descendente/ascendente + Floaters | F4 (Y aereo DESACTIVADO, espera bouncer) |
+| `plunge` | Mover DOWN NO-EXCLUSIVO propio | F4 ✓ (2026-07-20) |
+| `push` | arco balistico → bouncer | F5 |
 | `air_charge_fall_control` (freno) | Floater al Player | F4 |
 | Mazo/Brazo, `slam_arc`, rebotes balisticos | Mover en modo **bouncer** balistico | F5 |
 | `_airborne_until`, `StunSettings.airborne` | se retiran cuando nadie los use | F5 |

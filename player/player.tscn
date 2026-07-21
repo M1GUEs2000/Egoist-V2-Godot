@@ -3,7 +3,6 @@
 [ext_resource type="Script" uid="uid://dtdjcbbq5svxk" path="res://player/player.gd" id="1_player"]
 [ext_resource type="Script" uid="uid://b5vox4rloqjr0" path="res://player/player_locomotion.gd" id="2_loco"]
 [ext_resource type="Script" uid="uid://dattjsi2qh4fm" path="res://player/player_dash.gd" id="3_dash"]
-[ext_resource type="Script" uid="uid://db2vyyvad8gh5" path="res://player/player_launcher.gd" id="4_launcher"]
 [ext_resource type="Script" uid="uid://dr1ehd335mg06" path="res://combat/hitbox.gd" id="5_hitbox"]
 [ext_resource type="Resource" uid="uid://bkryybe060oiv" path="res://data/player_tuning.tres" id="6_tuning"]
 [ext_resource type="Script" uid="uid://dkevr562haiww" path="res://player/player_meter.gd" id="7_meter"]
@@ -232,9 +231,6 @@ script = ExtResource("5_hitbox")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="Dash/DashHitbox" unique_id=420765402]
 shape = SubResource("SphereShape3D_dash")
-
-[node name="Launcher" type="Node" parent="." unique_id=1536080464]
-script = ExtResource("4_launcher")
 
 [node name="WallSlide" type="Node" parent="." unique_id=1043687573]
 script = ExtResource("16_wall_slide")

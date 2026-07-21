@@ -300,11 +300,11 @@ Salida: combo aereo estable, sin poise recuperado en aire y sin temporizadores l
 
 ### F4 — X/Y cargados, plunge y push de Espada
 
-- [ ] X cargado aereo: Mover de Player que atraviesa enemigos y termina por distancia/pared,
-  luego Floater. **BLOQUEADO, ver abajo.**
+- [x] X cargado (tierra y aire): Mover EXCLUSIVO hacia adelante que atraviesa enemigos y termina por
+  distancia/pared. **RESUELTO (2026-07-20), ver "Desbloqueo" abajo.**
 - [x] Y cargado aereo: Movers de spike/rebote por contacto, luego Floaters.
-- [ ] Plunge y push: perfiles Mover propios; borrar sus verbos especializados al completar sus
-  consumidores. **BLOQUEADO, ver abajo.**
+- [x] Plunge: Mover DOWN NO-EXCLUSIVO propio. **RESUELTO (2026-07-20).** (`push` NO va aca: es arco
+  balistico → bouncer, ver F5.)
 - [x] Carga aerea: al empezar carga en aire, aplicar Floater al Player en vez de
   `air_charge_fall_control`; retirar el freno de caida y `air_charge_fall_reduction_steps`. Sin
   escalado por ahora (el "desgaste" queda como idea futura del Floater).
@@ -339,23 +339,96 @@ subida de un launch, pero rompe estos dos:
 Ademas **`push` no va aca**: es un arco balistico, y el plan ya lo manda al "bouncer" de F5 (esto
 mismo quedo anotado en el Mapa de Impacto en F0).
 
-Decision pendiente de Tutupa antes de seguir: darle al Mover un modo NO exclusivo (que maneje solo
-el eje de `direction` y deje el resto del cuerpo vivo) — con eso plunge entra limpio y el dash
-tambien —, o dejar estos dos como excepciones documentadas.
+**Desbloqueo (2026-07-20):** NO hizo falta el bouncer (arcos balisticos, sigue para el Y aereo del
+Mazo/Espada). Los dos bloqueados eran por la EXCLUSIVIDAD del Mover, no por arcos, y se resolvieron
+extendiendo el Mover lineal:
 
-Pendiente: smoke + playtest (no corridos en este batch).
+- **Modo NO-EXCLUSIVO** (`MoverSettings.exclusive = false`): el Mover aporta solo su eje vertical y el
+  glue mueve el cuerpo con el resto vivo (horizontal, contactos, rebote). El **plunge** pasa a un
+  Mover DOWN no-exclusivo (`Player.plunge` lo arma); `try_bounce` ahora solo bombea ante un Mover
+  EXCLUSIVO, asi el rebote en enemigo sigue cancelando el plunge. Se borro `_plunge_speed`.
+- **Extras de dash portados al Mover** (`MoverSettings.pass_through_enemies` / `boost_momentum` /
+  `keep_exit_inertia` / `emit_dash_particles`): el **X cargado** pasa a un Mover EXCLUSIVO forward
+  (`Sword._hold_x` arma el perfil, `Player.dash_mover` lo arranca). El pass-through lo hace el Mover
+  (collision_mask); boost/particulas/inercia los aplica el Player por hooks `on_mover_started/ended`
+  reusando helpers de `PlayerDash` (sin duplicar). El daño sigue en `ChargedDashHitbox`, aparte.
+  Ojo feel: el Mover no suma bump DURANTE el dash (force_dash si), asi que un dash con momentum previo
+  cambia un poco — caso borde, a confirmar jugando.
 
-Salida: todos los movimientos aereos de Espada usan solo Mover + Floater.
+Pendiente: playtest (el smoke headless no se corre). Baja Dash E4→E3 y Espada E3→E2 hasta el OK de
+Tutupa.
+
+**Datos en `.tres` (2026-07-21) — se cumple "todo número de feel vive en `.tres`".** Antes los
+perfiles se armaban en código desde escalares sueltos; ahora cada move vertical de la Espada es un
+recurso `MoverSettings`/`FloaterSettings` explícito, uno por cuerpo, embebido en `sword_tuning.tres`
+y editable en el inspector:
+
+- `charged_dash_mover` (Mover del JUGADOR, X cargado) — reemplaza `charged_dash_distance/duration`;
+  la duración del golpe se deriva de distancia/velocidad.
+- `plunge_player_mover` + `plunge_enemy_mover` (Movers DOWN, plunge) — reemplazan
+  `air_plunge_down_speed`; bajan a la par (mismo speed).
+- `launcher_enemy_mover` + `launcher_enemy_floater` (Mover UP + Floater del hang, launcher Y del
+  enemigo) — reemplazan `launcher_height/hang_time`.
+- `sweet_spot_player_floater` (Floater del JUGADOR, hang del sweet spot) — reemplaza
+  `sweet_spot_air_stall_bonus/float_fall_scale`.
+
+Se creó **`FloaterSettings`** (`data/floater_settings.gd`), simétrico a `MoverSettings` (`duration` +
+`fall_scale`). Los verbos duck-typed del enemigo (`launch`/`slam`) aceptan ahora los recursos por
+parámetros opcionales, con fallback escalar para Mazo/dummy/smoke (no se rompió su firma). Cambio de
+estructura, no de comportamiento: los valores se migraron idénticos (mismo baile de migración). No
+baja más el estado (sigue E2 pendiente del mismo playtest). `--import` exit 0.
+
+Salida: todos los movimientos de Espada usan solo Mover + Floater (el Y aereo sigue desactivado
+esperando el bouncer) y todo su feel vertical vive como recursos en el `.tres`.
 
 ### F5 — Mazo, Brazo y limpieza total
+
+**Estado real (F5, 2026-07-20): el bouncer (arcos balisticos) se pospone; se hizo TODO lo que no lo
+necesita — incluido extender el Mover lineal (modo no-exclusivo + extras de dash) para desbloquear
+plunge y X cargado (ver "Desbloqueo" en F4).**
+
+Primero se DESACTIVO lo que si depende del bouncer (Y aereo), despues se hizo la limpieza:
+
+- **Y cargado aereo DESACTIVADO en Espada y Mazo.** Es la unica via viva de los verbos de bouncer:
+  Espada `_aerial_charged_y` → `slam_bounce`; Mazo `_aerial_hold_y` → caida diagonal + `slam_arc` +
+  rebote diagonal del jugador. Ahora el `_hold_y` aereo de ambas armas cae al **combo aereo normal**
+  (`_tap_combo`, sin gastar meter). El codigo de esos moves (`_run_aerial_charged_y`,
+  `_on_aerial_charged_y_hit`, `_aerial_hold_y`, `_burst_air_slam`, etc.) queda **intacto** para
+  re-enchufarlo cuando exista el bouncer. Verificado: `--import` exit 0, sin errores de compilacion
+  en `sword.gd`/`mace.gd`. Falta playtest (Tutupa) para confirmar que el fallback al combo normal se
+  siente bien.
+- **`push` NO se toca.** Es una mecanica completa y aislada (solver geometrico propio en
+  `PushSettings`, maquina de estados en `EnemyBase`, rebote de pared, tuning propio). Funciona hoy
+  standalone y no llama a ningun verbo de bouncer. Mecanicamente ES un arco balistico, asi que el
+  bouncer PODRIA absorberlo el dia que se implemente, pero es consolidacion de codigo futura, no una
+  dependencia: push no espera nada.
+- Plunge de Espada y el ground pound del X cargado aereo del Mazo tampoco son arcos balisticos
+  (caen recto, lineal) ni estan rotos. Su relacion con el bouncer es solo la de F4 (exclusividad del
+  Mover para migrar el plunge), no funcional. Quedan vivos.
+
+Limpieza NO-bouncer hecha en este batch (2026-07-20):
+
+- [x] **`PlayerLauncher` eliminado.** El modulo ya no lanzaba (launch → `Mover` en F2) ni sostenia
+  hang (stall/hover → `Floater` en F3): solo le quedaba la contabilidad del air-hit-stall + la
+  ventana de whiff. Se plegaron dentro de `Player` (`register_air_hit_stall`, `notify_aerial_attack`,
+  `_reset_air_stall`, whiff inline en la integracion de gravedad). Borrados: `player/player_launcher.gd`
+  + `.uid`, el nodo `Launcher` de `player.tscn`, el knob muerto `launcher_fall_gravity` (.gd + .tres).
+  Quedan vivos y en uso los knobs `launcher_float_duration/fall_duration/float_gravity` (alimentan el
+  Floater del launch). Estado final: la vertical del Player es solo Floater + Mover + gravedad/salto.
+  Verificado `--import` exit 0. Regresa `Player — movimiento` a confirmar jugando (refactor sin cambio
+  de comportamiento).
+- [x] **`StunSettings.airborne` se queda.** El plan pide retirarlo "cuando nadie lo use", pero
+  `duration_for(is_airborne())` lo lee para la duracion del stun en aire (Player `receive_stun` y
+  EnemyBase). Tiene consumidores → no es vestigial. (El `_airborne_until` del enemigo es otra cosa y
+  sigue su propio camino.)
+
+Trabajo original de F5 (queda para cuando se retome, depende del bouncer):
 
 - [ ] Migrar Mazo, hazards y toda otra fuente que escriba vertical directamente.
   (El **Brazo ya esta migrado**: se adelanto en F3, ver esa fase.)
 - [ ] Arcos balisticos del Mazo (`slam_arc` y rebotes): el Mover lineal no los cubre. Se resuelven
   con un "bouncer" (Mover en modo balistico: lanza velocidad + gravedad propia hasta `FLOOR`).
   Diseñar e implementar ese modo es parte de esta fase, o se agenda aparte si crece.
-- [ ] Eliminar `PlayerLauncher` y los temporizadores/knobs legacy restantes.
-- [ ] Eliminar `StunSettings.airborne` si ya no tiene consumidores.
 - [ ] Actualizar [[Combate]], [[Espada]], [[Stun]], [[Reset Aereo por Kill]] y esta nota con
   nombres finales.
 

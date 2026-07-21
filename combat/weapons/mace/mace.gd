@@ -186,10 +186,14 @@ func _run_charged_spins(level: int) -> void:
 # ---- Personalidad Y: continuidad de combo ----
 
 func _hold_y() -> void:
-	var id := begin_routine()
+	begin_routine()
 	reset_hit_profile()
+	# DESACTIVADO — Plan Autoridad Vertical F5 (2026-07-20): la Y cargada aérea (caída diagonal +
+	# slam_arc balístico del enemigo + rebote diagonal del jugador) es un move del "bouncer" todavía
+	# sin implementar. Hasta que exista, el input cae al combo aéreo normal. _aerial_hold_y y
+	# _burst_air_slam quedan intactos para re-enchufarlos al llegar el bouncer.
 	if _player.is_airborne():
-		_aerial_hold_y(id)
+		_tap_combo()
 		return
 	var t := _t()
 	# El paso corto lleva el launcher ARMADO: el hitbox barre hacia adelante con el jugador y lanza

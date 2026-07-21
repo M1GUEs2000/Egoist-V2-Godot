@@ -71,6 +71,11 @@ var _launcher_starts_lying := false
 # El stun del launcher: el enemigo lo necesita para consultar su poise y decidir si el launch
 # entra (no se lo puede mover si le queda reserva). Ver EnemyBase.launch.
 var _launcher_stun: StunSettings
+# Perfiles explícitos del launcher para el ENEMIGO (Mover de subida + Floater del hang), tal como los
+# define el arma en su tuning. Si son null, EnemyBase.launch cae a los escalares _launcher_height/
+# _launcher_hang_time (Mazo hoy no los pasa; la Espada sí).
+var _launcher_enemy_mover: MoverSettings
+var _launcher_enemy_floater: FloaterSettings
 var _active_launcher_hitbox: Hitbox
 ## Pose de mano desde la que arranca la estocada en curso (ver thrust).
 var _thrust_from := Quaternion.IDENTITY
@@ -428,17 +433,21 @@ func _on_launcher_about_to_hit(hurtbox: Hurtbox) -> void:
 	var target: Node = hurtbox.owner_node
 	if target.has_method("launch"):
 		target.call("launch", _launcher_height, _launcher_hang_time, _launcher_stun,
-				_launcher_starts_lying and target is EnemyBase)
+				_launcher_starts_lying and target is EnemyBase,
+				_launcher_enemy_mover, _launcher_enemy_floater)
 
 ## Ventana de daño del launcher con id-guard: espera `delay` (deja arrancar el swing
 ## visual), opcionalmente lanza al player y prende el hitbox `duration` segundos. Arrancar un nuevo
 ## launcher invalida cualquier ventana anterior (mismo patrón que begin_damage_window).
 func run_launcher_window(hitbox: Hitbox, height: float, hang_time: float,
-		duration: float, delay := 0.05, launches_player := true) -> void:
+		duration: float, delay := 0.05, launches_player := true,
+		enemy_mover: MoverSettings = null, enemy_floater: FloaterSettings = null) -> void:
 	_launcher_id += 1
 	var id := _launcher_id
 	_launcher_height = height
 	_launcher_hang_time = hang_time
+	_launcher_enemy_mover = enemy_mover
+	_launcher_enemy_floater = enemy_floater
 	await wait_seconds(delay)
 	if id != _launcher_id:
 		return

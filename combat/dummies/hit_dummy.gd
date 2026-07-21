@@ -13,12 +13,12 @@ var _airborne_until := 0.0
 ## El dummy no tiene poise ni stun: siempre sale volando. Acepta los dos parametros del gate del
 ## enemigo (stun, starts_lying) solo para que las armas puedan llamarlo con el mismo verbo.
 func launch(height: float, hang_time: float, _stun: StunSettings = null,
-		_starts_lying := false) -> bool:
+		_starts_lying := false, _mover: MoverSettings = null, _floater: FloaterSettings = null) -> bool:
 	_vertical_velocity = height / maxf(0.01, launch_rise_time)
 	_airborne_until = World.now() + launch_rise_time + hang_time
 	return true
 
-func slam(down_speed: float) -> void:
+func slam(down_speed: float, _settings: MoverSettings = null) -> void:
 	_vertical_velocity = -absf(down_speed)
 	_airborne_until = World.now() + 4.0
 	_horizontal_velocity = Vector3.ZERO
