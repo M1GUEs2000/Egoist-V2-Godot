@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "skills": {
+    "blender-mcp": {
+      "source": "vladmdgolam/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/blender-mcp/SKILL.md",
+      "computedHash": "f913e2ba6117f5d708905598352429cda3550b72d70ae984bfe32090fe163e31"
+    },
+    "blender-motion-state-inspection": {
+      "source": "affaan-m/everything-claude-code",
+      "sourceType": "github",
+      "skillPath": "skills/blender-motion-state-inspection/SKILL.md",
+      "computedHash": "dd620dca99aedd7079553f49ba97f4d24d26672195cc4aa5f4ebf2bb8bf9bc1c"
+    }
+  }
+}
