@@ -42,6 +42,9 @@ var _disc_capsule: CapsuleShape3D
 
 func setup(player: Player) -> void:
 	super.setup(player)
+	for hitbox: Hitbox in [_blade_hitbox, _air_disc_hitbox, _vertical_hitbox, _charged_dash_hitbox]:
+		if hitbox != null:
+			hitbox.set_debug_enabled(_t().debug_show_hitboxes)
 	setup_vertical_hitbox(_vertical_hitbox, _t().ground_charged_y_deals_damage, tuning.stun)
 	# El golpe vertical terrestre (cargado Y) SI se parria: clavarlo en un enemigo atacando cuenta como
 	# parry (usa parry_poise_charged_y). setup_vertical_hitbox lo deja en false; lo reactivamos aca.

@@ -3,6 +3,12 @@ class_name SwordTuning extends WeaponTuning
 ## Los tamaños de los hitboxes (hoja, disco aéreo, vertical) viven como shapes en
 ## sword.tscn, igual que la cápsula del player.
 
+@export_group("Debug")
+## Dibuja un wireframe rojo de cada hitbox (BladeHitbox, AirDiscHitbox, VerticalHitbox,
+## ChargedDashHitbox) solo mientras esta activo (begin_swing/end_swing). Solo en builds de
+## debug; en release no hace nada. Ver combat/hitbox.gd.
+@export var debug_show_hitboxes := true
+
 @export_group("Combo X")
 @export var combo_window := 0.6
 ## Rama "espera": tardar al menos esto (dentro de la ventana) en encadenar el 3er golpe
