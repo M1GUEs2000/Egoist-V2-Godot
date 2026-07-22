@@ -6,6 +6,7 @@ class_name Player extends CharacterBody3D
 ## El salto, por ser trivial, vive aquí. (Swing de cadenas llega en batch 6.)
 
 enum AirState { GROUNDED, AIRBORNE }
+enum JumpControl { NONE, LOCKED, RELEASED }
 
 signal double_jump_changed(available: bool)
 
@@ -18,6 +19,14 @@ var poise := Poise.new()
 
 var _can_double_jump := true
 var _dodge_queued := false  # dodge pedido tarde en un golpe: sale al terminarlo
+var _jump_control := JumpControl.NONE
+var _jump_direction := Vector3.ZERO
+var _jump_hold_time := 0.0
+var _jump_hold_finished := false
+var _jump_elapsed := 0.0
+var _jump_gravity := 0.0
+var _jump_apex_height := 0.0
+var _jump_horizontal_velocity := Vector3.ZERO
 
 @onready var locomotion: PlayerLocomotion = $Locomotion
 @onready var dash: PlayerDash = $Dash
@@ -144,7 +153,17 @@ func _physics_process(delta: float) -> void:
 		return
 
 	var input_dir := locomotion.camera_relative(locomotion.read_move_input())
-	var horizontal := locomotion.tick(delta) + locomotion.lunge_velocity()
+	var jump_locked := _tick_jump_impulse(delta)
+	var horizontal := Vector3.ZERO
+	if jump_locked:
+		horizontal = _jump_horizontal_velocity
+	else:
+		var air_control_scale := tuning.jump_post_release_air_control_scale \
+				if _jump_control == JumpControl.RELEASED else 1.0
+		var air_idle_velocity := _jump_horizontal_velocity \
+				if _jump_control == JumpControl.RELEASED else Vector3.ZERO
+		horizontal = locomotion.tick(delta, air_control_scale, air_idle_velocity) \
+				+ locomotion.lunge_velocity()
 	if wall_slide.blocks_move_input() or enemy_bounce.blocks_move_input():
 		horizontal = Vector3.ZERO
 		# El impulso del wall jump/rebote vive en bump_velocity: la inercia aérea del input
@@ -155,9 +174,9 @@ func _physics_process(delta: float) -> void:
 	# air-hit-stall del combo aereo y el freeze del Brazo — los tres son lo mismo (una ventana con
 	# su escala de caida), asi que ninguno tiene sistema propio.
 	if floater.is_floating():
-		vertical_velocity = floater.apply_fall(vertical_velocity, tuning.gravity, delta)
+		vertical_velocity = floater.apply_fall(vertical_velocity, _active_gravity(), delta)
 	else:
-		vertical_velocity += tuning.gravity * delta
+		vertical_velocity += _active_gravity() * delta
 	if mover.is_partial():
 		vertical_velocity = mover.apply_partial_vertical(delta, vertical_velocity)
 
@@ -178,6 +197,7 @@ func _physics_process(delta: float) -> void:
 		_set_double_jump_available(true)
 		floater.cancel_float()  # aterrizar corta el hang del Floater igual que el air stall viejo
 		wall_slide.cancel()
+		_cancel_jump_impulse()
 	else:
 		air_state = AirState.AIRBORNE
 
@@ -194,23 +214,111 @@ func _on_jump() -> void:
 		# Saltar desde un floor slide conserva jump_momentum_keep del slide como momentum aereo.
 		if floor_slide.is_sliding:
 			floor_slide.launch_into_jump()
-		vertical_velocity = tuning.jump_force
+		_start_jump_impulse(_jump_direction_from_input())
 		air_state = AirState.AIRBORNE
 	elif wall_slide.try_wall_jump(locomotion.camera_relative(locomotion.read_move_input())):
 		# Contra una pared el salto SIEMPRE es rebote hacia afuera (aunque el slide se
 		# haya cortado este frame): no consume ni recarga el doble salto.
+		_cancel_jump_impulse()
 		air_state = AirState.AIRBORNE
 	elif enemy_bounce.try_bounce(locomotion.camera_relative(locomotion.read_move_input())):
+		_cancel_jump_impulse()
 		mover.cancel_mover(Mover.CancelReason.ATTACK_RULE)
 		air_state = AirState.AIRBORNE
 	elif _can_double_jump and not mover.blocks_jump():
 		_set_double_jump_available(false)
 		# El doble salto sale SIEMPRE con gravedad normal: cierra la ventana de caida lenta
-		# (Float de impacto y hang de un move) antes de aplicar second_jump_force. Sin esto, saltar dentro
 		# de esa ventana escalaría su subida con gravedad reducida y el segundo salto llegaría demasiado alto.
 		floater.cancel_float()  # el doble salto sale con gravedad normal: cierra el hang del Floater
-		vertical_velocity = tuning.second_jump_force
+		_start_jump_impulse(_jump_direction_from_input())
 		air_state = AirState.AIRBORNE
+
+## Salto base y doble salto comparten una parabola dirigida definida por altura, distancia y
+## duracion. La fuerza vertical y la gravedad se calculan: no son knobs de tuning.
+func _start_jump_impulse(direction: Vector3) -> void:
+	_jump_direction = Vector3(direction.x, 0.0, direction.z).normalized()
+	_jump_control = JumpControl.LOCKED
+	_jump_hold_time = 0.0
+	_jump_hold_finished = false
+	_jump_elapsed = 0.0
+	var duration := maxf(0.001, tuning.jump_duration)
+	_jump_apex_height = 0.0
+	vertical_velocity = 0.0
+	_refresh_jump_vertical_trajectory()
+	_refresh_jump_horizontal_velocity()
+	locomotion.set_air_velocity(Vector3.ZERO)
+
+func _jump_direction_from_input() -> Vector3:
+	var input := locomotion.read_move_input()
+	var camera_dir := locomotion.camera_relative(input)
+	return locomotion.movement_direction(input, camera_dir)
+
+func _tick_jump_impulse(delta: float) -> bool:
+	if _jump_control == JumpControl.NONE:
+		return false
+	if not _jump_hold_finished:
+		if Input.is_action_pressed("jump"):
+			_jump_hold_time += delta
+		else:
+			_jump_hold_finished = true
+	_jump_elapsed += delta
+	_refresh_jump_vertical_trajectory()
+	_refresh_jump_horizontal_velocity()
+	if _jump_control == JumpControl.RELEASED:
+		return false
+	var release_ratio := clampf(tuning.jump_control_release_percent / 100.0, 0.0, 1.0)
+	if _jump_elapsed / maxf(0.001, tuning.jump_duration) >= release_ratio:
+		_jump_control = JumpControl.RELEASED
+		locomotion.set_air_velocity(_jump_horizontal_velocity)
+		return false
+	return true
+
+func _refresh_jump_horizontal_velocity() -> void:
+	var base_speed := _jump_launch_vertical_speed() * tuning.jump_forward_impulse_ratio
+	_jump_horizontal_velocity = _jump_direction * base_speed * _jump_apex_speed_multiplier()
+
+## El hold cambia solo la altura. Cada incremento agrega la parte vertical que falta y actualiza
+## la gravedad del arco; la velocidad horizontal nunca depende del boton de salto.
+func _refresh_jump_vertical_trajectory() -> void:
+	var hold_ratio := 1.0 if tuning.jump_hold_time <= 0.0 else clampf(
+			_jump_hold_time / tuning.jump_hold_time, 0.0, 1.0)
+	var target_height := lerpf(tuning.jump_min_apex_height, tuning.jump_max_apex_height, hold_ratio)
+	var duration := maxf(0.001, tuning.jump_duration)
+	vertical_velocity += 4.0 * (target_height - _jump_apex_height) / duration
+	_jump_apex_height = target_height
+	_jump_gravity = -8.0 * target_height / (duration * duration)
+
+func _jump_launch_vertical_speed() -> float:
+	return 4.0 * _jump_apex_height / maxf(0.001, tuning.jump_duration)
+
+## Curva cosenoidal centrada en la cuspide: frena sin esquinas y compensa antes/despues para
+## que el area bajo la velocidad siga siendo uno; sin input, distancia y duracion no cambian.
+func _jump_apex_speed_multiplier() -> float:
+	var half_window := clampf(tuning.jump_apex_slowdown_window_percent / 200.0, 0.0, 0.5)
+	if half_window <= 0.0:
+		return 1.0
+	var normalized_time := clampf(_jump_elapsed / maxf(0.001, tuning.jump_duration), 0.0, 1.0)
+	var distance_from_apex := absf(normalized_time - 0.5)
+	var shape := 0.0
+	if distance_from_apex < half_window:
+		var phase := distance_from_apex / half_window
+		shape = 0.5 + 0.5 * cos(PI * phase)
+	var strength := clampf(tuning.jump_apex_slowdown_strength, 0.0, 1.0)
+	var average_multiplier := 1.0 - strength * half_window
+	return (1.0 - strength * shape) / maxf(0.001, average_multiplier)
+
+func _active_gravity() -> float:
+	return _jump_gravity if _jump_control != JumpControl.NONE else tuning.gravity
+
+func _cancel_jump_impulse() -> void:
+	_jump_control = JumpControl.NONE
+	_jump_direction = Vector3.ZERO
+	_jump_hold_time = 0.0
+	_jump_hold_finished = false
+	_jump_elapsed = 0.0
+	_jump_gravity = 0.0
+	_jump_apex_height = 0.0
+	_jump_horizontal_velocity = Vector3.ZERO
 
 func _on_dodge() -> void:
 	# Golpe casi completo (pasado el umbral): no lo cortamos, se buferea y sale al terminar.
@@ -291,6 +399,7 @@ func apply_stun(duration: float = -1.0, mode := PlayerStun.Mode.STILL,
 	mover.cancel_mover(Mover.CancelReason.STUN)  # el stun corta un launch en curso
 	floater.cancel_float()  # el stun corta cualquier hang del Floater
 	dash.cancel()
+	_cancel_jump_impulse()
 	if combat != null:
 		combat.cancel_input()
 	match mode:
@@ -347,6 +456,7 @@ func request_mover(settings: MoverSettings) -> void:
 	stun.cancel()
 	dash.cancel()
 	floater.cancel_float()
+	_cancel_jump_impulse()
 	air_state = AirState.AIRBORNE
 	vertical_velocity = 0.0
 	mover.start_mover(settings)
@@ -372,6 +482,7 @@ func bump(dir: Vector3, h_speed: float, v_speed: float) -> void:
 	mover.cancel_mover(Mover.CancelReason.SUPERSEDED)  # un bump corta un launch en curso
 	floater.cancel_float()  # un bump (knockback/rebote) corta el hang del Floater
 	dash.cancel()
+	_cancel_jump_impulse()
 	var horizontal := Vector3(dir.x, 0.0, dir.z)
 	if horizontal.length_squared() > 0.0001:
 		add_momentum(horizontal.normalized() * h_speed)
@@ -395,6 +506,7 @@ func set_dash_exit_bop(dir: Vector3, forward_speed: float, vertical_speed: float
 func _cancel_controlled_movement() -> void:
 	mover.cancel_mover(Mover.CancelReason.SUPERSEDED)
 	floater.cancel_float()
+	_cancel_jump_impulse()
 
 func _tick_stunned(delta: float) -> void:
 	wall_slide.cancel()

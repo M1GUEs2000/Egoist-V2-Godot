@@ -20,10 +20,24 @@ class_name PlayerTuning extends Resource
 @export var attack_step_distance := 0.7
 
 @export_group("Jump")
-## Velocidad vertical inicial del salto desde el suelo, en m/s.
-@export var jump_force := 8.0
-## Velocidad vertical inicial del doble salto, en m/s. Independiente del salto desde el suelo.
-@export var second_jump_force := 8.0
+## Altura de cuspide con un toque corto, en metros. Mas alto = hasta donde llega un tap; mas bajo = salto corto.
+@export var jump_min_apex_height := 2.0
+## Altura de cuspide al mantener salto hasta el limite. Mas alto = hold salta mas alto; debe ser >= altura minima.
+@export var jump_max_apex_height := 7.0
+## Fraccion del impulso vertical inicial que se convierte en avance horizontal con direccion. 0 = salto vertical; mas alto = mas lejos por la misma altura.
+@export_range(0.0, 2.0) var jump_forward_impulse_ratio := 0.7
+## Duracion total de la parabola, en segundos. Mas bajo = salto rapido y tenso; mas alto = arco lento y flotante.
+@export var jump_duration := 0.85
+## Segundos de hold para pasar de altura minima a maxima. Mas bajo = alcanza la altura maxima antes; mas alto = requiere sostener mas tiempo.
+@export var jump_hold_time := 0.25
+## Porcentaje del arco en que se libera el control aereo. 0 = inmediatamente; 50 = cuspide; 100 = al aterrizar.
+@export_range(0.0, 100.0, 1.0) var jump_control_release_percent := 45.0
+## Cuanto se frena el avance horizontal en la cuspide. 0 = sin freno; mas alto = mas tiempo de reaccion; 1 = se detiene.
+@export_range(0.0, 1.0) var jump_apex_slowdown_strength := 0.2
+## Ancho del freno centrado en la cuspide, como porcentaje de la duracion. Mas bajo = pausa puntual; mas alto = frenado mas prolongado.
+@export_range(0.0, 100.0, 1.0) var jump_apex_slowdown_window_percent := 30.0
+## Fraccion del control aereo normal tras liberarse. 0 = sin correccion; mas alto = se frena y gira con mayor facilidad; 1 = control aereo normal.
+@export_range(0.0, 1.0) var jump_post_release_air_control_scale := 0.4
 
 @export_group("Wall slide")
 ## Velocidad mínima de empuje CONTRA la pared para engancharse al slide (m/s).
@@ -82,7 +96,7 @@ class_name PlayerTuning extends Resource
 ## llegues lanzado (Wall Impulse, cadenas largas). Evita salir disparado a velocidades absurdas.
 @export var wall_slide_wall_jump_max_h_speed := 30.0
 ## Tope VERTICAL del rebote (m/s): subida máxima del wall jump por más velocidad que traigas.
-## Referencia: jump_force es la subida del salto normal.
+## Referencia: la altura del salto normal la definen jump_min_apex_height y jump_max_apex_height.
 @export var wall_slide_wall_jump_max_v_speed := 17.0
 ## Tiempo en que el rebote manda: bloquea el input de movimiento y el re-agarre de pared.
 @export var wall_slide_wall_jump_lock_time := 0.2

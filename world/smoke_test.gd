@@ -170,6 +170,50 @@ func _ready() -> void:
 	air_step = player.locomotion.tick(0.1)
 	assert(air_step.is_equal_approx(Vector3.RIGHT * 4.0))
 
+	# Salto dirigido: altura, distancia, duracion y porcentaje de liberacion calculan la parabola.
+	player.tuning.jump_min_apex_height = 5.0
+	player.tuning.jump_max_apex_height = 20.0
+	player.tuning.jump_forward_impulse_ratio = 0.5
+	player.tuning.jump_duration = 2.0
+	player.tuning.jump_hold_time = 0.25
+	player.tuning.jump_control_release_percent = 45.0
+	player.tuning.jump_apex_slowdown_strength = 0.0
+	player.tuning.jump_apex_slowdown_window_percent = 0.0
+	player.tuning.jump_post_release_air_control_scale = 0.4
+	player._start_jump_impulse(Vector3.FORWARD)
+	assert(player._jump_control == Player.JumpControl.LOCKED)
+	assert(is_equal_approx(player.vertical_velocity, 10.0))
+	assert(is_equal_approx(player._jump_gravity, -10.0))
+	assert(player._jump_horizontal_velocity.is_equal_approx(Vector3.FORWARD * 5.0))
+	player._jump_hold_time = player.tuning.jump_hold_time
+	player._jump_hold_finished = true
+	player._refresh_jump_vertical_trajectory()
+	player._refresh_jump_horizontal_velocity()
+	assert(is_equal_approx(player.vertical_velocity, 40.0))
+	assert(is_equal_approx(player._jump_gravity, -40.0))
+	assert(player._jump_horizontal_velocity.is_equal_approx(Vector3.FORWARD * 20.0))
+	player._jump_elapsed = player.tuning.jump_duration * 0.45
+	assert(not player._tick_jump_impulse(0.0))
+	assert(player._jump_control == Player.JumpControl.RELEASED)
+	# Sin input conserva el avance previsto; con input, PlayerLocomotion lo puede frenar/girar a
+	# jump_post_release_air_control_scale de la aceleracion aerea normal.
+	assert(player.locomotion.tick(0.1, player.tuning.jump_post_release_air_control_scale,
+			player._jump_horizontal_velocity).is_equal_approx(Vector3.FORWARD * 20.0))
+	# El freno de cuspide compensa fuera de su ventana: baja en la cuspide sin perder distancia.
+	player.tuning.jump_apex_slowdown_strength = 0.5
+	player.tuning.jump_apex_slowdown_window_percent = 40.0
+	player._jump_elapsed = 0.0
+	player._refresh_jump_horizontal_velocity()
+	assert(player._jump_horizontal_velocity.is_equal_approx(Vector3.FORWARD * (20.0 / 0.9)))
+	player._jump_elapsed = player.tuning.jump_duration * 0.5
+	player._refresh_jump_horizontal_velocity()
+	assert(player._jump_horizontal_velocity.is_equal_approx(Vector3.FORWARD * (10.0 / 0.9)))
+	player._cancel_jump_impulse()
+	# Sin direccion al despegar no existe impulso horizontal: salto completamente vertical.
+	player._start_jump_impulse(Vector3.ZERO)
+	assert(player._jump_horizontal_velocity == Vector3.ZERO)
+	player._cancel_jump_impulse()
+
 	# EnemyBounce: gracia, stomp, doble salto intacto, cooldown por enemigo y techo global.
 	player.cancel_launch()
 	player.dash.cancel()

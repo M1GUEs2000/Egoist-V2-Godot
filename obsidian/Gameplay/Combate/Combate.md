@@ -111,7 +111,7 @@ El stun se gana por **poise** (stagger acumulado), no golpe a golpe. La fuente d
 
 ## Momentos de gravedad (regla de correlacion)
 
-Todos los momentos de gravedad del player (launcher float/fall, air stall, whiff, stun, wall slide) son **escalas multiplicativas** de `PlayerTuning.gravity`; las **velocidades verticales** usan su knob propio. El salto usa `jump_force` y el doble salto `second_jump_force`; hops, rebotes y wall jump conservan sus knobs especificos. Anclas actuales en `player_tuning.tres`: `gravity = -40`, `jump_force = 17`, `second_jump_force = 17`. *(2026-07-19)*
+Todos los momentos de gravedad del player (launcher float/fall, air stall, whiff, stun, wall slide) son **escalas multiplicativas** de `PlayerTuning.gravity`; las **velocidades verticales** usan su knob propio. Salto y doble salto calculan su propia parabola desde `jump_min_apex_height` / `jump_max_apex_height`, `jump_duration` y un impulso horizontal derivado; hops, rebotes y wall jump conservan sus knobs especificos. *(2026-07-21)*
 
 - Al retunear la gravedad base, conservar el feel de un momento exige re-derivar su escala: `escala_nueva = escala_vieja x (g_vieja / g_nueva)`.
 - Al retunear velocidades verticales, la convencion es conservar el tiempo de subida y escalar la altura (si la gravedad se duplica, la velocidad se duplica).

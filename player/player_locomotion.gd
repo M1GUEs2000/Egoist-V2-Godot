@@ -66,7 +66,8 @@ func movement_direction(input: Vector2, camera_dir: Vector3) -> Vector3:
 ## Devuelve la velocidad horizontal del frame y maneja el facing. En el suelo el input tiene
 ## autoridad instantánea; en el aire manda la inercia: la velocidad se conserva y el input
 ## solo la empuja hacia su target a air_acceleration (ya no se invierte el rumbo en un frame).
-func tick(delta: float) -> Vector3:
+func tick(delta: float, air_acceleration_scale := 1.0,
+		air_idle_velocity := Vector3.ZERO) -> Vector3:
 	var input := read_move_input()
 	var camera_dir := camera_relative(input)
 	var dir := movement_direction(input, camera_dir)
@@ -86,7 +87,10 @@ func tick(delta: float) -> Vector3:
 	# aéreo tal cual (no lo frena a cero): el platforming depende de conservar esa inercia.
 	if is_attacking():
 		return _air_velocity
-	_air_velocity = _air_velocity.move_toward(target, _body.tuning.air_acceleration * delta)
+	if dir == Vector3.ZERO:
+		target = air_idle_velocity
+	_air_velocity = _air_velocity.move_toward(target,
+			_body.tuning.air_acceleration * air_acceleration_scale * delta)
 	return _air_velocity
 
 ## Reemplaza la inercia aérea del input (solo el plano horizontal). La llaman los módulos que

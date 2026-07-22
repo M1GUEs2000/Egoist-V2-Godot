@@ -18,8 +18,14 @@ gravity = -5.0
 [resource]
 script = ExtResource("1_tuning")
 move_speed = 10.0
-jump_force = 17.0
-second_jump_force = 20.0
+jump_max_apex_height = 5.0
+jump_forward_impulse_ratio = 0.8
+jump_duration = 0.9
+jump_hold_time = 0.2
+jump_control_release_percent = 40.0
+jump_apex_slowdown_strength = 0.308
+jump_apex_slowdown_window_percent = 73.0
+jump_post_release_air_control_scale = 0.849
 wall_slide_press_speed = 10.0
 wall_slide_input_dot = 0.3
 wall_slide_stick_time = 0.1
