@@ -63,6 +63,7 @@ func setup(player: Player) -> void:
 	for hitbox: Hitbox in [_blade_hitbox, _air_disc_hitbox]:
 		if hitbox != null:
 			hitbox.landed.connect(_on_aerial_charged_y_hit)
+			hitbox.landed.connect(_on_aerial_normal_hit)
 
 	# Shapes propios para el estiramiento del finisher aéreo: la hoja duplica su BoxShape
 	# (el .tscn comparte el recurso entre instancias) y el disco prepara su cápsula gemela.
@@ -184,6 +185,28 @@ func _on_aerial_charged_y_hit(hurtbox: Hurtbox, _died: bool) -> void:
 		(target as EnemyBase).request_mover(spike)
 	elif target.has_method("request_mover"):
 		target.call("request_mover", spike)
+
+## Golpe aéreo NORMAL (no cargado) conectado: suspende al enemigo en el aire con un hold puro
+## (Floater, sin recorrido) mientras dura el juggle — simétrico al air-hit-float del jugador. Sin
+## esto, pegarle en plena caída no lo frena: solo lo sostenía el Mover/hang del launcher, ya vencido
+## (ver obsidian/Plan Autoridad Vertical). Cada golpe renueva el tiempo (el Floater usa max), así el
+## enemigo queda "pegado" durante el combo y cae al dejar de golpearlo. request_float ya exige que el
+## enemigo esté aéreo y quebrado, así que un golpe en tierra o a un objetivo entero no hace nada.
+func _on_aerial_normal_hit(hurtbox: Hurtbox, _died: bool) -> void:
+	# El hold depende de que el ENEMIGO esté en el aire (lo valida request_float), no de dónde esté
+	# el jugador: el juggle común es pegarle al enemigo cayendo desde el piso. Solo se excluye el
+	# cargado Y, que ya le da su propio spike/Mover al enemigo. Un golpe a un enemigo en tierra no
+	# hace nada: request_float exige aéreo + quebrado.
+	if _aerial_charged_y_active:
+		return
+	var f := _t().air_hit_enemy_floater
+	if f == null or f.duration <= 0.0:
+		return
+	var target: Node = hurtbox.owner_node
+	if target is EnemyBase:
+		(target as EnemyBase).request_float(f.duration, f.fall_scale)
+	elif target.has_method("request_float"):
+		target.call("request_float", f.duration, f.fall_scale)
 
 # ---- Dash cargado: ventana de daño con hitbox propio de la espada ----
 

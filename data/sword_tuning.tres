@@ -4,34 +4,14 @@
 [ext_resource type="Script" uid="uid://w0b3i18w442a" path="res://data/stun_settings.gd" id="2_stun"]
 [ext_resource type="Script" uid="uid://cprdodv3kypq1" path="res://data/push_settings.gd" id="3_push"]
 [ext_resource type="Script" uid="uid://dsps3sxfd8wmx" path="res://data/mover_settings.gd" id="4_mover"]
+[ext_resource type="Script" uid="uid://br6k3bi45tkio" path="res://data/floater_settings.gd" id="5_floater"]
 
-[sub_resource type="Resource" id="Resource_810ig"]
-script = ExtResource("2_stun")
-poise_damage = 10.0
-grounded = 0.9
-airborne = 0.9
-metadata/_custom_type_script = "uid://w0b3i18w442a"
-
-[sub_resource type="Resource" id="Resource_swordpush"]
-script = ExtResource("3_push")
-
-[sub_resource type="Resource" id="Resource_swordstun"]
-script = ExtResource("2_stun")
-poise_damage = 6.0
-grounded = 0.35
-
-[sub_resource type="Resource" id="Resource_ground_y_player_mover"]
+[sub_resource type="Resource" id="Resource_aerial_y_enemy_spike_mover"]
 script = ExtResource("4_mover")
-distance = 5.0
-speed = 33.333333
-float_duration = 0.45
-float_fall_scale = 0.3
-
-[sub_resource type="Resource" id="Resource_ground_y_enemy_mover"]
-script = ExtResource("4_mover")
-distance = 5.0
-speed = 33.333333
-float_duration = 1.0
+direction = Vector3(0, -1, 0)
+distance = 100.0
+speed = 40.0
+stop_on = 3
 
 [sub_resource type="Resource" id="Resource_aerial_y_player_mover"]
 script = ExtResource("4_mover")
@@ -40,18 +20,16 @@ speed = 3.125
 float_duration = 0.45
 float_fall_scale = 0.3
 
-[sub_resource type="Resource" id="Resource_sweet_spot_enemy_mover"]
-script = ExtResource("4_mover")
-distance = 2.5
-speed = 16.666667
-float_duration = 1.0
-
-[sub_resource type="Resource" id="Resource_aerial_y_enemy_spike_mover"]
+[sub_resource type="Resource" id="Resource_air_finisher_enemy_spike_mover"]
 script = ExtResource("4_mover")
 direction = Vector3(0, -1, 0)
 distance = 100.0
 speed = 40.0
 stop_on = 3
+
+[sub_resource type="Resource" id="Resource_air_hit_enemy_floater"]
+script = ExtResource("5_floater")
+duration = 0.2
 
 [sub_resource type="Resource" id="Resource_air_plunge_enemy_mover"]
 script = ExtResource("4_mover")
@@ -70,16 +48,44 @@ mode = 1
 
 [sub_resource type="Resource" id="Resource_air_wait_spin_player_mover"]
 script = ExtResource("4_mover")
-distance = 0.6125
+distance = 1.0
 speed = 7.0
 mode = 1
+float_duration = 0.1
+float_fall_scale = 0.3
 
-[sub_resource type="Resource" id="Resource_air_finisher_enemy_spike_mover"]
+[sub_resource type="Resource" id="Resource_810ig"]
+script = ExtResource("2_stun")
+poise_damage = 10.0
+grounded = 0.9
+airborne = 0.9
+metadata/_custom_type_script = "uid://w0b3i18w442a"
+
+[sub_resource type="Resource" id="Resource_ground_y_enemy_mover"]
 script = ExtResource("4_mover")
-direction = Vector3(0, -1, 0)
-distance = 100.0
-speed = 40.0
-stop_on = 3
+distance = 5.0
+speed = 33.0
+float_duration = 0.5
+
+[sub_resource type="Resource" id="Resource_ground_y_player_mover"]
+script = ExtResource("4_mover")
+distance = 5.0
+speed = 33.333333
+float_duration = 0.45
+float_fall_scale = 0.3
+
+[sub_resource type="Resource" id="Resource_swordpush"]
+script = ExtResource("3_push")
+
+[sub_resource type="Resource" id="Resource_swordstun"]
+script = ExtResource("2_stun")
+poise_damage = 6.0
+grounded = 0.35
+
+[sub_resource type="Resource" id="Resource_sweet_spot_enemy_mover"]
+script = ExtResource("4_mover")
+speed = 16.666667
+float_duration = 0.5
 
 [resource]
 script = ExtResource("1_tuning")
@@ -100,20 +106,22 @@ air_plunge_enemy_mover = SubResource("Resource_air_plunge_enemy_mover")
 air_plunge_player_mover = SubResource("Resource_air_plunge_player_mover")
 air_wait_spin_player_mover = SubResource("Resource_air_wait_spin_player_mover")
 air_finisher_enemy_spike_mover = SubResource("Resource_air_finisher_enemy_spike_mover")
+air_hit_enemy_floater = SubResource("Resource_air_hit_enemy_floater")
 swing_time = 0.4
-combo_recovery = 0.4
+combo_recovery = 0.2
 stun = SubResource("Resource_swordstun")
 hand_radius = 1.0
 air_step_time = 0.2
 air_wait_branch_threshold = 0.2
+air_stall_scale = 1.1
 air_hit_float_base = 10.0
 air_hit_float_per_hit = 0.01
 air_hit_float_fall_scale = 0.1
 air_hit_momentum_keep = 0.204
-air_stall_scale = 1.1
 push = SubResource("Resource_swordpush")
 push_at = 0.65
 parry_poise_normal = 10.0
 parry_poise_charged_x = 9.0
 parry_poise_charged_y = 12.0
 sweet_spot_start = 0.4
+sweet_spot_particle_color = Color(1, 0.015686275, 0.101960786, 1)

@@ -106,3 +106,11 @@ class_name SwordTuning extends WeaponTuning
 @export var air_wait_spin_player_mover: MoverSettings
 ## Perfil descendente del Enemy para el hachazo aéreo normal de Espada.
 @export var air_finisher_enemy_spike_mover: MoverSettings
+## Hold del ENEMIGO al conectarle un golpe aéreo NORMAL (no cargado): lo suspende en el aire
+## mientras dura el juggle, simétrico al air-hit-float del jugador. Es un hold PURO sin recorrido
+## (request_float), no un Mover. Cada golpe renueva el tiempo (el Floater usa max), así el enemigo
+## queda "pegado" durante el combo y cae al dejar de golpearlo. Sin esto, pegarle en plena caída no
+## lo frena (solo lo sostenía el launcher/hang, ya vencido). fall_scale 0 = hold total (vertical en
+## 0); subirlo lo deja hundirse. duration 0 = desactiva el hold. Ver combat/floater.gd y
+## obsidian/Plan Autoridad Vertical. Pendiente de tunear jugando.
+@export var air_hit_enemy_floater: FloaterSettings
