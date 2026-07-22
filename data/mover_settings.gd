@@ -35,7 +35,7 @@ enum Mode {
 @export_flags("Distance:1", "Floor:2", "Wall:4", "Enemy:8") var stop_on := STOP_ON_DISTANCE
 ## TOTAL ejecuta `move_and_slide` por su cuenta y toma el movimiento completo. PARTIAL solo controla
 ## Y dentro del tick normal del Player, para conservar contactos y movimiento horizontal.
-@export_enum("Total", "Partial") var mode := Mode.TOTAL
+@export var mode := Mode.TOTAL
 ## Segundos de Floater que este cuerpo pide al TERMINAR el recorrido. 0 = no detona Floater.
 @export var float_duration := 0.0
 ## fall_scale del Floater que se pide al terminar: 0.0 = hold total, 1.0 = gravedad normal,

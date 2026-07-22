@@ -66,33 +66,10 @@ points = PackedVector3Array(-1, 0, -1, -1, 0, 1, 1, 0, -1, 1, 0, 1)
 [sub_resource type="SphereShape3D" id="SphereShape_body"]
 radius = 0.55
 
-[sub_resource type="SphereShape3D" id="SphereShape_ground_sense"]
-radius = 0.2
-
-[sub_resource type="SphereMesh" id="SphereMesh_body"]
-radius = 0.55
-height = 1.1
-
-[sub_resource type="StandardMaterial3D" id="Mat_body"]
-albedo_color = Color(0.22, 0.55, 0.88, 1)
-
-[sub_resource type="StandardMaterial3D" id="Mat_eye"]
-albedo_color = Color(1, 0.35, 0.12, 1)
-emission_enabled = true
-emission = Color(1, 0.08, 0.01, 1)
-
-[sub_resource type="BoxMesh" id="BoxMesh_wing"]
-size = Vector3(1.7, 0.08, 0.55)
-
-[sub_resource type="StandardMaterial3D" id="Mat_wing"]
-albedo_color = Color(0.5, 0.82, 1, 1)
-emission_enabled = true
-emission = Color(0.08, 0.28, 0.65, 1)
-
 [node name="Lvl1 v0_1" type="Node3D" unique_id=149798636]
 
 [node name="Player" parent="." unique_id=1407604159 instance=ExtResource("1_ay86g")]
-transform = Transform3D(0.7241705, 0, 0.689621, 0, 1, 0, -0.689621, 0, 0.7241705, 223.49797, 79.34113, -350.48746)
+transform = Transform3D(0.7241705, 0, 0.689621, 0, 1, 0, -0.689621, 0, 0.7241705, 2.9872355, 58.87435, -14.797397)
 
 [node name="CameraRig" type="Node3D" parent="." unique_id=1612751166]
 script = ExtResource("5_ktyo2")
@@ -168,7 +145,7 @@ dash_vertical_bop_speed = 20.0
 hits_to_break = 50
 
 [node name="WorldSwitchPickup3" parent="Traversal Cubes" unique_id=457184539 instance=ExtResource("8_3ypg5")]
-transform = Transform3D(2.0092587, 5.9431273e-09, 0.05460252, -2.386751e-09, 5.005, -3.2422457e-11, -0.05460252, -8.074387e-11, 2.0092587, 68.63389, 11.599548, -17.022488)
+transform = Transform3D(2.0092587, 5.9431273e-09, 0.05460252, -2.386751e-09, 5.005, -3.2422457e-11, -0.05460252, -8.074387e-11, 2.0092587, 77.261536, 11.599548, -9.115852)
 enable_world_switch = true
 dash_distance = 20.0
 dash_duration = 0.3
@@ -177,7 +154,7 @@ dash_vertical_bop_speed = 20.0
 hits_to_break = 50
 
 [node name="WorldSwitchPickup7" parent="Traversal Cubes" unique_id=937959750 instance=ExtResource("8_3ypg5")]
-transform = Transform3D(2.0092587, 5.9431273e-09, 0.05460252, -2.386751e-09, 5.005, -3.2422457e-11, -0.05460252, -8.074387e-11, 2.0092587, 82.97534, 11.599554, -4.866618)
+transform = Transform3D(2.0092587, 5.9431273e-09, 0.05460252, -2.386751e-09, 5.005, -3.2422457e-11, -0.05460252, -8.074387e-11, 2.0092587, 92.61792, 11.599554, 6.180189)
 enable_world_switch = true
 dash_distance = 20.0
 dash_duration = 0.3
@@ -886,11 +863,11 @@ paint_prototype_material = true
 metadata/_custom_type_script = "uid://cr2mf5ypgksws"
 
 [node name="Rebote recto2" type="Node3D" parent="." unique_id=1274862330]
-transform = Transform3D(0.70710677, 0, 0.56922096, 0, 1, 0, -0.70710677, 0, 0.56922096, 49.6767, 12.224085, -36.89218)
+transform = Transform3D(0.70710677, 0, 0.56568545, 0, 1, 0, -0.70710677, 0, 0.56568545, 56.993217, 12.224085, -29.575666)
 metadata/_edit_group_ = true
 
 [node name="Pared rebote 1_" type="StaticBody3D" parent="Rebote recto2" unique_id=1924933388]
-transform = Transform3D(0.99999994, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
+transform = Transform3D(0.99999994, 0, 0, 0, 1, 0, 0, 0, 1, 2.3307462, 0, 0)
 metadata/_edit_group_ = true
 
 [node name="MeshInstance3D" type="MeshInstance3D" parent="Rebote recto2/Pared rebote 1_" unique_id=1282450545]
@@ -1103,76 +1080,27 @@ transform = Transform3D(-0.9954638, -0.052940637, 0.07905111, 0.0712906, 0.13516
 hostility = 2
 poise_max = 1.0
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="FlyingEnemy" unique_id=90996040]
+[node name="CollisionShape3D2" type="CollisionShape3D" parent="FlyingEnemy" unique_id=90996040]
 shape = SubResource("SphereShape_body")
 
-[node name="GroundSense" type="Area3D" parent="FlyingEnemy" unique_id=1758952942]
+[node name="GroundSense2" type="Area3D" parent="FlyingEnemy" unique_id=1758952942]
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="FlyingEnemy/GroundSense" unique_id=87854298]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.4, 0)
-shape = SubResource("SphereShape_ground_sense")
+[node name="Visual2" type="Node3D" parent="FlyingEnemy" unique_id=1674440842]
 
-[node name="Visual" type="Node3D" parent="FlyingEnemy" unique_id=1674440842]
-
-[node name="Body" type="MeshInstance3D" parent="FlyingEnemy/Visual" unique_id=661179917]
-mesh = SubResource("SphereMesh_body")
-surface_material_override/0 = SubResource("Mat_body")
-
-[node name="Eye" type="MeshInstance3D" parent="FlyingEnemy/Visual" unique_id=1665366842]
-transform = Transform3D(0.3, 0, 0, 0, 0.3, 0, 0, 0, 0.15, 0, 0.08, -0.53)
-mesh = SubResource("SphereMesh_body")
-surface_material_override/0 = SubResource("Mat_eye")
-
-[node name="LeftWingPivot" type="Node3D" parent="FlyingEnemy/Visual" unique_id=334502834]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.35, 0, 0)
-
-[node name="Wing" type="MeshInstance3D" parent="FlyingEnemy/Visual/LeftWingPivot" unique_id=1251273558]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.85, 0, 0)
-mesh = SubResource("BoxMesh_wing")
-surface_material_override/0 = SubResource("Mat_wing")
-
-[node name="RightWingPivot" type="Node3D" parent="FlyingEnemy/Visual" unique_id=253770179]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.35, 0, 0)
-
-[node name="Wing" type="MeshInstance3D" parent="FlyingEnemy/Visual/RightWingPivot" unique_id=128911683]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.85, 0, 0)
-mesh = SubResource("BoxMesh_wing")
-surface_material_override/0 = SubResource("Mat_wing")
-
-[node name="Ragdoll" type="RigidBody3D" parent="FlyingEnemy" unique_id=297231645]
+[node name="Ragdoll2" type="RigidBody3D" parent="FlyingEnemy" unique_id=297231645]
 top_level = true
 visible = false
 freeze = true
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="FlyingEnemy/Ragdoll" unique_id=383498399]
-shape = SubResource("SphereShape_body")
-
-[node name="Body" type="MeshInstance3D" parent="FlyingEnemy/Ragdoll" unique_id=282287418]
-mesh = SubResource("SphereMesh_body")
-surface_material_override/0 = SubResource("Mat_body")
-
-[node name="LeftWing" type="MeshInstance3D" parent="FlyingEnemy/Ragdoll" unique_id=1395931503]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.2, 0, 0)
-mesh = SubResource("BoxMesh_wing")
-surface_material_override/0 = SubResource("Mat_wing")
-
-[node name="RightWing" type="MeshInstance3D" parent="FlyingEnemy/Ragdoll" unique_id=1400467947]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.2, 0, 0)
-mesh = SubResource("BoxMesh_wing")
-surface_material_override/0 = SubResource("Mat_wing")
-
-[node name="Health" type="Node" parent="FlyingEnemy" unique_id=1906197470]
+[node name="Health2" type="Node" parent="FlyingEnemy" unique_id=1906197470]
 script = ExtResource("13_28ist")
 max_health = 100.0
 
-[node name="WorldMembership" type="Node" parent="FlyingEnemy" unique_id=410482387]
+[node name="WorldMembership2" type="Node" parent="FlyingEnemy" unique_id=410482387]
 script = ExtResource("4_e571o")
 mode = 1
 affiliation = 1
 hide_when_inactive = false
 
-[node name="Hurtbox" type="Area3D" parent="FlyingEnemy" unique_id=1461108498]
+[node name="Hurtbox2" type="Area3D" parent="FlyingEnemy" unique_id=1461108498]
 script = ExtResource("14_b3nvj")
-
-[node name="CollisionShape3D" type="CollisionShape3D" parent="FlyingEnemy/Hurtbox" unique_id=588667392]
-shape = SubResource("SphereShape_body")
