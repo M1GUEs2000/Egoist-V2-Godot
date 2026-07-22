@@ -72,17 +72,23 @@ rebote del Y cargado aereo esta desactivado.
 | `air_finisher_hitbox_v_scale` | Estira verticalmente los hitboxes del finisher aereo (hachazo y plunge) mientras dura el golpe: alto de la hoja y disco aereo como capsula vertical. 1 = sin estirar. |
 | `charged_fallback_angle` | Swing degradado del X cargado sin barra. |
 
-### Perfiles Mover/Floater (feel vertical, `.tres`) *(2026-07-21)*
+### Perfiles Mover/Floater (feel vertical, `.tres`)
 
-Todo el movimiento vertical de la Espada vive como recursos `MoverSettings`/`FloaterSettings` en
+Cada ruta vertical de la Espada vive como recurso `MoverSettings`/`FloaterSettings` en
 `sword_tuning.tres`, uno por cuerpo (ver [[Plan Autoridad Vertical]]):
 
 | Recurso | Que hace |
 |---|---|
-| `charged_dash_mover` | Recorrido del dash cargado (X) del JUGADOR: distancia, velocidad, atraviesa enemigos, frena en pared, boost/particulas/inercia. La duracion del golpe se deriva de distancia/velocidad. |
-| `plunge_player_mover` / `plunge_enemy_mover` | Movers DOWN del plunge (X X espera X), jugador y enemigo. Mismo speed = bajan a la par. |
-| `launcher_enemy_mover` / `launcher_enemy_floater` | Launcher Y del ENEMIGO: Mover de subida + Floater del hang en el tope. El jugador se lanza a la misma altura (su hang sale de `PlayerTuning`). |
-| `sweet_spot_player_floater` | Hang del JUGADOR al conectar la explosion del sweet spot (para ver el estallido). |
+| `ground_charged_y_player_mover` / `ground_charged_y_enemy_mover` | Launcher Y terrestre: Mover UP del jugador y del enemigo, cada uno con su Floater de hang en el tope. |
+| `aerial_charged_y_player_mover` / `aerial_charged_y_enemy_spike_mover` | Y cargada aerea: auto-launch del jugador + spike lineal descendente del enemigo (corta al tocar piso). El rebote esta desactivado. |
+| `sweet_spot_explosion_enemy_mover` | Lo que la explosion del sweet spot (X cargado) pide a cada enemigo antes de cobrar el dano. |
+| `air_plunge_player_mover` / `air_plunge_enemy_mover` | Movers DOWN del plunge (X X espera X): mismo speed = bajan a la par; el del jugador es PARTIAL para conservar contactos. |
+| `air_wait_spin_player_mover` | Hop PARTIAL de la primera vuelta de la rama aerea de espera. |
+| `air_finisher_enemy_spike_mover` | Spike descendente del enemigo en el hachazo aereo normal (finisher). |
+| `air_hit_enemy_floater` | Hold del ENEMIGO al conectarle un golpe aereo NORMAL: lo suspende con un Floater (`request_float`), simetrico al air-hit-float del jugador. Se renueva por golpe (`max`), asi queda pegado durante el combo y cae al dejar de golpearlo. Gate: enemigo aereo + quebrado. Excluye el cargado Y (que ya le da su propio spike). |
+
+El X cargado (dash) no usa perfil Mover: sale por `Player.force_dash` con `charged_dash_distance` /
+`charged_dash_duration`.
 
 ## Pendiente H1
 
