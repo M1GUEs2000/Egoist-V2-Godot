@@ -603,7 +603,7 @@ func _process_engage(delta: float, target: Node3D, attack_range: float) -> void:
 
 ## Rango del ataque que va a usar. El ring se mide contra ESE rango, no contra el mayor: un
 ## hibrido con un ranged largo no debe espaciarse como si su melee alcanzara 10 m.
-func _range_of_attack_state(attack_state: int, fallback: float) -> float:
+func _range_of_attack_state(attack_state: AIState, fallback: float) -> float:
 	for attack in _attacks:
 		var is_ranged := attack is RangedAttack
 		if (attack_state == AIState.ATTACK_RANGED) == is_ranged:
@@ -731,7 +731,7 @@ func _tick_limbo(delta: float) -> bool:
 	_bt_player.call("update", delta)
 	return true
 
-func _best_attack_state_for_range(distance: float) -> int:
+func _best_attack_state_for_range(distance: float) -> AIState:
 	var melee := _select_attack(distance, AIState.ATTACK_MELEE)
 	if melee != null and _state_allowed(AIState.ATTACK_MELEE):
 		return AIState.ATTACK_MELEE
@@ -740,7 +740,7 @@ func _best_attack_state_for_range(distance: float) -> int:
 		return AIState.ATTACK_RANGED
 	return AIState.ATTACK_MELEE
 
-func _active_attack_state() -> int:
+func _active_attack_state() -> AIState:
 	for attack in _attacks:
 		if not bool(attack.get("is_attacking")):
 			continue
@@ -749,7 +749,7 @@ func _active_attack_state() -> int:
 		return AIState.ATTACK_MELEE
 	return AIState.ATTACK_MELEE
 
-func _fallback_state(desired: int) -> int:
+func _fallback_state(desired: AIState) -> AIState:
 	if _state_allowed(desired) and _state_legal_for_hostility(desired):
 		return desired
 	for fallback in [AIState.ROAM, AIState.GUARD, AIState.IDLE]:
@@ -765,7 +765,7 @@ func _state_legal_for_hostility(state: int) -> bool:
 		return true
 	return not (state in [AIState.FLEE, AIState.HIDE, AIState.GUARD, AIState.ATTACK_GROUP])
 
-func _change_state(next_state: int) -> void:
+func _change_state(next_state: AIState) -> void:
 	ai_state = next_state
 
 func _effective_hostility() -> int:

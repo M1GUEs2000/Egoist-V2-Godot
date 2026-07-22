@@ -25,8 +25,8 @@ var _target: Node3D
 var _last_attack := -999.0
 var _routine_id := 0
 
-func setup(owner: EnemyBase) -> void:
-	_owner = owner
+func setup(body: EnemyBase) -> void:
+	_owner = body
 
 func try_attack(target: Node3D, opening_windup := 0.0) -> bool:
 	if _owner == null or not _owner.can_attack() or is_attacking:

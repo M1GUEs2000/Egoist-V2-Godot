@@ -21,9 +21,9 @@ func is_dead() -> bool:
 ## Para dueños que exponen la vida con otro nombre en SU inspector y la empujan acá
 ## (PlayerHealth, objetos con hits_to_break). Los enemigos configuran max_health directo.
 ## Funciona sin importar el orden de _ready entre dueño y módulo.
-func set_max(new_max: float, refill := true) -> void:
+func set_max(new_max: float, should_refill := true) -> void:
 	max_health = maxf(1.0, new_max)
-	if refill or not _initialized:
+	if should_refill or not _initialized:
 		current = max_health
 	_initialized = true
 

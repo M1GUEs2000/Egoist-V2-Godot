@@ -90,13 +90,13 @@ func _process(_delta: float) -> void:
 		return
 	if is_locked and not _target_still_valid(current_target):
 		_release()
-	var show := has_visible_target()
-	_reticle.visible = show
+	var has_target := has_visible_target()
+	_reticle.visible = has_target
 	# El ring de aterrizaje del target reusa LandingIndicator: solo se muestra mientras
 	# hay lock-on activo (el propio LandingIndicator filtra si el target no esta en el aire).
-	_target_landing.enabled = show
+	_target_landing.enabled = has_target
 	_target_landing.source = current_target
-	if show:
+	if has_target:
 		_reticle.global_position = head_position(current_target)
 		_reticle_material.set_shader_parameter("fill", _target_health_ratio(current_target))
 

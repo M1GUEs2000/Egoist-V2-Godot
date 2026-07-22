@@ -20,8 +20,8 @@ var _owner: Node3D
 var _alert_until := -999.0
 var _search_until := -999.0
 
-func setup(owner: Node3D) -> void:
-	_owner = owner
+func setup(body: Node3D) -> void:
+	_owner = body
 
 func tick(new_target: Node3D, hostility: int, can_chase: bool) -> void:
 	target = new_target
@@ -39,12 +39,12 @@ func is_alerted() -> bool:
 func is_searching() -> bool:
 	return not can_see_target and World.now() < _search_until
 
-func within(range: float) -> bool:
+func within(distance: float) -> bool:
 	if _owner == null or target == null:
 		return false
 	var to := target.global_position - _owner.global_position
 	to.y = 0.0
-	return to.length() <= range
+	return to.length() <= distance
 
 func _compute(hostility: int, can_chase: bool) -> bool:
 	if _owner == null or target == null or not can_chase:

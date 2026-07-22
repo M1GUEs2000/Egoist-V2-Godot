@@ -1250,6 +1250,10 @@ func _die() -> void:
 	collision_mask = 0
 	if hurtbox != null:
 		hurtbox.monitorable = false
+		hurtbox.monitoring = false
+	if ground_sense != null:
+		ground_sense.monitoring = false
+		ground_sense.monitorable = false
 	_refresh_visual_state()
 	if is_world_switch():
 		_play_death_flash()

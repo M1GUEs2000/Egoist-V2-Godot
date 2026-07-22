@@ -83,7 +83,7 @@ func backpedal_from(point: Vector3, keep_distance: float) -> void:
 	navigation_strafe_distance = keep_distance
 	set_intent(IntentKind.BACKPEDAL, point, SpeedProfile.CHASE)
 
-func set_intent(kind: int, point: Vector3, profile: int) -> void:
+func set_intent(kind: IntentKind, point: Vector3, profile: SpeedProfile) -> void:
 	navigation_intent_kind = kind
 	navigation_intent_point = point
 	navigation_speed_profile = profile

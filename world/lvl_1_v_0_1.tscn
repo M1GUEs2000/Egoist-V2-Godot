@@ -12,6 +12,8 @@
 [ext_resource type="PackedScene" uid="uid://yxqtvxwuiily" path="res://enemies/flying_enemy.tscn" id="10_ica1u"]
 [ext_resource type="PackedScene" uid="uid://d10r8vuqovxh5" path="res://assets/models/walls/wall_curve.tscn" id="11_gkdlb"]
 [ext_resource type="PackedScene" uid="uid://d3jtgfi3oqa6g" path="res://assets/models/walls/wall_spiral.tscn" id="12_28ist"]
+[ext_resource type="Script" uid="uid://coemg5ljdfu7t" path="res://combat/health.gd" id="13_28ist"]
+[ext_resource type="Script" uid="uid://dvxrsptoplacw" path="res://combat/hurtbox.gd" id="14_b3nvj"]
 
 [sub_resource type="Environment" id="Environment_ica1u"]
 background_mode = 1
@@ -60,6 +62,32 @@ albedo_color = Color(0.18155456, 0.12718341, 0.03125641, 1)
 
 [sub_resource type="ConvexPolygonShape3D" id="ConvexPolygonShape3D_28ist"]
 points = PackedVector3Array(-1, 0, -1, -1, 0, 1, 1, 0, -1, 1, 0, 1)
+
+[sub_resource type="SphereShape3D" id="SphereShape_body"]
+radius = 0.55
+
+[sub_resource type="SphereShape3D" id="SphereShape_ground_sense"]
+radius = 0.2
+
+[sub_resource type="SphereMesh" id="SphereMesh_body"]
+radius = 0.55
+height = 1.1
+
+[sub_resource type="StandardMaterial3D" id="Mat_body"]
+albedo_color = Color(0.22, 0.55, 0.88, 1)
+
+[sub_resource type="StandardMaterial3D" id="Mat_eye"]
+albedo_color = Color(1, 0.35, 0.12, 1)
+emission_enabled = true
+emission = Color(1, 0.08, 0.01, 1)
+
+[sub_resource type="BoxMesh" id="BoxMesh_wing"]
+size = Vector3(1.7, 0.08, 0.55)
+
+[sub_resource type="StandardMaterial3D" id="Mat_wing"]
+albedo_color = Color(0.5, 0.82, 1, 1)
+emission_enabled = true
+emission = Color(0.08, 0.28, 0.65, 1)
 
 [node name="Lvl1 v0_1" type="Node3D" unique_id=149798636]
 
@@ -945,11 +973,6 @@ poise_max = 1.0
 [node name="Rebote con bumps" type="Node3D" parent="." unique_id=598547048]
 transform = Transform3D(0.70710677, 0, 0.56922096, 0, 1, 0, -0.70710677, 0, 0.56922096, 70.42668, 16.747145, -57.870174)
 
-[node name="FlyingEnemy" parent="Rebote con bumps" unique_id=1175298367 instance=ExtResource("10_ica1u")]
-transform = Transform3D(-0.6593484, -0.7370517, 0.14836818, 0.0712905, 0.13516074, 0.9882548, -0.74844885, 0.6621823, -0.036573067, 62.755096, -3.1851177, -77.012955)
-hostility = 2
-poise_max = 1.0
-
 [node name="Pared rebote 1_2" type="StaticBody3D" parent="Rebote con bumps" unique_id=1382484084]
 transform = Transform3D(0.9999999, 0, 0, 0, 1, 0, 0, 0, 0.99999976, -13.073198, 23.69368, -9.921413)
 metadata/_edit_group_ = true
@@ -1074,3 +1097,82 @@ transform = Transform3D(2.7525377, -0.04719007, 0.73743165, 0.04230946, 2.849580
 
 [node name="wall_spiral" parent="." unique_id=1798899393 instance=ExtResource("12_28ist")]
 transform = Transform3D(-0.5280937, 0, 1.3127612, 0, 1.653, 0, -1.3127612, 0, -0.5280937, 202.20676, 71.21977, -329.00287)
+
+[node name="FlyingEnemy" parent="." unique_id=1175298367 instance=ExtResource("10_ica1u")]
+transform = Transform3D(-0.9954638, -0.052940637, 0.07905111, 0.0712906, 0.13516073, 0.9882557, -0.06300348, 0.9894084, -0.13077344, 70.963844, 13.562027, -146.08212)
+hostility = 2
+poise_max = 1.0
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="FlyingEnemy" unique_id=90996040]
+shape = SubResource("SphereShape_body")
+
+[node name="GroundSense" type="Area3D" parent="FlyingEnemy" unique_id=1758952942]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="FlyingEnemy/GroundSense" unique_id=87854298]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.4, 0)
+shape = SubResource("SphereShape_ground_sense")
+
+[node name="Visual" type="Node3D" parent="FlyingEnemy" unique_id=1674440842]
+
+[node name="Body" type="MeshInstance3D" parent="FlyingEnemy/Visual" unique_id=661179917]
+mesh = SubResource("SphereMesh_body")
+surface_material_override/0 = SubResource("Mat_body")
+
+[node name="Eye" type="MeshInstance3D" parent="FlyingEnemy/Visual" unique_id=1665366842]
+transform = Transform3D(0.3, 0, 0, 0, 0.3, 0, 0, 0, 0.15, 0, 0.08, -0.53)
+mesh = SubResource("SphereMesh_body")
+surface_material_override/0 = SubResource("Mat_eye")
+
+[node name="LeftWingPivot" type="Node3D" parent="FlyingEnemy/Visual" unique_id=334502834]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.35, 0, 0)
+
+[node name="Wing" type="MeshInstance3D" parent="FlyingEnemy/Visual/LeftWingPivot" unique_id=1251273558]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.85, 0, 0)
+mesh = SubResource("BoxMesh_wing")
+surface_material_override/0 = SubResource("Mat_wing")
+
+[node name="RightWingPivot" type="Node3D" parent="FlyingEnemy/Visual" unique_id=253770179]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.35, 0, 0)
+
+[node name="Wing" type="MeshInstance3D" parent="FlyingEnemy/Visual/RightWingPivot" unique_id=128911683]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.85, 0, 0)
+mesh = SubResource("BoxMesh_wing")
+surface_material_override/0 = SubResource("Mat_wing")
+
+[node name="Ragdoll" type="RigidBody3D" parent="FlyingEnemy" unique_id=297231645]
+top_level = true
+visible = false
+freeze = true
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="FlyingEnemy/Ragdoll" unique_id=383498399]
+shape = SubResource("SphereShape_body")
+
+[node name="Body" type="MeshInstance3D" parent="FlyingEnemy/Ragdoll" unique_id=282287418]
+mesh = SubResource("SphereMesh_body")
+surface_material_override/0 = SubResource("Mat_body")
+
+[node name="LeftWing" type="MeshInstance3D" parent="FlyingEnemy/Ragdoll" unique_id=1395931503]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.2, 0, 0)
+mesh = SubResource("BoxMesh_wing")
+surface_material_override/0 = SubResource("Mat_wing")
+
+[node name="RightWing" type="MeshInstance3D" parent="FlyingEnemy/Ragdoll" unique_id=1400467947]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.2, 0, 0)
+mesh = SubResource("BoxMesh_wing")
+surface_material_override/0 = SubResource("Mat_wing")
+
+[node name="Health" type="Node" parent="FlyingEnemy" unique_id=1906197470]
+script = ExtResource("13_28ist")
+max_health = 100.0
+
+[node name="WorldMembership" type="Node" parent="FlyingEnemy" unique_id=410482387]
+script = ExtResource("4_e571o")
+mode = 1
+affiliation = 1
+hide_when_inactive = false
+
+[node name="Hurtbox" type="Area3D" parent="FlyingEnemy" unique_id=1461108498]
+script = ExtResource("14_b3nvj")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="FlyingEnemy/Hurtbox" unique_id=588667392]
+shape = SubResource("SphereShape_body")

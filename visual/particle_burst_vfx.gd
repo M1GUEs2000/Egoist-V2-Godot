@@ -30,7 +30,11 @@ class_name ParticleBurstVFX extends GPUParticles3D
 		brightness = v
 		_apply_look()
 
+## Los botones del inspector invocan el Callable via el editor, no desde este script:
+## el analizador estatico no lo ve como "uso" y marca falso positivo de var sin usar.
+@warning_ignore("unused_private_class_variable")
 @export_tool_button("Play") var _play_button := func(): play()
+@warning_ignore("unused_private_class_variable")
 @export_tool_button("Stop") var _stop_button := func(): stop()
 
 var _draw_mat: StandardMaterial3D

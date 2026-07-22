@@ -385,6 +385,11 @@ func _infer_other_world_echo_shape() -> float:
 	var highest_center := _other_world_echo_local_center.y
 	for node in _target.find_children("*", "MeshInstance3D", true):
 		var mesh_instance := node as MeshInstance3D
+		# call_deferred puede disparar el setup un frame despues de que el dueño (o alguno
+		# de sus meshes recien instanciados) salga del arbol; to_global/to_local tiran error
+		# sobre nodos fuera de arbol, asi que los salteamos en vez de ensuciar la consola.
+		if not mesh_instance.is_inside_tree():
+			continue
 		var bounds := mesh_instance.get_aabb()
 		var center := _target.to_local(mesh_instance.to_global(bounds.get_center()))
 		var scale := mesh_instance.global_transform.basis.get_scale()

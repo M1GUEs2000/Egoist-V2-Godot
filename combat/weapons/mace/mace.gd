@@ -53,11 +53,11 @@ func tap(_slot: World.Slot) -> void:
 		return
 	_tap_combo()
 
-func hold(slot: World.Slot, level: int) -> void:
+func hold(slot: World.Slot, requested_level: int) -> void:
 	if _uninterruptible:
 		return
 	if slot == World.Slot.X:
-		_hold_x(level)
+		_hold_x(requested_level)
 	else:
 		_hold_y()
 
@@ -71,8 +71,8 @@ func charge_level(held_time: float) -> int:
 	var t := _t()
 	var hold_threshold := _player.tuning.input_hold_threshold if _player != null else 0.0
 	var extra := held_time - hold_threshold
-	var level := 1 + int(floor(maxf(0.0, extra) / t.charge_level_step))
-	return clampi(level, 1, t.max_charge_level)
+	var computed_level := 1 + int(floor(maxf(0.0, extra) / t.charge_level_step))
+	return clampi(computed_level, 1, t.max_charge_level)
 
 # ---- Tap: combo de 3 (+2 en rama espera) compartido por X/Y ----
 
@@ -123,15 +123,15 @@ func _play_smash() -> void:
 
 # ---- Personalidad X: cargado (vueltas, 3 niveles) ----
 
-func _hold_x(level: int) -> void:
+func _hold_x(requested_level: int) -> void:
 	cancel_routines()
 	if _player.is_airborne():
 		if _player.meter.spend_charged(1, false):
-			_aerial_charged_x(level >= _t().max_charge_level)
+			_aerial_charged_x(requested_level >= _t().max_charge_level)
 		else:
 			_tap_combo()
 		return
-	var actual_level := mini(level, _player.meter.affordable_bars())
+	var actual_level := mini(requested_level, _player.meter.affordable_bars())
 	if actual_level <= 0:
 		_tap_combo()
 	elif _player.meter.spend_charged(actual_level, false):
@@ -139,7 +139,7 @@ func _hold_x(level: int) -> void:
 	else:
 		_tap_combo()
 
-func _run_charged_spins(level: int) -> void:
+func _run_charged_spins(spin_count: int) -> void:
 	var t := _t()
 	var id := begin_routine()
 	reset_hit_profile()
@@ -147,16 +147,16 @@ func _run_charged_spins(level: int) -> void:
 	# (que las cancelaria via begin_routine). El dodge/dash siguen siendo escape: no pasan por aca.
 	_uninterruptible = true
 	_charged_move_active = true
-	var sweet_spot := level >= t.max_charge_level
+	var is_sweet_spot := spin_count >= t.max_charge_level
 	_player.hold_airborne_for_attack()
-	for spin in range(1, level + 1):
+	for spin in range(1, spin_count + 1):
 		# Una vuelta de clip por vuelta mecánica (el tramo se repite según el nivel de carga).
 		play_visual_clip(ANIM_HEAVY, HEAVY_CHARGED_X_SPIN.x, HEAVY_CHARGED_X_SPIN.y,
 				t.charged_spin_time)
 		_play_spin(t.charged_spin_time)
-		var finisher := spin == level
-		_set_hitbox_stun(t.charged_freeze_stun if (sweet_spot and not finisher) else t.charged_final_stun)
-		_blade_hitbox.damage = t.charged_hit_damage if finisher else (0.0 if sweet_spot else 1.0)
+		var finisher := spin == spin_count
+		_set_hitbox_stun(t.charged_freeze_stun if (is_sweet_spot and not finisher) else t.charged_final_stun)
+		_blade_hitbox.damage = t.charged_hit_damage if finisher else (0.0 if is_sweet_spot else 1.0)
 		if finisher:
 			arm_push(t.charged_final_push, t.charged_spin_time * tuning.push_at)
 		begin_damage_window(t.charged_spin_time)
@@ -218,7 +218,7 @@ func _begin_air_step(step: int, _finisher: bool, _wait_branch: bool) -> void:
 	_player.attack_step(tuning.swing_time)
 	_player.notify_aerial_attack(tuning.swing_time)
 
-func _aerial_charged_x(sweet_spot: bool) -> void:
+func _aerial_charged_x(is_sweet_spot: bool) -> void:
 	var t := _t()
 	var id := begin_routine()
 	reset_hit_profile()
@@ -233,7 +233,7 @@ func _aerial_charged_x(sweet_spot: bool) -> void:
 	if not is_routine_current(id):
 		_charged_move_active = false
 		return
-	if sweet_spot:
+	if is_sweet_spot:
 		# La vuelta congelante reusa el tramo de vueltas del X terrestre (el plan no le asigna
 		# tramo propio; decidido al implementar, ver bóveda Animacion Mazo).
 		play_visual_clip(ANIM_HEAVY, HEAVY_CHARGED_X_SPIN.x, HEAVY_CHARGED_X_SPIN.y,

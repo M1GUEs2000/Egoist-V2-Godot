@@ -54,9 +54,9 @@ func _ready() -> void:
 	_hand.position = Vector3.UP * hand_height
 	_reset_hand()
 
-func setup(owner: EnemyBase) -> void:
-	_owner = owner
-	_blade_hitbox.source = owner
+func setup(body: EnemyBase) -> void:
+	_owner = body
+	_blade_hitbox.source = body
 	_blade_hitbox.damage = attack_damage
 	_blade_hitbox.stun = stun
 	_blade_hitbox.can_be_parried = false

@@ -23,11 +23,11 @@ func setup(body: Node) -> void:
 ## (0.0 = hold total con velocity.y en 0; 1.0 = gravedad normal; intermedio = deriva lenta, ej.
 ## 0.15 = cae al 15%). Renueva el vencimiento con max(actual, now + duration) y adopta el
 ## `fall_scale` de la ultima solicitud (gana el ultimo que escribe). `duration` <= 0 no hace nada.
-func start_float(duration: float, fall_scale: float) -> void:
+func start_float(duration: float, new_fall_scale: float) -> void:
 	if duration <= 0.0:
 		return
 	_float_until = maxf(_float_until, World.now() + duration)
-	_fall_scale = clampf(fall_scale, 0.0, 1.0)
+	_fall_scale = clampf(new_fall_scale, 0.0, 1.0)
 
 ## Corta el float en el acto y devuelve el control a la gravedad normal.
 func cancel_float() -> void:
