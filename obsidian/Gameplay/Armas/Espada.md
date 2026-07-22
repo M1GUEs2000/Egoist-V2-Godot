@@ -86,6 +86,8 @@ Cada ruta vertical de la Espada vive como recurso `MoverSettings`/`FloaterSettin
 | `air_wait_spin_player_mover` | Hop PARTIAL de la primera vuelta de la rama aerea de espera. |
 | `air_finisher_enemy_spike_mover` | Spike descendente del enemigo en el hachazo aereo normal (finisher). |
 | `air_hit_enemy_floater` | Hold del ENEMIGO al conectarle un golpe aereo NORMAL: lo suspende con un Floater (`request_float`), simetrico al air-hit-float del jugador. Se renueva por golpe (`max`), asi queda pegado durante el combo y cae al dejar de golpearlo. Gate: enemigo aereo + quebrado. Excluye el cargado Y (que ya le da su propio spike). |
+| `air_hit_player_floater` | Hold del JUGADOR al conectar un golpe aereo normal (`request_float`): plano, renovado por golpe (`max`), sin escalado por combo. Simetrico al `air_hit_enemy_floater`. Vive en `WeaponTuning` (comun a todas las armas). |
+| `sweet_spot_player_floater` | Hold del JUGADOR tras el estallido del sweet spot del X cargado (`request_float`), para mirarlo sin caerse. Hoy en duracion 0 (sin hang). El estallido no lo cuelga por el air-hit generico: solo este perfil. |
 
 El X cargado (dash) no usa perfil Mover: sale por `Player.force_dash` con `charged_dash_distance` /
 `charged_dash_duration`.

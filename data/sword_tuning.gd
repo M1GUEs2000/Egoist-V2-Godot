@@ -50,15 +50,10 @@ class_name SwordTuning extends WeaponTuning
 @export var sweet_spot_explosion_delay := 0.18
 ## Dano extra que mete la explosion, aparte del dano del propio dash.
 @export var sweet_spot_explosion_damage := 1.0
-## Segundos que el jugador queda sostenido en el aire cuando la explosion conecta, para ver
-## el estallido en vez de caerse encima. Es un hang PROPIO del move (no escala el air-hit-stall
-## generico ni gasta el doble salto): cuenta desde la explosion, encima de lo que ya durara el
-## stall del dash. 0 = sin hang extra. Solo aplica en el aire.
-@export var sweet_spot_air_stall_bonus := 0.5
-## fall_scale del Floater del hang (ver combat/floater.gd): 0.0 = hold total (vertical en 0), 1.0 =
-## gravedad normal, intermedio = deriva lenta. 0.15 replica el air_stall_float_gravity que usaba el
-## hover viejo, asi que el feel del sweet spot no cambia. Solo aplica si sweet_spot_air_stall_bonus > 0.
-@export_range(0.0, 1.0) var sweet_spot_float_fall_scale := 0.15
+## Hold PROPIO del jugador cuando la explosion del sweet spot conecta, para ver el estallido en vez
+## de caerse encima (request_float). No gasta el doble salto y solo aplica en el aire. duration 0 =
+## sin hang; fall_scale 0 = hold total, 0.15 = deriva lenta. Ver combat/floater.gd.
+@export var sweet_spot_player_floater: FloaterSettings
 @export_subgroup("Motas del estallido (solo visual)")
 ## Nada de acá toca fisica ni gameplay: son las motas del estallido de cada enemigo, las
 ## mismas que tira un bloque de traversal al golpearlo (World.spawn_color_burst).

@@ -276,14 +276,13 @@ class_name PlayerTuning extends Resource
 @export var run_dust_min_speed := 1.5
 
 @export_group("Dash air hit float")
-## Float aplicado cuando el hitbox del dash conecta en el aire.
-@export var dash_air_hit_float_duration := 0.08
-@export_range(0.0, 1.0) var dash_air_hit_float_fall_scale := 0.15
+## Hold del jugador cuando el hitbox del dash ofensivo conecta en el aire (request_float). duration 0
+## = sin hang; fall_scale 0 = hold total, 0.15 = deriva lenta. Ver combat/floater.gd.
+@export var dash_air_hit_floater: FloaterSettings
 
 @export_group("Air charge float")
 ## Cargar en el aire cuelga al jugador con un Floater (mismo primitivo que el resto). Reemplaza al
 ## viejo freno de caida escalonado: ya no hay "desgaste" por uso, cada carga aerea abre la misma
-## ventana. El desgaste queda como idea futura del Floater. 0 = cargar en aire no sostiene.
-@export var air_charge_float_duration := 0.35
-## Escala de caida durante esa ventana. 0 = hold total; 0.15 = deriva lenta (como el air stall).
-@export_range(0.0, 1.0) var air_charge_float_fall_scale := 0.15
+## ventana. El desgaste queda como idea futura del Floater. duration 0 = cargar en aire no sostiene;
+## fall_scale 0 = hold total, 0.15 = deriva lenta (como el air stall). Ver combat/floater.gd.
+@export var air_charge_floater: FloaterSettings

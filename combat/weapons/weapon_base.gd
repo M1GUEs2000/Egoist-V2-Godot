@@ -64,8 +64,6 @@ var _combo_queued := false
 var _combo_queued_time := 0.0
 var _combo_kind := &""
 var _swing_tween: Tween
-var _air_hit_float_count := 0
-var _last_air_hit_float_time := -999.0
 var _vertical_window_id := 0
 var _vertical_player_mover: MoverSettings
 var _vertical_enemy_mover: MoverSettings
@@ -314,12 +312,13 @@ func _push_target(hurtbox: Hurtbox, settings: PushSettings) -> void:
 ## Reacción común a cualquier golpe conectado del arma (hoja, disco, vertical, dash
 ## cargado): air-hit-stall + meter + progresión de kills.
 func register_weapon_hit(hurtbox: Hurtbox, died: bool, cuts_air_momentum := true,
-		player_float_duration := 0.0, player_float_fall_scale := 0.0) -> void:
+		triggers_player_float := true) -> void:
 	# Conectar en el aire contra algo que lo dispara ralentiza la caída del jugador, y (si el golpe
-	# es normal) le come momentum horizontal. Los cargados pasan cuts_air_momentum = false.
-	if player_float_duration > 0.0:
-		_player.request_float(player_float_duration, player_float_fall_scale)
-	elif hurtbox.triggers_air_hit_stall:
+	# es normal) le come momentum horizontal. Los cargados pasan cuts_air_momentum = false. La
+	# explosión del sweet spot pasa triggers_player_float = false: su hang propio lo da
+	# sweet_spot_player_floater, no el air-hit por enemigo — que además, al ser retardado, cancelaría
+	# (request_float) un salto que el jugador ya hizo tras el dash.
+	if triggers_player_float and hurtbox.triggers_air_hit_stall:
 		_register_air_hit_float(cuts_air_momentum)
 	var meter := _player.meter
 	if meter != null:
@@ -337,14 +336,10 @@ func _register_air_hit_float(cuts_momentum: bool) -> void:
 	if cuts_momentum:
 		_player.bump_velocity *= clampf(tuning.air_hit_momentum_keep, 0.0, 1.0)
 		_player.locomotion.scale_air_velocity(tuning.air_hit_momentum_keep)
-	if World.now() - _last_air_hit_float_time > tuning.air_hit_float_combo_window:
-		_air_hit_float_count = 0
-	_air_hit_float_count += 1
-	_last_air_hit_float_time = World.now()
-	var duration := minf(tuning.air_hit_float_base + tuning.air_hit_float_per_hit *
-			(_air_hit_float_count - 1), tuning.air_hit_float_max) * tuning.air_stall_scale
-	_player.vertical_velocity = clampf(_player.vertical_velocity, 0.0, tuning.air_hit_float_max_rise)
-	_player.request_float(duration, tuning.air_hit_float_fall_scale)
+	var f := tuning.air_hit_player_floater
+	if f == null:
+		return
+	_player.request_float(f.duration, f.fall_scale)
 
 ## Hay un move CARGADO en curso sobre este hitbox. Lo usa el corte de momentum aéreo para dejar
 ## pasar los cargados (que mueven al jugador a propósito). Cada arma lo sobreescribe con su flag;

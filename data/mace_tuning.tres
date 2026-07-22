@@ -4,6 +4,12 @@
 [ext_resource type="Script" uid="uid://w0b3i18w442a" path="res://data/stun_settings.gd" id="2_stun"]
 [ext_resource type="Script" uid="uid://cprdodv3kypq1" path="res://data/push_settings.gd" id="3_push"]
 [ext_resource type="Script" uid="uid://dsps3sxfd8wmx" path="res://data/mover_settings.gd" id="4_mover"]
+[ext_resource type="Script" uid="uid://br6k3bi45tkio" path="res://data/floater_settings.gd" id="5_floater"]
+
+[sub_resource type="Resource" id="Resource_air_hit_player_floater"]
+script = ExtResource("5_floater")
+duration = 0.25
+fall_scale = 0.15
 
 [sub_resource type="Resource" id="Resource_maceairfreeze"]
 script = ExtResource("2_stun")
@@ -28,17 +34,17 @@ poise_damage = 12.0
 grounded = 1.4
 airborne = 1.4
 
-[sub_resource type="Resource" id="Resource_macepush"]
-script = ExtResource("3_push")
-distance = 13.0
-angle_degrees = 24.0
-gravity = -40.0
-
 [sub_resource type="Resource" id="Resource_ground_y_launcher_enemy_mover"]
 script = ExtResource("4_mover")
 distance = 3.6
 speed = 24.0
 float_duration = 1.1
+
+[sub_resource type="Resource" id="Resource_macepush"]
+script = ExtResource("3_push")
+distance = 13.0
+angle_degrees = 24.0
+gravity = -40.0
 
 [resource]
 script = ExtResource("1_tuning")
@@ -57,7 +63,7 @@ air_freeze_stun = SubResource("Resource_maceairfreeze")
 swing_time = 0.5
 stun = SubResource("Resource_macestun")
 air_step_time = 0.09
-air_stall_scale = 1.8
+air_hit_player_floater = SubResource("Resource_air_hit_player_floater")
 push = SubResource("Resource_macepush")
 push_at = 0.5
 parry_poise_normal = 8.0

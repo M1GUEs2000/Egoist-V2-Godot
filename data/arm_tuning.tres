@@ -3,6 +3,11 @@
 [ext_resource type="Script" uid="uid://cj14fn3tnv6va" path="res://data/arm_tuning.gd" id="1_tuning"]
 [ext_resource type="Resource" uid="uid://eyi1a88usmmc" path="res://data/arm_stun.tres" id="2_stun"]
 [ext_resource type="PackedScene" uid="uid://ccg2qrwq3kse7" path="res://visual/arm_vfx_pulse.tscn" id="3_vk5ia"]
+[ext_resource type="Script" uid="uid://br6k3bi45tkio" path="res://data/floater_settings.gd" id="4_floater"]
+
+[sub_resource type="Resource" id="Resource_air_hang_floater"]
+script = ExtResource("4_floater")
+duration = 0.1
 
 [resource]
 script = ExtResource("1_tuning")
@@ -12,7 +17,7 @@ cooldown_duration = 1.0
 tap_cadence = 0.3
 hitbox_radius = 1.0
 meter_gain_on_hit = 0.01
-air_hang_duration = 0.1
+air_hang_floater = SubResource("Resource_air_hang_floater")
 air_horizontal_keep = 0.201
 traversal_lock_max_range = 25.0
 traversal_lock_half_angle = 100.0

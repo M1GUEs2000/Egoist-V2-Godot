@@ -325,8 +325,10 @@ func _ready() -> void:
 	# Carga aerea: cuelga al jugador con un Floater (sin desgaste por uso — cada carga abre la
 	# misma ventana). AirKillReset ya solo devuelve doble salto y airdash.
 	player.air_state = Player.AirState.AIRBORNE
-	player.tuning.air_charge_float_duration = 0.35
-	player.tuning.air_charge_float_fall_scale = 0.15
+	var air_charge_floater := FloaterSettings.new()
+	air_charge_floater.duration = 0.35
+	air_charge_floater.fall_scale = 0.15
+	player.tuning.air_charge_floater = air_charge_floater
 	player.floater.cancel_float()
 	player.vertical_velocity = -20.0
 	player.apply_air_charge_float()

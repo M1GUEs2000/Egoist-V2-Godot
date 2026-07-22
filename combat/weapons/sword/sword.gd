@@ -250,14 +250,15 @@ func _explode_sweet_spot_hits() -> void:
 				t.sweet_spot_burst_amount, t.sweet_spot_burst_speed,
 				t.sweet_spot_burst_particle_gravity, t.sweet_spot_burst_lifetime,
 				t.sweet_spot_burst_size)
-		register_weapon_hit(hurtbox, died, false)
+		register_weapon_hit(hurtbox, died, false, false)
 		exploded = true
 	_sweet_spot_hits.clear()
 	# Hang extra para mirar el estallido. Va DESPUÉS del loop: un solo Floater aunque explote
-	# media pantalla, y solo si algo explotó de verdad (whiff = caés normal). Migrado a Floater
-	# (F1): antes era _player.hover; ahora el ataque pide el hang con su propio fall_scale.
-	if exploded and t.sweet_spot_air_stall_bonus > 0.0:
-		_player.request_float(t.sweet_spot_air_stall_bonus, t.sweet_spot_float_fall_scale)
+	# media pantalla, y solo si algo explotó de verdad (whiff = caés normal). El ataque pide el
+	# hang con su propio perfil (sweet_spot_player_floater); request_float valida aéreo.
+	var ssf := t.sweet_spot_player_floater
+	if exploded and ssf != null and ssf.duration > 0.0:
+		_player.request_float(ssf.duration, ssf.fall_scale)
 
 ## Solo alimenta el meter (sin _window_hits: no es parte de un combo aéreo). Un kill en la
 ## ventana del cargado devuelve la barra completa (gain_on_kill lo resuelve).

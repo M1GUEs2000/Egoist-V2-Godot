@@ -220,22 +220,25 @@ func _on_jump() -> void:
 		# Contra una pared el salto SIEMPRE es rebote hacia afuera (aunque el slide se
 		# haya cortado este frame): no consume ni recarga el doble salto.
 		_cancel_jump_impulse()
+		floater.cancel_float()  # el rebote impone su propia vertical: el hang la re-pisaria a 0
 		air_state = AirState.AIRBORNE
 	elif enemy_bounce.try_bounce(locomotion.camera_relative(locomotion.read_move_input())):
 		_cancel_jump_impulse()
 		mover.cancel_mover(Mover.CancelReason.ATTACK_RULE)
+		floater.cancel_float()  # el rebote impone su propia vertical: el hang la re-pisaria a 0
 		air_state = AirState.AIRBORNE
 	elif _can_double_jump and not mover.blocks_jump():
 		_set_double_jump_available(false)
-		# El doble salto sale SIEMPRE con gravedad normal: cierra la ventana de caida lenta
-		# de esa ventana escalaría su subida con gravedad reducida y el segundo salto llegaría demasiado alto.
-		floater.cancel_float()  # el doble salto sale con gravedad normal: cierra el hang del Floater
 		_start_jump_impulse(_jump_direction_from_input())
 		air_state = AirState.AIRBORNE
 
 ## Salto base y doble salto comparten una parabola dirigida definida por altura, distancia y
 ## duracion. La fuerza vertical y la gravedad se calculan: no son knobs de tuning.
 func _start_jump_impulse(direction: Vector3) -> void:
+	# Todo salto propulsado arranca con gravedad normal: si un Floater siguiera activo su fall_scale
+	# escalaria la subida (o con 0.0 la anularia pisando vertical_velocity a 0), asi que el hang muere
+	# al saltar. Vale para el salto de piso y el doble salto (ambos entran por aca).
+	floater.cancel_float()
 	_jump_direction = Vector3(direction.x, 0.0, direction.z).normalized()
 	_jump_control = JumpControl.LOCKED
 	_jump_hold_time = 0.0
@@ -347,7 +350,9 @@ func restore_airdash() -> void:
 func apply_air_charge_float() -> void:
 	if is_on_floor():
 		return
-	floater.start_float(tuning.air_charge_float_duration, tuning.air_charge_float_fall_scale)
+	var f := tuning.air_charge_floater
+	if f != null:
+		floater.start_float(f.duration, f.fall_scale)
 
 func apply_air_kill_reset() -> void:
 	air_kill_reset.apply_air_kill_reset()
@@ -420,25 +425,33 @@ func apply_stun(duration: float = -1.0, mode := PlayerStun.Mode.STILL,
 func fire_action_world_switch() -> void:
 	action_world_switch.fire_action()
 
-## Golpe aereo del Brazo. VERTICAL: un Floater de hold total (`fall_scale` 0) por `duration` seg —
-## el mismo primitivo que el resto de los ataques, sin sistema propio. A diferencia del freeze viejo
-## que reemplaza, al terminar la ventana la caida arranca de 0 en vez de retomar la velocidad previa.
-## HORIZONTAL: decelera el momentum (bump) por `horizontal_keep` (0-1) en el acto; no es una pausa,
-## es un freno que decrece con cada golpe, y por eso no es asunto del Floater.
-func register_arm_air_hit(duration: float, horizontal_keep: float) -> void:
+## Golpe aereo del Brazo. VERTICAL: un Floater por `duration` seg con `fall_scale` propio (el ataque
+## trae ambos en su FloaterSettings) — el mismo primitivo que el resto de los ataques, sin sistema
+## propio. A diferencia del freeze viejo que reemplaza, al terminar la ventana la caida arranca de 0
+## en vez de retomar la velocidad previa. HORIZONTAL: decelera el momentum (bump) por `horizontal_keep`
+## (0-1) en el acto; no es una pausa, es un freno que decrece con cada golpe, y por eso no es del Floater.
+func register_arm_air_hit(duration: float, fall_scale: float, horizontal_keep: float) -> void:
 	if is_on_floor():
 		return
 	bump_velocity *= clampf(horizontal_keep, 0.0, 1.0)
-	floater.start_float(duration, 0.0)
+	floater.start_float(duration, fall_scale)
 
-## Pide un Floater para el propio jugador (lo usa un ataque que quiere colgarlo en el aire). Frena
-## la caída como el viejo hover: no actúa en piso ni pisa una subida, y snapea la vertical a 0 para
-## que el hang se lea como una pausa real. `fall_scale` 0 = hold total; 0.15 = deriva lenta (como el
-## air stall). No gasta el doble salto: la ventana existe para que el jugador lo use. La duración y el
-## fall_scale los define el ataque (por arma/ataque, en su tuning). Ver combat/floater.gd.
+## Pide un Floater para el propio jugador (lo usa un ataque que quiere colgarlo en el aire). En el
+## aire TOMA la autoridad vertical: cancela el salto en curso —suba o caiga— y snapea la vertical a 0
+## para que el hang se lea como una pausa real. Es la contraparte simetrica de saltar, que a su vez
+## cancela el Floater (ver _start_jump_impulse): salto y hang nunca coexisten, gana el ultimo pedido.
+## No actúa en piso. `fall_scale` 0 = hold total; 0.15 = deriva lenta (como el air stall). No gasta el
+## doble salto: la ventana existe para que el jugador lo use. La duración y el fall_scale los define el
+## ataque (por arma/ataque, en su tuning). Ver combat/floater.gd.
 func request_float(duration: float, fall_scale: float) -> void:
-	if is_on_floor() or vertical_velocity > 0.0:
+	# El dash es dueño de su propia vertical mientras corre (el glue hace return temprano y dash.tick
+	# pisa velocity). Un float pedido durante el dash arrancaria un hang fantasma que deja al jugador
+	# flotando a ras de piso con is_on_floor() en false (el bloque de piso nunca lo re-asienta ni le
+	# devuelve el doble salto), y el impacto del cargado borraria un salto recien buffereado. El dash
+	# termina y recien ahi el jugador vuelve a aceptar floats.
+	if is_on_floor() or dash.is_dashing:
 		return
+	_cancel_jump_impulse()  # el golpe mata el salto en curso: la vertical pasa entera al Floater
 	vertical_velocity = 0.0
 	air_state = AirState.AIRBORNE
 	floater.start_float(duration, fall_scale)

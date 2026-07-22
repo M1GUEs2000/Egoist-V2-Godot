@@ -252,8 +252,9 @@ func _on_hit(hurtbox: Hurtbox, _died: bool) -> void:
 	# Reaccion aerea propia del Brazo: hang corto (Floater de hold total) + freno del momentum
 	# horizontal (decelera cada golpe). El guard de is_on_floor vive en Player.register_arm_air_hit;
 	# is_airborne evita el passthrough en el caso terrestre.
-	if _player.is_airborne():
-		_player.register_arm_air_hit(tuning.air_hang_duration, tuning.air_horizontal_keep)
+	var hang := tuning.air_hang_floater
+	if _player.is_airborne() and hang != null:
+		_player.register_arm_air_hit(hang.duration, hang.fall_scale, tuning.air_horizontal_keep)
 	if _player.meter != null:
 		_player.meter.gain_bars(tuning.meter_gain_on_hit)
 	_spawn_impact_vfx(hurtbox)

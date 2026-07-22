@@ -84,8 +84,9 @@ Arma de mas dano. Controla masas. Tiene bastante knockback. Tumba a los enemigos
   agrega una vuelta final que congela (`air_freeze_stun`). El ground pound escribe
   `vertical_velocity` directo a proposito: es una caida recta, no un arco balistico, y el plan
   vertical lo deja como excepcion viva (no depende del bouncer). *(2026-07-21)*
-- `air_stall_scale = 1.8`: el Mazo sostiene mas al jugador por golpe conectado porque
-  tiene menos impactos y cada uno pesa mas. *(2026-07-09)*
+- El hang del jugador al conectar un golpe aereo lo da el `air_hit_player_floater` propio del Mazo
+  (`FloaterSettings` en `mace_tuning.tres`), mas largo que el de la Espada porque el Mazo pega menos
+  veces y cada golpe pesa mas. *(2026-07-21)*
 - "Congelar" no es un verbo nuevo: reusa el sistema de stun existente
   (`StunSettings` con power/duración altos, mode STILL) — ver [[Combate]].
 - Las primitivas de swing procedural (`swing`/`swing_up`/`_play_spin`/`thrust`) viven en

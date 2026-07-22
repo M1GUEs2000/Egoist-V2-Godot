@@ -31,6 +31,15 @@ stop_on = 3
 script = ExtResource("5_floater")
 duration = 0.2
 
+[sub_resource type="Resource" id="Resource_air_hit_player_floater"]
+script = ExtResource("5_floater")
+duration = 0.2
+fall_scale = 0.1
+
+[sub_resource type="Resource" id="Resource_sweet_spot_player_floater"]
+script = ExtResource("5_floater")
+fall_scale = 0.15
+
 [sub_resource type="Resource" id="Resource_air_plunge_enemy_mover"]
 script = ExtResource("4_mover")
 direction = Vector3(0, -1, 0)
@@ -84,7 +93,8 @@ grounded = 0.35
 
 [sub_resource type="Resource" id="Resource_sweet_spot_enemy_mover"]
 script = ExtResource("4_mover")
-speed = 16.666667
+distance = 5.0
+acceleration = 10.0
 float_duration = 0.5
 
 [resource]
@@ -95,8 +105,8 @@ charged_dash_distance = 11.0
 charged_dash_duration = 0.13
 charged_dash_damage = 5.0
 charged_dash_stun = SubResource("Resource_810ig")
-sweet_spot_explosion_delay = 0.4
-sweet_spot_air_stall_bonus = 0.0
+sweet_spot_explosion_delay = 0.2
+sweet_spot_player_floater = SubResource("Resource_sweet_spot_player_floater")
 ground_charged_y_player_mover = SubResource("Resource_ground_y_player_mover")
 ground_charged_y_enemy_mover = SubResource("Resource_ground_y_enemy_mover")
 aerial_charged_y_player_mover = SubResource("Resource_aerial_y_player_mover")
@@ -113,10 +123,7 @@ stun = SubResource("Resource_swordstun")
 hand_radius = 1.0
 air_step_time = 0.2
 air_wait_branch_threshold = 0.2
-air_stall_scale = 1.1
-air_hit_float_base = 10.0
-air_hit_float_per_hit = 0.01
-air_hit_float_fall_scale = 0.1
+air_hit_player_floater = SubResource("Resource_air_hit_player_floater")
 air_hit_momentum_keep = 0.204
 push = SubResource("Resource_swordpush")
 push_at = 0.65

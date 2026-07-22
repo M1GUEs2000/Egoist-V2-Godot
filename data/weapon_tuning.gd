@@ -32,17 +32,15 @@ class_name WeaponTuning extends Resource
 @export var air_spike_down_speed := 30.0
 ## La 1ra vuelta de la rama espera eleva un poco al jugador.
 @export var air_wait_spin_hop := 4.0
-## Cuánto sostiene en el aire un golpe de esta arma (multiplica el air-hit-stall del
-## Player). >1 = arma de pocos golpes pesados; 1.0 = base (Espada).
-@export var air_stall_scale := 1.0
 
 @export_group("Float por impacto aéreo")
-@export var air_hit_float_base := 0.08
-@export var air_hit_float_per_hit := 0.04
-@export var air_hit_float_max := 0.28
-@export var air_hit_float_combo_window := 0.75
-@export_range(0.0, 1.0) var air_hit_float_fall_scale := 0.15
-@export var air_hit_float_max_rise := 5.0
+## Hold del JUGADOR al conectar un golpe aéreo NORMAL con esta arma (request_float). Se renueva por
+## golpe (el Floater usa max()), así queda "colgado" durante el combo y cae al dejar de pegar —
+## simétrico al air_hit_enemy_floater del enemigo. duration 0 = sin hang; fall_scale 0 = hold total,
+## 0.15 = deriva lenta (como el juggle). Ver combat/floater.gd y obsidian/Plan Autoridad Vertical.
+@export var air_hit_player_floater: FloaterSettings
+## Fracción del momentum HORIZONTAL (bump) que sobrevive cada golpe aéreo normal (el corte de la
+## vertical lo hace el Floater; esto es aparte y horizontal). 1.0 = no frena; 0.0 = lo mata.
 @export_range(0.0, 1.0) var air_hit_momentum_keep := 0.3
 
 @export_group("Push")

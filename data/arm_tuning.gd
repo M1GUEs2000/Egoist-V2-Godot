@@ -23,11 +23,10 @@ class_name ArmTuning extends Resource
 @export var hitbox_radius := 0.35
 ## Meter que gana un golpe conectado. Propio y bajo, independiente de WeaponTuning/PlayerTuning.
 @export var meter_gain_on_hit := 1.0
-## Segundos que el Brazo sostiene al jugador al conectar en el aire: un Floater de hold total
-## (fall_scale 0), el mismo primitivo que usan los demas ataques. Mucho mas corto que el air stall
-## del arma (PlayerTuning.air_stall_*) y sin escalado por combo: es una duracion fija por golpe.
-## 0 = sin hang vertical.
-@export var air_hang_duration := 0.3
+## Hold del jugador cuando el Brazo conecta en el aire: un Floater (request_float via
+## register_arm_air_hit), el mismo primitivo que usan los demas ataques. Sin escalado por combo: es un
+## perfil fijo por golpe. duration 0 = sin hang vertical; fall_scale 0 = hold total. Ver combat/floater.gd.
+@export var air_hang_floater: FloaterSettings
 ## Fraccion del momentum HORIZONTAL (bump) que sobrevive cada golpe aereo del Brazo: a diferencia
 ## de la vertical (pausa que conserva), la horizontal DECELERA — cada golpe la frena. 1.0 = no
 ## frena, 0.5 = la parte a la mitad por golpe, 0.0 = la mata.

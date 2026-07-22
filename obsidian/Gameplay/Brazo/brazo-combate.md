@@ -26,16 +26,13 @@ usa el snap del golpe normal sin lock). Daño y poise bajos (`damage`, `stun` en
 genera meter propio al conectar (`meter_gain_on_hit`). `max_taps` seguidos antes de forzar
 `cooldown_duration` segundos de bloqueo.
 
-**Reaccion aerea propia** (si el tap conecta con el jugador en el aire): distinta y mucho mas corta
-que el air stall del arma (`PlayerTuning.air_stall_*`, que flota y resetea la caida). Dos efectos
-separados, ambos en `arm_tuning.tres`:
+**Reaccion aerea propia** (si el tap conecta con el jugador en el aire): mas corta que el hang del
+combo aereo de la Espada. Dos efectos separados, ambos en `arm_tuning.tres`:
 
-- **Vertical → Floater de hold total**: `Player.register_arm_air_hit` pide `floater.start_float(air_hang_duration, 0.0)`
-  (0.3s). Mismo primitivo que cualquier otro ataque (ver [[Plan Autoridad Vertical]]), no un sistema
-  propio del brazo. *(2026-07-21, reemplaza el freeze viejo — `PlayerLauncher.consume_air_freeze` /
-  `register_arm_air_freeze` ya no existen)*. Cambio de feel: el freeze retomaba la caida con la
-  velocidad previa completa (se leia como "pausa"); el Floater arranca de 0 al terminar la ventana
-  (se lee como "hang"). El knob se renombro `air_freeze_duration` → `air_hang_duration`.
+- **Vertical → Floater**: `Player.register_arm_air_hit` arranca un Floater con el perfil
+  `air_hang_floater` (un `FloaterSettings`: `duration` 0.1, `fall_scale` 0 = hold total). Mismo
+  primitivo que cualquier otro ataque (ver [[Plan Autoridad Vertical]]), no un sistema propio del
+  brazo. Al terminar la ventana la caida arranca de 0 (se lee como "hang", no como "pausa").
 - **Horizontal → freno que decrece**: el momentum `bump` se **decelera** en el acto por
   `air_horizontal_keep` (0-1; 0.5 = lo parte a la mitad cada golpe, 1.0 = no frena, 0.0 = lo mata).
   No es pausa: cada golpe encadenado lo baja mas.

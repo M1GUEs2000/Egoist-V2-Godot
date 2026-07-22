@@ -39,15 +39,15 @@ Combate del jugador: slots X/Y, espada, hitboxes, parry, meter, combo aereo e in
 - El dodge tiene i-frames: mientras dura la ventana (`PlayerTuning.dodge_iframe_duration`) el player no puede ser stuneado (gate en `Player.try_apply_stun`, ver [[Stun]] > I-frames del dodge). No aplica al `force_dash` ofensivo. El esquive enemigo (`EVADE`) todavia no existe (planeado H2). *(2026-07-13, pendiente de tunear jugando)*
 - Cada golpe de un combo, en tierra o en aire, avanza al jugador hacia el enemigo lockeado (o hacia su frente) con `Player.attack_step`. Distancia en `PlayerTuning.attack_step_distance`. *(2026-07-09)*
 - El golpe aereo flota solo si conecta; si falla, cae mas fuerte. Un golpe aereo normal conectado tambien suspende al enemigo golpeado con un Floater propio, simetrico al hang del jugador (ver [[Espada]] `air_hit_enemy_floater`).
-- Un move puede pedir un **hang propio** con `Player.request_float(duration, fall_scale)` (componente Floater, ver [[Plan Autoridad Vertical]]): frena la caida en seco (o la escala) y sostiene al jugador un tiempo exacto, sin depender del contador de combo ni de `air_stall_scale`, y sin gastarle el doble salto. Es distinto del air-hit-stall generico, que ralentiza segun cuantos golpes lleve encadenados. *(actualizado 2026-07-21: `Player.hover()` ya no existe, lo reemplazo Floater; el Y aereo del [[Mazo]] se borro por completo, no rebota mas al jugador)*
+- Un move puede pedir un **hang propio** con `Player.request_float(duration, fall_scale)` (componente Floater, ver [[Plan Autoridad Vertical]]): frena la caida en seco (o la escala) y sostiene al jugador un tiempo exacto, sin gastarle el doble salto. **Salto y Floater se cancelan mutuamente** (gana el ultimo pedido): saltar —piso, doble salto, wall jump o rebote en enemigo— corta cualquier hang activo, y a la inversa un golpe que pide Floater cancela el salto en curso, suba o caiga, y toma la vertical. `request_float` no actua en piso ni mientras el dash es dueño de la vertical (el dash cargado la conserva hasta terminar).
 - El finisher aereo usa los verbos `slam`, `push` y `slam_bounce` de `EnemyBase`. `push` es una mecanica aislada con solver propio (no depende de Mover/Floater). `slam`/`slam_bounce` (y `slam_arc` del Mazo) describen arcos balisticos que el Mover lineal todavia no cubre: esperan el "bouncer" (Mover en modo balistico) planeado en [[Plan Autoridad Vertical]] F5, sin fecha.
-- El combo aereo `X espera X X`: la primera vuelta eleva un poco al jugador (`Player.air_hop`, tuneable con `air_wait_spin_hop`). El air-hit-stall preserva la subida hasta un tope (`air_stall_max_rise`, al nivel del hop y por debajo del salto), asi el hop sobrevive al stall. *(2026-07-06)*
+- El combo aereo `X espera X X`: la primera vuelta eleva un poco al jugador (hop, `air_wait_spin_hop`). *(2026-07-06)*
 - El push es un verbo generico que cualquier ataque puede armar con `WeaponBase.arm_push`: a `push_at` del swing empuja lo ya golpeado, y lo que conecte despues se empuja al instante. Usa `WeaponTuning.push` y sirve en tierra o aire. *(2026-07-09)*
 - Un enemigo empujado (`push`) o stuneado en el aire cae **acostado** y, al tocar el piso, pasa a un ragdoll fisico (RigidBody capsula) que rueda y se para en ~0.5s. Solo cambia la pose y la reaccion de aterrizaje; el hang del stun y el arco del push no se tocan (ver [[Stun]]). *(2026-07-10)*
 - Los enemigos tambien son superficies de traversal: el player puede rebotar desde su colision con `PlayerEnemyBounce`; si `enemy_bounce_push` existe, el enemigo recibe `push()` como reaccion opcional.
-- Cada arma escala cuanto sostiene en el aire un golpe conectado con `air_stall_scale`; el Player calcula el stall base y el arma multiplica el resultado. *(2026-07-09)*
+- El hang del jugador al conectar un golpe aereo normal es un `FloaterSettings` por arma (`WeaponTuning.air_hit_player_floater`): duracion y `fall_scale` fijos, renovados por golpe (el Floater usa `max()`), sin escalado por combo. *(2026-07-21)*
 - La hoja brilla al cargar un ataque (glow ambar proporcional a `InputBuffer.charge_progress`, tuneable con `charge_glow_color` / `charge_glow_max_energy`). El halo ya existe: `test_scene` tiene un `WorldEnvironment` con glow (HDR threshold 1.0, tonemap Filmic); falta tunear el bloom jugando. *(2026-07-10)*
-- Al empezar una carga en aire, `Player.apply_air_charge_float()` cuelga al jugador con un Floater (`PlayerTuning.air_charge_float_duration/fall_scale`), sin escalado ni anti-spam por ahora; no toca momentum horizontal. `PlayerAirKillReset` solo devuelve doble salto y airdash al matar en aire. *(2026-07-21: reemplaza al freno de caida por pasos `air_charge_fall_control`/`air_charge_fall_reduction_steps`, ya borrados; ver [[Plan Autoridad Vertical]] F4)*
+- Al empezar una carga en aire, `Player.apply_air_charge_float()` cuelga al jugador con un Floater (`PlayerTuning.air_charge_floater`, un `FloaterSettings`), sin escalado ni anti-spam; no toca momentum horizontal. `PlayerAirKillReset` solo devuelve doble salto y airdash al matar en aire. *(2026-07-21)*
 
 ## Autoridad vertical
 
@@ -56,8 +56,9 @@ los ejecutan. Un Mover TOTAL toma el cuerpo completo y uno PARTIAL controla solo
 contactos y la locomocion del Player. Todo golpe nuevo que afecte a un enemigo cancela su
 Mover/Floater anterior, salvo el perfil preparado por ese mismo golpe antes del dano.
 
-Espada usa Mover/Floater para sus rutas verticales, incluido hop, finisher y plunge. El Float por
-impacto aereo vive en `WeaponTuning`, el whiff conserva gravedad normal y el rebote del Y aereo esta
+Espada usa Mover/Floater para sus rutas verticales, incluido hop, finisher y plunge. Todos los floats
+verticales del jugador (impacto aereo, sweet spot, dash, carga aerea, Brazo) son `FloaterSettings` por
+ataque, igual que los Movers; el whiff conserva gravedad normal y el rebote del Y aereo esta
 desactivado. Mazo se reconstruyo sobre el mismo contrato (2026-07-21): su launcher terrestre pide un
 `MoverSettings` propio para el enemigo (antes lo tenia cableado en null y no elevaba a nadie); su Y
 cargado aereo se borro por completo en vez de migrarlo, porque dependia de un rebote balistico que

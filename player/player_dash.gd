@@ -212,10 +212,11 @@ func _boost_bump_momentum() -> void:
 ## Golpe del dash ofensivo: frena la caida, pero NO le come el momentum horizontal — el
 ## desplazamiento del dash es el move; el impacto pide su Float sin cortar momentum horizontal.
 func _on_dash_hit(hurtbox: Hurtbox, _died: bool) -> void:
-	if hurtbox.triggers_air_hit_stall:
-		_body.request_float(
-				_body.tuning.dash_air_hit_float_duration,
-				_body.tuning.dash_air_hit_float_fall_scale)
+	if not hurtbox.triggers_air_hit_stall:
+		return
+	var f := _body.tuning.dash_air_hit_floater
+	if f != null:
+		_body.request_float(f.duration, f.fall_scale)
 
 func _set_airdash_available(available: bool) -> void:
 	if _can_airdash == available:
