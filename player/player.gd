@@ -182,7 +182,8 @@ func _physics_process(delta: float) -> void:
 
 	var horizontal_with_momentum := wall_slide.apply_slide_velocity(horizontal + bump_velocity, input_dir, delta)
 	horizontal_with_momentum = floor_slide.apply_slide_velocity(horizontal_with_momentum, input_dir, delta)
-	velocity = horizontal_with_momentum + Vector3(0.0, vertical_velocity, 0.0)
+	var unstack := World.character_unstack_velocity(self, World.CHARACTER_UNSTACK_SPEED)
+	velocity = horizontal_with_momentum + unstack + Vector3(0.0, vertical_velocity, 0.0)
 	var before_move := global_position
 	move_and_slide()
 	mover.finish_partial_vertical(before_move)
@@ -190,7 +191,7 @@ func _physics_process(delta: float) -> void:
 	floor_slide.update_after_move(horizontal + bump_velocity, input_dir)
 	enemy_bounce.update_after_move(horizontal + bump_velocity)
 
-	if is_on_floor():
+	if World.on_solid_floor(self):
 		vertical_velocity = -1.0
 		air_state = AirState.GROUNDED
 		dash.restore_airdash()
@@ -203,14 +204,14 @@ func _physics_process(delta: float) -> void:
 
 	# Polvo al correr: solo en el suelo y por encima del umbral de velocidad horizontal.
 	var planar_speed := Vector2(velocity.x, velocity.z).length()
-	_set_run_dust(is_on_floor() and planar_speed >= tuning.run_dust_min_speed)
+	_set_run_dust(World.on_solid_floor(self) and planar_speed >= tuning.run_dust_min_speed)
 
 	_bleed_momentum(delta)
 
 func _on_jump() -> void:
 	_dodge_queued = false  # saltar descarta un dodge bufferizado pendiente
 	# (swing release / begin — batch 6)
-	if is_on_floor():
+	if World.on_solid_floor(self):
 		# Saltar desde un floor slide conserva jump_momentum_keep del slide como momentum aereo.
 		if floor_slide.is_sliding:
 			floor_slide.launch_into_jump()
@@ -527,7 +528,10 @@ func _tick_stunned(delta: float) -> void:
 	enemy_bounce.cancel()
 	locomotion.set_air_velocity(Vector3.ZERO)  # el golpe pisa la inercia del input; el knockback vive en bump
 	vertical_velocity += tuning.gravity * tuning.stun_gravity_scale * delta
-	velocity = bump_velocity + Vector3(0.0, vertical_velocity, 0.0)
+	# Aunque esté stuneado, un cuerpo apilado sobre otro debe despegarse (el stun no lo debe dejar
+	# clavado en la cabeza del otro): el knockback vive en bump, el desapilado se suma aparte.
+	var unstack := World.character_unstack_velocity(self, World.CHARACTER_UNSTACK_SPEED)
+	velocity = bump_velocity + unstack + Vector3(0.0, vertical_velocity, 0.0)
 	move_and_slide()
 	if is_on_floor():
 		vertical_velocity = -1.0

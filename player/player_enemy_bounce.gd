@@ -31,7 +31,7 @@ func update_after_move(horizontal_velocity: Vector3) -> void:
 func try_bounce(input_dir: Vector3) -> bool:
 	# Un Mover EXCLUSIVO (launcher/dash) bloquea el rebote; el NO-EXCLUSIVO (plunge) NO: rebotar en un
 	# enemigo es justamente la cancelación del plunge (ver Player.cancel_plunge en _on_jump).
-	if _body == null or _body.is_on_floor() or _body.dash.is_dashing:
+	if _body == null or World.on_solid_floor(_body) or _body.dash.is_dashing:
 		return false
 	if _body.mover.is_moving() and _body.mover.is_exclusive():
 		return false

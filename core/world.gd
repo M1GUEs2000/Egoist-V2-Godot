@@ -162,6 +162,57 @@ static func opposite_world(kind: Kind) -> Kind:
 static func now() -> float:
 	return Time.get_ticks_msec() / 1000.0
 
+## Un CharacterBody3D está apoyado en SUELO REAL (LAYER_WORLD), no sobre otro personaje. Godot
+## reporta is_on_floor() en true también cuando un cuerpo queda parado sobre la cápsula de otro
+## (jugador sobre enemigo o viceversa): eso NO debe contar como suelo, o los humanoides se apilan
+## y rompen el combate. Se llama DESPUÉS de move_and_slide(); si el único contacto de piso es un
+## personaje, devuelve false para que el cuerpo siga cayendo y resbale por la cápsula. Un contacto
+## de piso real (aunque además toque a un personaje al costado) igual cuenta como suelo.
+static func on_solid_floor(body: CharacterBody3D) -> bool:
+	if body == null or not body.is_on_floor():
+		return false
+	for i in body.get_slide_collision_count():
+		var collision := body.get_slide_collision(i)
+		if collision == null:
+			continue
+		if collision.get_normal().dot(body.up_direction) < 0.5:
+			continue  # contacto de pared/techo, no de piso
+		var collider := collision.get_collider() as CollisionObject3D
+		if collider != null and (collider.collision_layer & LAYER_WORLD) != 0:
+			return true
+	return false
+
+## Velocidad horizontal (m/s) con que dos humanoides apilados se despegan. Un cuerpo centrado justo
+## sobre la cápsula de otro tiene contacto puramente vertical: la gravedad no lo desliza (no hay
+## componente lateral) y quedaría en equilibrio para siempre. Este empuje lo saca a un lado. Subir
+## para que se despeguen más rápido; bajar para que resbalen más despacio.
+const CHARACTER_UNSTACK_SPEED := 6.0
+
+## Empuje horizontal para sacar a `body` de ENCIMA de otro personaje. Solo actúa sobre el cuerpo de
+## arriba (el que no tiene suelo real): el de abajo está firme y no debe patinar. La dirección es la
+## componente lateral de la normal de contacto; si el apilado está perfectamente centrado no hay
+## lado natural y elige uno al azar. Devuelve ZERO si no está apilado. Se llama DESPUÉS de
+## move_and_slide(). Ver on_solid_floor() (la regla hermana que evita que se apilen como suelo).
+static func character_unstack_velocity(body: CharacterBody3D, speed: float) -> Vector3:
+	if body == null or on_solid_floor(body):
+		return Vector3.ZERO
+	for i in body.get_slide_collision_count():
+		var collision := body.get_slide_collision(i)
+		if collision == null:
+			continue
+		var normal := collision.get_normal()
+		if normal.dot(body.up_direction) < 0.7:
+			continue  # solo cuenta estar PARADO sobre algo (contacto tipo piso), no un roce lateral
+		var collider := collision.get_collider() as CollisionObject3D
+		if collider == null or (collider.collision_layer & (LAYER_PLAYER | LAYER_ENEMY)) == 0:
+			continue
+		var flat := Vector3(normal.x, 0.0, normal.z)
+		if flat.length_squared() < 0.0001:
+			var angle := randf() * TAU  # centrado perfecto: sin lado natural, sale a uno random
+			flat = Vector3(cos(angle), 0.0, sin(angle))
+		return flat.normalized() * speed
+	return Vector3.ZERO
+
 ## Primer hermano de `node` que sea instancia de `type` (class_name o clase nativa),
 ## o null. Único punto para el cableado "módulo hijo busca a su módulo hermano".
 static func find_sibling(node: Node, type: Variant) -> Node:

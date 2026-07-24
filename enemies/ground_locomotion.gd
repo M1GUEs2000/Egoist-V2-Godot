@@ -181,7 +181,7 @@ func evade(from_point: Vector3, speed: float, delta: float) -> void:
 	_attempted_move = true
 	_body.velocity.x = dir.x * speed
 	_body.velocity.z = dir.z * speed
-	if _body.is_on_floor():
+	if World.on_solid_floor(_body):
 		_body.velocity.y = -1.0
 	else:
 		_body.velocity.y += gravity * delta
@@ -204,7 +204,7 @@ func backpedal(around: Vector3, desired_distance: float, delta: float) -> void:
 	var away := _detour_direction(-to_center.normalized())
 	_body.velocity.x = away.x * backpedal_speed
 	_body.velocity.z = away.z * backpedal_speed
-	if _body.is_on_floor():
+	if World.on_solid_floor(_body):
 		_body.velocity.y = -1.0
 	else:
 		_body.velocity.y += gravity * delta
@@ -243,18 +243,20 @@ func _apply_move(dir: Vector3, speed: float, delta: float) -> void:
 	_attempted_move = true
 	dir = _detour_direction(dir)
 	face_target(_body.global_position + dir)
-	_body.velocity.x = dir.x * speed
-	_body.velocity.z = dir.z * speed
-	if _body.is_on_floor():
+	var unstack := World.character_unstack_velocity(_body, World.CHARACTER_UNSTACK_SPEED)
+	_body.velocity.x = dir.x * speed + unstack.x
+	_body.velocity.z = dir.z * speed + unstack.z
+	if World.on_solid_floor(_body):
 		_body.velocity.y = -1.0
 	else:
 		_body.velocity.y += gravity * delta
 	_body.move_and_slide()
 
 func _stop_horizontal(delta: float) -> void:
-	_body.velocity.x = _approach(_body.velocity.x, 0.0, chase_speed * delta)
-	_body.velocity.z = _approach(_body.velocity.z, 0.0, chase_speed * delta)
-	if _body.is_on_floor():
+	var unstack := World.character_unstack_velocity(_body, World.CHARACTER_UNSTACK_SPEED)
+	_body.velocity.x = _approach(_body.velocity.x, 0.0, chase_speed * delta) + unstack.x
+	_body.velocity.z = _approach(_body.velocity.z, 0.0, chase_speed * delta) + unstack.z
+	if World.on_solid_floor(_body):
 		_body.velocity.y = -1.0
 	else:
 		_body.velocity.y += gravity * delta

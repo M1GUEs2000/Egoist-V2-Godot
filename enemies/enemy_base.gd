@@ -395,11 +395,16 @@ func tick_base(delta: float) -> bool:
 	if is_stunned():
 		_set_run_dust(false)
 		_tick_stun_knockback(delta)
+		# El stun no debe dejar al enemigo clavado sobre la cabeza del jugador (ni al revés): se
+		# despega igual mientras esté apilado.
+		var unstack := World.character_unstack_velocity(self, World.CHARACTER_UNSTACK_SPEED)
+		velocity.x += unstack.x
+		velocity.z += unstack.z
 		move_and_slide()
 		return false
 	# Polvo al correr: activo en el mundo, en el suelo y por encima del umbral. La velocidad es
 	# la del move_and_slide del frame anterior (la locomocion corre despues de tick_base).
-	_set_run_dust(_is_active and is_on_floor()
+	_set_run_dust(_is_active and World.on_solid_floor(self)
 			and Vector2(velocity.x, velocity.z).length() >= run_dust_min_speed)
 	# Fuera de mundo el cuerpo sigue vivo (roam/patrulla): _is_active solo gatea
 	# colision/hurtbox/visual (ver WorldMembership), no la simulacion.
@@ -859,6 +864,9 @@ func _update_airborne(delta: float) -> void:
 	else:
 		velocity.y += _air_gravity * delta
 	_tick_push_arc()
+	var unstack := World.character_unstack_velocity(self, World.CHARACTER_UNSTACK_SPEED)
+	velocity.x += unstack.x
+	velocity.z += unstack.z
 	move_and_slide()
 	_tick_push_wall_bounce()
 	# La esfera GroundSense siente el piso un pelo antes que los pies: el ragdoll de un cuerpo
@@ -871,7 +879,7 @@ func _update_airborne(delta: float) -> void:
 	if not sensed:
 		_left_ground_once = true
 	var early_ground := use_ragdoll and _lying and _left_ground_once and sensed
-	if is_on_floor() or early_ground or World.now() >= _airborne_until + airborne_max_time:
+	if World.on_solid_floor(self) or early_ground or World.now() >= _airborne_until + airborne_max_time:
 		if _slam_bounce:
 			_do_bounce()
 		elif _lying:
