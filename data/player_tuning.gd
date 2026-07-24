@@ -6,6 +6,10 @@ class_name PlayerTuning extends Resource
 @export_group("Locomotion")
 ## Velocidad horizontal base de movimiento, en m/s (suelo y aire).
 @export var move_speed := 6.0
+## Velocidad horizontal en tierra mientras se carga un ataque (X o Y sostenido), en m/s.
+## Cargar obliga a caminar: reemplaza a move_speed durante la carga, siempre por debajo del
+## umbral de Sprint del animation controller para que la pose de caminar-cargando sea consistente.
+@export var ground_charge_move_speed := 3.0
 ## Aceleración del control aéreo, en m/s². En el aire la velocidad de input se CONSERVA
 ## (inercia) y el stick solo la empuja hacia donde apunta a este ritmo; en el suelo el input
 ## sigue mandando directo. Referencia: move_speed / air_acceleration = segundos de quieto a

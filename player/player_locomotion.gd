@@ -100,6 +100,9 @@ func tick(delta: float, air_acceleration_scale := 1.0,
 		if is_attacking():
 			_air_velocity = Vector3.ZERO
 			return Vector3.ZERO
+		# Cargar un ataque obliga a caminar: pisa move_speed mientras dura la carga.
+		if _body.combat != null and _body.combat.is_charging():
+			target = dir * _body.tuning.ground_charge_move_speed
 		_air_velocity = target  # despegar (salto o caída) arranca con la velocidad de carrera
 		return target
 	# En aire, un golpe en curso tampoco deja steerear con el input, pero preserva el momentum

@@ -71,6 +71,7 @@ dash_stun = SubResource("Resource_dashstun")
 meter_max_bars = 10
 meter_start_bars = 10.0
 meter_gain_on_hit = 1.0
+input_hold_threshold = 0.3
 lock_max_range = 24.0
 lock_vertical_half_angle = 45.0
 lock_require_weapons_out = false

@@ -100,7 +100,7 @@ func try_lock_back_y_launcher() -> bool:
 	if _t().lock_back_y_launcher_window <= 0.0:
 		return false
 	cancel_routines()
-	_run_ground_launcher()
+	_run_enemy_only_launcher()
 	return true
 
 func lock_back_y_launcher_window() -> float:
@@ -166,8 +166,20 @@ func _hold_y() -> void:
 	# Golpe vertical terrestre (ex AttackLauncher: solo desde el suelo — ya garantizado acá).
 	_run_ground_launcher()
 
-## Launcher comun para la Y cargada terrestre y el gesto tap atras + Y.
+## Launcher cargado: eleva al Player y al Enemy.
 func _run_ground_launcher() -> void:
+	_begin_launcher()
+	run_vertical_window(_vertical_hitbox, _t().ground_charged_y_player_mover,
+			_t().ground_charged_y_enemy_mover, _t().ground_charged_y_hitbox_duration)
+
+## Tap atras + Y: comparte el golpe, pero solo el Enemy recibe el Mover vertical.
+func _run_enemy_only_launcher() -> void:
+	_begin_launcher()
+	run_vertical_window(_vertical_hitbox, _t().ground_charged_y_player_mover,
+			_t().ground_charged_y_enemy_mover, _t().ground_charged_y_hitbox_duration, 0.05, false)
+
+## Parte visual y de control comun a ambas variantes del launcher.
+func _begin_launcher() -> void:
 	_face_locked_target()
 	_player.locomotion.lock_facing(tuning.swing_time)
 	_player.locomotion.lock_movement(tuning.swing_time)
@@ -175,8 +187,6 @@ func _run_ground_launcher() -> void:
 	# Tramo 0.2-0.8 de Sword_Launcher (clip propio, WIP en animaciones/).
 	play_visual_clip(ANIM_LAUNCHER, 0.2, 0.8, tuning.swing_time)
 	swing_up(_t().strike_angle)
-	run_vertical_window(_vertical_hitbox, _t().ground_charged_y_player_mover,
-			_t().ground_charged_y_enemy_mover, _t().ground_charged_y_hitbox_duration)
 
 ## El launcher no hereda el facing del tap atras: con lock-on siempre barre hacia el objetivo.
 ## Se proyecta al suelo porque look_at no debe inclinar al Player aunque el enemigo este arriba.

@@ -150,7 +150,8 @@ inline (11, 21), `push` (484, 548), `launch` (482, 490), lee `_airborne_until` (
   el gate de poise. Ya no existe fallback desde WeaponBase a `launch(height, hang_time)`.
 - El Y cargado terrestre de Espada es el primer consumidor: usa los perfiles de `SwordTuning`.
 - Antes de pedir el Mover UP, el launcher comun de Espada fija el facing al lock-on y limpia/bloquea
-  el desplazamiento horizontal del Player; el tap atras + Y no puede arrastrar la subida hacia atras.
+  el desplazamiento horizontal del Player. El tap atras + Y deja al Player en tierra y pide el
+  Mover solo para el Enemy; no puede arrastrar al Player hacia atras.
 - `register_weapon_hit(...)` puede pedir un Float del Player con duracion y fall scale del ataque,
   sin pasar por `PlayerLauncher`. Los golpes no migrados siguen temporalmente en air-hit-stall.
 - Mace queda fuera de la seleccion del loadout y su launcher terrestre ya no aplica control vertical.

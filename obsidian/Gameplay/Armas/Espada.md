@@ -25,7 +25,7 @@ Arma base / equilibrada. Velocidad media. Sirve para mantener el flujo del comba
 | X cargado            | Dash recto. Al primer enemigo impactado lo atraviesas y apareces al otro lado, segun la direccion del dash; entonces termina. Rompe armadura. |
 | X cargado sweet spot | Tras atravesar al primer enemigo, ejecuta un launcher sin gastar otra barra. |
 | Y cargado            | Launcher. Area pequena/media.                                                                                              |
-| Tap atras + Y (lock-on) | Launcher sin gastar barra. "Atras" se calcula alejandose del objetivo lockeado y Y debe llegar dentro de `lock_back_y_launcher_window`; al iniciar, el Player vuelve a encarar al objetivo, limpia su momentum horizontal y sube recto. |
+| Tap atras + Y (lock-on) | Launcher sin gastar barra que eleva solo al enemigo. "Atras" se calcula alejandose del objetivo lockeado y Y debe llegar dentro de `lock_back_y_launcher_window`; al iniciar, el Player vuelve a encarar al objetivo y limpia su momentum horizontal. |
 | Y cargado sweet spot | Golpe hacia arriba que sube a los enemigos un poco. Despues te elevas con otro Y. Aumenta un poco el AOE.                  |
 
 ## Aereo
@@ -38,7 +38,7 @@ Arma base / equilibrada. Velocidad media. Sirve para mantener el flujo del comba
 | X cargado            | Con lock-on, dash 3D hacia el objetivo aunque este arriba o abajo; sin lock-on, dash recto. Al primer impacto lo atraviesas y apareces al otro lado de la trayectoria. |
 | X cargado sweet spot | Igual que el terrestre: tras atravesar al objetivo, activa el launcher sin gasto extra. |
 | Y cargado            | **Desactivado por ahora** (ver Estado Godot): diseño es golpe hacia abajo que hace rebotar al enemigo (auto-lanza al jugador y spikea/rebota al enemigo hasta su altura), pero depende de `slam_bounce`, que espera el "bouncer" sin diseñar. Sostener Y en el aire cae al combo aereo normal. |
-| Tap atras + Y (lock-on) | Lanza igual que el terrestre y sin barra. El tap se lee contra el eje jugador-objetivo, no contra el mundo ni la camara; al iniciar fija el facing al enemigo y bloquea input/momentum horizontal durante la subida. |
+| Tap atras + Y (lock-on) | Lanza solo al enemigo, igual que en tierra y sin barra. El tap se lee contra el eje jugador-objetivo, no contra el mundo ni la camara; al iniciar fija el facing al enemigo y bloquea input/momentum horizontal durante el swing. |
 | Y cargado sweet spot | Diseño pendiente (doble rebote, el segundo sube mas a jugador y enemigos): no implementado, bloqueado por lo mismo que el Y cargado.                               |
 
 ## Autoridad vertical
@@ -54,7 +54,7 @@ rebote del Y cargado aereo esta desactivado.
 - Los swings mueven la mano alrededor del jugador (ver Mano orbital en [[Combate]]); la hoja va rigida, apuntando hacia afuera. *(2026-07-09)*
 - Tap X/Y usa la misma cadena de combo terrestre/aérea; solo el cargado bifurca por slot. *(2026-07-09)*
 - `SwordTuning` controla ventanas, angulos, dash cargado, launcher y el `push` (arco del empuje armado por `arm_push`). *(2026-07-09)*
-- El launcher comun de la Espada (Y cargado terrestre, tap atras + Y y sweet spot del X) fija el facing al target bloqueado y corta input/momentum horizontal mientras toma control el Mover UP. *(2026-07-23)*
+- El launcher comun de la Espada fija el facing al target bloqueado y corta input/momentum horizontal durante el swing. El tap atras + Y mueve solo al enemigo; Y cargado terrestre y sweet spot del X elevan tambien al Player. *(2026-07-23)*
 - Habilidad especial de X cargado existe parcialmente por ventana de kill.
 - La hoja brilla al cargar un ataque (glow de carga, ver [[Combate]]). *(2026-07-06)*
 - **Y cargado aereo DESACTIVADO temporalmente** *(2026-07-20)*: usa `slam_bounce` (rebote balistico

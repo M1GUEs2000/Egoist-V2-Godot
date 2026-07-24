@@ -65,6 +65,25 @@ const CUSTOM_ANIMATIONS := [&"Sword_Launcher"]
 ## esta lista.
 @export var air_lower_body_bones: PackedStringArray = ["thigh_l", "thigh_r", "calf_l", "calf_r",
 		"foot_l", "foot_r", "ball_l", "ball_r", "ball_leaf_l", "ball_leaf_r"]
+## Cargando cualquier ataque EN TIERRA (quieto o caminando): mezcla por mitades de cuerpo igual
+## que air_upper_body_blend, pero al revés en duración. La locomoción (Idle/Walk) sigue en loop
+## normal para el grupo de abajo; torso/brazos quedan congelados en la pose de
+## ground_charge_pose_animation en ground_charge_pose_time. Apagarlo vuelve a Idle/Walk de
+## cuerpo completo también cargando.
+@export var ground_charge_blend := true
+## Huesos que en el blend de carga SIGUEN la locomoción (Idle/Walk). A diferencia de
+## air_lower_body_bones, acá van root y pelvis ademas de las piernas: pelvis es PADRE de los
+## muslos en el esqueleto (root → pelvis → thigh_l/r), asi que si queda del lado congelado los
+## muslos del Walk giran contra una cadera que no acompaña el paso y el mesh se ve corrido/en
+## diagonal. Todo lo que NO está en esta lista (columna, brazos, cabeza) es lo que se congela.
+@export var ground_charge_lower_body_bones: PackedStringArray = ["root", "pelvis", "thigh_l",
+		"thigh_r", "calf_l", "calf_r", "foot_l", "foot_r", "ball_l", "ball_r", "ball_leaf_l",
+		"ball_leaf_r"]
+## Clip fuente de la pose de torso/brazos al cargar en tierra (WIP, sin aprobar jugando).
+@export var ground_charge_pose_animation: StringName = &"Sword_Launcher"
+## Segundo de ground_charge_pose_animation que se congela para el torso mientras se camina
+## cargando cualquier ataque.
+@export_range(0.0, 1.0, 0.01) var ground_charge_pose_time := 0.15
 ## Velocidad horizontal (m/s) mínima para dejar el Idle y caminar.
 @export var moving_speed_threshold := 0.15
 ## Velocidad horizontal (m/s) a partir de la cual el Walk pasa a Sprint. El player corre a
@@ -463,10 +482,10 @@ func _update_locomotion_animation() -> void:
 	var speed := _horizontal_speed()
 	if speed >= sprint_speed_threshold:
 		_play_loop(sprint_animation)
-	elif speed >= moving_speed_threshold:
-		_play_loop(walk_animation)
-	else:
-		_play_loop(idle_animation)
+		return
+	var base_animation := walk_animation if speed >= moving_speed_threshold else idle_animation
+	var charging := ground_charge_blend and _player.combat != null and _player.combat.is_charging()
+	_play_loop(_locomotion_charge_composite(base_animation) if charging else base_animation)
 
 func _horizontal_speed() -> float:
 	return Vector2(_player.velocity.x, _player.velocity.z).length()
@@ -557,6 +576,72 @@ func _copy_track(source: Animation, index: int, target: Animation) -> void:
 	for k in source.track_get_key_count(index):
 		target.track_insert_key(t, source.track_get_key_time(index, k),
 				source.track_get_key_value(index, k))
+
+## Cachea (por clip base) el compuesto de "cargando en tierra": el grupo de abajo
+## (ground_charge_lower_body_bones) sigue `base_animation` (Idle o Walk) en loop normal; torso y
+## brazos quedan congelados en la pose de ground_charge_pose_animation a ground_charge_pose_time.
+## Mismo mecanismo que _air_composite_for (clip compuesto en runtime, sin AnimationTree), pero
+## al revés en duración: acá el grupo de abajo lleva el clip largo/loop y el de arriba la pose fija.
+func _locomotion_charge_composite(base_animation: StringName) -> StringName:
+	var composite_name := StringName(String(base_animation) + "_ChargeUpper")
+	if _has_animation(composite_name):
+		return composite_name
+	if not _has_animation(base_animation) or not _has_animation(ground_charge_pose_animation):
+		return base_animation
+	var library := _animation_player.get_animation_library(&"")
+	if library == null:
+		return base_animation
+	var base_clip := _animation_player.get_animation(base_animation)
+	var composite := base_clip.duplicate(true) as Animation
+	for i in range(composite.get_track_count() - 1, -1, -1):
+		if not _is_ground_charge_lower_body_track(composite.track_get_path(i)):
+			composite.remove_track(i)
+	_bake_ground_charge_pose(base_clip, composite)
+	library.add_animation(composite_name, composite)
+	return composite_name
+
+## El último subname del path del track es el hueso ("Skeleton3D:pelvis" → "pelvis").
+func _is_ground_charge_lower_body_track(path: NodePath) -> bool:
+	if path.get_subname_count() == 0:
+		return false
+	return ground_charge_lower_body_bones.has(String(path.get_subname(path.get_subname_count() - 1)))
+
+## Instancia ground_charge_pose_animation en un esqueleto temporal (no toca el AnimationPlayer
+## real ni su pose en pantalla), la sostiene en ground_charge_pose_time y copia esa pose como
+## un único key —constante durante todo el loop de `target`— para cada hueso de arriba que
+## `reference` (el clip base) ya anima.
+func _bake_ground_charge_pose(reference: Animation, target: Animation) -> void:
+	var source_root := SWORD_LAUNCHER_SCENE.instantiate()
+	var source_player := _find_animation_player(source_root)
+	var source_skeleton := _find_skeleton(source_root)
+	if source_player == null or source_skeleton == null \
+			or not source_player.has_animation(ground_charge_pose_animation):
+		source_root.free()
+		return
+	source_player.play(ground_charge_pose_animation)
+	source_player.seek(ground_charge_pose_time, true)
+	for i in reference.get_track_count():
+		var path := reference.track_get_path(i)
+		if path.get_subname_count() == 0 or _is_ground_charge_lower_body_track(path):
+			continue
+		var bone_idx := source_skeleton.find_bone(String(path.get_subname(path.get_subname_count() - 1)))
+		if bone_idx < 0:
+			continue
+		var type := reference.track_get_type(i)
+		var value: Variant
+		match type:
+			Animation.TYPE_POSITION_3D:
+				value = source_skeleton.get_bone_pose_position(bone_idx)
+			Animation.TYPE_ROTATION_3D:
+				value = source_skeleton.get_bone_pose_rotation(bone_idx)
+			Animation.TYPE_SCALE_3D:
+				value = source_skeleton.get_bone_pose_scale(bone_idx)
+			_:
+				continue
+		var t := target.add_track(type)
+		target.track_set_path(t, path)
+		target.track_insert_key(t, 0.0, value)
+	source_root.free()
 
 func _animation_length(animation: StringName) -> float:
 	if not _has_animation(animation):

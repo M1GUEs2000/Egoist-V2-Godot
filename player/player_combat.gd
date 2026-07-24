@@ -77,6 +77,12 @@ func weapon_label(weapon: WeaponBase) -> String:
 func cancel_input() -> void:
 	buffer.release()
 
+## Sosteniendo X o Y desde el press hasta que se suelta o dispara el golpe cargado. Mismo
+## progreso que ya alimenta el glow (vuelve a 0 al soltar); lo usan la locomoción (clamp de
+## velocidad) y el animation controller (blend de pose al caminar cargando).
+func is_charging() -> bool:
+	return buffer.charge_progress() > 0.0
+
 ## El jugador tiene las armas afuera si atacó hace poco.
 func weapons_out() -> bool:
 	return World.now() - _last_attack_time < _body.tuning.weapons_out_duration

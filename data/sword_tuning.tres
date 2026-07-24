@@ -72,12 +72,14 @@ metadata/_custom_type_script = "uid://w0b3i18w442a"
 script = ExtResource("4_mover")
 distance = 5.0
 speed = 33.0
+stop_on = 3
 float_duration = 0.5
 
 [sub_resource type="Resource" id="Resource_ground_y_player_mover"]
 script = ExtResource("4_mover")
 distance = 5.0
 speed = 33.333333
+stop_on = 3
 float_duration = 0.45
 float_fall_scale = 0.3
 
@@ -94,7 +96,7 @@ script = ExtResource("1_tuning")
 combo_window = 0.8
 ground_wait_branch_threshold = 0.2
 charged_dash_distance = 11.0
-charged_dash_duration = 0.13
+charged_dash_duration = 0.19
 charged_dash_damage = 5.0
 charged_dash_stun = SubResource("Resource_810ig")
 ground_charged_y_player_mover = SubResource("Resource_ground_y_player_mover")
