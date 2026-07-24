@@ -67,7 +67,7 @@ func _assert_clips() -> void:
 			&"ground_stun_animation", &"air_stun_animation"]:
 		assert(_animation_player.has_animation(_clip(property)))
 	for clip: StringName in [Sword.ANIM_REGULAR_A, Sword.ANIM_REGULAR_B, Sword.ANIM_REGULAR_C,
-			Sword.ANIM_DASH, Sword.ANIM_HEAVY]:
+			Sword.ANIM_DASH, Sword.ANIM_HEAVY, Sword.ANIM_LAUNCHER]:
 		assert(_animation_player.has_animation(clip))
 	assert(_animation_player.has_animation(Mace.ANIM_HEAVY))
 	print("PROBE animaciones_player=clips_presentes")
@@ -253,14 +253,13 @@ func _run_sword() -> void:
 	await _hold(0.6)
 	_tick_controller()
 
-	# Y cargado terrestre: tramo 0.90-1.30 de Sword_Heavy_Combo, arranca dentro del tramo.
-	_sword.play_visual_clip(Sword.ANIM_HEAVY, Sword.HEAVY_GROUND_Y_START,
-			Sword.HEAVY_GROUND_Y_END, _sword.tuning.swing_time)
+	# Y cargado terrestre: tramo 0.2-0.8 de Sword_Launcher.
+	_sword.play_visual_clip(Sword.ANIM_LAUNCHER, 0.2, 0.8, _sword.tuning.swing_time)
 	_tick_controller()
-	assert(_animation_player.current_animation == Sword.ANIM_HEAVY)
-	assert(_animation_player.current_animation_position >= Sword.HEAVY_GROUND_Y_START - 0.02)
-	_assert_speed(Sword.HEAVY_GROUND_Y_END - Sword.HEAVY_GROUND_Y_START, _sword.tuning.swing_time)
-	print("PROBE animaciones_player=espada_y_cargado_tramo")
+	assert(_animation_player.current_animation == Sword.ANIM_LAUNCHER)
+	assert(_animation_player.current_animation_position >= 0.2 - 0.02)
+	_assert_speed(0.6, _sword.tuning.swing_time)
+	print("PROBE animaciones_player=espada_y_cargado_launcher")
 	await _wait_override_release()
 	# tap() llamó hold_airborne_for_attack: sin piso con colisión, el player quedó AIRBORNE.
 	_settle_on_ground()

@@ -43,31 +43,8 @@ class_name SwordTuning extends WeaponTuning
 @export var charged_dash_damage := 1.0
 @export var charged_dash_hit_radius := 1.1
 @export var charged_dash_stun: StunSettings
-
-@export_subgroup("Sweet spot del dash (explosion)")
-## Segundos entre el final del dash y la explosion de todo lo que atraveso. Es el respiro
-## entre "pase de largo" y el estallido: subirlo separa mas las dos lecturas.
-@export var sweet_spot_explosion_delay := 0.18
-## Dano extra que mete la explosion, aparte del dano del propio dash.
-@export var sweet_spot_explosion_damage := 1.0
-## Hold PROPIO del jugador cuando la explosion del sweet spot conecta, para ver el estallido en vez
-## de caerse encima (request_float). No gasta el doble salto y solo aplica en el aire. duration 0 =
-## sin hang; fall_scale 0 = hold total, 0.15 = deriva lenta. Ver combat/floater.gd.
-@export var sweet_spot_player_floater: FloaterSettings
-@export_subgroup("Motas del estallido (solo visual)")
-## Nada de acá toca fisica ni gameplay: son las motas del estallido de cada enemigo, las
-## mismas que tira un bloque de traversal al golpearlo (World.spawn_color_burst).
-## Cuantas motas salen por enemigo.
-@export var sweet_spot_burst_amount := 40
-## Con cuanta fuerza se abren desde el centro del enemigo, en m/s.
-@export var sweet_spot_burst_speed := 7.0
-## Gravedad de las MOTAS (no la del juego, no la del enemigo): cuanto caen mientras viven.
-## 0 = quedan flotando donde el estallido las dejo; subirlo las tira al piso mas rapido.
-@export var sweet_spot_burst_particle_gravity := 12.0
-## Segundos que vive cada mota.
-@export var sweet_spot_burst_lifetime := 0.7
-## Lado del quad de cada mota, en metros.
-@export var sweet_spot_burst_size := 0.18
+## Separacion al salir por el lado opuesto de la trayectoria del dash tras el primer impacto.
+@export var charged_dash_behind_offset := 1.2
 
 ## Estira VERTICALMENTE los hitboxes del finisher aéreo (hachazo X X X y plunge X X espera X)
 ## mientras dura ese golpe: multiplica el alto de la caja de la hoja y convierte el disco
@@ -82,6 +59,11 @@ class_name SwordTuning extends WeaponTuning
 @export var ground_charged_y_hitbox_duration := 0.18
 @export var ground_charged_y_deals_damage := true
 
+@export_group("Launcher tap atras + Y")
+## Segundos durante los cuales Y consume un toque que se alejo del objetivo lockeado. Cero lo
+## desactiva. El gesto se interpreta sobre el plano horizontal tambien cuando el Player esta en aire.
+@export var lock_back_y_launcher_window := 0.15
+
 @export_group("Autoridad vertical")
 ## Perfil del Y cargado terrestre para el Player. Incluye su Float final: no depende de PlayerTuning.
 @export var ground_charged_y_player_mover: MoverSettings
@@ -89,8 +71,6 @@ class_name SwordTuning extends WeaponTuning
 @export var ground_charged_y_enemy_mover: MoverSettings
 ## Perfil del auto-launch del Player al iniciar Y cargada aerea, incluido su Float final.
 @export var aerial_charged_y_player_mover: MoverSettings
-## Perfil que la explosion del sweet spot pide a cada Enemy antes de cobrar su dano.
-@export var sweet_spot_explosion_enemy_mover: MoverSettings
 ## Perfil lineal descendente del Enemy para el spike de Y cargada aerea; corta al tocar piso.
 @export var aerial_charged_y_enemy_spike_mover: MoverSettings
 ## Perfil descendente del Enemy para el plunge de Espada; mantiene la misma velocidad que el Player.

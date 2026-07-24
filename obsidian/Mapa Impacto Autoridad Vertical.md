@@ -108,9 +108,9 @@ inline (11, 21), `push` (484, 548), `launch` (482, 490), lee `_airborne_until` (
 - `player_tuning.gd`: `launcher_float_duration` (209), `launcher_float_gravity` (211),
   `launcher_fall_duration` (213), `launcher_fall_gravity` (215); `air_stall_*` (276-296);
   `aerial_whiff_fall_gravity` (298); `air_charge_fall_reduction_steps` (303).
-- `sword_tuning.gd`: perfiles `ground_charged_y_*_mover`, `aerial_charged_y_*_mover` y
-  `sweet_spot_explosion_enemy_mover`; `ground_charged_y_hitbox_duration` y
-  `ground_charged_y_deals_damage` gobiernan el Y terrestre.
+- `sword_tuning.gd`: perfiles `ground_charged_y_*_mover` y `aerial_charged_y_*_mover`;
+  `charged_dash_behind_offset`, `ground_charged_y_hitbox_duration` y
+  `ground_charged_y_deals_damage` gobiernan las rutas de dash y launcher.
 - `mace_tuning.gd`: `ground_y_launcher_*` (46-56), `air_y_launcher_hang_time` (90),
   `air_freeze_stun` (103), `air_freeze_extra_hang_time` (104).
 - `weapon_tuning.gd`: `air_stall_scale` (37). `arm_tuning.gd`: `air_freeze_duration` (30).
@@ -136,7 +136,7 @@ inline (11, 21), `push` (484, 548), `launch` (482, 490), lee `_airborne_until` (
 ### Batch 2 - perfiles de Espada listos
 
 - `SwordTuning` ya contiene perfiles `MoverSettings` para Y cargado terrestre (Player y Enemy),
-  auto-launch aereo del Player, explosion del sweet spot Enemy y spike del Y aereo Enemy.
+  auto-launch aereo del Player y spike del Y aereo Enemy.
 - Los perfiles incluyen `float_duration` y `float_fall_scale`: el hang ya no necesita vivir dentro
   de `StunSettings`. Se migraron los valores vigentes de altura, tiempo de subida y Float.
 - El rebote aereo sigue desactivado y queda fuera de esta migracion hasta que vuelva a estar en juego.
@@ -149,6 +149,8 @@ inline (11, 21), `push` (484, 548), `launch` (482, 490), lee `_airborne_until` (
   Enemy. El golpe previo al dano llama `EnemyBase.request_mover(...)`, con `StunSettings` solo para
   el gate de poise. Ya no existe fallback desde WeaponBase a `launch(height, hang_time)`.
 - El Y cargado terrestre de Espada es el primer consumidor: usa los perfiles de `SwordTuning`.
+- Antes de pedir el Mover UP, el launcher comun de Espada fija el facing al lock-on y limpia/bloquea
+  el desplazamiento horizontal del Player; el tap atras + Y no puede arrastrar la subida hacia atras.
 - `register_weapon_hit(...)` puede pedir un Float del Player con duracion y fall scale del ataque,
   sin pasar por `PlayerLauncher`. Los golpes no migrados siguen temporalmente en air-hit-stall.
 - Mace queda fuera de la seleccion del loadout y su launcher terrestre ya no aplica control vertical.
@@ -174,8 +176,8 @@ inline (11, 21), `push` (484, 548), `launch` (482, 490), lee `_airborne_until` (
 
 - La Y cargada aérea de Espada pide `aerial_charged_y_player_mover` al Player y, tras conectar,
   `aerial_charged_y_enemy_spike_mover` al Enemy. El rebote permanece desactivado y fuera de la ruta.
-- El sweet spot pide `sweet_spot_explosion_enemy_mover` antes de cobrar el daño, junto al stun que
-  consulta poise. Ya no usa `target.launch(...)`.
+- El sweet spot del X cargado reutiliza el launcher terrestre tras su primer impacto, sin un Mover
+  adicional ni explosión retardada.
 - Se retiraron de `SwordTuning` los knobs legacy de altura, tiempo de subida, hang y rebote que esas
   rutas dejaron de consumir.
 
@@ -270,12 +272,12 @@ esta stuneado no flota.
 - `WeaponBase.arm_push(...)` / `_push_target(...)` llama `target.push(...)` con `PushSettings`. Aunque
   `PushSettings` viene del arma, la trayectoria balistica todavia la ejecuta EnemyBase por verbo
   legacy; falta bouncer/perfil balistico o excepcion documentada.
-- `Sword._run_aerial_charged_y()`, `_on_aerial_charged_y_hit()` y `_explode_sweet_spot_hits()` ya
-  piden perfiles `MoverSettings`; el sweet spot conserva su `request_float(...)` propio para Player.
+- `Sword._run_aerial_charged_y()` y `_on_aerial_charged_y_hit()` ya piden perfiles
+  `MoverSettings`; el sweet spot del X cargado usa el launcher terrestre tras atravesar al objetivo.
 - `Sword._finish_air_combo()` usa Movers para Player y Enemy, tanto en plunge como en el hachazo
   aéreo normal. Ya no llama `target.slam(...)`; `play_air_step()` tampoco usa `Player.air_hop(...)`.
-- El sweet spot de Espada usa `charged_dash_stun` como stun real, sin derivar `airborne` de la subida
-  ni del Float, y pide su perfil Enemy antes del daño.
+- El sweet spot de Espada usa `charged_dash_stun` como stun real y encadena el launcher sin gasto
+  adicional tras el primer impacto.
 - `Sword._hold_x()` usa `_player.force_dash(...)` para el X cargado. Esta pendiente decidir si el
   dash ofensivo queda como excepción de locomoción/dash o si entra en Mover parcial.
 - `Sword.play_air_step(...)` usa `air_wait_spin_player_mover` como Mover parcial para el hop de

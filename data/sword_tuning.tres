@@ -41,6 +41,7 @@ script = ExtResource("4_mover")
 direction = Vector3(0, -1, 0)
 distance = 100.0
 speed = 20.0
+acceleration = 10.0
 stop_on = 3
 
 [sub_resource type="Resource" id="Resource_air_plunge_player_mover"]
@@ -48,6 +49,7 @@ script = ExtResource("4_mover")
 direction = Vector3(0, -1, 0)
 distance = 100.0
 speed = 20.0
+acceleration = 10.0
 stop_on = 3
 mode = 1
 
@@ -87,16 +89,6 @@ script = ExtResource("2_stun")
 poise_damage = 6.0
 grounded = 0.35
 
-[sub_resource type="Resource" id="Resource_sweet_spot_enemy_mover"]
-script = ExtResource("4_mover")
-distance = 5.0
-acceleration = 10.0
-float_duration = 0.5
-
-[sub_resource type="Resource" id="Resource_sweet_spot_player_floater"]
-script = ExtResource("5_floater")
-fall_scale = 0.15
-
 [resource]
 script = ExtResource("1_tuning")
 combo_window = 0.8
@@ -105,12 +97,9 @@ charged_dash_distance = 11.0
 charged_dash_duration = 0.13
 charged_dash_damage = 5.0
 charged_dash_stun = SubResource("Resource_810ig")
-sweet_spot_explosion_delay = 0.2
-sweet_spot_player_floater = SubResource("Resource_sweet_spot_player_floater")
 ground_charged_y_player_mover = SubResource("Resource_ground_y_player_mover")
 ground_charged_y_enemy_mover = SubResource("Resource_ground_y_enemy_mover")
 aerial_charged_y_player_mover = SubResource("Resource_aerial_y_player_mover")
-sweet_spot_explosion_enemy_mover = SubResource("Resource_sweet_spot_enemy_mover")
 aerial_charged_y_enemy_spike_mover = SubResource("Resource_aerial_y_enemy_spike_mover")
 air_plunge_enemy_mover = SubResource("Resource_air_plunge_enemy_mover")
 air_plunge_player_mover = SubResource("Resource_air_plunge_player_mover")

@@ -33,7 +33,7 @@ func try_bounce(input_dir: Vector3) -> bool:
 	# enemigo es justamente la cancelación del plunge (ver Player.cancel_plunge en _on_jump).
 	if _body == null or World.on_solid_floor(_body) or _body.dash.is_dashing:
 		return false
-	if _body.mover.is_moving() and _body.mover.is_exclusive():
+	if _body.mover.is_moving() and _body.mover.is_total():
 		return false
 	if World.now() - _last_contact_time > _body.tuning.enemy_bounce_grace:
 		return false

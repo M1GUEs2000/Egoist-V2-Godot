@@ -129,6 +129,11 @@ objetivo ya aereo. Cuando llega otro golpe, `EnemyBase.cancel_vertical_control()
 Floater anteriores. Solo el perfil preparado por el mismo golpe se preserva para no cancelarse a si
 mismo. Un `request_float` requiere un enemigo aereo y quebrado/stuneado.
 
+El `push` no usa Mover: impone su propio arco balistico (ver *Acostado y ragdoll*). Al entrar cancela
+cualquier Mover activo del cuerpo, porque `_update_airborne` prioriza el Mover sobre el arco. Por eso
+el rebote lateral del jugador (ver [[Rebote en Enemigos]]) saca al enemigo del descenso a la par en el
+plunge de la [[Espada]]: el `push` corta ese Mover y el enemigo sale volando por el arco.
+
 ## Acostado y ragdoll de aterrizaje
 
 > [!important]

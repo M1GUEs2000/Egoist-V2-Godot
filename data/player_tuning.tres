@@ -22,9 +22,8 @@ grounded = 0.35
 
 [sub_resource type="Resource" id="Resource_bouncepush"]
 script = ExtResource("3_push")
-distance = 8.0
 angle_degrees = 20.0
-gravity = -5.0
+fall_height = 8.0
 
 [resource]
 script = ExtResource("1_tuning")

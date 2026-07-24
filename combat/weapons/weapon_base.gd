@@ -126,6 +126,15 @@ func tap(_slot: World.Slot) -> void:
 func hold(_slot: World.Slot, _level: int) -> void:
 	pass
 
+## Gancho opcional para gestos direccionales que PlayerCombat haya reconocido. Devuelve true
+## solo si el arma consumio el input y ya arranco su ataque especial.
+func try_lock_back_y_launcher() -> bool:
+	return false
+
+## Duracion del buffer para el gesto "tap atras + Y". Cero lo desactiva para esta arma.
+func lock_back_y_launcher_window() -> float:
+	return 0.0
+
 ## PlayerCombat llama esto antes de resetear la pose del arma en un press.
 ## Si hay una cadena activa, ese press puede ser solo un input encolado para el próximo
 ## golpe: resetear la rotación acá hace que armas pesadas como el Mazo parezcan reiniciar
@@ -314,10 +323,8 @@ func _push_target(hurtbox: Hurtbox, settings: PushSettings) -> void:
 func register_weapon_hit(hurtbox: Hurtbox, died: bool, cuts_air_momentum := true,
 		triggers_player_float := true) -> void:
 	# Conectar en el aire contra algo que lo dispara ralentiza la caída del jugador, y (si el golpe
-	# es normal) le come momentum horizontal. Los cargados pasan cuts_air_momentum = false. La
-	# explosión del sweet spot pasa triggers_player_float = false: su hang propio lo da
-	# sweet_spot_player_floater, no el air-hit por enemigo — que además, al ser retardado, cancelaría
-	# (request_float) un salto que el jugador ya hizo tras el dash.
+	# es normal) le come momentum horizontal. Los cargados pasan cuts_air_momentum = false; cada
+	# ruta puede desactivar triggers_player_float si ya tiene un Mover/Floater propio.
 	if triggers_player_float and hurtbox.triggers_air_hit_stall:
 		_register_air_hit_float(cuts_air_momentum)
 	var meter := _player.meter

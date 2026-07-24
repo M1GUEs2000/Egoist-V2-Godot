@@ -383,8 +383,8 @@ y editable en el inspector:
   `air_plunge_down_speed`; bajan a la par (mismo speed).
 - `launcher_enemy_mover` + `launcher_enemy_floater` (Mover UP + Floater del hang, launcher Y del
   enemigo) — reemplazan `launcher_height/hang_time`.
-- `sweet_spot_player_floater` (Floater del JUGADOR, hang del sweet spot) — reemplaza
-  `sweet_spot_air_stall_bonus/float_fall_scale`.
+- El sweet spot del X cargado ya no usa Floater: tras el primer impacto encadena el launcher
+  terrestre sin gasto adicional.
 
 Se creó **`FloaterSettings`** (`data/floater_settings.gd`), simétrico a `MoverSettings` (`duration` +
 `fall_scale`). Los verbos duck-typed del enemigo (`launch`/`slam`) aceptan ahora los recursos por

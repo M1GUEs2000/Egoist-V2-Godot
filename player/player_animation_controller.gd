@@ -18,6 +18,11 @@ class_name PlayerAnimationController extends Node
 const UAL1_SCENE := preload("res://assets/animations/Universal Animation Library[Standard]/Universal Animation Library[Standard]/Unreal-Godot/UAL1_Standard.glb")
 const UAL1_ANIMATIONS := [&"Idle", &"Walk", &"Sprint"]
 
+# Clips WIP fuera de UAL1/UAL2, todavia sin aprobar jugando.
+# Mismo mecanismo de copia a la libreria que _import_ual1_animations.
+const SWORD_LAUNCHER_SCENE := preload("res://animaciones/Sword_LauncherV1.glb")
+const CUSTOM_ANIMATIONS := [&"Sword_Launcher"]
+
 # Nombres REALES de los .glb importados (verificados con Godot listando get_animation_list):
 # la bóveda planeaba sufijos _Loop (Walk_Loop, NinjaJump_Idle_Loop…) que no existen en el
 # import. Idle_No_Loop tampoco existe: se usa Idle de UAL1, el mismo del enemigo.
@@ -115,6 +120,7 @@ func _ready() -> void:
 		set_physics_process(false)
 		return
 	_import_ual1_animations()
+	_import_custom_animations()
 	_connect_weapons()
 	# Un arma equipada después (menú de loadout) también tiene que avisar sus clips.
 	var combat := _player.get_node_or_null("Combat") as PlayerCombat
@@ -488,6 +494,23 @@ func _import_ual1_animations() -> void:
 	var library := _animation_player.get_animation_library(&"")
 	if library != null:
 		for animation_name in UAL1_ANIMATIONS:
+			if _has_animation(animation_name):
+				continue
+			var source_animation := source_player.get_animation(animation_name)
+			if source_animation != null:
+				library.add_animation(animation_name, source_animation.duplicate(true))
+	source_root.free()
+
+## Clips WIP fuera de UAL1/UAL2 (ver CUSTOM_ANIMATIONS): mismo mecanismo de copia.
+func _import_custom_animations() -> void:
+	var source_root := SWORD_LAUNCHER_SCENE.instantiate()
+	var source_player := _find_animation_player(source_root)
+	if source_player == null:
+		source_root.free()
+		return
+	var library := _animation_player.get_animation_library(&"")
+	if library != null:
+		for animation_name in CUSTOM_ANIMATIONS:
 			if _has_animation(animation_name):
 				continue
 			var source_animation := source_player.get_animation(animation_name)

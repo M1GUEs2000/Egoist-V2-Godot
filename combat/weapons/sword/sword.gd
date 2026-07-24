@@ -14,16 +14,18 @@ const ANIM_REGULAR_B := &"Sword_Regular_B"
 const ANIM_REGULAR_C := &"Sword_Regular_C"
 const ANIM_DASH := &"Sword_Dash"
 const ANIM_HEAVY := &"Sword_Heavy_Combo"
-# Tramos de Sword_Heavy_Combo para los cargados Y (segundos dentro del clip).
-const HEAVY_GROUND_Y_START := 0.90
-const HEAVY_GROUND_Y_END := 1.30
+# Clip propio (WIP, animaciones/) para el golpe vertical terrestre (launcher).
+const ANIM_LAUNCHER := &"Sword_Launcher"
+# Tramo de Sword_Heavy_Combo para la cargada Y aerea (segundos dentro del clip).
 const HEAVY_AIR_Y_START := 2.40
 const HEAVY_AIR_Y_END := 2.70
 
 var _charged_dash_id := 0
-## El dash cargado en curso salio en sweet spot: junta lo que atraviesa para explotarlo.
 var _sweet_spot_dash := false
-var _sweet_spot_hits: Array[Hurtbox] = []
+## El X cargado termina en su primer objetivo para reposicionar al Player una sola vez.
+var _charged_dash_connected := false
+## Direccion capturada al empezar el dash: define el lado de salida al atravesar al objetivo.
+var _charged_dash_travel_direction := Vector3.FORWARD
 var _aerial_charged_y_active := false
 ## Rama plunge elegida para el finisher aéreo en curso (la lee _finish_air_combo).
 var _air_plunge_finisher := false
@@ -92,6 +94,18 @@ func hold(slot: World.Slot, _level: int) -> void:
 	else:
 		_hold_y()
 
+## Tap atras relativo al target lockeado seguido de Y. No consume meter y puede salir tanto
+## en suelo como en aire porque reutiliza el launcher terrestre y sus Movers.
+func try_lock_back_y_launcher() -> bool:
+	if _t().lock_back_y_launcher_window <= 0.0:
+		return false
+	cancel_routines()
+	_run_ground_launcher()
+	return true
+
+func lock_back_y_launcher_window() -> float:
+	return _t().lock_back_y_launcher_window
+
 # ---- Tap: combo de 4 compartido por X/Y ----
 
 ## Combo terrestre (bóveda Armas): tap tap tap tap → swing, swing, estocada, estocada.
@@ -122,13 +136,14 @@ func _hold_x() -> void:
 	# Move de compromiso: interrumpe el combo en curso y dashea.
 	cancel_routines()
 
-	# Soltar dentro de la ventana de sweet spot: el dash cuesta menos barra y todo lo que
-	# atraviesa explota despues, lanzado hacia arriba (bóveda Espada, "X cargado sweet spot").
+	# Soltar dentro de la ventana de sweet spot abarata el dash y encadena un launcher al conectar.
 	_sweet_spot_dash = sweet_spot
-	_sweet_spot_hits.clear()
+	_charged_dash_connected = false
 	if _player.meter.spend_charged(1, true, tuning.meter_cost_scale(_sweet_spot_dash)):
+		_charged_dash_travel_direction = _charged_dash_direction().normalized()
 		play_visual_clip(ANIM_DASH, 0.0, -1.0, _t().charged_dash_duration)
-		_player.force_dash(_player.forward(), _t().charged_dash_distance, _t().charged_dash_duration, true)
+		_player.force_dash(_charged_dash_travel_direction, _t().charged_dash_distance,
+				_t().charged_dash_duration, true)
 		_run_charged_dash_window()
 	else:
 		# ponytail: sin barra no hay dash — cae a un swing cargado normal.
@@ -149,10 +164,32 @@ func _hold_y() -> void:
 		_aerial_charged_y()
 		return
 	# Golpe vertical terrestre (ex AttackLauncher: solo desde el suelo — ya garantizado acá).
-	play_visual_clip(ANIM_HEAVY, HEAVY_GROUND_Y_START, HEAVY_GROUND_Y_END, tuning.swing_time)
+	_run_ground_launcher()
+
+## Launcher comun para la Y cargada terrestre y el gesto tap atras + Y.
+func _run_ground_launcher() -> void:
+	_face_locked_target()
+	_player.locomotion.lock_facing(tuning.swing_time)
+	_player.locomotion.lock_movement(tuning.swing_time)
+	_player.bump_velocity = Vector3.ZERO
+	# Tramo 0.2-0.8 de Sword_Launcher (clip propio, WIP en animaciones/).
+	play_visual_clip(ANIM_LAUNCHER, 0.2, 0.8, tuning.swing_time)
 	swing_up(_t().strike_angle)
 	run_vertical_window(_vertical_hitbox, _t().ground_charged_y_player_mover,
 			_t().ground_charged_y_enemy_mover, _t().ground_charged_y_hitbox_duration)
+
+## El launcher no hereda el facing del tap atras: con lock-on siempre barre hacia el objetivo.
+## Se proyecta al suelo porque look_at no debe inclinar al Player aunque el enemigo este arriba.
+func _face_locked_target() -> void:
+	if not _player.lock_on.has_visible_target():
+		return
+	var target := _player.lock_on.current_target
+	if target == null or not is_instance_valid(target):
+		return
+	var toward_target := target.global_position - _player.global_position
+	toward_target.y = 0.0
+	if toward_target.length_squared() > 0.0001:
+		_player.locomotion.set_facing(toward_target)
 
 ## Y cargada en el aire: gasta 1 barra (como la X cargada). El Player sube con su perfil y los
 ## enemigos golpeados reciben un spike lineal al suelo. El rebote sigue fuera de esta ruta.
@@ -220,55 +257,46 @@ func _run_charged_dash_window() -> void:
 	if id != _charged_dash_id:
 		return  # otro dash cargado ya arrancó: él es dueño del hitbox
 	_charged_dash_hitbox.end_swing()
-	if not _sweet_spot_dash:
-		return
-	await wait_seconds(_t().sweet_spot_explosion_delay)
-	if id != _charged_dash_id:
-		return
-	_explode_sweet_spot_hits()
-
-## Sweet spot del X cargado: cada enemigo que atravesó el dash estalla en su lugar y recibe su
-## perfil vertical antes del daño. Así el impacto ya lo ve en el aire y el Enemy consulta poise.
-func _explode_sweet_spot_hits() -> void:
-	var t := _t()
-	# El stun define poise y recuperación; la subida y el Float pertenecen al perfil vertical.
-	var stun: StunSettings = t.charged_dash_stun
-	var exploded := false
-	for hurtbox in _sweet_spot_hits:
-		if not is_instance_valid(hurtbox) or not hurtbox.can_receive_hit():
-			continue
-		var target: Node = hurtbox.owner_node
-		var mover := t.sweet_spot_explosion_enemy_mover
-		if target is EnemyBase:
-			(target as EnemyBase).request_mover(mover, stun, false, true)
-		elif mover != null and target.has_method("request_mover"):
-			target.call("request_mover", mover)
-		var died := hurtbox.receive_hit(_player, t.sweet_spot_explosion_damage,
-				_player.forward(), stun)
-		World.spawn_color_burst(_player.get_parent(), hurtbox.global_position,
-				tuning.sweet_spot_particle_color, tuning.sweet_spot_particle_emission,
-				t.sweet_spot_burst_amount, t.sweet_spot_burst_speed,
-				t.sweet_spot_burst_particle_gravity, t.sweet_spot_burst_lifetime,
-				t.sweet_spot_burst_size)
-		register_weapon_hit(hurtbox, died, false, false)
-		exploded = true
-	_sweet_spot_hits.clear()
-	# Hang extra para mirar el estallido. Va DESPUÉS del loop: un solo Floater aunque explote
-	# media pantalla, y solo si algo explotó de verdad (whiff = caés normal). El ataque pide el
-	# hang con su propio perfil (sweet_spot_player_floater); request_float valida aéreo.
-	var ssf := t.sweet_spot_player_floater
-	if exploded and ssf != null and ssf.duration > 0.0:
-		_player.request_float(ssf.duration, ssf.fall_scale)
 
 ## Solo alimenta el meter (sin _window_hits: no es parte de un combo aéreo). Un kill en la
 ## ventana del cargado devuelve la barra completa (gain_on_kill lo resuelve).
-## El dash cargado no frena el momentum del jugador: el desplazamiento ES el move.
+## El primer objetivo corta el dash, reposiciona al Player al otro lado de la trayectoria y apaga
+## el hitbox inmediatamente para que no haya contactos extra tras el teletransporte.
 func _on_charged_dash_hit(hurtbox: Hurtbox, died: bool) -> void:
+	if _charged_dash_connected:
+		return
+	_charged_dash_connected = true
+	_charged_dash_hitbox.end_swing()
+	_player.dash.cancel()
+	var target := hurtbox.owner_node as Node3D
+	if target != null and is_instance_valid(target):
+		_place_behind_target(target)
 	register_weapon_hit(hurtbox, died, false)
-	# Si el dash salió en sweet spot, lo atravesado queda anotado para estallar después.
-	# Lo que murió con el dash mismo no explota: el hurtbox ya no recibe golpes.
-	if _sweet_spot_dash and not died and hurtbox not in _sweet_spot_hits:
-		_sweet_spot_hits.append(hurtbox)
+	if _sweet_spot_dash:
+		_run_ground_launcher()
+
+## En aire, el lock-on orienta el dash en los tres ejes. Sin lock o con un target invalido,
+## se conserva el dash recto que usa la version terrestre.
+func _charged_dash_direction() -> Vector3:
+	if not _player.is_airborne() or not _player.lock_on.is_locked:
+		return _player.forward()
+	var target := _player.lock_on.current_target
+	if target == null or not is_instance_valid(target):
+		return _player.forward()
+	var to_target := target.global_position - _player.global_position
+	return to_target.normalized() if to_target.length_squared() > 0.0001 else _player.forward()
+
+## El lado de salida sigue la trayectoria que llevaba el Player, no la orientacion del enemigo.
+func _place_behind_target(target: Node3D) -> void:
+	var exit_direction := _charged_dash_travel_direction
+	if exit_direction.length_squared() < 0.0001:
+		exit_direction = target.global_position - _player.global_position
+	exit_direction = exit_direction.normalized()
+	_player.global_position = target.global_position + exit_direction * _t().charged_dash_behind_offset
+	var toward_target := target.global_position - _player.global_position
+	toward_target.y = 0.0
+	if toward_target.length_squared() > 0.0001:
+		_player.look_at(_player.global_position + toward_target, Vector3.UP)
 
 # ---- Coreografía (swing/swing_up/_play_swing/_play_spin viven en WeaponBase) ----
 

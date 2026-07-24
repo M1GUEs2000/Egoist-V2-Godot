@@ -15,6 +15,10 @@ var _cam: Camera3D
 var _lunge_velocity := Vector3.ZERO
 var _lunge_start := 0.0
 var _lunge_until := 0.0
+## Bloqueo de orientacion sin bloquear el movimiento: lo usan ataques que no tienen lunge.
+var _facing_lock_until := 0.0
+## Bloqueo de movimiento para ataques que toman control de la trayectoria con un Mover.
+var _movement_lock_until := 0.0
 
 func setup(body: Player, cam: Camera3D) -> void:
 	_body = body
@@ -36,6 +40,18 @@ func read_move_input() -> Vector2:
 func has_move_input(input: Vector2) -> bool:
 	var dz := _body.tuning.move_input_deadzone
 	return input.length_squared() >= dz * dz
+
+## Con lock-on, decide si el input apunta claramente al lado opuesto del objetivo. Usa el
+## plano horizontal para que el mismo gesto sea valido en suelo y aire.
+func input_is_away_from_locked_target(input: Vector2) -> bool:
+	var target := _lock_target()
+	if target == null or not has_move_input(input):
+		return false
+	var input_dir := camera_relative(input)
+	var to_target := _direction_to(target.global_position)
+	if input_dir.length_squared() < 0.0001 or to_target == Vector3.ZERO:
+		return false
+	return input_dir.normalized().dot(to_target) <= -0.7
 
 ## Dirección de input relativa a la cámara, proyectada al plano del suelo.
 func camera_relative(input: Vector2) -> Vector3:
@@ -71,8 +87,11 @@ func tick(delta: float, air_acceleration_scale := 1.0,
 	var input := read_move_input()
 	var camera_dir := camera_relative(input)
 	var dir := movement_direction(input, camera_dir)
-	# Durante un golpe (lunge) no giramos por input: mantenemos la mira del ataque.
-	if dir != Vector3.ZERO and World.now() >= _lunge_until:
+	if World.now() < _movement_lock_until:
+		_air_velocity = Vector3.ZERO
+		return Vector3.ZERO
+	# Durante un ataque que fijó su mira, el input puede mover pero no cambia el facing.
+	if dir != Vector3.ZERO and World.now() >= maxf(_lunge_until, _facing_lock_until):
 		set_facing(dir)
 	var target := dir * _body.tuning.move_speed
 	if _body.is_on_floor():
@@ -136,6 +155,18 @@ func lunge_velocity() -> Vector3:
 
 func cancel_lunge() -> void:
 	_lunge_until = 0.0
+	_facing_lock_until = 0.0
+	_movement_lock_until = 0.0
+
+## Fija solo el facing por `duration`; no agrega lunge ni altera la velocidad del Player.
+func lock_facing(duration: float) -> void:
+	_facing_lock_until = maxf(_facing_lock_until, World.now() + maxf(0.0, duration))
+
+## Bloquea el input horizontal sin agregar un lunge. El ataque debe limpiar tambien cualquier
+## bump si quiere una trayectoria completamente recta.
+func lock_movement(duration: float) -> void:
+	_movement_lock_until = maxf(_movement_lock_until, World.now() + maxf(0.0, duration))
+	_air_velocity = Vector3.ZERO
 
 func set_facing(dir: Vector3) -> void:
 	var flat := Vector3(dir.x, 0.0, dir.z)

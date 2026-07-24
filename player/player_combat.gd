@@ -28,6 +28,8 @@ var _active_weapon: WeaponBase  # arma visible actualmente
 var _attack_kind := AttackKind.NORMAL  # tipo del ultimo ataque iniciado (lo lee el parry)
 var _rest_rotations := {}  # WeaponBase → Quaternion
 var _air_charge_fall_applied := false
+## Fin de la ventana que deja un tap hacia atras relativo al lock-on antes de pulsar Y.
+var _lock_back_tap_until := -999.0
 
 @onready var buffer: InputBuffer = $InputBuffer
 
@@ -87,9 +89,46 @@ func _input(event: InputEvent) -> void:
 	elif event.is_action_released("attack_x"):
 		buffer.release()
 	elif event.is_action_pressed("attack_y"):
-		_on_press(slot_y, World.Slot.Y)
+		if not _try_lock_back_y_launcher():
+			_on_press(slot_y, World.Slot.Y)
 	elif event.is_action_released("attack_y"):
 		buffer.release()
+	elif event.is_action_pressed("move_up") or event.is_action_pressed("move_down") \
+			or event.is_action_pressed("move_left") or event.is_action_pressed("move_right"):
+		_remember_lock_back_tap()
+
+## Guarda el gesto solo si el input actual se aleja claramente del target. La locomocion hace la
+## conversion camara -> mundo y compara contra jugador -> target, asi no hay un "atras" fijo.
+func _remember_lock_back_tap() -> void:
+	if _body == null or not _body.lock_on.is_locked:
+		return
+	var window := slot_y.lock_back_y_launcher_window() if slot_y != null else 0.0
+	if window > 0.0 and _body.locomotion.input_is_away_from_locked_target(
+			_body.locomotion.read_move_input()):
+		_lock_back_tap_until = World.now() + window
+
+## Y consume el gesto una vez y lo convierte en el launcher propio del arma equipada. Entra como
+## ataque normal: no carga, no gasta meter y no espera a que se suelte Y.
+func _try_lock_back_y_launcher() -> bool:
+	if _body == null or World.now() > _lock_back_tap_until or slot_y == null:
+		return false
+	if slot_y.lock_back_y_launcher_window() <= 0.0:
+		return false
+	_lock_back_tap_until = -999.0
+	buffer.release()
+	if _charging_weapon != null:
+		_charging_weapon.set_charge_glow(0.0)
+		_charging_weapon.set_sweet_spot_window(false)
+	_charging_weapon = null
+	_attack_kind = AttackKind.NORMAL
+	_air_charge_fall_applied = false
+	if slot_y.should_reset_pose_on_press():
+		slot_y.quaternion = _rest_rotations[slot_y]
+	_set_active_weapon(slot_y)
+	attack_telegraphed.emit(_body.global_position, _body.forward())
+	_body.fire_action_world_switch()
+	_last_attack_time = World.now()
+	return slot_y.try_lock_back_y_launcher()
 
 ## Golpea en el press (tap) y carga mientras se mantiene; al soltar sale el cargado.
 func _on_press(weapon: WeaponBase, slot: World.Slot) -> void:

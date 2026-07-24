@@ -620,6 +620,11 @@ func push(direction: Vector3, settings: PushSettings) -> void:
 		return
 	if settings == null:
 		settings = PushSettings.new()  # defaults seguros si el arma no configuro su push
+	# El push impone un arco balistico PROPIO (_tick_push_arc), no un Mover. Si el enemigo venia en un
+	# Mover (ej. el air_plunge_enemy_mover que baja a la par del plunge del jugador), hay que cancelarlo:
+	# _update_airborne prioriza el Mover (mover.tick + return) y pisaria el arco antes de que corra.
+	if mover != null:
+		mover.cancel_mover(Mover.CancelReason.ATTACK_RULE)
 	_begin_airborne()
 	# Sin hang: el push es un arco balistico que sale al angulo pedido y aterriza a la distancia
 	# pedida. airborne_max_time queda solo como tope de seguridad en _update_airborne.
