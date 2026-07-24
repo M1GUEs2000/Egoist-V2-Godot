@@ -64,11 +64,19 @@ class_name SwordTuning extends WeaponTuning
 ## desactiva. El gesto se interpreta sobre el plano horizontal tambien cuando el Player esta en aire.
 @export var lock_back_y_launcher_window := 0.15
 
+@export_group("Push tap adelante + Y")
+## Segundos durante los cuales Y consume un toque que se acerca al objetivo lockeado. Cero lo
+## desactiva. El Player usa tap_forward_y_player_mover hacia el objetivo actual.
+@export var lock_forward_y_push_window := 0.15
+
 @export_group("Autoridad vertical")
 ## Perfil del Y cargado terrestre para el Player. Incluye su Float final: no depende de PlayerTuning.
 @export var ground_charged_y_player_mover: MoverSettings
 ## Perfil del Y cargado terrestre para el Enemy. El arma lo envia junto al Stun que consulta poise.
 @export var ground_charged_y_enemy_mover: MoverSettings
+## Perfil de avance del Player para tap adelante + Y. La Espada clona el recurso y orienta su
+## direccion al target lockeado antes de solicitarlo, para no mutar el .tres compartido.
+@export var tap_forward_y_player_mover: MoverSettings
 ## Perfil del auto-launch del Player al iniciar Y cargada aerea, incluido su Float final.
 @export var aerial_charged_y_player_mover: MoverSettings
 ## Perfil lineal descendente del Enemy para el spike de Y cargada aerea; corta al tocar piso.

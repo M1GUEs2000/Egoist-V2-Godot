@@ -91,6 +91,13 @@ script = ExtResource("2_stun")
 poise_damage = 6.0
 grounded = 0.35
 
+[sub_resource type="Resource" id="Resource_tap_forward_y_player_mover"]
+script = ExtResource("4_mover")
+distance = 5.0
+speed = 30.0
+acceleration = 10.0
+stop_on = 13
+
 [resource]
 script = ExtResource("1_tuning")
 combo_window = 0.8
@@ -101,6 +108,7 @@ charged_dash_damage = 5.0
 charged_dash_stun = SubResource("Resource_810ig")
 ground_charged_y_player_mover = SubResource("Resource_ground_y_player_mover")
 ground_charged_y_enemy_mover = SubResource("Resource_ground_y_enemy_mover")
+tap_forward_y_player_mover = SubResource("Resource_tap_forward_y_player_mover")
 aerial_charged_y_player_mover = SubResource("Resource_aerial_y_player_mover")
 aerial_charged_y_enemy_spike_mover = SubResource("Resource_aerial_y_enemy_spike_mover")
 air_plunge_enemy_mover = SubResource("Resource_air_plunge_enemy_mover")

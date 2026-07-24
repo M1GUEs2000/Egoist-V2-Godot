@@ -26,6 +26,7 @@ Arma base / equilibrada. Velocidad media. Sirve para mantener el flujo del comba
 | X cargado sweet spot | Tras atravesar al primer enemigo, ejecuta un launcher sin gastar otra barra. |
 | Y cargado            | Launcher. Area pequena/media.                                                                                              |
 | Tap atras + Y (lock-on) | Launcher sin gastar barra que eleva solo al enemigo. "Atras" se calcula alejandose del objetivo lockeado y Y debe llegar dentro de `lock_back_y_launcher_window`; al iniciar, el Player vuelve a encarar al objetivo y limpia su momentum horizontal. |
+| Tap adelante + Y (lock-on) | Vuelta final de `X X espera X X`: usa el mismo push y avanza al Player con `tap_forward_y_player_mover` hacia el objetivo bloqueado. Y debe llegar dentro de `lock_forward_y_push_window`. |
 | Y cargado sweet spot | Golpe hacia arriba que sube a los enemigos un poco. Despues te elevas con otro Y. Aumenta un poco el AOE.                  |
 
 ## Aereo
@@ -38,7 +39,8 @@ Arma base / equilibrada. Velocidad media. Sirve para mantener el flujo del comba
 | X cargado            | Con lock-on, dash 3D hacia el objetivo aunque este arriba o abajo; sin lock-on, dash recto. Al primer impacto lo atraviesas y apareces al otro lado de la trayectoria. |
 | X cargado sweet spot | Igual que el terrestre: tras atravesar al objetivo, activa el launcher sin gasto extra. |
 | Y cargado            | **Desactivado por ahora** (ver Estado Godot): diseño es golpe hacia abajo que hace rebotar al enemigo (auto-lanza al jugador y spikea/rebota al enemigo hasta su altura), pero depende de `slam_bounce`, que espera el "bouncer" sin diseñar. Sostener Y en el aire cae al combo aereo normal. |
-| Tap atras + Y (lock-on) | Lanza solo al enemigo, igual que en tierra y sin barra. El tap se lee contra el eje jugador-objetivo, no contra el mundo ni la camara; al iniciar fija el facing al enemigo y bloquea input/momentum horizontal durante el swing. |
+| Tap atras + Y (lock-on) | Plunge sin barra: hachazo y, al cerrar el swing, Player y enemigo golpeado caen con `air_plunge_player_mover` / `air_plunge_enemy_mover`. En whiff el Player tambien cae. El tap se lee contra el eje jugador-objetivo y fija el facing al enemigo durante el hachazo. |
+| Tap adelante + Y (lock-on) | Push con la vuelta final y Mover de avance hacia el objetivo, igual que en tierra. |
 | Y cargado sweet spot | Diseño pendiente (doble rebote, el segundo sube mas a jugador y enemigos): no implementado, bloqueado por lo mismo que el Y cargado.                               |
 
 ## Autoridad vertical
@@ -54,7 +56,8 @@ rebote del Y cargado aereo esta desactivado.
 - Los swings mueven la mano alrededor del jugador (ver Mano orbital en [[Combate]]); la hoja va rigida, apuntando hacia afuera. *(2026-07-09)*
 - Tap X/Y usa la misma cadena de combo terrestre/aérea; solo el cargado bifurca por slot. *(2026-07-09)*
 - `SwordTuning` controla ventanas, angulos, dash cargado, launcher y el `push` (arco del empuje armado por `arm_push`). *(2026-07-09)*
-- El launcher comun de la Espada fija el facing al target bloqueado y corta input/momentum horizontal durante el swing. El tap atras + Y mueve solo al enemigo; Y cargado terrestre y sweet spot del X elevan tambien al Player. *(2026-07-23)*
+- El launcher comun de la Espada fija el facing al target bloqueado y corta input/momentum horizontal durante el swing. En suelo, tap atras + Y mueve solo al enemigo; en aire es un plunge con los Movers de Player y Enemy. Y cargado terrestre y sweet spot del X elevan tambien al Player. *(2026-07-24)*
+- Tap adelante + Y reutiliza el spin final y `PushSettings` de `X X espera X X`; su Mover se clona y orienta hacia el target antes de mover al Player. *(2026-07-24)*
 - Habilidad especial de X cargado existe parcialmente por ventana de kill.
 - La hoja brilla al cargar un ataque (glow de carga, ver [[Combate]]). *(2026-07-06)*
 - **Y cargado aereo DESACTIVADO temporalmente** *(2026-07-20)*: usa `slam_bounce` (rebote balistico
@@ -76,6 +79,7 @@ rebote del Y cargado aereo esta desactivado.
 | `charged_fallback_angle` | Swing degradado del X cargado sin barra. |
 | `charged_dash_behind_offset` | Distancia de salida al otro lado del primer enemigo impactado, medida sobre la trayectoria del X cargado. |
 | `lock_back_y_launcher_window` | Ventana en segundos para pulsar Y despues de un tap que se aleja del objetivo lockeado. `0` desactiva el gesto. |
+| `lock_forward_y_push_window` | Ventana en segundos para pulsar Y despues de un tap que se acerca al objetivo lockeado. `0` desactiva el gesto. |
 
 ### Perfiles Mover/Floater (feel vertical, `.tres`)
 
@@ -85,8 +89,9 @@ Cada ruta vertical de la Espada vive como recurso `MoverSettings`/`FloaterSettin
 | Recurso | Que hace |
 |---|---|
 | `ground_charged_y_player_mover` / `ground_charged_y_enemy_mover` | Launcher Y terrestre: Mover UP del jugador y del enemigo, cada uno con su Floater de hang en el tope. |
+| `tap_forward_y_player_mover` | Avance TOTAL del Player para tap adelante + Y. El recurso se clona y orienta hacia el target lockeado en cada uso. |
 | `aerial_charged_y_player_mover` / `aerial_charged_y_enemy_spike_mover` | Y cargada aerea: auto-launch del jugador + spike lineal descendente del enemigo (corta al tocar piso). El rebote esta desactivado. |
-| `air_plunge_player_mover` / `air_plunge_enemy_mover` | Movers DOWN del plunge (X X espera X): mismo speed = bajan a la par; el del jugador es PARTIAL para conservar contactos. |
+| `air_plunge_player_mover` / `air_plunge_enemy_mover` | Movers DOWN del plunge (`X X espera X` y tap atras + Y aéreo): mismo speed = bajan a la par; el del jugador es PARTIAL para conservar contactos. |
 | `air_wait_spin_player_mover` | Hop PARTIAL de la primera vuelta de la rama aerea de espera. |
 | `air_finisher_enemy_spike_mover` | Spike descendente del enemigo en el hachazo aereo normal (finisher). |
 | `air_hit_enemy_floater` | Hold del ENEMIGO al conectarle un golpe aereo NORMAL: lo suspende con un Floater (`request_float`), simetrico al air-hit-float del jugador. Se renueva por golpe (`max`), asi queda pegado durante el combo y cae al dejar de golpearlo. Gate: enemigo aereo + quebrado. Excluye el cargado Y (que ya le da su propio spike). |

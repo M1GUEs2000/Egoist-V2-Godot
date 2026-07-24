@@ -100,11 +100,26 @@ func try_lock_back_y_launcher() -> bool:
 	if _t().lock_back_y_launcher_window <= 0.0:
 		return false
 	cancel_routines()
-	_run_enemy_only_launcher()
+	if _player.is_airborne():
+		_run_air_back_y_plunge()
+	else:
+		_run_enemy_only_launcher()
 	return true
 
 func lock_back_y_launcher_window() -> float:
 	return _t().lock_back_y_launcher_window
+
+## Tap adelante relativo al target lockeado seguido de Y. Reusa la vuelta final con push de la
+## rama X X espera X X y solicita su propio Mover horizontal para el Player.
+func try_lock_forward_y_push() -> bool:
+	if _t().lock_forward_y_push_window <= 0.0:
+		return false
+	cancel_routines()
+	_run_forward_y_push()
+	return true
+
+func lock_forward_y_push_window() -> float:
+	return _t().lock_forward_y_push_window
 
 # ---- Tap: combo de 4 compartido por X/Y ----
 
@@ -177,6 +192,51 @@ func _run_enemy_only_launcher() -> void:
 	_begin_launcher()
 	run_vertical_window(_vertical_hitbox, _t().ground_charged_y_player_mover,
 			_t().ground_charged_y_enemy_mover, _t().ground_charged_y_hitbox_duration, 0.05, false)
+
+## En aire, tap atras + Y es un plunge: el hachazo conserva alcance y, al cerrarse, ambos cuerpos
+## usan los mismos Movers DOWN de X X espera X. En whiff el Player tambien cae (move de compromiso).
+func _run_air_back_y_plunge() -> void:
+	var id := begin_routine()
+	_face_locked_target()
+	_player.locomotion.lock_facing(tuning.swing_time)
+	_player.locomotion.lock_movement(tuning.swing_time)
+	_player.bump_velocity = Vector3.ZERO
+	_run_finisher_v_stretch()
+	play_visual_clip(ANIM_HEAVY, HEAVY_AIR_Y_START, HEAVY_AIR_Y_END, tuning.swing_time)
+	var half := _t().air_finisher_angle
+	_play_swing(Quaternion(Vector3.RIGHT, deg_to_rad(-half)), Quaternion(Vector3.RIGHT, deg_to_rad(half)))
+	begin_damage_window(tuning.swing_time)
+	ComboTracker.register_hit()
+	await wait_seconds(tuning.swing_time)
+	if not is_routine_current(id):
+		return
+	_start_air_plunge_from_hits()
+
+## Tap adelante + Y: la misma vuelta final de la rama espera, con el mismo PushSettings y un
+## Mover de avance propio. El Mover se clona porque direction es mundo y no debe mutar el .tres.
+func _run_forward_y_push() -> void:
+	_face_locked_target()
+	_player.locomotion.lock_facing(tuning.swing_time)
+	_player.locomotion.lock_movement(tuning.swing_time)
+	_player.bump_velocity = Vector3.ZERO
+	play_visual_clip(ANIM_REGULAR_C, 0.0, -1.0, tuning.swing_time)
+	_play_spin()
+	arm_push(tuning.push, tuning.swing_time * tuning.push_at)
+	_request_tap_forward_y_mover()
+	begin_damage_window(tuning.swing_time)
+	ComboTracker.register_hit()
+
+func _request_tap_forward_y_mover() -> void:
+	var profile := _t().tap_forward_y_player_mover
+	if profile == null:
+		return
+	var mover := profile.duplicate() as MoverSettings
+	var direction := _player.forward()
+	direction.y = 0.0
+	if direction.length_squared() < 0.0001:
+		return
+	mover.direction = direction.normalized()
+	_player.request_mover(mover)
 
 ## Parte visual y de control comun a ambas variantes del launcher.
 func _begin_launcher() -> void:
@@ -377,24 +437,7 @@ func play_air_step(step: int, finisher: bool, wait_branch: bool) -> void:
 ## perfiles Mover; el del Player es parcial para conservar sus contactos.
 func _finish_air_combo(wait_branch: bool) -> void:
 	if _air_plunge_finisher and not wait_branch:
-		# Recién acá cae el jugador: el swing ya cerró con su ventana de daño completa.
-		# En whiff también caés (move de compromiso, como el dash cargado).
-		_player.request_mover(_t().air_plunge_player_mover)
-		var enemy_mover := _t().air_plunge_enemy_mover
-		for hurtbox in _window_hits.duplicate():
-			var target: Node = hurtbox.owner_node
-			if enemy_mover == null or not target.has_method("request_mover"):
-				continue
-			# Alinear y pedir solo si el perfil puede entrar (aéreo y stuneado): sin este guard,
-			# un enemigo parado en el piso se teletransportaría a tu altura sin caer.
-			if not _plunge_can_take(target):
-				continue
-			if target is Node3D:
-				(target as Node3D).global_position.y = _player.global_position.y
-			if target is EnemyBase:
-				(target as EnemyBase).request_mover(enemy_mover)
-			else:
-				target.call("request_mover", enemy_mover)
+		_start_air_plunge_from_hits()
 		return
 	if wait_branch:
 		return
@@ -407,6 +450,25 @@ func _finish_air_combo(wait_branch: bool) -> void:
 			(target as EnemyBase).request_mover(spike)
 		elif target.has_method("request_mover"):
 			target.call("request_mover", spike)
+
+## Recién después del swing inicia el plunge: el Player conserva el rango del hachazo y luego
+## cae incluso en whiff. Los enemigos conectados usan el mismo perfil descendente si pueden tomarlo.
+func _start_air_plunge_from_hits() -> void:
+	_player.request_mover(_t().air_plunge_player_mover)
+	var enemy_mover := _t().air_plunge_enemy_mover
+	for hurtbox in _window_hits.duplicate():
+		var target: Node = hurtbox.owner_node
+		if enemy_mover == null or not target.has_method("request_mover"):
+			continue
+		# Un enemigo parado no se alinea: el perfil solo puede entrar sobre uno aéreo y stuneado.
+		if not _plunge_can_take(target):
+			continue
+		if target is Node3D:
+			(target as Node3D).global_position.y = _player.global_position.y
+		if target is EnemyBase:
+			(target as EnemyBase).request_mover(enemy_mover)
+		else:
+			target.call("request_mover", enemy_mover)
 
 ## Estira los hitboxes del finisher aéreo mientras dura el golpe y los restaura al cerrar.
 ## La restauración es incondicional e idempotente: aunque un cargado cancele el combo a

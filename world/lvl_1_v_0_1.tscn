@@ -863,7 +863,7 @@ paint_prototype_material = true
 metadata/_custom_type_script = "uid://cr2mf5ypgksws"
 
 [node name="Rebote recto2" type="Node3D" parent="." unique_id=1274862330]
-transform = Transform3D(0.70710677, 0, 0.56568545, 0, 1, 0, -0.70710677, 0, 0.56568545, 56.993217, 12.224085, -29.575666)
+transform = Transform3D(0.70710677, 0, 0.56568545, 0, 1, 0, -0.70710677, 0, 0.56568545, 56.993217, 13.860407, -29.575666)
 metadata/_edit_group_ = true
 
 [node name="Pared rebote 1_" type="StaticBody3D" parent="Rebote recto2" unique_id=1924933388]

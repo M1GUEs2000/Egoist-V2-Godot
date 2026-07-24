@@ -30,6 +30,8 @@ var _rest_rotations := {}  # WeaponBase → Quaternion
 var _air_charge_fall_applied := false
 ## Fin de la ventana que deja un tap hacia atras relativo al lock-on antes de pulsar Y.
 var _lock_back_tap_until := -999.0
+## Fin de la ventana que deja un tap hacia adelante relativo al lock-on antes de pulsar Y.
+var _lock_forward_tap_until := -999.0
 
 @onready var buffer: InputBuffer = $InputBuffer
 
@@ -95,23 +97,37 @@ func _input(event: InputEvent) -> void:
 	elif event.is_action_released("attack_x"):
 		buffer.release()
 	elif event.is_action_pressed("attack_y"):
-		if not _try_lock_back_y_launcher():
+		if not _try_lock_forward_y_push() and not _try_lock_back_y_launcher():
 			_on_press(slot_y, World.Slot.Y)
 	elif event.is_action_released("attack_y"):
 		buffer.release()
 	elif event.is_action_pressed("move_up") or event.is_action_pressed("move_down") \
 			or event.is_action_pressed("move_left") or event.is_action_pressed("move_right"):
-		_remember_lock_back_tap()
+		_remember_lock_y_gestures()
 
-## Guarda el gesto solo si el input actual se aleja claramente del target. La locomocion hace la
-## conversion camara -> mundo y compara contra jugador -> target, asi no hay un "atras" fijo.
-func _remember_lock_back_tap() -> void:
+## Guarda taps relativos al target. La locomocion convierte camara -> mundo y los compara contra
+## jugador -> target, asi "adelante" y "atras" no quedan fijos al mundo.
+func _remember_lock_y_gestures() -> void:
 	if _body == null or not _body.lock_on.is_locked:
 		return
-	var window := slot_y.lock_back_y_launcher_window() if slot_y != null else 0.0
-	if window > 0.0 and _body.locomotion.input_is_away_from_locked_target(
-			_body.locomotion.read_move_input()):
-		_lock_back_tap_until = World.now() + window
+	if slot_y == null:
+		return
+	var input := _body.locomotion.read_move_input()
+	var back_window := slot_y.lock_back_y_launcher_window()
+	if back_window > 0.0 and _body.locomotion.input_is_away_from_locked_target(input):
+		_lock_back_tap_until = World.now() + back_window
+	var forward_window := slot_y.lock_forward_y_push_window()
+	if forward_window > 0.0 and _body.locomotion.input_is_toward_locked_target(input):
+		_lock_forward_tap_until = World.now() + forward_window
+
+## Y consume el tap adelante una vez para el push propio del arma equipada.
+func _try_lock_forward_y_push() -> bool:
+	if _body == null or World.now() > _lock_forward_tap_until or slot_y == null:
+		return false
+	if slot_y.lock_forward_y_push_window() <= 0.0:
+		return false
+	_lock_forward_tap_until = -999.0
+	return _start_lock_y_special(Callable(slot_y, &"try_lock_forward_y_push"))
 
 ## Y consume el gesto una vez y lo convierte en el launcher propio del arma equipada. Entra como
 ## ataque normal: no carga, no gasta meter y no espera a que se suelte Y.
@@ -121,6 +137,10 @@ func _try_lock_back_y_launcher() -> bool:
 	if slot_y.lock_back_y_launcher_window() <= 0.0:
 		return false
 	_lock_back_tap_until = -999.0
+	return _start_lock_y_special(Callable(slot_y, &"try_lock_back_y_launcher"))
+
+## Prepara un gesto direccional como ataque normal sin pasar por InputBuffer/hold.
+func _start_lock_y_special(start_special: Callable) -> bool:
 	buffer.release()
 	if _charging_weapon != null:
 		_charging_weapon.set_charge_glow(0.0)
@@ -134,7 +154,7 @@ func _try_lock_back_y_launcher() -> bool:
 	attack_telegraphed.emit(_body.global_position, _body.forward())
 	_body.fire_action_world_switch()
 	_last_attack_time = World.now()
-	return slot_y.try_lock_back_y_launcher()
+	return start_special.call()
 
 ## Golpea en el press (tap) y carga mientras se mantiene; al soltar sale el cargado.
 func _on_press(weapon: WeaponBase, slot: World.Slot) -> void:

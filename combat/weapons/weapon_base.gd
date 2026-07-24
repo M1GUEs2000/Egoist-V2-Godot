@@ -135,6 +135,13 @@ func try_lock_back_y_launcher() -> bool:
 func lock_back_y_launcher_window() -> float:
 	return 0.0
 
+## Gancho para tap adelante + Y relativo al lock-on. Las armas que no lo usan lo dejan apagado.
+func try_lock_forward_y_push() -> bool:
+	return false
+
+func lock_forward_y_push_window() -> float:
+	return 0.0
+
 ## PlayerCombat llama esto antes de resetear la pose del arma en un press.
 ## Si hay una cadena activa, ese press puede ser solo un input encolado para el próximo
 ## golpe: resetear la rotación acá hace que armas pesadas como el Mazo parezcan reiniciar

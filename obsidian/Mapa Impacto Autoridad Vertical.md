@@ -152,6 +152,10 @@ inline (11, 21), `push` (484, 548), `launch` (482, 490), lee `_airborne_until` (
 - Antes de pedir el Mover UP, el launcher comun de Espada fija el facing al lock-on y limpia/bloquea
   el desplazamiento horizontal del Player. El tap atras + Y deja al Player en tierra y pide el
   Mover solo para el Enemy; no puede arrastrar al Player hacia atras.
+- En aire, tap atras + Y no usa el launcher: cierra un hachazo y llama la misma salida de plunge
+  de `X X espera X`, que solicita `air_plunge_player_mover` y `air_plunge_enemy_mover`.
+- Tap adelante + Y reutiliza el `push` del finisher de la rama espera y pide al Player
+  `tap_forward_y_player_mover`, clonado y orientado al target lockeado para no mutar el recurso.
 - `register_weapon_hit(...)` puede pedir un Float del Player con duracion y fall scale del ataque,
   sin pasar por `PlayerLauncher`. Los golpes no migrados siguen temporalmente en air-hit-stall.
 - Mace queda fuera de la seleccion del loadout y su launcher terrestre ya no aplica control vertical.

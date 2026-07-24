@@ -53,6 +53,17 @@ func input_is_away_from_locked_target(input: Vector2) -> bool:
 		return false
 	return input_dir.normalized().dot(to_target) <= -0.7
 
+## Equivalente hacia el objetivo: se usa para los gestos ofensivos relativos al lock-on.
+func input_is_toward_locked_target(input: Vector2) -> bool:
+	var target := _lock_target()
+	if target == null or not has_move_input(input):
+		return false
+	var input_dir := camera_relative(input)
+	var to_target := _direction_to(target.global_position)
+	if input_dir.length_squared() < 0.0001 or to_target == Vector3.ZERO:
+		return false
+	return input_dir.normalized().dot(to_target) >= 0.7
+
 ## Dirección de input relativa a la cámara, proyectada al plano del suelo.
 func camera_relative(input: Vector2) -> Vector3:
 	if _cam == null:
