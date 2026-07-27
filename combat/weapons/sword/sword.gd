@@ -155,7 +155,7 @@ func _hold_x() -> void:
 	_sweet_spot_dash = sweet_spot
 	_charged_dash_connected = false
 	if _player.meter.spend_charged(1, true, tuning.meter_cost_scale(_sweet_spot_dash)):
-		_charged_dash_travel_direction = _charged_dash_direction().normalized()
+		_charged_dash_travel_direction = _charged_dash_direction(_sweet_spot_dash).normalized()
 		play_visual_clip(ANIM_DASH, 0.0, -1.0, _t().charged_dash_duration)
 		_player.force_dash(_charged_dash_travel_direction, _t().charged_dash_distance,
 				_t().charged_dash_duration, true)
@@ -345,10 +345,10 @@ func _on_charged_dash_hit(hurtbox: Hurtbox, died: bool) -> void:
 	if _sweet_spot_dash:
 		_run_ground_launcher()
 
-## En aire, el lock-on orienta el dash en los tres ejes. Sin lock o con un target invalido,
-## se conserva el dash recto que usa la version terrestre.
-func _charged_dash_direction() -> Vector3:
-	if not _player.is_airborne() or not _player.lock_on.is_locked:
+## Solo el sweet spot aereo puede orientar el dash en los tres ejes hacia el lock-on.
+## El cargado normal conserva la trayectoria recta, igual que la version terrestre.
+func _charged_dash_direction(is_sweet_spot: bool) -> Vector3:
+	if not is_sweet_spot or not _player.is_airborne() or not _player.lock_on.is_locked:
 		return _player.forward()
 	var target := _player.lock_on.current_target
 	if target == null or not is_instance_valid(target):
