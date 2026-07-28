@@ -6,7 +6,7 @@ tags:
   - sistema
   - traversal
 status: active
-system_status: E2
+system_status: E3
 hito: H1
 ---
 
@@ -119,7 +119,7 @@ Efecto lateral: el sistema paso de ~14 knobs a ~20, pero todos en **m/s, m/s² o
 
 Chequeos de regresion headless: `world/wall_slide_probe.tscn` (cae pegado a una pared con input sostenido y cuenta transiciones del estado de slide) y `world/wall_impulse_probe.tscn` (captura el primer input tangencial y verifica que no cambie al alterar el stick).
 
-Estado **E2**: los knobs correctos existen en el `.tres` y el sistema funciona mecanicamente, pero **el feel de la reescritura no fue aprobado jugando**. La nota estaba en E3 con el modelo anterior; reescribir el sistema aplica la regresion automatica E3 → E2. Sube a E3 solo cuando Tutupa apruebe jugando la rampa, la trepada y el rebote por rangos. *(2026-07-27)*
+Estado **E3**: la reescritura fue **aprobada jugando** — rampa, trepada con tope de angulo, rebote por rangos y cooldown de re-enganche. Lo que queda es iterar valores como ajuste fino, no buscar la direccion del feel. El sistema paso por la regresion E3 → E2 al reescribirse y volvio a E3 en la misma sesion. *(2026-07-27)*
 
 > [!warning] Wall Impulse: falta integrarlo al loop jugable
 > El sistema esta completo en codigo (`WallImpulseSurface`, `WallImpulseTuning`,

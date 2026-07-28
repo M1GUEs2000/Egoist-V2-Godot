@@ -6,7 +6,7 @@ tags:
   - sistema
   - traversal
 status: active
-system_status: E2
+system_status: E3
 hito: H1
 ---
 
@@ -79,7 +79,7 @@ Knobs en `PlayerTuning` grupo *Dust FX*: `sprint_trail_min_level`, `sprint_trail
 
 ## Verificacion
 
-Estado **E2**: los knobs existen y el sistema funciona mecanicamente; el feel no fue aprobado jugando. *(2026-07-27)*
+Estado **E3**: aprobado jugando, incluidos los canales nuevos de velocidad final y aceleracion de la rampa del wall slide. Lo que queda es iterar porcentajes como ajuste fino. *(2026-07-27)*
 
 ## Relacionado
 
