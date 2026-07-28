@@ -35,8 +35,8 @@ script = ExtResource("4_break")
 free_owner = false
 
 [node name="Hurtbox" type="Area3D" parent="." unique_id=1267125898]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.55, 0)
 script = ExtResource("5_hurtbox")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="Hurtbox" unique_id=1078917030]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.55, 0)
 shape = SubResource("BoxShape3D_hurtbox")
