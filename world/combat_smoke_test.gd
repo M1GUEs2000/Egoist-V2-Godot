@@ -294,8 +294,37 @@ func _ready() -> void:
 	assert(player.arm._taps_used == 1)
 	arm_enemy.queue_free()
 
+	await _test_charged_meter_cost(player)
+
 	print("COMBAT SMOKE OK")
 	get_tree().quit()
+
+## El preview del HUD y el cobro real tienen que salir del mismo numero: charged_meter_cost dice
+## cuanto va a costar y la rutina lo gasta con spend_charged. Si se separan, el meter marca barras
+## que no se van a gastar (o peor, se gastan sin aviso). Se prueba sobre el Y cargado TERRESTRE de
+## la Espada, que es el que dejo de ser gratis.
+func _test_charged_meter_cost(player: Player) -> void:
+	var sword := player.combat.slot_y as Sword
+	if sword == null:
+		return
+	player.air_state = Player.AirState.GROUNDED
+
+	var cost := sword.charged_meter_cost(World.Slot.Y, 999.0)
+	assert(cost > 0.0)  # el launcher terrestre ya no es gratis
+	player.meter.gain_bars(float(player.meter.bars()))  # meter lleno
+	var before := player.meter.meter()
+	sword._hold_y()
+	await get_tree().physics_frame
+	assert(is_equal_approx(before - player.meter.meter(), cost))
+	sword.cancel_routines()
+	await get_tree().physics_frame
+
+	# Sin barra el cargado no sale: cae al tap y el meter no queda en negativo.
+	player.meter.gain_bars(-player.meter.meter())
+	sword._hold_y()
+	await get_tree().physics_frame
+	assert(is_equal_approx(player.meter.meter(), 0.0))
+	sword.cancel_routines()
 
 ## Contratos F0 de Mover/Floater (ver obsidian/Plan Autoridad Vertical). Todavia SIN comportamiento:
 ## esto fija la superficie tipada (campos, metodos, senales, razones) antes de migrar en F1/F2. No

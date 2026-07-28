@@ -106,15 +106,16 @@ func hold(slot: World.Slot, _level: int) -> void:
 	else:
 		_hold_y()
 
-## Preview del HUD. X cargado paga con el descuento del sweet spot (_hold_x); Y cargado solo cuesta
-## en el aire (_aerial_charged_y), porque el launcher terrestre es gratis.
+## Preview del HUD. X cargado paga con el descuento del sweet spot (_hold_x); Y cargado cuesta la
+## barra entera en aire y en suelo (_aerial_charged_y / _hold_y). El gesto tap atras + Y no pasa por
+## acá: es un tap, no un cargado, y sigue siendo gratis.
 func charged_meter_cost(slot: World.Slot, held_time: float) -> float:
 	if _player == null:
 		return 0.0
 	var full := _player.tuning.meter_charged_cost
 	if slot == World.Slot.X:
 		return full * tuning.meter_cost_scale(tuning.in_sweet_spot(held_time))
-	return full if _player.is_airborne() else 0.0
+	return full
 
 ## Tap atras relativo al target lockeado seguido de Y. No consume meter y puede salir tanto
 ## en suelo como en aire porque reutiliza el launcher terrestre y sus Movers.
@@ -225,6 +226,12 @@ func _hold_y() -> void:
 		_aerial_charged_y()
 		return
 	# Golpe vertical terrestre (ex AttackLauncher: solo desde el suelo — ya garantizado acá).
+	# Cuesta 1 barra como cualquier cargado: elevar al enemigo abre el juggle entero, no puede ser
+	# el único cargado gratis del arma.
+	if not _player.meter.spend_charged():
+		# ponytail: sin barra no hay launcher — cae al tap terrestre normal, igual que la Y aérea.
+		_tap_combo()
+		return
 	_run_ground_launcher()
 
 ## Launcher cargado: eleva al Player y al Enemy.

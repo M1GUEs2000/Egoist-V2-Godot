@@ -68,12 +68,14 @@ func is_charged_move_active() -> bool:
 	return _charged_move_active
 
 ## Preview del HUD. En el aire el X cargado cuesta 1 barra fija; en suelo cobra una barra por vuelta
-## y se recorta a lo que alcanza, igual que _hold_x. El Y cargado no gasta meter en este build
-## (launcher terrestre gratis; en aire cae al combo aereo normal).
+## y se recorta a lo que alcanza, igual que _hold_x. El Y cargado cuesta 1 barra por su launcher
+## terrestre; en el aire no existe (cae al combo aereo normal), asi que ahi no cuesta nada.
 func charged_meter_cost(slot: World.Slot, held_time: float) -> float:
-	if _player == null or slot != World.Slot.X:
+	if _player == null:
 		return 0.0
 	var full := _player.tuning.meter_charged_cost
+	if slot != World.Slot.X:
+		return 0.0 if _player.is_airborne() else full
 	if _player.is_airborne():
 		return full
 	return full * float(mini(charge_level(held_time), _player.meter.affordable_bars()))
@@ -190,6 +192,11 @@ func _hold_y() -> void:
 	# El Y cargado aereo no existe en este build (depende de un bouncer sin diseñar, ver
 	# encabezado del archivo): sostener Y en el aire cae al combo aereo normal, sin gastar meter.
 	if _player.is_airborne():
+		_tap_combo()
+		return
+	# El launcher terrestre cuesta 1 barra como cualquier cargado. Sin kill window: la barra de
+	# regalo al matar dentro del cargado es la especialidad de la Espada, no del Mazo.
+	if not _player.meter.spend_charged(1, false):
 		_tap_combo()
 		return
 	var t := _t()
