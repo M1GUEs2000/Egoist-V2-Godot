@@ -64,6 +64,8 @@ rebote del Y cargado aereo esta desactivado.
 - Tap adelante + Y reutiliza el spin final y avanza al Player con un Mover clonado y orientado hacia el target; en suelo no arma `PushSettings`, pero en aire si empuja al enemigo. *(2026-07-28)*
 - Tap adelante + X hace dos vueltas: en suelo cancela cualquier Mover activo para quedarse estatico; en aire Player y enemigos conectados reciben un Floater de 0.3 s con gravedad 0. Tap atras + X conserva el retroceso terrestre con clip de launcher, pero en aire es una vuelta que sube ambos cuerpos 2 unidades con Movers y el mismo Floater final. *(2026-07-28)*
 - Los gestos `tap atras/adelante + Y` solo se arman desde input de movimiento neutral y consumen la primera direccion al salir de neutral. Girar el stick de forma continua no debe crear un especial al atravesar esas direcciones. *(2026-07-28)*
+- Los cuatro gestos direccionales de X/Y, sus ventanas y sus rutas de suelo/aire se documentan en [[Taps Direccionales]].
+- El Sweet Spot del X cargado reduce su coste y encadena launcher al conectar; el Y cargado aun no consume ese flag. Ver [[Sweet Spots]].
 - Habilidad especial de X cargado existe parcialmente por ventana de kill.
 - La hoja brilla al cargar un ataque (glow de carga, ver [[Combate]]). *(2026-07-06)*
 - **Y cargado aereo DESACTIVADO temporalmente** *(2026-07-20)*: usa `slam_bounce` (rebote balistico

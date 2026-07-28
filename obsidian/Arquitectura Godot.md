@@ -92,7 +92,7 @@ Los custom statuses del plugin viven en la config local (`.obsidian/`, no versio
 
 | Nodo | Carpeta | Subnotas registradas |
 |---|---|---|
-| [[Combate]] | `Gameplay/Combate/` | [[Meter]], [[Input Feel]], [[Lock On]] |
+| [[Combate]] | `Gameplay/Combate/` | [[Meter]], [[Input Feel]], [[Lock On]], [[Mover y Floater]], [[Taps Direccionales]], [[Sweet Spots]] |
 | [[Traversal]] | `Gameplay/Traversal/` | [[Movimiento Base]], [[Dash y Airdash]], [[Launcher y Aire]], [[Momentum y Bump]], [[Wall Slide y Wall Jump]], [[Floor Slide]], [[Rebote en Enemigos]], [[Reset Aereo por Kill]], [[World Switch]], [[Bloques]], [[Cadenas]], [[Occlusion Fade de Camara]], [[Landing Indicator]], [[Colores de mundo]] |
 | [[Brazo]] | `Gameplay/Brazo/` | [[brazo-combate|Brazo Combate]], [[brazo-traversal|Brazo Traversal]] |
 | [[Enemigos]] | `Gameplay/Enemigos/` | [[Modelo de Enemigo]], [[Mascaras y Cordura]], [[Hostilidad]], [[Afiliacion de Mundo]], [[Estados de Combate Enemigo]], [[Stun]], [[Ataques Enemigos]], [[Ecosistema Vivo]], [[Objetos Golpeables]], [[Roster Enemigos]], [[Melee Living]], [[Ranged Dead]], [[Armored Enemy]], [[Jefes]] |

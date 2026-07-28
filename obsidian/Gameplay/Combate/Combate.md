@@ -23,6 +23,8 @@ Combate del jugador: slots X/Y, espada, hitboxes, parry, meter, combo aereo e in
 | Combo global | `ComboTracker` |
 | Armas | `WeaponBase`, `Sword`, `Mace` (combos alineados con Espada, E2 pend. playtest, ver [[Mazo]]) |
 | Tuning | `WeaponTuning`, `SwordTuning`, `StunSettings`, `PushSettings`, `PlayerTuning` |
+| Movimiento dirigido | [[Mover y Floater]] (`MoverSettings` y `FloaterSettings`) |
+| Gestos y carga | [[Taps Direccionales]], [[Sweet Spots]], `InputBuffer` |
 | Meter | `PlayerMeter` |
 | Loadout | `ActionLoadoutMenu` (overlay en HUD) |
 | Stun del player | `PlayerStun` (nodo hijo `Stun`) |
@@ -50,6 +52,9 @@ Combate del jugador: slots X/Y, espada, hitboxes, parry, meter, combo aereo e in
 - Al empezar una carga en aire, `Player.apply_air_charge_float()` cuelga al jugador con un Floater (`PlayerTuning.air_charge_floater`, un `FloaterSettings`), sin escalado ni anti-spam; no toca momentum horizontal. `PlayerAirKillReset` solo devuelve doble salto y airdash al matar en aire. *(2026-07-21)*
 
 ## Autoridad vertical
+
+La referencia de implementacion, perfiles, modos TOTAL/PARTIAL y reglas de cancelacion vive en
+[[Mover y Floater]].
 
 Los ataques deciden los perfiles `MoverSettings` y los datos de `Floater`; Player y EnemyBase solo
 los ejecutan. Un Mover TOTAL toma el cuerpo completo y uno PARTIAL controla solo Y, conservando los
