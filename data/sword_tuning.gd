@@ -69,6 +69,14 @@ class_name SwordTuning extends WeaponTuning
 ## desactiva. El Player usa tap_forward_y_player_mover hacia el objetivo actual.
 @export var lock_forward_y_push_window := 0.15
 
+@export_group("Tap X con lock-on")
+## Segundos durante los cuales X consume un toque que se acerca al objetivo lockeado. Cero lo
+## desactiva. Ejecuta una vuelta estatica.
+@export var lock_forward_x_static_spin_window := 0.15
+## Segundos durante los cuales X consume un toque que se aleja del objetivo lockeado. Cero lo
+## desactiva. Ejecuta la animacion de launcher y retira al Player sin lanzar al Enemy.
+@export var lock_back_x_retreat_window := 0.15
+
 @export_group("Autoridad vertical")
 ## Perfil del Y cargado terrestre para el Player. Incluye su Float final: no depende de PlayerTuning.
 @export var ground_charged_y_player_mover: MoverSettings
@@ -77,6 +85,16 @@ class_name SwordTuning extends WeaponTuning
 ## Perfil de avance del Player para tap adelante + Y. La Espada clona el recurso y orienta su
 ## direccion al target lockeado antes de solicitarlo, para no mutar el .tres compartido.
 @export var tap_forward_y_player_mover: MoverSettings
+## Perfil de retroceso del Player para tap atras + X. La Espada lo clona y lo orienta en sentido
+## opuesto al target lockeado antes de solicitarlo, para no mutar el .tres compartido.
+@export var tap_back_x_player_mover: MoverSettings
+## Perfil ascendente del Player para tap atras + X en aire. Al terminar sostiene 0.3 s con
+## gravedad cero; el recurso define distancia y velocidad del ascenso.
+@export var tap_back_x_air_player_mover: MoverSettings
+## Perfil ascendente del Enemy golpeado por tap atras + X en aire, con el mismo hang del Player.
+@export var tap_back_x_air_enemy_mover: MoverSettings
+## Hang de Player y Enemy para tap adelante + X en aire. Cero de fall_scale congela la gravedad.
+@export var tap_forward_x_air_floater: FloaterSettings
 ## Perfil del auto-launch del Player al iniciar Y cargada aerea, incluido su Float final.
 @export var aerial_charged_y_player_mover: MoverSettings
 ## Perfil lineal descendente del Enemy para el spike de Y cargada aerea; corta al tocar piso.

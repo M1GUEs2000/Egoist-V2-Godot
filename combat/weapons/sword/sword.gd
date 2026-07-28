@@ -27,6 +27,9 @@ var _charged_dash_connected := false
 ## Direccion capturada al empezar el dash: define el lado de salida al atravesar al objetivo.
 var _charged_dash_travel_direction := Vector3.FORWARD
 var _aerial_charged_y_active := false
+## Rutinas aereas de tap X que reemplazan el float generico al conectar.
+var _air_forward_x_float_routine_id := -1
+var _air_back_x_lift_routine_id := -1
 ## Rama plunge elegida para el finisher aéreo en curso (la lee _finish_air_combo).
 var _air_plunge_finisher := false
 # Estiramiento vertical de hitboxes del finisher aéreo (ver air_finisher_hitbox_v_scale):
@@ -83,7 +86,16 @@ func setup(player: Player) -> void:
 ## La Y cargada aérea usa el MISMO hitbox que los taps: sin este flag, su auto-launch se comería
 ## el corte de momentum del air-hit-stall.
 func is_charged_move_active() -> bool:
-	return _aerial_charged_y_active
+	return _aerial_charged_y_active or _is_air_x_special_active()
+
+## Los especiales aereos de tap X manejan su propio float/Mover. Evitan que el air-hit-stall
+## generico reemplace el hang de 0.3 s con gravedad cero.
+func register_weapon_hit(hurtbox: Hurtbox, died: bool, cuts_air_momentum := true,
+		triggers_player_float := true) -> void:
+	if _is_air_x_special_active():
+		super.register_weapon_hit(hurtbox, died, false, false)
+		return
+	super.register_weapon_hit(hurtbox, died, cuts_air_momentum, triggers_player_float)
 
 func tap(_slot: World.Slot) -> void:
 	_tap_combo()
@@ -109,8 +121,8 @@ func try_lock_back_y_launcher() -> bool:
 func lock_back_y_launcher_window() -> float:
 	return _t().lock_back_y_launcher_window
 
-## Tap adelante relativo al target lockeado seguido de Y. Reusa la vuelta final con push de la
-## rama X X espera X X y solicita su propio Mover horizontal para el Player.
+## Tap adelante relativo al target lockeado seguido de Y. Reusa la vuelta final de la rama
+## X X espera X X y solicita su propio Mover horizontal para el Player; el push solo sale en aire.
 func try_lock_forward_y_push() -> bool:
 	if _t().lock_forward_y_push_window <= 0.0:
 		return false
@@ -120,6 +132,30 @@ func try_lock_forward_y_push() -> bool:
 
 func lock_forward_y_push_window() -> float:
 	return _t().lock_forward_y_push_window
+
+## Tap adelante relativo al target lockeado seguido de X. Hace la vuelta final sin avance,
+## retroceso ni push.
+func try_lock_forward_x_static_spin() -> bool:
+	if _t().lock_forward_x_static_spin_window <= 0.0:
+		return false
+	cancel_routines()
+	_run_forward_x_static_spin()
+	return true
+
+func lock_forward_x_static_spin_window() -> float:
+	return _t().lock_forward_x_static_spin_window
+
+## Tap atras relativo al target lockeado seguido de X. Reusa la animacion del launcher, pero
+## solo mueve al Player hacia atras: no activa hitbox vertical ni lanza al Enemy.
+func try_lock_back_x_retreat() -> bool:
+	if _t().lock_back_x_retreat_window <= 0.0:
+		return false
+	cancel_routines()
+	_run_back_x_retreat()
+	return true
+
+func lock_back_x_retreat_window() -> float:
+	return _t().lock_back_x_retreat_window
 
 # ---- Tap: combo de 4 compartido por X/Y ----
 
@@ -212,8 +248,8 @@ func _run_air_back_y_plunge() -> void:
 		return
 	_start_air_plunge_from_hits()
 
-## Tap adelante + Y: la misma vuelta final de la rama espera, con el mismo PushSettings y un
-## Mover de avance propio. El Mover se clona porque direction es mundo y no debe mutar el .tres.
+## Tap adelante + Y: la misma vuelta final de la rama espera. En aire arma PushSettings; en suelo
+## solo avanza el Player. El Mover se clona porque direction es mundo y no debe mutar el .tres.
 func _run_forward_y_push() -> void:
 	_face_locked_target()
 	_player.locomotion.lock_facing(tuning.swing_time)
@@ -221,7 +257,8 @@ func _run_forward_y_push() -> void:
 	_player.bump_velocity = Vector3.ZERO
 	play_visual_clip(ANIM_REGULAR_C, 0.0, -1.0, tuning.swing_time)
 	_play_spin()
-	arm_push(tuning.push, tuning.swing_time * tuning.push_at)
+	if _player.is_airborne():
+		arm_push(tuning.push, tuning.swing_time * tuning.push_at)
 	_request_tap_forward_y_mover()
 	begin_damage_window(tuning.swing_time)
 	ComboTracker.register_hit()
@@ -232,6 +269,74 @@ func _request_tap_forward_y_mover() -> void:
 		return
 	var mover := profile.duplicate() as MoverSettings
 	var direction := _player.forward()
+	direction.y = 0.0
+	if direction.length_squared() < 0.0001:
+		return
+	mover.direction = direction.normalized()
+	_player.request_mover(mover)
+
+## Tap adelante + X: dos vueltas de la rama espera. En suelo queda estatica; en aire sostiene al
+## Player y a los enemigos conectados con un Floater propio de gravedad cero.
+func _run_forward_x_static_spin() -> void:
+	var id := _routine_id
+	_face_locked_target()
+	_player.locomotion.lock_facing(tuning.swing_time)
+	_player.locomotion.lock_movement(tuning.swing_time)
+	_player.bump_velocity = Vector3.ZERO
+	_player.mover.cancel_mover(Mover.CancelReason.ATTACK_RULE)
+	if _player.is_airborne():
+		_air_forward_x_float_routine_id = id
+		_request_player_float(_t().tap_forward_x_air_floater)
+	play_visual_clip(ANIM_REGULAR_C, 0.0, -1.0, tuning.swing_time * 2.0)
+	_play_spin()
+	begin_damage_window(tuning.swing_time * 2.0)
+	ComboTracker.register_hit()
+	await wait_seconds(tuning.swing_time)
+	if not is_routine_current(id):
+		return
+	_play_spin()
+	await wait_seconds(tuning.swing_time)
+	if is_routine_current(id):
+		_air_forward_x_float_routine_id = -1
+
+## Tap atras + X: en suelo conserva el clip del launcher y retrocede. En aire usa una vuelta y
+## eleva Player y enemigos conectados dos unidades con hang de gravedad cero.
+func _run_back_x_retreat() -> void:
+	if _player.is_airborne():
+		_run_air_back_x_lift()
+		return
+	_face_locked_target()
+	_player.locomotion.lock_facing(tuning.swing_time)
+	_player.locomotion.lock_movement(tuning.swing_time)
+	_player.bump_velocity = Vector3.ZERO
+	play_visual_clip(ANIM_LAUNCHER, 0.2, 0.8, tuning.swing_time)
+	swing_up(_t().strike_angle)
+	_request_tap_back_x_mover()
+	begin_damage_window(tuning.swing_time)
+	ComboTracker.register_hit()
+
+func _run_air_back_x_lift() -> void:
+	var id := _routine_id
+	_air_back_x_lift_routine_id = id
+	_face_locked_target()
+	_player.locomotion.lock_facing(tuning.swing_time)
+	_player.locomotion.lock_movement(tuning.swing_time)
+	_player.bump_velocity = Vector3.ZERO
+	play_visual_clip(ANIM_REGULAR_C, 0.0, -1.0, tuning.swing_time)
+	_play_spin()
+	_player.request_mover(_t().tap_back_x_air_player_mover)
+	begin_damage_window(tuning.swing_time)
+	ComboTracker.register_hit()
+	await wait_seconds(tuning.swing_time)
+	if is_routine_current(id):
+		_air_back_x_lift_routine_id = -1
+
+func _request_tap_back_x_mover() -> void:
+	var profile := _t().tap_back_x_player_mover
+	if profile == null:
+		return
+	var mover := profile.duplicate() as MoverSettings
+	var direction := -_player.forward()
 	direction.y = 0.0
 	if direction.length_squared() < 0.0001:
 		return
@@ -300,6 +405,12 @@ func _on_aerial_charged_y_hit(hurtbox: Hurtbox, _died: bool) -> void:
 ## enemigo queda "pegado" durante el combo y cae al dejar de golpearlo. request_float ya exige que el
 ## enemigo esté aéreo y quebrado, así que un golpe en tierra o a un objetivo entero no hace nada.
 func _on_aerial_normal_hit(hurtbox: Hurtbox, _died: bool) -> void:
+	if _air_forward_x_float_routine_id == _routine_id:
+		_request_enemy_float(hurtbox, _t().tap_forward_x_air_floater)
+		return
+	if _air_back_x_lift_routine_id == _routine_id:
+		_request_air_back_x_enemy_mover(hurtbox)
+		return
 	# El hold depende de que el ENEMIGO esté en el aire (lo valida request_float), no de dónde esté
 	# el jugador: el juggle común es pegarle al enemigo cayendo desde el piso. Solo se excluye el
 	# cargado Y, que ya le da su propio spike/Mover al enemigo. Un golpe a un enemigo en tierra no
@@ -319,6 +430,33 @@ func _on_aerial_normal_hit(hurtbox: Hurtbox, _died: bool) -> void:
 
 ## Prende el hitbox del dash cargado mientras dura el dash (la espada mueve al player vía
 ## PlayerDash.force_dash, pero el daño lo pone ESTE hitbox, no el del dodge).
+func _is_air_x_special_active() -> bool:
+	return _air_forward_x_float_routine_id == _routine_id \
+			or _air_back_x_lift_routine_id == _routine_id
+
+func _request_player_float(settings: FloaterSettings) -> void:
+	if settings != null and settings.duration > 0.0:
+		_player.request_float(settings.duration, settings.fall_scale)
+
+func _request_enemy_float(hurtbox: Hurtbox, settings: FloaterSettings) -> void:
+	if settings == null or settings.duration <= 0.0:
+		return
+	var target: Node = hurtbox.owner_node
+	if target is EnemyBase:
+		(target as EnemyBase).request_float(settings.duration, settings.fall_scale)
+	elif target.has_method("request_float"):
+		target.call("request_float", settings.duration, settings.fall_scale)
+
+func _request_air_back_x_enemy_mover(hurtbox: Hurtbox) -> void:
+	var mover := _t().tap_back_x_air_enemy_mover
+	if mover == null:
+		return
+	var target: Node = hurtbox.owner_node
+	if target is EnemyBase:
+		(target as EnemyBase).request_mover(mover)
+	elif target.has_method("request_mover"):
+		target.call("request_mover", mover)
+
 func _run_charged_dash_window() -> void:
 	_charged_dash_id += 1
 	var id := _charged_dash_id

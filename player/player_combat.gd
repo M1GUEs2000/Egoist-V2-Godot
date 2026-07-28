@@ -32,8 +32,11 @@ var _air_charge_fall_applied := false
 var _lock_back_tap_until := -999.0
 ## Fin de la ventana que deja un tap hacia adelante relativo al lock-on antes de pulsar Y.
 var _lock_forward_tap_until := -999.0
+## Ventanas equivalentes para los especiales del slot X.
+var _lock_back_x_tap_until := -999.0
+var _lock_forward_x_tap_until := -999.0
 ## El gesto direccional debe salir de neutral para que girar el stick no lo active.
-var _lock_y_tap_armed := false
+var _lock_direction_tap_armed := false
 
 @onready var buffer: InputBuffer = $InputBuffer
 
@@ -95,36 +98,45 @@ func _input(event: InputEvent) -> void:
 	if _body != null and _body.is_stunned():
 		return
 	if event.is_action_pressed("attack_x"):
-		_on_press(slot_x, World.Slot.X)
+		_track_lock_direction_tap()
+		if not _try_lock_forward_x_static_spin() and not _try_lock_back_x_retreat():
+			_on_press(slot_x, World.Slot.X)
 	elif event.is_action_released("attack_x"):
 		buffer.release()
 	elif event.is_action_pressed("attack_y"):
-		_track_lock_y_tap()
+		_track_lock_direction_tap()
 		if not _try_lock_forward_y_push() and not _try_lock_back_y_launcher():
 			_on_press(slot_y, World.Slot.Y)
 	elif event.is_action_released("attack_y"):
 		buffer.release()
 ## Solo registra la primera direccion despues de neutral. Asi girar el stick de forma continua
 ## no abre un especial adelante/atras y el gesto sigue siendo relativo al target lockeado.
-func _track_lock_y_tap() -> void:
-	if _body == null or _body.is_stunned() or not _body.lock_on.is_locked or slot_y == null:
-		_lock_y_tap_armed = false
+func _track_lock_direction_tap() -> void:
+	if _body == null or _body.is_stunned() or not _body.lock_on.is_locked \
+			or (slot_x == null and slot_y == null):
+		_lock_direction_tap_armed = false
 		_lock_back_tap_until = -999.0
 		_lock_forward_tap_until = -999.0
+		_lock_back_x_tap_until = -999.0
+		_lock_forward_x_tap_until = -999.0
 		return
 	var input := _body.locomotion.read_move_input()
 	if not _body.locomotion.has_move_input(input):
-		_lock_y_tap_armed = true
+		_lock_direction_tap_armed = true
 		return
-	if not _lock_y_tap_armed:
+	if not _lock_direction_tap_armed:
 		return
-	_lock_y_tap_armed = false
-	var back_window := slot_y.lock_back_y_launcher_window()
-	if back_window > 0.0 and _body.locomotion.input_is_away_from_locked_target(input):
-		_lock_back_tap_until = World.now() + back_window
-	var forward_window := slot_y.lock_forward_y_push_window()
-	if forward_window > 0.0 and _body.locomotion.input_is_toward_locked_target(input):
-		_lock_forward_tap_until = World.now() + forward_window
+	_lock_direction_tap_armed = false
+	if _body.locomotion.input_is_away_from_locked_target(input):
+		if slot_y != null and slot_y.lock_back_y_launcher_window() > 0.0:
+			_lock_back_tap_until = World.now() + slot_y.lock_back_y_launcher_window()
+		if slot_x != null and slot_x.lock_back_x_retreat_window() > 0.0:
+			_lock_back_x_tap_until = World.now() + slot_x.lock_back_x_retreat_window()
+	if _body.locomotion.input_is_toward_locked_target(input):
+		if slot_y != null and slot_y.lock_forward_y_push_window() > 0.0:
+			_lock_forward_tap_until = World.now() + slot_y.lock_forward_y_push_window()
+		if slot_x != null and slot_x.lock_forward_x_static_spin_window() > 0.0:
+			_lock_forward_x_tap_until = World.now() + slot_x.lock_forward_x_static_spin_window()
 
 ## Y consume el tap adelante una vez para el push propio del arma equipada.
 func _try_lock_forward_y_push() -> bool:
@@ -133,7 +145,7 @@ func _try_lock_forward_y_push() -> bool:
 	if slot_y.lock_forward_y_push_window() <= 0.0:
 		return false
 	_lock_forward_tap_until = -999.0
-	return _start_lock_y_special(Callable(slot_y, &"try_lock_forward_y_push"))
+	return _start_lock_special(slot_y, Callable(slot_y, &"try_lock_forward_y_push"))
 
 ## Y consume el gesto una vez y lo convierte en el launcher propio del arma equipada. Entra como
 ## ataque normal: no carga, no gasta meter y no espera a que se suelte Y.
@@ -143,10 +155,28 @@ func _try_lock_back_y_launcher() -> bool:
 	if slot_y.lock_back_y_launcher_window() <= 0.0:
 		return false
 	_lock_back_tap_until = -999.0
-	return _start_lock_y_special(Callable(slot_y, &"try_lock_back_y_launcher"))
+	return _start_lock_special(slot_y, Callable(slot_y, &"try_lock_back_y_launcher"))
+
+## X consume el tap adelante una vez para la vuelta estatica propia del arma equipada.
+func _try_lock_forward_x_static_spin() -> bool:
+	if _body == null or World.now() > _lock_forward_x_tap_until or slot_x == null:
+		return false
+	if slot_x.lock_forward_x_static_spin_window() <= 0.0:
+		return false
+	_lock_forward_x_tap_until = -999.0
+	return _start_lock_special(slot_x, Callable(slot_x, &"try_lock_forward_x_static_spin"))
+
+## X consume el tap atras una vez para el retroceso propio del arma equipada.
+func _try_lock_back_x_retreat() -> bool:
+	if _body == null or World.now() > _lock_back_x_tap_until or slot_x == null:
+		return false
+	if slot_x.lock_back_x_retreat_window() <= 0.0:
+		return false
+	_lock_back_x_tap_until = -999.0
+	return _start_lock_special(slot_x, Callable(slot_x, &"try_lock_back_x_retreat"))
 
 ## Prepara un gesto direccional como ataque normal sin pasar por InputBuffer/hold.
-func _start_lock_y_special(start_special: Callable) -> bool:
+func _start_lock_special(weapon: WeaponBase, start_special: Callable) -> bool:
 	buffer.release()
 	if _charging_weapon != null:
 		_charging_weapon.set_charge_glow(0.0)
@@ -154,9 +184,9 @@ func _start_lock_y_special(start_special: Callable) -> bool:
 	_charging_weapon = null
 	_attack_kind = AttackKind.NORMAL
 	_air_charge_fall_applied = false
-	if slot_y.should_reset_pose_on_press():
-		slot_y.quaternion = _rest_rotations[slot_y]
-	_set_active_weapon(slot_y)
+	if weapon.should_reset_pose_on_press():
+		weapon.quaternion = _rest_rotations[weapon]
+	_set_active_weapon(weapon)
 	attack_telegraphed.emit(_body.global_position, _body.forward())
 	_body.fire_action_world_switch()
 	_last_attack_time = World.now()
@@ -210,7 +240,7 @@ func current_parry_poise() -> float:
 func _process(delta: float) -> void:
 	if _body == null:
 		return
-	_track_lock_y_tap()
+	_track_lock_direction_tap()
 	# Glow de carga: la hoja del arma presionada brilla según el progreso de carga.
 	if _charging_weapon != null:
 		var charge_progress := buffer.charge_progress()

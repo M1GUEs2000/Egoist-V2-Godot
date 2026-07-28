@@ -142,6 +142,20 @@ func try_lock_forward_y_push() -> bool:
 func lock_forward_y_push_window() -> float:
 	return 0.0
 
+## Ganchos para tap adelante/atras + X relativo al lock-on. Las armas que no los usan los dejan
+## apagados y PlayerCombat cae al tap normal del slot X.
+func try_lock_forward_x_static_spin() -> bool:
+	return false
+
+func lock_forward_x_static_spin_window() -> float:
+	return 0.0
+
+func try_lock_back_x_retreat() -> bool:
+	return false
+
+func lock_back_x_retreat_window() -> float:
+	return 0.0
+
 ## PlayerCombat llama esto antes de resetear la pose del arma en un press.
 ## Si hay una cadena activa, ese press puede ser solo un input encolado para el próximo
 ## golpe: resetear la rotación acá hace que armas pesadas como el Mazo parezcan reiniciar

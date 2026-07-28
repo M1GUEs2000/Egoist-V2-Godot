@@ -154,8 +154,16 @@ inline (11, 21), `push` (484, 548), `launch` (482, 490), lee `_airborne_until` (
   Mover solo para el Enemy; no puede arrastrar al Player hacia atras.
 - En aire, tap atras + Y no usa el launcher: cierra un hachazo y llama la misma salida de plunge
   de `X X espera X`, que solicita `air_plunge_player_mover` y `air_plunge_enemy_mover`.
-- Tap adelante + Y reutiliza el `push` del finisher de la rama espera y pide al Player
-  `tap_forward_y_player_mover`, clonado y orientado al target lockeado para no mutar el recurso.
+- Tap adelante + Y reutiliza el spin del finisher de la rama espera y pide al Player
+  `tap_forward_y_player_mover`, clonado y orientado al target lockeado para no mutar el recurso;
+  no arma `push` para el Enemy.
+- Tap adelante + X reutiliza el mismo spin, pero cancela el Mover activo para quedarse estatico.
+  Tap atras + X usa el clip del launcher con la hoja normal y pide `tap_back_x_player_mover` en
+  sentido opuesto al target; no usa `run_vertical_window` ni aplica movimiento al Enemy.
+- En aire, tap adelante + X hace dos vueltas y usa `tap_forward_x_air_floater` (0.3 s, gravedad
+  cero) para Player y enemigos conectados. Tap atras + X cambia a una vuelta con Movers UP de 2
+  unidades para ambos cuerpos (`tap_back_x_air_player_mover` / `tap_back_x_air_enemy_mover`), con
+  el mismo hang al terminar. Tap adelante + Y vuelve a armar `push` solo en aire.
 - `register_weapon_hit(...)` puede pedir un Float del Player con duracion y fall scale del ataque,
   sin pasar por `PlayerLauncher`. Los golpes no migrados siguen temporalmente en air-hit-stall.
 - Mace queda fuera de la seleccion del loadout y su launcher terrestre ya no aplica control vertical.
