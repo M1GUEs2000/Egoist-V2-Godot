@@ -23,6 +23,48 @@ class_name PlayerTuning extends Resource
 ## Avance (lunge) hacia adelante en cada golpe del combo terrestre, en metros.
 @export var attack_step_distance := 0.7
 
+@export_group("Sprint")
+# El sprint NO es una velocidad aparte: es un nivel 0-1 (boton `sprint` sostenido) que multiplica
+# los valores de abajo. Todo lo demas de este Resource sigue siendo el BASE — con el sprint en 0 el
+# movimiento es identico al de siempre. Cada bono es un PORCENTAJE aplicado a sprint pleno: 40 = a
+# nivel 1 ese canal vale 1.4x, a nivel 0.5 vale 1.2x. En 0 el canal no participa del sprint.
+## Segundos de boton sostenido para pasar de sprint 0 a pleno. Mas bajo = arranca lanzado enseguida.
+@export var sprint_charge_seconds := 1.2
+## Segundos en volver de sprint pleno a 0 al soltar el boton, pisando suelo. En el aire el nivel
+## queda congelado (el salto y la cadena de paredes heredan el sprint del despegue), asi que este
+## drenaje solo corre en tierra. Mas bajo = perdes la carrera apenas soltas.
+@export var sprint_decay_seconds := 0.6
+## Si el sprint exige ademas input direccional. true = frenar en seco corta la carga aunque sostengas
+## el boton; false = el boton solo alcanza (el nivel sube incluso parado).
+@export var sprint_requires_move_input := true
+## Bono % a la velocidad horizontal en tierra (move_speed). Es el canal que mas se siente.
+@export_range(0.0, 300.0, 1.0) var sprint_move_speed_bonus := 40.0
+## Bono % a la ALTURA de cuspide del salto y del doble salto (min y max por igual).
+@export_range(0.0, 300.0, 1.0) var sprint_jump_height_bonus := 20.0
+## Bono % al AVANCE horizontal del salto, aparte de la altura. Alarga el arco sin subirlo mas.
+@export_range(0.0, 300.0, 1.0) var sprint_jump_forward_bonus := 30.0
+## Bono % a la velocidad INICIAL de deslice al enganchar la pared (escala min y max a la vez, asi
+## el rango entero se corre sin deformarse). 100 = con sprint pleno el rango 2-4 pasa a 4-8.
+@export_range(0.0, 300.0, 1.0) var sprint_wall_slide_initial_speed_bonus := 100.0
+## Bono % a la velocidad FINAL de deslice, o sea al techo al que llega la rampa (min y max a la vez).
+## Es el que decide cuanto mas lejos te lleva la pared con sprint: la rampa apunta mas alto y, como
+## el wall jump se mide contra este mismo techo, el rebote escala con el.
+@export_range(0.0, 300.0, 1.0) var sprint_wall_slide_final_speed_bonus := 40.0
+## Bono % a la ACELERACION de la rampa del wall slide. No cambia adonde llegás (eso es el bono de
+## velocidad final), cambia QUE TAN RAPIDO llegás: con sprint la rampa se recorre en menos tiempo,
+## así que el tramo a potencia plena empieza antes y el slide se siente mas agresivo.
+@export_range(0.0, 300.0, 1.0) var sprint_wall_slide_acceleration_bonus := 50.0
+## Bono % a la salida HORIZONTAL del wall jump (escala su min y su max a la vez): que tan lejos te tira.
+@export_range(0.0, 300.0, 1.0) var sprint_wall_jump_h_bonus := 30.0
+## Bono % a la salida VERTICAL del wall jump (escala su min y su max a la vez): que tan alto te tira.
+@export_range(0.0, 300.0, 1.0) var sprint_wall_jump_v_bonus := 20.0
+## Bono % al carril Wall Impulse (velocidad inicial, aceleracion y tope de la pared).
+@export_range(0.0, 300.0, 1.0) var sprint_wall_impulse_bonus := 25.0
+## Bono % al techo global de momentum (momentum_max_speed). IMPORTANTE: todo impulso pasa por ese
+## techo, asi que si este bono queda por debajo de los de wall jump / impulse, el recorte se los
+## come y el sprint no se nota en las cadenas largas. Regla: dejarlo >= al mayor de esos dos.
+@export_range(0.0, 300.0, 1.0) var sprint_momentum_max_bonus := 40.0
+
 @export_group("Jump")
 ## Altura de cuspide con un toque corto, en metros. Mas alto = hasta donde llega un tap; mas bajo = salto corto.
 @export var jump_min_apex_height := 2.0
@@ -69,52 +111,95 @@ class_name PlayerTuning extends Resource
 ## Ventana de gracia (coyote) tras perder contacto con la pared antes de cortar el slide,
 ## en segundos. Evita que el estado titile en esquinas o micro-separaciones del muro.
 @export var wall_slide_release_grace := 0.12
-## Duración de la fase inicial "pegado": casi no cae, en segundos.
-@export var wall_slide_stick_time := 0.16
-## Velocidad máxima de caída durante la fase pegado (m/s).
-@export var wall_slide_stick_fall_speed := 0.35
-## Velocidad máxima de caída deslizando, después de la fase pegado (m/s).
+## Cooldown para volver a engancharse tras despegarse A PROPÓSITO (stick hacia afuera), en segundos.
+## Sin esto, soltar y re-pegar es un RESET GRATIS del slide: vuelve a arrancar la rampa, cancela el
+## drenaje y devuelve potencia plena de rebote, así que aleteando el stick te quedás en la pared para
+## siempre. Solo aplica al despegue voluntario: perder contacto por geometría (esquinas) sigue
+## pudiendo re-enganchar de inmediato, que es lo que hace fluido el encadenado.
+@export var wall_slide_reattach_cooldown := 0.35
+## Velocidad máxima de caída deslizando, una vez que la rampa terminó y empezó la caída (m/s).
 @export var wall_slide_max_fall_speed := 3.4
-## Velocidad máxima HORIZONTAL (a lo largo del muro) mientras deslizás, en m/s. Topa lo que podés
-## arrastrar por la pared —y por lo tanto lo que le entra al wall jump—; NO incluye el empuje contra
-## el muro (press). La caída la topa wall_slide_max_fall_speed aparte.
-@export var wall_slide_max_horizontal_speed := 20.0
-## Fracción de la gravedad aplicada mientras eslidea, tanto subiendo como cayendo
-## (0 = no cae/no frena la subida, 1 = gravedad completa). Gobierna la altura del arco.
+## Fracción de la gravedad aplicada durante la CAÍDA del slide (0 = no cae, 1 = gravedad completa).
+## Solo actúa después de que la rampa llegó a su velocidad final: mientras acelerás, la pared te
+## sostiene y no caés nada.
 @export_range(0.0, 1.0) var wall_slide_gravity_scale := 0.35
-## Frenado del momentum lateral a lo largo de la pared (m/s²). Más alto = el arco de la
-## caída se endereza antes y terminas cayendo vertical más rápido.
-@export var wall_slide_momentum_decay := 4.0
-## Autoridad del input vivo para moverse a lo largo de la pared mientras eslidea (0-1).
-## 0 = sin control, solo coasteás el momentum de entrada; 1 = control total como en el
-## movimiento normal. Bajarlo evita sentir que te movés demasiado libre de lado sobre el muro.
+## TREPADO: cuánto del empuje CONTRA la pared se dobla hacia arriba. Es lo que decide si el slide
+## puede subir. 0 = solo deslizás de lado (aplastarte contra el muro no hace nada, comportamiento
+## viejo); 1 = trepás tan rápido como deslizás. Vale tanto para la velocidad con la que LLEGÁS
+## (entrar de frente lanzado = subís) como para el input en vivo (empujar al muro = seguís subiendo).
+## Bajarlo hace que trepar sea más caro que deslizar de lado sin desactivarlo del todo.
+@export_range(0.0, 1.0, 0.05) var wall_slide_climb_ratio := 1.0
+## Ángulo MÁXIMO de trepado sobre la horizontal, en grados. Es un tope duro del rumbo: por más de
+## frente que entres o más apretado que empujes el stick contra el muro, el slide nunca sube más
+## empinado que esto. 0 = no trepás nunca (puro lateral); 45 = el rumbo más vertical es una diagonal
+## a media altura; 90 = sin tope (trepás vertical puro, que se siente absurdo).
+@export_range(0.0, 89.0, 1.0) var wall_slide_max_climb_angle := 45.0
+## Autoridad del input vivo para REDIRIGIR el rumbo a lo largo de la pared (0-1). Ojo: el input ya
+## no cambia la RAPIDEZ (esa la manda la rampa entera), solo hacia qué lado deslizás. 0 = el rumbo
+## de entrada es inamovible; 1 = girás en ~1.4 s de un extremo al otro de la pared.
 @export_range(0.0, 1.0) var wall_slide_steer_control := 1.0
-## Empuje horizontal (m/s) a lo largo de la pared al enganchar, en la dirección en que ya
-## venías. Ensancha el arco del slide (evita el arco alto y flaco que cae vertical cuando
-## llegás lento). 0 = sin empuje. Se nota junto con un `wall_slide_momentum_decay` bajo,
-## que conserva el lateral durante toda la bajada.
-@export var wall_slide_stick_push := 0.0
-## Ángulo MÍNIMO de salida respecto a la cara de la pared, en grados. Es el piso: nunca salís a
-## menos de esto (evita rozar el muro). Cuanto más rápido vas A LO LARGO del muro (respecto a
-## move_speed), más te acercás a este ángulo (rasante); sin velocidad lateral salís perpendicular
-## (90°, recto/para atrás).
-@export_range(0.0, 90.0) var wall_slide_wall_jump_min_angle := 35.0
-# La velocidad que manda el wall jump es la que llevás A LO LARGO de la pared (el momentum real que
-# encadenar conserva y compone; NO cuenta el empuje contra el muro). HORIZONTAL = max(esa_velocidad *
-# h_boost, h_base) → con piso, siempre despega. VERTICAL = esa_velocidad * v_boost → SIN piso.
-## Multiplicador HORIZONTAL: >1 = encadenar acelera el avance (topado por momentum_max_speed).
-@export var wall_slide_wall_jump_h_boost := 1.1
-## Piso HORIZONTAL (m/s): empujón de salida mínimo aunque llegues casi sin velocidad lateral.
-@export var wall_slide_wall_jump_h_base := 5.0
-## Multiplicador VERTICAL: la subida = tu velocidad a lo largo del muro × esto, SIN piso (a velocidad
-## 0 no hay despegue vertical). Rápido → más alto, lento → más bajo.
-@export var wall_slide_wall_jump_v_boost := 1.1
-## Tope HORIZONTAL del rebote (m/s): por encima de esto el wall jump no empuja más fuerte, aunque
-## llegues lanzado (Wall Impulse, cadenas largas). Evita salir disparado a velocidades absurdas.
-@export var wall_slide_wall_jump_max_h_speed := 30.0
-## Tope VERTICAL del rebote (m/s): subida máxima del wall jump por más velocidad que traigas.
+
+# ────────────────────────────────────────────────────────────────────────────────────────────────
+# LA RAMPA. El slide es un solo tramo de aceleración: al enganchar arrancás en una velocidad INICIAL
+# y acelerás hacia una velocidad FINAL. Cuando llegás a la final, la pared deja de sostenerte y
+# empieza la caída. Los dos extremos salen de rangos y el punto dentro del rango lo elige qué tan
+# rasante llegaste (tangente 0 → min, tangente >= move_speed → max), así llegar lanzado te da un
+# tramo más rápido Y un techo más alto.
+#
+# Por qué rangos absolutos y no multiplicadores: la salida del slide queda ANCLADA a la velocidad
+# final pase lo que pase. Entrés con 5 o con 40, terminás en el mismo techo. Por eso encadenar
+# paredes converge en vez de acelerarse rebote a rebote (que era el bug viejo del h_boost).
+# ────────────────────────────────────────────────────────────────────────────────────────────────
+## Velocidad (m/s) con la que ARRANCA el deslice llegando de frente al muro (sin componente lateral).
+@export var wall_slide_initial_speed_min := 6.0
+## Velocidad (m/s) con la que ARRANCA el deslice llegando rasante (tangente >= move_speed).
+@export var wall_slide_initial_speed_max := 10.0
+## Velocidad (m/s) a la que LLEGA la rampa si enganchaste de frente. Es el techo del tramo lento.
+@export var wall_slide_final_speed_min := 10.0
+## Velocidad (m/s) a la que LLEGA la rampa si enganchaste rasante. Es el techo absoluto del slide y
+## la referencia contra la que se miden el wall jump y el brillo.
+@export var wall_slide_final_speed_max := 15.0
+## Aceleración de la rampa (m/s²). Es el knob que decide CUÁNTO DURA el slide: el tramo tarda
+## (final − inicial) / esto segundos. Más bajo = deslice largo y planeado; más alto = llegás al
+## techo enseguida y la caída empieza casi de una.
+@export var wall_slide_acceleration := 8.0
+
+# CAÍDA. Al tocar la velocidad final el lateral no se corta de golpe: aguanta un momento al 100% y
+# después se drena exponencialmente. Así la potencia del wall jump se degrada suave (tenés margen
+# para reaccionar) en vez de desplomarse al mínimo en un par de frames.
+## Segundos al 100% de la velocidad final antes de que arranque el drenaje. Es la ventana en la que
+## el wall jump sale a máxima potencia: subirlo perdona la ejecución, bajarlo la exige.
+@export_range(0.0, 2.0, 0.01) var wall_slide_fall_hold_time := 0.15
+## Vida media del drenaje lateral (segundos): cada tanto tiempo la velocidad a lo largo del muro cae
+## a la MITAD. Al ser exponencial nunca llega a cero seco — se desploma rápido al principio y va
+## aflojando. Más bajo = pierde el lateral de golpe; más alto = sigue avanzando de costado al caer.
+@export_range(0.05, 3.0, 0.01) var wall_slide_fall_lateral_halflife := 0.35
+
+# ────────────────────────────────────────────────────────────────────────────────────────────────
+# EL WALL JUMP. Rangos absolutos, igual que la rampa: hay un rebote mínimo y uno máximo, y tu
+# velocidad del momento a lo largo del muro decide dónde caés dentro de ellos. Sin multiplicadores,
+# así el rebote no puede escalar solo. El ángulo de salida sale gratis de tener H y V por separado;
+# `min_angle` solo decide el reparto HORIZONTAL entre alejarse del muro y seguir de largo.
+# ────────────────────────────────────────────────────────────────────────────────────────────────
+## Salida HORIZONTAL (m/s) del rebote más flojo: llegás casi sin velocidad a lo largo del muro.
+## Es el piso que garantiza que siempre despegues de la pared.
+@export var wall_slide_wall_jump_h_min := 8.0
+## Salida HORIZONTAL (m/s) del rebote pleno: qué tan lejos te tira yendo a tope por la pared.
+@export var wall_slide_wall_jump_h_max := 20.0
+## Salida VERTICAL (m/s) del rebote más flojo. Es el piso de subida: aunque llegues cayendo casi
+## vertical, el rebote de emergencia igual te levanta algo.
+@export var wall_slide_wall_jump_v_min := 8.0
+## Salida VERTICAL (m/s) del rebote pleno: qué tan alto te tira yendo a tope.
 ## Referencia: la altura del salto normal la definen jump_min_apex_height y jump_max_apex_height.
-@export var wall_slide_wall_jump_max_v_speed := 17.0
+@export var wall_slide_wall_jump_v_max := 16.0
+## Porcentaje de la velocidad final del slide en el que el rebote ya entrega el 100%. Con 80, todo
+## lo que esté por encima del 80% del techo da salto pleno: hay una MESETA arriba en vez de un pico
+## exacto, así no perdés potencia por no clavar el frame justo. Bajarlo la ensancha más.
+@export_range(10.0, 100.0, 1.0) var wall_slide_wall_jump_full_power_percent := 80.0
+## Ángulo MÍNIMO de salida respecto a la cara de la pared, en grados. Reparte la salida HORIZONTAL
+## entre alejarse del muro y seguir tu rumbo: cuanto más rápido vas a lo largo, más rasante salís
+## (nunca menos que esto, para no rozar el muro); sin velocidad lateral salís perpendicular (90°).
+@export_range(0.0, 90.0) var wall_slide_wall_jump_min_angle := 35.0
 ## Tiempo en que el rebote manda: bloquea el input de movimiento y el re-agarre de pared.
 @export var wall_slide_wall_jump_lock_time := 0.2
 ## DEBUG: muestra una flecha de ~2 m mientras deslizás, apuntando al ángulo al que te va a lanzar el
@@ -291,6 +376,31 @@ class_name PlayerTuning extends Resource
 ## Velocidad horizontal mínima (m/s) a partir de la cual el jugador levanta polvo al correr.
 ## Solo aplica en el suelo; el look del polvo vive en el ParticleProcessMaterial del emisor RunDust.
 @export var run_dust_min_speed := 1.5
+## Color del polvo de correr con el sprint a tope. Se mezcla desde el color normal del emisor
+## siguiendo la MISMA rampa gradual que la velocidad, así el verde entra a la par que acelerás.
+## Default: el verde de traversal del proyecto (World.COLOR_TRAVERSAL_DASH), el mismo del wall slide.
+@export var run_dust_sprint_color := World.COLOR_TRAVERSAL_DASH
+## Intensidad HDR del polvo verde de sprint. El emisor es unshaded, así que el brillo no sale de
+## una emisión propia sino de empujar el color por encima de 1.0 para que lo agarre el glow del
+## WorldEnvironment (mismo truco que Wall Impulse). 1 = sin brillo extra, 3 = 200% más brillante.
+## Solo escala el RGB: el alpha queda intacto, así el fade del color_ramp del polvo no se pierde.
+@export_range(1.0, 20.0, 0.25) var run_dust_sprint_emission_energy := 3.0
+
+# ESTELAS DE SPRINT: a diferencia del polvo (que nace en los pies y solo en el suelo), el emisor
+# SprintTrail cubre el cuerpo entero y funciona también en el aire. Emite en coordenadas de MUNDO,
+# así las partículas se quedan donde nacieron mientras el jugador avanza: eso es lo que dibuja la
+# estela. Encima se les da velocidad hacia atrás para que además se despeguen.
+## Nivel de sprint (0-1) a partir del cual aparecen las estelas. Por debajo el emisor está apagado,
+## así trotar no las dispara: son la señal visual de que el sprint ya está cargado.
+@export_range(0.0, 1.0, 0.05) var sprint_trail_min_level := 0.35
+## Color de las estelas. Default: el mismo verde de traversal que el polvo y el wall slide.
+@export var sprint_trail_color := World.COLOR_TRAVERSAL_DASH
+## Intensidad HDR de las estelas, con el mismo truco que el polvo: el emisor es unshaded, así que el
+## brillo sale de empujar el RGB por encima de 1.0 para que lo levante el glow del WorldEnvironment.
+@export_range(1.0, 20.0, 0.25) var sprint_trail_emission_energy := 4.0
+## Velocidad (m/s) con la que las estelas se van hacia ATRÁS respecto a tu rumbo. 0 = quedan donde
+## nacieron y la estela sale solo de que vos avanzás; subirlo las despega más rápido.
+@export var sprint_trail_backward_speed := 2.5
 
 @export_group("Dash air hit float")
 ## Hold del jugador cuando el hitbox del dash ofensivo conecta en el aire (request_float). duration 0

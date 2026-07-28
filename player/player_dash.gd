@@ -169,7 +169,9 @@ func _apply_exit_bop() -> void:
 	var has_bop := _exit_bop_velocity.length_squared() > 0.0001 \
 			or absf(_exit_bop_vertical_speed) > 0.0001
 	if _exit_bop_velocity.length_squared() > 0.0001:
-		_body.add_momentum(_exit_bop_velocity)
+		# El bop lo define el bloque verde, así que PISA el momentum en vez de sumársele: su empuje
+		# de salida es siempre el mismo, se llegue al bloque parado o encadenando.
+		_body.set_momentum(_exit_bop_velocity)
 	if absf(_exit_bop_vertical_speed) > 0.0001:
 		_body.vertical_velocity = _exit_bop_vertical_speed
 		_body.air_state = Player.AirState.AIRBORNE

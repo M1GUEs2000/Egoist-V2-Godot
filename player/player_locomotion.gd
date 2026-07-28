@@ -104,7 +104,9 @@ func tick(delta: float, air_acceleration_scale := 1.0,
 	# Durante un ataque que fijó su mira, el input puede mover pero no cambia el facing.
 	if dir != Vector3.ZERO and World.now() >= maxf(_lunge_until, _facing_lock_until):
 		set_facing(dir)
-	var target := dir * _body.tuning.move_speed
+	# El sprint escala la velocidad acá, en el consumidor, y nunca sobre el Resource: `move_speed`
+	# tiene que seguir valiendo lo mismo para quien la usa como unidad de medida (ver PlayerSprint).
+	var target := dir * _body.tuning.move_speed * _body.sprint_scale(PlayerSprint.MOVE_SPEED)
 	if _body.is_on_floor():
 		# En tierra, un golpe en curso bloquea el input de movimiento: solo manda el lunge del
 		# ataque. La dirección ya quedó fijada al entrar (attack_step, hacia el lock/forward).

@@ -11,6 +11,27 @@ class_name WallImpulseTuning extends Resource
 ## Rapidez maxima del carril.
 @export var max_speed := 16.0
 
+# ────────────────────────────────────────────────────────────────────────────────────────────────
+# WALL JUMP DESDE EL CARRIL. Misma forma que el wall jump normal (ver `Wall Slide y Wall Jump`): hay
+# un rebote minimo y uno maximo, y la velocidad del momento decide donde caes entre los dos. Lo que
+# cambia es que estos rangos son POR PARED, no del player: un carril rapido puede tirarte mucho mas
+# lejos que una pared comun sin tocar el PlayerTuning.
+#
+# La fraccion que interpola es la misma que usa el slide normal, medida contra el techo del carril
+# (`max_speed`) en vez del techo del slide — asi "rebote pleno" significa "vas a tope EN ESTE riel".
+# El angulo de salida lo sigue mandando el player (`wall_slide_wall_jump_min_angle`): es forma de
+# movimiento del personaje, no propiedad de la pared.
+# ────────────────────────────────────────────────────────────────────────────────────────────────
+## Salida HORIZONTAL (m/s) del rebote mas flojo desde este carril: recien enganchaste y todavia no
+## aceleraste. Es el piso que garantiza despegar de la pared.
+@export var wall_jump_h_min := 10.0
+## Salida HORIZONTAL (m/s) del rebote pleno: que tan lejos te tira saltando a tope del carril.
+@export var wall_jump_h_max := 26.0
+## Salida VERTICAL (m/s) del rebote mas flojo desde este carril. Piso de subida.
+@export var wall_jump_v_min := 9.0
+## Salida VERTICAL (m/s) del rebote pleno: que tan alto te tira saltando a tope del carril.
+@export var wall_jump_v_max := 18.0
+
 ## Activa el emisor verde creado automaticamente por cada WallImpulseSurface.
 @export var particles_enabled := true
 ## Nombre del material que, en Blender, marca las caras que deben emitir. Solo esas caras

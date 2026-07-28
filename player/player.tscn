@@ -26,6 +26,7 @@
 [ext_resource type="Resource" uid="uid://27h3b56dj2pl" path="res://data/arm_tuning.tres" id="25_arm_tuning"]
 [ext_resource type="PackedScene" uid="uid://d1mqppcblj4fm" path="res://assets/animations/Universal Animation Library 2[Standard]/Universal Animation Library 2[Standard]/Unreal-Godot/UAL2_Standard.glb" id="26_ual2"]
 [ext_resource type="Script" uid="uid://ld40uvfhry72" path="res://player/player_animation_controller.gd" id="27_anim_controller"]
+[ext_resource type="Script" uid="uid://byvqx8yq8irlk" path="res://player/player_sprint.gd" id="27_uw77l"]
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_body"]
 radius = 0.4
@@ -79,6 +80,52 @@ particles_anim_loop = false
 [sub_resource type="QuadMesh" id="QuadMesh_dust"]
 material = SubResource("Mat_dust")
 size = Vector2(0.35, 0.35)
+
+[sub_resource type="Gradient" id="Gradient_sprint_trail"]
+offsets = PackedFloat32Array(0, 0.25, 1)
+colors = PackedColorArray(1, 1, 1, 0, 1, 1, 1, 0.85, 1, 1, 1, 0)
+
+[sub_resource type="GradientTexture1D" id="GradientTexture1D_sprint_trail"]
+gradient = SubResource("Gradient_sprint_trail")
+
+[sub_resource type="Curve" id="Curve_sprint_trail"]
+_data = [Vector2(0, 1), 0.0, 0.0, 0, 0, Vector2(1, 0), 0.0, 0.0, 0, 0]
+point_count = 2
+
+[sub_resource type="CurveTexture" id="CurveTexture_sprint_trail"]
+curve = SubResource("Curve_sprint_trail")
+
+[sub_resource type="StandardMaterial3D" id="Mat_sprint_trail"]
+transparency = 1
+blend_mode = 1
+shading_mode = 0
+vertex_color_use_as_albedo = true
+albedo_color = Color(1, 1, 1, 1)
+billboard_mode = 3
+billboard_keep_scale = true
+particles_anim_h_frames = 1
+particles_anim_v_frames = 1
+particles_anim_loop = false
+
+[sub_resource type="QuadMesh" id="QuadMesh_sprint_trail"]
+material = SubResource("Mat_sprint_trail")
+size = Vector2(0.22, 0.22)
+
+[sub_resource type="ParticleProcessMaterial" id="PPM_sprint_trail"]
+lifetime_randomness = 0.35
+emission_shape = 3
+emission_box_extents = Vector3(0.28, 0.85, 0.28)
+direction = Vector3(0, 0, -1)
+spread = 12.0
+initial_velocity_min = 0.5
+initial_velocity_max = 1.6
+gravity = Vector3(0, 0, 0)
+damping_min = 0.5
+damping_max = 1.5
+scale_min = 0.4
+scale_max = 1.0
+scale_curve = SubResource("CurveTexture_sprint_trail")
+color_ramp = SubResource("GradientTexture1D_sprint_trail")
 
 [sub_resource type="ParticleProcessMaterial" id="PPM_wall_dust"]
 lifetime_randomness = 0.3
@@ -213,6 +260,16 @@ randomness = 0.4
 process_material = SubResource("PPM_wall_dust")
 draw_pass_1 = SubResource("QuadMesh_dust")
 
+[node name="SprintTrail" type="GPUParticles3D" parent="." unique_id=1402134099]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
+emitting = false
+amount = 48
+lifetime = 0.45
+local_coords = false
+randomness = 0.3
+process_material = SubResource("PPM_sprint_trail")
+draw_pass_1 = SubResource("QuadMesh_sprint_trail")
+
 [node name="Dash" type="Node3D" parent="." unique_id=1956062227]
 script = ExtResource("3_dash")
 
@@ -234,7 +291,8 @@ shape = SubResource("SphereShape3D_dash")
 
 [node name="WallSlide" type="Node" parent="." unique_id=1043687573]
 script = ExtResource("16_wall_slide")
-glow_energy = 1.0
+glow_energy_min = 0.15
+glow_energy_max = 6.0
 
 [node name="FloorSlide" type="Node" parent="." unique_id=771034512]
 script = ExtResource("23_floor_slide")
@@ -299,3 +357,6 @@ visible = false
 cast_shadow = 0
 mesh = SubResource("SphereMesh_arm_marker")
 surface_material_override/0 = SubResource("Mat_arm_marker")
+
+[node name="Sprint" type="Node" parent="." unique_id=1351225468]
+script = ExtResource("27_uw77l")

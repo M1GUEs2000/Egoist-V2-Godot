@@ -7,11 +7,11 @@
 
 [sub_resource type="Resource" id="Resource_air_enemy_floater"]
 script = ExtResource("4_floater")
-duration = 10.0
+duration = 0.15
 
 [sub_resource type="Resource" id="Resource_air_player_floater"]
 script = ExtResource("4_floater")
-duration = 2.0
+duration = 0.1
 
 [resource]
 script = ExtResource("1_tuning")

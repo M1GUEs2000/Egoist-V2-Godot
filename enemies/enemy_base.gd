@@ -63,7 +63,6 @@ static func can_damage_enemy(attacker: EnemyBase, target: EnemyBase) -> bool:
 @export var parry_tuning: ParryTuning
 
 @export var airborne_gravity := -20.0
-@export var airborne_max_time := 4.0
 ## Tope de distancia del Mover de spike (slam). El spike termina de verdad al tocar el piso
 ## (STOP_ON_FLOOR); esto es solo la red de seguridad para que nunca baje infinito si no hay suelo.
 @export var airborne_max_fall_distance := 100.0
@@ -503,7 +502,7 @@ func request_mover(settings: MoverSettings, stun: StunSettings = null,
 	velocity = Vector3.ZERO
 	# Mover ascendente (ex _launch_routine): sube `height` a velocidad constante en LAUNCH_RISE_TIME y
 	# al terminar detona el Floater del hang (hold total `hang_time`). `_airborne_until = now` apaga el
-	# hold viejo (ahora sostiene el Floater) y deja airborne_max_time contando como tope de seguridad.
+	# hold viejo (ahora sostiene el Floater). La duración del perfil manda hasta que toque piso.
 	_airborne_until = World.now()
 	_cancel_air_hold()  # el perfil nuevo manda: no hereda el hang del juggle anterior
 	mover.start_mover(settings)
@@ -627,7 +626,7 @@ func push(direction: Vector3, settings: PushSettings) -> void:
 		mover.cancel_mover(Mover.CancelReason.ATTACK_RULE)
 	_begin_airborne()
 	# Sin hang: el push es un arco balistico que sale al angulo pedido y aterriza a la distancia
-	# pedida. airborne_max_time queda solo como tope de seguridad en _update_airborne.
+	# pedida. El arco termina al tocar el piso.
 	_air_gravity = settings.gravity
 	_airborne_until = World.now()
 	_cancel_air_hold()
@@ -824,7 +823,7 @@ func _update_combat_state() -> void:
 	# TOCAR EL PISO, aunque su reloj ya haya expirado. Sin esto el stun moria a media caida y con el
 	# se caian push/slam/slam_bounce/slam_arc, que exigen is_stunned(): el juggle se cortaba solo
 	# mientras el enemigo seguia visiblemente por el aire. `_airborne_until` es fijo, asi que la
-	# caida arranca igual cuando toca (no hay deadlock), y airborne_max_time sigue de tope duro.
+	# caída arranca igual cuando termina el Floater o cuando toca piso.
 	# Generaliza lo que _do_bounce_arc ya hacia a mano para el pique del Mazo. *(2026-07-19)*
 	if combat_state == CombatState.STUNNED and World.now() >= _stunned_until and not is_airborne():
 		combat_state = CombatState.NORMAL
@@ -884,7 +883,7 @@ func _update_airborne(delta: float) -> void:
 	if not sensed:
 		_left_ground_once = true
 	var early_ground := use_ragdoll and _lying and _left_ground_once and sensed
-	if World.on_solid_floor(self) or early_ground or World.now() >= _airborne_until + airborne_max_time:
+	if World.on_solid_floor(self) or early_ground:
 		if _slam_bounce:
 			_do_bounce()
 		elif _lying:

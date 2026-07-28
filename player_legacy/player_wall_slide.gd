@@ -103,8 +103,11 @@ func update_after_move(horizontal_velocity: Vector3, input_dir: Vector3) -> void
 		# Empuje horizontal al pegarse: un impulso a lo largo de la pared en la direccion
 		# en que ya venias, para ensanchar el arco (evita el arco alto-y-flaco que cae
 		# vertical cuando llegas lento). Solo se aplica si hay una direccion lateral clara.
+		# El knob `wall_slide_stick_push` que leia esto ya no existe: V2 lo reemplazo por la
+		# velocidad inicial de deslice. Se apunta al minimo de ese rango, que es el mismo numero
+		# que el push tenia en el .tres, asi este codigo congelado no cambia de comportamiento.
 		if entry.length() > 0.1:
-			entry += entry.normalized() * _body.tuning.wall_slide_stick_push
+			entry += entry.normalized() * _body.tuning.wall_slide_initial_speed_min
 		_wall_tangent_velocity = entry
 		_set_glow(true)
 		_set_dust(true)

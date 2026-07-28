@@ -1,9 +1,17 @@
 class_name PlayerWallSlide extends Node
 ## Deslizamiento de pared por momentum: requiere input hacia la pared y contacto real.
 
-## Feedback visual: el personaje brilla verde mientras está pegado a la pared.
+# Feedback visual: el personaje brilla verde mientras está pegado a la pared, y la INTENSIDAD sigue
+# en vivo qué fracción del MÁXIMO ACTUAL llevás a lo largo del muro (ver _max_along_wall_speed). No
+# hay una velocidad de referencia propia a tunear: la escala sale del mismo techo que el slide aplica,
+# así que se mueve sola con el tuning, con el sprint y con el Wall Impulse. Brillo pleno siempre
+# significa lo mismo — "estás en el tope de lo que el sistema te permite ahora".
+## Color del brillo mientras deslizás.
 @export var glow_color := Color(0.25, 1.0, 0.4)
-@export var glow_energy := 2.0
+## Brillo al 0% del máximo actual (sin velocidad a lo largo del muro).
+@export var glow_energy_min := 0.15
+## Brillo al 100% del máximo actual.
+@export var glow_energy_max := 6.0
 
 var is_sliding := false
 var wall_normal := Vector3.ZERO
@@ -13,15 +21,27 @@ var is_impulsing := false
 var impulse_direction := Vector3.ZERO
 
 var _body: Player
-var _stick_until := -999.0
 var _ignore_until := -999.0
 var _move_lock_until := -999.0
 var _grace_until := -999.0
-var _wall_tangent_velocity := Vector3.ZERO
+## Rumbo unitario SOBRE EL PLANO DE LA PARED (puede tener componente vertical: deslizar de lado,
+## trepar y todo lo intermedio son el mismo rumbo apuntando distinto). La RAPIDEZ va aparte
+## (_slide_speed) a propósito: el sistema manda la rapidez y el input solo puede redirigir.
+var _slide_direction := Vector3.ZERO
+var _slide_speed := 0.0
+## Caída acumulada por gravedad durante la fase 2, SEPARADA de la velocidad del slide. Van aparte
+## para que la gravedad no contamine la lectura del slide: `_slide_speed` sigue siendo puro "cuánto
+## te queda de rampa" y es lo que mide la potencia del rebote y el brillo.
+var _fall_velocity := 0.0
+## Techo al que apunta la rampa en ESTE enganche (sale del rango final según qué tan rasante llegaste).
+var _slide_final_speed := 0.0
+## False mientras la rampa acelera (la pared te sostiene, no caés); true una vez que tocó el techo.
+var _falling := false
+var _fall_hold_until := -999.0
 var _impulse_velocity := Vector3.ZERO
 var _impulse_surface: WallImpulseSurface
 var _impulse_tuning: WallImpulseTuning
-var _mesh: MeshInstance3D
+var _glow_meshes: Array[MeshInstance3D] = []
 var _glow_material: StandardMaterial3D
 var _glow_active := false
 var _dust: GPUParticles3D
@@ -33,9 +53,26 @@ var _arrow_material: StandardMaterial3D
 
 func setup(body: Player) -> void:
 	_body = body
-	_mesh = body.get_node_or_null("Mesh") as MeshInstance3D
+	_collect_glow_meshes(body.get_node_or_null("Visual"))
+	if _glow_meshes.is_empty():
+		# Fallback a la capsula placeholder por si se corre una escena sin el modelo.
+		var capsule := body.get_node_or_null("Mesh") as MeshInstance3D
+		if capsule != null:
+			_glow_meshes.append(capsule)
 	_dust = body.get_node_or_null("WallSlideDust") as GPUParticles3D
 	_build_arrow()
+
+## El brillo va sobre las mallas del MODELO (Visual/...), no sobre el nodo "Mesh": ese es la capsula
+## placeholder y quedo con visible = false cuando entro el personaje, asi que pintarlo no se veia.
+## El modelo es un arbol con Skeleton3D, de ahi la recoleccion recursiva.
+func _collect_glow_meshes(root: Node) -> void:
+	if root == null:
+		return
+	var mesh := root as MeshInstance3D
+	if mesh != null:
+		_glow_meshes.append(mesh)
+	for child in root.get_children():
+		_collect_glow_meshes(child)
 
 func apply_slide_velocity(horizontal_velocity: Vector3, input_dir: Vector3, delta: float) -> Vector3:
 	if _body == null or not is_sliding:
@@ -46,51 +83,153 @@ func apply_slide_velocity(horizontal_velocity: Vector3, input_dir: Vector3, delt
 	# Assist: el slide ya no exige apretar HACIA la pared; solo se corta si el jugador
 	# dirige el stick EN CONTRA (se despega a propósito). Input neutro mantiene el deslice.
 	if not is_impulsing and _presses_away_from_wall(input_dir, wall_normal):
-		cancel()
+		_release_by_input()
 		return horizontal_velocity
 
 	var t := _body.tuning
-	# Gravedad reducida SIMÉTRICA (subiendo y cayendo): entrando con momentum hacia arriba
-	# el arco sube, frena y vuelve; entrando en caída, se ralentiza y sigue bajando. Antes
-	# solo se reducía al caer, así que el momentum de subida moría a gravedad completa y no
-	# había arco genuino.
-	if is_impulsing:
-		# Wall Impulse es un carril horizontal: la pared sostiene la altura del player.
-		_body.vertical_velocity = 0.0
-	else:
-		_body.vertical_velocity += -t.gravity * (1.0 - t.wall_slide_gravity_scale) * delta
-		if World.now() < _stick_until:
-			_body.vertical_velocity = maxf(_body.vertical_velocity, -t.wall_slide_stick_fall_speed)
-		else:
-			_body.vertical_velocity = maxf(_body.vertical_velocity, -t.wall_slide_max_fall_speed)
-
-	# Momentum de entrada: se conserva al enganchar y decae a cero con `wall_slide_momentum_decay`
-	# (el arco lateral que se endereza con el tiempo).
-	_wall_tangent_velocity = _wall_tangent_velocity.move_toward(
-			Vector3.ZERO, t.wall_slide_momentum_decay * delta)
-	# Steering vivo: el input a lo largo de la pared, con la autoridad recortada por
-	# `wall_slide_steer_control` (0 = sin control, solo coasteas el momentum de entrada;
-	# 1 = control total como el movimiento normal). Recortarlo evita sentir que "volas"
-	# de lado sobre la pared.
-	var steer := horizontal_velocity.slide(wall_normal)
-	steer.y = 0.0
-	steer *= t.wall_slide_steer_control
-	# Velocidad a lo largo del muro (steer vivo + momentum de entrada), topada por su cap propio.
 	_update_wall_impulse(input_dir, wall_normal, delta)
-	# Wall Impulse conserva su primer rumbo: una vez capturado, el stick posterior no
-	# puede desviar el empuje. El momentum de entrada aun se mezcla de forma natural.
+	# Wall Impulse es un carril aparte con su propio acelerador, techo y altura sostenida: cuando
+	# está activo manda entero y la rampa del slide no interviene. Antes se mezclaban por suma, y
+	# eso hacía que el carril compitiera contra el drenaje del slide en vez de reemplazarlo.
 	if is_impulsing:
-		steer = Vector3.ZERO
-	var max_horizontal_speed := t.wall_slide_max_horizontal_speed
-	if _impulse_tuning != null:
-		max_horizontal_speed = maxf(max_horizontal_speed, _impulse_tuning.max_speed)
-	var impulse_horizontal := _impulse_velocity
-	impulse_horizontal.y = 0.0
-	var along_wall := (steer + _wall_tangent_velocity + impulse_horizontal).limit_length(
-			max_horizontal_speed)
-	# Presion constante contra la pared: sin esto el movimiento queda paralelo al muro,
-	# se pierde el contacto (is_on_wall) y el estado de slide titila frame a frame.
-	return along_wall - wall_normal * t.wall_slide_press_speed
+		var impulse_horizontal := _impulse_velocity
+		impulse_horizontal.y = 0.0
+		return impulse_horizontal - wall_normal * t.wall_slide_press_speed
+
+	_tick_ramp(delta)
+	_tick_fall(delta)
+	_steer_direction(input_dir, delta)
+	# El slide corre sobre el plano de la pared, así que su rumbo puede tener componente vertical
+	# (trepar). La vertical se entrega al motor por separado, más la caída acumulada; acá vuelve solo
+	# la parte horizontal, más la presión contra la pared — sin ella el movimiento queda paralelo al
+	# muro, se pierde el contacto (is_on_wall) y el estado titila frame a frame.
+	_body.vertical_velocity = _slide_direction.y * _slide_speed + _fall_velocity
+	var horizontal := _slide_direction * _slide_speed
+	horizontal.y = 0.0
+	return horizontal - wall_normal * t.wall_slide_press_speed
+
+## FASE 1 — la rampa. Acelerás desde la velocidad inicial hacia la final a `wall_slide_acceleration`,
+## y mientras tanto la pared te SOSTIENE: la gravedad no corre (_fall_velocity queda en cero), así
+## que si el rumbo apunta hacia arriba subís limpio. Al tocar el techo se abre la fase 2.
+func _tick_ramp(delta: float) -> void:
+	if _falling:
+		return
+	var t := _body.tuning
+	var accel := t.wall_slide_acceleration * _body.sprint_scale(PlayerSprint.WALL_SLIDE_ACCEL)
+	_slide_speed = move_toward(_slide_speed, _slide_final_speed, accel * delta)
+	if _slide_speed >= _slide_final_speed - 0.001:
+		_slide_speed = _slide_final_speed
+		_falling = true
+		_fall_hold_until = World.now() + t.wall_slide_fall_hold_time
+
+## FASE 2 — la caída. Arranca la gravedad y el slide NO se corta de golpe: aguanta
+## `wall_slide_fall_hold_time` al 100% (ahí el wall jump sale pleno) y recién después se drena
+## EXPONENCIALMENTE por vida media, así la potencia del rebote se degrada suave en vez de
+## desplomarse al mínimo en dos frames. Si venías trepando, el mismo drenaje te apaga la subida:
+## la trepada se agota sola y el arco se da vuelta sin ningún caso especial.
+func _tick_fall(delta: float) -> void:
+	if not _falling:
+		return
+	var t := _body.tuning
+	# `gravity` ya viene negativa; gravity_scale 1 = caída normal, 0 = no caés.
+	_fall_velocity += t.gravity * t.wall_slide_gravity_scale * delta
+	_fall_velocity = maxf(_fall_velocity, -t.wall_slide_max_fall_speed)
+	if World.now() < _fall_hold_until:
+		return
+	# Vida media: cada `halflife` segundos queda la mitad. Independiente del framerate y, al ser
+	# exponencial, nunca corta seco — sigue habiendo algo de slide aunque cuelgues mucho.
+	_slide_speed *= pow(0.5, delta / maxf(0.01, t.wall_slide_fall_lateral_halflife))
+
+## El input solo REDIRIGE el rumbo sobre el plano de la pared, con la autoridad de
+## `wall_slide_steer_control`; la rapidez es intocable (la manda la rampa). Ese es el punto del
+## rediseño: la salida del slide queda anclada a un techo conocido y encadenar converge.
+##
+## Como el input pasa por _wall_plane_vector, empujar CONTRA el muro dirige hacia arriba: podés
+## arrancar deslizando de lado y curvar a trepada, o al revés, sin botón aparte.
+func _steer_direction(input_dir: Vector3, delta: float) -> void:
+	if _slide_direction.length_squared() < 0.0001:
+		return
+	_reproject_direction()
+	var steer := _wall_plane_vector(input_dir, wall_normal)
+	if steer.length_squared() < 0.0001:
+		return
+	_slide_direction = _slide_direction.move_toward(
+			steer.normalized(), _body.tuning.wall_slide_steer_control * delta)
+	if _slide_direction.length_squared() > 0.0001:
+		_slide_direction = _slide_direction.normalized()
+
+## Reproyecta el rumbo sobre el plano de la pared ACTUAL conservando su forma (cuánto va de lado y
+## cuánto hacia arriba). Hace falta en paredes curvas: conservar el vector mundial original iría
+## metiendo velocidad CONTRA el muro y el deslice se frenaría solo, sin que ningún input lo pida.
+func _reproject_direction() -> void:
+	var climb := _slide_direction.y
+	var lateral := _slide_direction
+	lateral.y = 0.0
+	var lateral_speed := lateral.length()
+	if lateral_speed < 0.0001:
+		return
+	var tangent := Vector3.UP.cross(wall_normal)
+	tangent.y = 0.0
+	if tangent.length_squared() < 0.0001:
+		return
+	tangent = tangent.normalized()
+	if tangent.dot(lateral) < 0.0:
+		tangent = -tangent
+	_slide_direction = (tangent * lateral_speed + Vector3.UP * climb).normalized()
+
+## LA REGLA DEL TREPADO. Convierte un vector del mundo (la velocidad con la que llegás, o el input)
+## en un rumbo sobre el PLANO DE LA PARED: la parte tangencial se conserva tal cual, y la parte que
+## empuja CONTRA el muro —que antes no hacía más que sostener el contacto— se dobla hacia ARRIBA,
+## recortada por `wall_slide_climb_ratio`.
+##
+## De ahí sale todo el comportamiento sin casos especiales: llegar rasante desliza de lado, llegar
+## de frente trepa, llegar en diagonal sube en diagonal. Y lo mismo con el stick mientras deslizás.
+##
+## El rumbo resultante se INCLINA hacia abajo hasta respetar `wall_slide_max_climb_angle`. Es un tope
+## duro: por más de frente que entres, la trepada nunca pasa de ese ángulo. Sin él, entrar
+## perpendicular daba un rumbo casi vertical y se trepaba la pared como una escalera.
+func _wall_plane_vector(v: Vector3, normal: Vector3) -> Vector3:
+	var t := _body.tuning
+	var flat := v
+	flat.y = 0.0
+	# Solo cuenta el empuje HACIA la pared: tirar para afuera no debería hundirte, y ese caso ya lo
+	# maneja _presses_away_from_wall soltándote del muro.
+	var into := maxf(0.0, flat.dot(-normal))
+	var lateral := flat.slide(normal)
+	lateral.y = 0.0
+	var climb := into * t.wall_slide_climb_ratio
+	if climb <= 0.0:
+		return lateral
+	# tan(ángulo) = cuánta subida se banca por unidad de avance lateral. Con 45° la subida no puede
+	# superar al lateral; con 0° no hay trepada.
+	var max_ratio := tan(deg_to_rad(clampf(t.wall_slide_max_climb_angle, 0.0, 89.0)))
+	if max_ratio <= 0.0:
+		return lateral
+	var lateral_speed := lateral.length()
+	if lateral_speed < 0.001:
+		# Entrada perpendicular pura: no hay lateral contra el cual medir el ángulo, así que en vez
+		# de dejarlo vertical (que es justo lo que el tope existe para evitar) se le presta el lateral
+		# justo para quedar EXACTO en el ángulo máximo. Sale una diagonal, no una escalera.
+		var tangent := _climb_fallback_tangent(normal)
+		if tangent.length_squared() < 0.0001:
+			return lateral + Vector3.UP * climb
+		return tangent * (climb / max_ratio) + Vector3.UP * climb
+	return lateral + Vector3.UP * minf(climb, lateral_speed * max_ratio)
+
+## Lado hacia el que derrapa una entrada perpendicular pura. Sigue el rumbo que ya se venía llevando
+## si hay uno; si no (enganche recién hecho), toma la tangente cruda del muro. Es determinista: la
+## misma pared y el mismo rumbo dan siempre el mismo lado.
+func _climb_fallback_tangent(normal: Vector3) -> Vector3:
+	var tangent := Vector3.UP.cross(normal)
+	tangent.y = 0.0
+	if tangent.length_squared() < 0.0001:
+		return Vector3.ZERO
+	tangent = tangent.normalized()
+	var current := _slide_direction
+	current.y = 0.0
+	if current.length_squared() > 0.0001 and tangent.dot(current) < 0.0:
+		tangent = -tangent
+	return tangent
 
 func update_after_move(horizontal_velocity: Vector3, input_dir: Vector3) -> void:
 	if _body == null:
@@ -112,7 +251,7 @@ func update_after_move(horizontal_velocity: Vector3, input_dir: Vector3) -> void
 
 	# Solo corta si el jugador se dirige EN CONTRA de la pared (ver apply_slide_velocity).
 	if not is_impulsing and _presses_away_from_wall(input_dir, normal):
-		cancel()
+		_release_by_input()
 		return
 
 	var push_speed := horizontal_velocity.dot(-normal)
@@ -125,22 +264,46 @@ func update_after_move(horizontal_velocity: Vector3, input_dir: Vector3) -> void
 	wall_normal = normal
 	_grace_until = World.now() + _body.tuning.wall_slide_release_grace
 	if not was_sliding:
-		_stick_until = World.now() + _body.tuning.wall_slide_stick_time
-		# Semilla del momentum de entrada: la velocidad con la que se llega a la pared. Se
-		# siembra SOLO al enganchar y de ahi decae a cero en apply_slide_velocity; no se
-		# re-setea por frame (si se reseteara nunca decaeria y no habria arco lateral).
-		var entry := horizontal_velocity.slide(wall_normal)
-		entry.y = 0.0
-		# Empuje horizontal al pegarse: un impulso a lo largo de la pared en la direccion
-		# en que ya venias, para ensanchar el arco (evita el arco alto-y-flaco que cae
-		# vertical cuando llegas lento). Solo se aplica si hay una direccion lateral clara.
-		if entry.length() > 0.1:
-			entry += entry.normalized() * _body.tuning.wall_slide_stick_push
-		_wall_tangent_velocity = entry
+		_begin_slide(horizontal_velocity)
 		_set_glow(true)
 		_set_dust(true)
 	_set_impulse_surface(_find_wall_impulse_surface())
+	_update_glow()
 	_update_arrow()
+
+## Arma la rampa al enganchar. Un solo numero (`frac`, que tan rasante llegaste medido contra
+## `move_speed`) elige a la vez el arranque Y el techo: llegar lanzado te da un tramo mas rapido y
+## ademas apuntando mas alto. La RAPIDEZ es absoluta, no se le suma a la que traias — por eso
+## encadenar paredes ya no acumula: entres con 5 o con 40, la rampa termina en el mismo techo.
+## Lo que traias no se tira: define el rumbo y donde caes dentro de los dos rangos.
+func _begin_slide(horizontal_velocity: Vector3) -> void:
+	var t := _body.tuning
+	# La velocidad de llegada pasa por la regla del trepado: lo que va de costado desliza de costado
+	# y lo que va CONTRA la pared se dobla hacia arriba. Por eso llegar de frente lanzado ya no es un
+	# caso muerto (antes no habia tangente y te quedabas cayendo pegado): ahora te sube.
+	var entry := _wall_plane_vector(horizontal_velocity, wall_normal)
+	var entry_speed := entry.length()
+	_falling = false
+	_fall_hold_until = -999.0
+	_fall_velocity = 0.0
+	if entry_speed <= 0.1:
+		# Llegada sin velocidad util en ninguna direccion del plano: no hay rumbo que sembrar, asi
+		# que se pasa directo a la fase de caida en vez de inventar uno.
+		_slide_direction = Vector3.ZERO
+		_slide_speed = 0.0
+		_slide_final_speed = 0.0
+		_falling = true
+		_fall_hold_until = World.now() + t.wall_slide_fall_hold_time
+		return
+	var frac := clampf(entry_speed / maxf(0.001, t.move_speed), 0.0, 1.0)
+	_slide_direction = entry / entry_speed
+	_slide_speed = lerpf(t.wall_slide_initial_speed_min, t.wall_slide_initial_speed_max, frac) \
+			* _body.sprint_scale(PlayerSprint.WALL_SLIDE_INITIAL)
+	_slide_final_speed = lerpf(t.wall_slide_final_speed_min, t.wall_slide_final_speed_max, frac) \
+			* _body.sprint_scale(PlayerSprint.WALL_SLIDE_FINAL)
+	# Red de seguridad de tuning: con un final por debajo del inicial la rampa FRENARIA en vez de
+	# acelerar, que no es lo que nadie espera al mover esos knobs. Se aplana a "no acelera".
+	_slide_final_speed = maxf(_slide_final_speed, _slide_speed)
 
 func try_wall_jump(_input_dir: Vector3) -> bool:
 	if _body == null:
@@ -156,7 +319,9 @@ func try_wall_jump(_input_dir: Vector3) -> bool:
 			return false
 
 	var launch := _wall_jump_velocity(normal)
-	_body.set_momentum(Vector3(launch.x, 0.0, launch.z))
+	# El rebote lo genera el propio momentum del jugador, así que su techo sí sube con el sprint
+	# (a diferencia de un bloque de launch, que debe entregar siempre la misma distancia).
+	_body.set_momentum(Vector3(launch.x, 0.0, launch.z), true)
 	_body.vertical_velocity = launch.y
 	_ignore_until = World.now() + _body.tuning.wall_slide_wall_jump_lock_time
 	_move_lock_until = World.now() + _body.tuning.wall_slide_wall_jump_lock_time
@@ -165,47 +330,116 @@ func try_wall_jump(_input_dir: Vector3) -> bool:
 
 ## Velocidad de lanzamiento del wall jump para una normal de pared dada: xz = empuje horizontal
 ## (dirección + rapidez), y = subida. La usan tanto el salto real como la flecha de debug, así nunca
-## difieren. Sale de la velocidad A LO LARGO de la pared (tangente): el momentum real que encadenar
-## conserva y compone; el empuje contra el muro (press) no cuenta y del stick no depende.
+## difieren.
+##
+## Todo sale de UNA fracción 0-1 (ver _wall_jump_power_frac): rapidez horizontal, subida y ángulo se
+## interpolan con ella entre su mínimo y su máximo. Sin multiplicadores ni pisos por separado — por
+## eso el rebote no puede escalar solo entre paredes: su techo es un número fijo, no algo que dependa
+## de con cuánta velocidad llegaste.
 func _wall_jump_velocity(normal: Vector3) -> Vector3:
 	var t := _body.tuning
+	var frac := _wall_jump_power_frac(normal)
+	var along := _along_wall_velocity(normal)
+
+	# Ángulo de salida medido DESDE LA CARA de la pared: a rebote pleno salís al `min_angle` (rasante,
+	# nunca menos, para no rozar el muro); sin velocidad lateral salís perpendicular (90°, para atrás).
+	var angle := lerpf(PI * 0.5, deg_to_rad(t.wall_slide_wall_jump_min_angle), frac)
+	var exit_dir := normal
+	if along.length() > 0.001:
+		# sin(angle) = componente hacia afuera del muro; cos(angle) = componente hacia tu rumbo.
+		exit_dir = (normal * sin(angle) + along.normalized() * cos(angle)).normalized()
+
+	# Los rangos salen de la PARED si estás en un carril Wall Impulse, y del player si no. Un carril
+	# rápido tiene que poder tirarte más lejos que un muro común sin tocar el PlayerTuning; el ÁNGULO
+	# en cambio siempre lo manda el player, porque es forma de movimiento del personaje y no una
+	# propiedad de la superficie.
+	var h_min := t.wall_slide_wall_jump_h_min
+	var h_max := t.wall_slide_wall_jump_h_max
+	var v_min := t.wall_slide_wall_jump_v_min
+	var v_max := t.wall_slide_wall_jump_v_max
+	if _impulse_tuning != null:
+		h_min = _impulse_tuning.wall_jump_h_min
+		h_max = _impulse_tuning.wall_jump_h_max
+		v_min = _impulse_tuning.wall_jump_v_min
+		v_max = _impulse_tuning.wall_jump_v_max
+	# El sprint escala min y max a la vez, así el rango entero se corre sin deformarse (escalar solo
+	# el max haría que correr cambie la FORMA de la progresión y no solo su magnitud).
+	var h_speed := lerpf(h_min, h_max, frac) * _body.sprint_scale(PlayerSprint.WALL_JUMP_H)
+	var v_speed := lerpf(v_min, v_max, frac) * _body.sprint_scale(PlayerSprint.WALL_JUMP_V)
+	return exit_dir * h_speed + Vector3.UP * v_speed
+
+## Fracción 0-1 de potencia del rebote: tu velocidad a lo largo del muro medida contra el techo del
+## slide, saturando en `full_power_percent` de ese techo. Esa saturación es lo que da la MESETA
+## arriba: no hay que clavar un frame exacto para sacar el salto pleno, todo el tramo final de la
+## rampa (y la ventana de hold que le sigue) ya entrega el 100%.
+##
+## Mide `_slide_speed` —la rampa— y NO la velocidad del cuerpo: así cuenta igual deslizar de costado
+## que trepar (las dos son la misma rampa apuntando distinto), y deja afuera la caída por gravedad,
+## que se acumula sola con el tiempo. Si la caída contara, colgarse de la pared valdría más que
+## deslizarla bien: el incentivo al revés.
+func _wall_jump_power_frac(normal: Vector3) -> float:
+	var full := _slide_power_ceiling() \
+			* _body.tuning.wall_slide_wall_jump_full_power_percent * 0.01
+	var speed := 0.0
+	if is_impulsing:
+		# En el carril la rampa del slide está apagada (_slide_speed = 0): la velocidad real es la
+		# del riel. Sin esto el rebote desde un Wall Impulse saldría siempre al mínimo.
+		speed = _impulse_velocity.length()
+	elif is_sliding:
+		speed = _slide_speed
+	else:
+		# Re-agarre: el slide ya se cortó este frame y no hay rampa que leer, así que se cae a la
+		# velocidad real sobre el plano del muro.
+		speed = _along_wall_velocity(normal).length()
+	return clampf(speed / maxf(0.001, full), 0.0, 1.0)
+
+## Techo AHORA MISMO de la velocidad a lo largo del muro: el destino más alto al que puede llegar la
+## rampa con el sprint actual, o el del Wall Impulse si estás en un carril más rápido. Es la unidad
+## contra la que se miden tanto la potencia del rebote como el brillo, así que si cambia el tuning o
+## entra el sprint, las dos cosas se mueven solas y "pleno" sigue significando lo mismo.
+func _slide_power_ceiling() -> float:
+	# En un carril el techo es SOLO el del carril, no el máximo de los dos: el riel tiene sus propios
+	# rangos de rebote y su propia velocidad, así que "pleno" tiene que significar "vas a tope EN
+	# ESTE riel". Tomar el mayor haría que en un carril lento nunca se llegue al rebote pleno.
+	if _impulse_tuning != null:
+		return _impulse_tuning.max_speed * _body.sprint_scale(PlayerSprint.WALL_IMPULSE)
+	return _body.tuning.wall_slide_final_speed_max \
+			* _body.sprint_scale(PlayerSprint.WALL_SLIDE_FINAL)
+
+## Velocidad actual A LO LARGO del muro (sin componente contra la pared ni vertical): da el rumbo del
+## rebote y su potencia.
+func _along_wall_velocity(normal: Vector3) -> Vector3:
 	var horizontal := _body.velocity
 	horizontal.y = 0.0
 	var along := horizontal.slide(normal)
 	along.y = 0.0
-	var along_speed := along.length()
-
-	# Ángulo de salida medido DESDE LA CARA de la pared: cuanto más rápido vas a lo largo (respecto a
-	# move_speed), más te acercás al piso `min_angle` (rasante, nunca menos, para no rozar el muro);
-	# sin velocidad lateral salís perpendicular (90°, recto/para atrás).
-	var along_frac := clampf(along_speed / maxf(0.001, t.move_speed), 0.0, 1.0)
-	var angle := lerpf(PI * 0.5, deg_to_rad(t.wall_slide_wall_jump_min_angle), along_frac)
-	var exit_dir := normal
-	if along_speed > 0.001:
-		# sin(angle) = componente hacia afuera del muro; cos(angle) = componente hacia tu rumbo.
-		exit_dir = (normal * sin(angle) + along.normalized() * cos(angle)).normalized()
-
-	# HORIZONTAL = max(velocidad_a_lo_largo * h_boost, h_base): tiene piso, siempre despega hacia
-	# afuera. VERTICAL = velocidad_a_lo_largo * v_boost: SIN piso (a velocidad 0 no hay subida). El
-	# techo horizontal lo pone momentum_max_speed dentro de set_momentum, sin cambiar la dirección.
-	# Topes tuneables: a velocidades muy altas (Wall Impulse, cadenas largas) el rebote no puede
-	# escalar sin límite o el player sale disparado. Se capan aquí, así la flecha de debug los refleja.
-	var h_speed := minf(
-			maxf(along_speed * t.wall_slide_wall_jump_h_boost, t.wall_slide_wall_jump_h_base),
-			t.wall_slide_wall_jump_max_h_speed)
-	var v_speed := minf(along_speed * t.wall_slide_wall_jump_v_boost,
-			t.wall_slide_wall_jump_max_v_speed)
-	return exit_dir * h_speed + Vector3.UP * v_speed
+	return along
 
 ## Durante el rebote el impulso de la pared manda: el input de movimiento queda
 ## bloqueado un instante para que aplastar hacia el muro no cancele el empuje.
 func blocks_move_input() -> bool:
 	return _body != null and World.now() < _move_lock_until and not _body.is_on_floor()
 
+## Despegue VOLUNTARIO (stick hacia afuera): corta el slide y bloquea el re-enganche por
+## `wall_slide_reattach_cooldown`. Va aparte de cancel() a propósito — cancel() también corre al
+## tocar suelo y al perder contacto por geometría, y ahí un bloqueo estorbaría: en una esquina hay
+## que poder reenganchar en el acto.
+##
+## Reusa el mismo `_ignore_until` que el wall jump, así los dos bloqueos son el mismo mecanismo y no
+## se pisan: si ya había un bloqueo más largo corriendo, se respeta.
+func _release_by_input() -> void:
+	_ignore_until = maxf(_ignore_until, World.now() + _body.tuning.wall_slide_reattach_cooldown)
+	cancel()
+
 func cancel() -> void:
 	is_sliding = false
 	wall_normal = Vector3.ZERO
-	_wall_tangent_velocity = Vector3.ZERO
+	_slide_direction = Vector3.ZERO
+	_slide_speed = 0.0
+	_slide_final_speed = 0.0
+	_falling = false
+	_fall_hold_until = -999.0
+	_fall_velocity = 0.0
 	impulse_direction = Vector3.ZERO
 	_impulse_velocity = Vector3.ZERO
 	_impulse_tuning = null
@@ -218,21 +452,45 @@ func cancel() -> void:
 func _carry_impulse_into_air() -> void:
 	if _body == null or not is_impulsing or _impulse_velocity.length_squared() < 0.0001:
 		return
-	_body.add_momentum(_impulse_velocity)
+	# Igual que el wall jump: la velocidad del carril es del jugador, su techo acompaña al sprint.
+	_body.add_momentum(_impulse_velocity, true)
 
+## Se usa `material_overlay` y no `set_surface_override_material`: el override REEMPLAZA el material
+## del modelo y dejaria al personaje como una silueta verde plana. El overlay se dibuja ENCIMA, en
+## modo aditivo, asi el personaje se sigue viendo y el brillo se le suma.
 func _set_glow(active: bool) -> void:
-	if _mesh == null or active == _glow_active:
+	if _glow_meshes.is_empty() or active == _glow_active:
 		return
 	_glow_active = active
+	if active and _glow_material == null:
+		_glow_material = StandardMaterial3D.new()
+		_glow_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		_glow_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		_glow_material.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
 	if active:
-		if _glow_material == null:
-			_glow_material = StandardMaterial3D.new()
-			_glow_material.emission_enabled = true
-		_glow_material.emission = glow_color
-		_glow_material.emission_energy_multiplier = glow_energy
-		_mesh.set_surface_override_material(0, _glow_material)
-	else:
-		_mesh.set_surface_override_material(0, null)
+		_update_glow_color(glow_energy_min)
+	for mesh in _glow_meshes:
+		mesh.material_overlay = _glow_material if active else null
+
+## La intensidad se empuja por el COLOR (rgb multiplicado), no por emission_energy: el overlay es
+## unshaded y aditivo, asi que lo que manda es el albedo. Pasado 1.0 el color entra en HDR y lo
+## levanta el glow del WorldEnvironment, que es de donde sale el bloom (ver Colores de mundo).
+func _update_glow_color(energy: float) -> void:
+	if _glow_material == null:
+		return
+	_glow_material.albedo_color = Color(
+			glow_color.r * energy, glow_color.g * energy, glow_color.b * energy, glow_color.a)
+
+## La intensidad se refresca por frame (aparte de prender/apagar el material, que es una sola vez):
+## el brillo tiene que seguir la velocidad a lo largo del muro mientras deslizás, no congelarse en
+## el valor que tenía al enganchar.
+func _update_glow() -> void:
+	if not _glow_active or _glow_material == null:
+		return
+	# Se usa EXACTAMENTE la misma fracción que la potencia del wall jump, no una escala aparte: así
+	# brillo pleno significa literalmente "el rebote sale al 100%", meseta incluida. El brillo deja
+	# de ser decorado y pasa a ser el indicador de cuándo saltar.
+	_update_glow_color(lerpf(glow_energy_min, glow_energy_max, _wall_jump_power_frac(wall_normal)))
 
 func _set_dust(active: bool) -> void:
 	if _dust != null and _dust.emitting != active:
@@ -352,8 +610,9 @@ func _update_wall_impulse(input_dir: Vector3, normal: Vector3, delta: float) -> 
 		is_impulsing = true
 		captured_now = true
 		_impulse_tuning = _impulse_surface.tuning
-		# El carril manda: la velocidad de entrada no debe curvar el rumbo capturado.
-		_wall_tangent_velocity = Vector3.ZERO
+		# El carril manda: la rampa del slide se apaga para que no curve el rumbo capturado.
+		_slide_speed = 0.0
+		_slide_final_speed = 0.0
 		_impulse_velocity = impulse_direction * _impulse_tuning.initial_speed
 		_impulse_surface.set_impulse_active(true)
 	if _impulse_tuning == null:
@@ -372,15 +631,19 @@ func _update_wall_impulse(input_dir: Vector3, normal: Vector3, delta: float) -> 
 	# hacia abajo y positivo hacia arriba. La vertical se entrega al motor por separado.
 	var travel_direction := impulse_direction.rotated(
 			normal, deg_to_rad(_impulse_tuning.angle_degrees)).normalized()
+	# El sprint escala el carril entero (arranque, aceleración y techo) con un solo canal: la pared
+	# sigue mandando la forma del riel, el sprint solo decide qué tan rápido lo recorrés.
+	var impulse_scale := _body.sprint_scale(PlayerSprint.WALL_IMPULSE)
 	if captured_now:
-		_impulse_velocity = travel_direction * _impulse_tuning.initial_speed
+		_impulse_velocity = travel_direction * _impulse_tuning.initial_speed * impulse_scale
 	else:
 		# La curvatura solo ROTA el rumbo, nunca lo frena: se conserva la rapidez actual sobre
 		# la tangente nueva y la aceleracion trabaja solo sobre la magnitud. (Perseguir con
 		# move_toward un vector objetivo recorta la cuerda del giro y en curva sostenida la
 		# rapidez decae sin que ningun input lo pida.)
-		var speed := move_toward(_impulse_velocity.length(), _impulse_tuning.max_speed,
-				_impulse_tuning.acceleration * delta)
+		var speed := move_toward(_impulse_velocity.length(),
+				_impulse_tuning.max_speed * impulse_scale,
+				_impulse_tuning.acceleration * impulse_scale * delta)
 		_impulse_velocity = travel_direction * speed
 	_body.vertical_velocity = _impulse_velocity.y
 	# El emisor visual sigue el punto de contacto cada frame; no queda abandonado en el origen

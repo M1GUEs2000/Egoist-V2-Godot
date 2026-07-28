@@ -27,8 +27,10 @@ var _jump_elapsed := 0.0
 var _jump_gravity := 0.0
 var _jump_apex_height := 0.0
 var _jump_horizontal_velocity := Vector3.ZERO
+var _spawn_transform := Transform3D.IDENTITY
 
 @onready var locomotion: PlayerLocomotion = $Locomotion
+@onready var sprint: PlayerSprint = $Sprint
 @onready var dash: PlayerDash = $Dash
 @onready var wall_slide: PlayerWallSlide = $WallSlide
 @onready var floor_slide: PlayerFloorSlide = $FloorSlide
@@ -49,8 +51,19 @@ var floater: Floater
 ## Ver combat/mover.gd.
 var mover: Mover
 @onready var _run_dust: GPUParticles3D = get_node_or_null("RunDust") as GPUParticles3D
+@onready var _sprint_trail: GPUParticles3D = get_node_or_null("SprintTrail") as GPUParticles3D
 @onready var _mesh: MeshInstance3D = get_node_or_null("Mesh") as MeshInstance3D
 
+# Launch de bloque: mientras dura, el bloque es DUEÑO del arco. Impone su propia gravedad (igual
+# que el salto impone la suya) para que distancia, altura y duración del inspector se cumplan
+# exactas, y bloquea el stick por `_launch_lock_until` para que el input no estire el tramo.
+var _launch_gravity := 0.0
+var _launch_until := -999.0
+var _launch_lock_until := -999.0
+
+var _run_dust_material: ParticleProcessMaterial
+var _run_dust_base_color := Color.WHITE
+var _sprint_trail_material: ParticleProcessMaterial
 var _stun_material: StandardMaterial3D
 var _stun_feedback_color := Color.WHITE
 var _chip_material: StandardMaterial3D
@@ -58,6 +71,8 @@ var _chip_tween: Tween
 
 func _ready() -> void:
 	add_to_group("player")  # la cámara y los enemigos me encuentran por grupo
+	# Cada escena define el spawn con el transform inicial de esta instancia.
+	_spawn_transform = global_transform
 	if tuning == null:
 		tuning = PlayerTuning.new()
 	collision_layer = World.LAYER_PLAYER
@@ -67,6 +82,9 @@ func _ready() -> void:
 	meter.setup(self)
 	lock_on.setup(self, get_viewport().get_camera_3d())
 	locomotion.setup(self, get_viewport().get_camera_3d())
+	sprint.setup(self)
+	_setup_run_dust_material()
+	_setup_sprint_trail_material()
 	wall_slide.setup(self)
 	floor_slide.setup(self)
 	enemy_bounce.setup(self)
@@ -104,12 +122,26 @@ func can_receive_hit() -> bool:
 func forward() -> Vector3:
 	return -global_basis.z
 
+## Multiplicador del sprint para un canal (ver PlayerSprint). Único punto de acceso: los módulos
+## de movimiento lo llaman sobre su propio valor de tuning en vez de leer el nivel a mano, y la
+## guarda de null deja que un Player armado por código (smokes) corra sin el nodo Sprint.
+func sprint_scale(channel: StringName) -> float:
+	return sprint.scale(channel) if sprint != null else 1.0
+
+## Nivel crudo del sprint (0-1). Para escalar valores usar sprint_scale(); esto es para el feedback
+## visual, que interpola contra el nivel y no contra el multiplicador de ningún canal.
+func sprint_level() -> float:
+	return sprint.level if sprint != null else 0.0
+
 ## Poise que inflige un parry del jugador ahora mismo (por arma y tipo de ataque). Lo consulta el
 ## enemigo parriado (EnemyBase.resolve_parry) por duck typing.
 func current_parry_poise() -> float:
 	return combat.current_parry_poise() if combat != null else 0.0
 
 func _unhandled_input(event: InputEvent) -> void:
+	if event.is_action_pressed("return_to_spawn"):
+		return_to_spawn()
+		return
 	if is_stunned():
 		return
 	if event.is_action_pressed("jump"):
@@ -123,15 +155,38 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif lock_on.is_locked and event.is_action_pressed("camera_right"):
 		lock_on.cycle_target(1)
 
+## Regreso de depuración al punto donde esta instancia apareció en la escena actual.
+func return_to_spawn() -> void:
+	_dodge_queued = false
+	stun.cancel()
+	dash.cancel()
+	wall_slide.cancel()
+	floor_slide.cancel()
+	enemy_bounce.cancel()
+	mover.cancel_mover(Mover.CancelReason.SUPERSEDED)
+	floater.cancel_float()
+	_cancel_jump_impulse()
+	_cancel_launch_arc()
+	locomotion.cancel_lunge()
+	combat.cancel_input()
+	bump_velocity = Vector3.ZERO
+	vertical_velocity = 0.0
+	velocity = Vector3.ZERO
+	global_transform = _spawn_transform
+
 func _physics_process(delta: float) -> void:
 	stun.tick()
 	if is_stunned():
-		_set_run_dust(false)
+		_stop_movement_fx()
 		_tick_stunned(delta)
 		return
 
+	# El nivel de sprint se actualiza antes que cualquier consumidor, y sigue corriendo durante
+	# dash/mover: cortarlo ahí haría que un dodge a mitad de carrera reiniciara la carga.
+	sprint.tick(delta)
+
 	if mover.is_moving() and mover.is_total():
-		_set_run_dust(false)
+		_stop_movement_fx()
 		wall_slide.cancel()
 		floor_slide.cancel()
 		enemy_bounce.cancel()
@@ -144,7 +199,7 @@ func _physics_process(delta: float) -> void:
 		dash.dodge()
 
 	if dash.is_dashing:
-		_set_run_dust(false)
+		_stop_movement_fx()
 		wall_slide.cancel()
 		floor_slide.cancel()
 		enemy_bounce.cancel()
@@ -164,7 +219,8 @@ func _physics_process(delta: float) -> void:
 				if _jump_control == JumpControl.RELEASED else Vector3.ZERO
 		horizontal = locomotion.tick(delta, air_control_scale, air_idle_velocity) \
 				+ locomotion.lunge_velocity()
-	if wall_slide.blocks_move_input() or enemy_bounce.blocks_move_input():
+	if wall_slide.blocks_move_input() or enemy_bounce.blocks_move_input() \
+			or launch_blocks_move_input():
 		horizontal = Vector3.ZERO
 		# El impulso del wall jump/rebote vive en bump_velocity: la inercia aérea del input
 		# se borra para que al soltarse el lock no reaparezca el rumbo previo al salto.
@@ -198,13 +254,14 @@ func _physics_process(delta: float) -> void:
 		_set_double_jump_available(true)
 		floater.cancel_float()  # aterrizar corta el hang del Floater igual que el air stall viejo
 		wall_slide.cancel()
-		_cancel_jump_impulse()
+		_cancel_jump_impulse()  # corta también el arco del bloque: aterrizar lo termina
 	else:
 		air_state = AirState.AIRBORNE
 
 	# Polvo al correr: solo en el suelo y por encima del umbral de velocidad horizontal.
 	var planar_speed := Vector2(velocity.x, velocity.z).length()
 	_set_run_dust(World.on_solid_floor(self) and planar_speed >= tuning.run_dust_min_speed)
+	_set_sprint_trail()
 
 	_bleed_momentum(delta)
 
@@ -241,6 +298,7 @@ func _start_jump_impulse(direction: Vector3) -> void:
 	# escalaria la subida (o con 0.0 la anularia pisando vertical_velocity a 0), asi que el hang muere
 	# al saltar. Vale para el salto de piso y el doble salto (ambos entran por aca).
 	floater.cancel_float()
+	_cancel_launch_arc()  # saltar es una salida del arco: le devuelve la vertical al player
 	_jump_direction = Vector3(direction.x, 0.0, direction.z).normalized()
 	_jump_control = JumpControl.LOCKED
 	_jump_hold_time = 0.0
@@ -293,14 +351,18 @@ func _tick_jump_impulse(delta: float) -> bool:
 
 func _refresh_jump_horizontal_velocity() -> void:
 	var base_speed := _jump_launch_vertical_speed() * tuning.jump_forward_impulse_ratio
-	_jump_horizontal_velocity = _jump_direction * base_speed * _jump_apex_speed_multiplier()
+	_jump_horizontal_velocity = _jump_direction * base_speed * _jump_apex_speed_multiplier() \
+			* sprint_scale(PlayerSprint.JUMP_FORWARD)
 
 ## El hold cambia solo la altura. Cada incremento agrega la parte vertical que falta y actualiza
 ## la gravedad del arco; la velocidad horizontal nunca depende del boton de salto.
 func _refresh_jump_vertical_trajectory() -> void:
 	var hold_ratio := 1.0 if tuning.jump_hold_time <= 0.0 else clampf(
 			_jump_hold_time / tuning.jump_hold_time, 0.0, 1.0)
-	var target_height := lerpf(tuning.jump_min_apex_height, tuning.jump_max_apex_height, hold_ratio)
+	# El sprint escala la altura de cúspide, no la duración: el arco sube más en el mismo tiempo
+	# (la gravedad del salto se recalcula abajo a partir de esta altura, así que sigue cerrando).
+	var target_height := lerpf(tuning.jump_min_apex_height, tuning.jump_max_apex_height, hold_ratio) \
+			* sprint_scale(PlayerSprint.JUMP_HEIGHT)
 	var duration := maxf(0.001, tuning.jump_duration)
 	vertical_velocity += 4.0 * (target_height - _jump_apex_height) / duration
 	_jump_apex_height = target_height
@@ -325,10 +387,21 @@ func _jump_apex_speed_multiplier() -> float:
 	var average_multiplier := 1.0 - strength * half_window
 	return (1.0 - strength * shape) / maxf(0.001, average_multiplier)
 
+## Un salto en curso gana sobre el arco del bloque (saltar cancela el launch, es una de las salidas
+## que el jugador tiene), y el arco gana sobre la gravedad normal mientras dure.
 func _active_gravity() -> float:
-	return _jump_gravity if _jump_control != JumpControl.NONE else tuning.gravity
+	if _jump_control != JumpControl.NONE:
+		return _jump_gravity
+	if World.now() < _launch_until and _launch_gravity < 0.0:
+		return _launch_gravity
+	return tuning.gravity
 
+## Suelta la autoridad vertical del player. Cancela también el arco de un launch de bloque: salto y
+## arco son la MISMA autoridad (los dos imponen su gravedad), así que todo lo que corta uno corta el
+## otro — aterrizar, ser golpeado, dashear, un Mover o un bump nuevo. Unificarlo acá evita tener que
+## acordarse de cancelar el arco en cada uno de esos puntos por separado.
 func _cancel_jump_impulse() -> void:
+	_cancel_launch_arc()
 	_jump_control = JumpControl.NONE
 	_jump_direction = Vector3.ZERO
 	_jump_hold_time = 0.0
@@ -420,6 +493,7 @@ func apply_stun(duration: float = -1.0, mode := PlayerStun.Mode.STILL,
 	floater.cancel_float()  # el stun corta cualquier hang del Floater
 	dash.cancel()
 	_cancel_jump_impulse()
+	sprint.cancel()  # comerse un golpe apaga la carrera: el sprint se vuelve a ganar corriendo
 	if combat != null:
 		combat.cancel_input()
 	match mode:
@@ -496,11 +570,51 @@ func hold_airborne_for_attack() -> void:
 	if not is_on_floor():
 		air_state = AirState.AIRBORNE
 
-func add_momentum(v: Vector3) -> void:
-	bump_velocity = (bump_velocity + v).limit_length(tuning.momentum_max_speed)
+## Techo del momentum. `sprint_scaled` decide QUIÉN es dueño de la velocidad resultante:
+## - false (default): la fuente es EXTERNA y manda ella — bloque de launch, knockback, spike wall.
+##   Capea contra el techo base para que el impulso sea el mismo se venga corriendo o sprinteando:
+##   un bloque que promete una distancia tiene que cumplirla siempre. (Los bloques suelen pedir MÁS
+##   de lo que el techo permite, así que este recorte no es un detalle: ES la distancia que entregan.)
+## - true: la velocidad la generó el propio jugador con su movimiento (wall jump, Wall Impulse), y
+##   ahí el sprint sí tiene que poder empujar el techo o el recorte se come el bono en las cadenas.
+func _momentum_max_speed(sprint_scaled: bool) -> float:
+	if not sprint_scaled:
+		return tuning.momentum_max_speed
+	return tuning.momentum_max_speed * sprint_scale(PlayerSprint.MOMENTUM_MAX)
 
-func set_momentum(v: Vector3) -> void:
-	bump_velocity = v.limit_length(tuning.momentum_max_speed)
+func add_momentum(v: Vector3, sprint_scaled := false) -> void:
+	bump_velocity = (bump_velocity + v).limit_length(_momentum_max_speed(sprint_scaled))
+
+func set_momentum(v: Vector3, sprint_scaled := false) -> void:
+	bump_velocity = v.limit_length(_momentum_max_speed(sprint_scaled))
+
+## Launch de un bloque: el bloque manda el arco completo. A diferencia de `bump`, trae su propia
+## gravedad (derivada de altura + duración, igual que el salto del player) y un lock que apaga el
+## stick, así la distancia que promete el inspector es la que se recorre. Salto y dash lo cancelan:
+## el lock solo apaga el movimiento, no las acciones.
+func launch_arc(dir: Vector3, h_speed: float, v_speed: float, arc_gravity: float,
+		lock_time: float) -> void:
+	bump(dir, h_speed, v_speed)
+	if arc_gravity >= 0.0:
+		return
+	_launch_gravity = arc_gravity
+	# La gravedad propia dura todo el vuelo; el lock del stick, solo el tramo pedido.
+	_launch_until = World.now() + maxf(0.0, lock_time) + _launch_air_time(v_speed, arc_gravity)
+	_launch_lock_until = World.now() + maxf(0.0, lock_time)
+
+## Segundos hasta que el arco vuelve a la altura de salida, con la gravedad del propio launch.
+func _launch_air_time(v_speed: float, arc_gravity: float) -> float:
+	return 2.0 * v_speed / -arc_gravity if arc_gravity < 0.0 else 0.0
+
+## El launch bloquea SOLO el input de movimiento (mismo criterio que el wall jump). Saltar o
+## dashear siguen disponibles y cancelan el arco por su cuenta.
+func launch_blocks_move_input() -> bool:
+	return World.now() < _launch_lock_until and not is_on_floor()
+
+func _cancel_launch_arc() -> void:
+	_launch_gravity = 0.0
+	_launch_until = -999.0
+	_launch_lock_until = -999.0
 
 func bump(dir: Vector3, h_speed: float, v_speed: float) -> void:
 	_dodge_queued = false
@@ -511,9 +625,14 @@ func bump(dir: Vector3, h_speed: float, v_speed: float) -> void:
 	floater.cancel_float()  # un bump (knockback/rebote) corta el hang del Floater
 	dash.cancel()
 	_cancel_jump_impulse()
+	# La fuente PISA tu momentum, no se le suma: un bloque que promete una distancia tiene que
+	# entregarla igual vengas parado, corriendo o encadenando paredes. (Antes sumaba, y por eso la
+	# distancia real dependía de con cuánto llegabas y del recorte del techo global.)
 	var horizontal := Vector3(dir.x, 0.0, dir.z)
 	if horizontal.length_squared() > 0.0001:
-		add_momentum(horizontal.normalized() * h_speed)
+		set_momentum(horizontal.normalized() * h_speed)
+	else:
+		bump_velocity = Vector3.ZERO
 	vertical_velocity = v_speed
 	air_state = AirState.AIRBORNE
 
@@ -581,8 +700,93 @@ func _bleed_momentum_for_scale(delta: float, rate: float, surface_scale: float) 
 	bump_velocity = bump_velocity.move_toward(Vector3.ZERO, rate * surface_scale * delta)
 
 func _set_run_dust(active: bool) -> void:
-	if _run_dust != null and _run_dust.emitting != active:
+	if _run_dust == null:
+		return
+	# El polvo se tiñe hacia el verde de sprint siguiendo la misma rampa que la velocidad: a medio
+	# sprint el color va a medio camino. `color` multiplica al color_ramp del emisor, así que el
+	# fade de alpha del gradiente se conserva intacto.
+	if _run_dust_material != null:
+		_run_dust_material.color = _run_dust_base_color.lerp(
+				_run_dust_sprint_color(), sprint_level())
+	if _run_dust.emitting != active:
 		_run_dust.emitting = active
+
+## Color del polvo a sprint pleno, ya empujado a HDR. Multiplica solo el RGB: subir también el alpha
+## saturaría la transparencia y se perdería el fade del color_ramp del emisor.
+func _run_dust_sprint_color() -> Color:
+	var c := tuning.run_dust_sprint_color
+	var boost := tuning.run_dust_sprint_emission_energy
+	return Color(c.r * boost, c.g * boost, c.b * boost, c.a)
+
+## Corta los FX de movimiento de una. Lo usan los cortes tempranos del frame (stun, Mover total,
+## dash): ahí el player no se mueve por locomoción y el cálculo normal de la estela nunca llega a
+## correr, así que sin esto quedaría emitiendo colgada.
+func _stop_movement_fx() -> void:
+	_set_run_dust(false)
+	if _sprint_trail != null and _sprint_trail.emitting:
+		_sprint_trail.emitting = false
+
+## Estelas del sprint: cubren el cuerpo entero y salen hacia atrás. A diferencia del polvo, NO piden
+## suelo — en pleno salto o cadena de paredes seguís dejando estela, que es donde más se nota que
+## venís lanzado. El emisor está en coordenadas de mundo, así que las partículas se quedan clavadas
+## donde nacieron mientras avanzás: la estela la dibuja tu propio desplazamiento, y la velocidad
+## hacia atrás solo la despega un poco más.
+func _set_sprint_trail() -> void:
+	if _sprint_trail == null:
+		return
+	var level := sprint_level()
+	var active := level >= tuning.sprint_trail_min_level
+	if active and _sprint_trail_material != null:
+		# La dirección se reapunta cada frame al contrario de tu rumbo: el emisor no rota con el
+		# player (está en mundo), así que sin esto las estelas saldrían siempre hacia el mismo lado.
+		var back := -_sprint_trail_direction()
+		_sprint_trail_material.direction = back
+		_sprint_trail_material.initial_velocity_min = tuning.sprint_trail_backward_speed * 0.5
+		_sprint_trail_material.initial_velocity_max = tuning.sprint_trail_backward_speed
+		# El color arranca en el umbral y sube hasta sprint pleno, así las estelas nacen tenues
+		# en vez de aparecer de golpe a intensidad máxima.
+		var ramp := inverse_lerp(tuning.sprint_trail_min_level, 1.0, level)
+		_sprint_trail_material.color = _sprint_trail_color(clampf(ramp, 0.0, 1.0))
+	if _sprint_trail.emitting != active:
+		_sprint_trail.emitting = active
+
+## Rumbo al que se le da la espalda: la dirección real de movimiento si la hay, y si estás quieto
+## (estela vertical de un salto en el lugar) el frente del personaje, para no devolver cero.
+func _sprint_trail_direction() -> Vector3:
+	var planar := Vector3(velocity.x, 0.0, velocity.z)
+	if planar.length_squared() > 0.01:
+		return planar.normalized()
+	return forward()
+
+## Color de la estela a una fracción dada, empujado a HDR igual que el polvo: el emisor es unshaded,
+## así que el brillo sale de pasar el RGB de 1.0 para que lo agarre el glow. Solo escala el RGB para
+## no romper el fade de alpha del color_ramp.
+func _sprint_trail_color(ramp: float) -> Color:
+	var c := tuning.sprint_trail_color
+	var boost := lerpf(1.0, tuning.sprint_trail_emission_energy, ramp)
+	return Color(c.r * boost, c.g * boost, c.b * boost, c.a)
+
+func _setup_sprint_trail_material() -> void:
+	if _sprint_trail == null:
+		return
+	var source := _sprint_trail.process_material as ParticleProcessMaterial
+	if source == null:
+		return
+	_sprint_trail_material = source.duplicate() as ParticleProcessMaterial
+	_sprint_trail.process_material = _sprint_trail_material
+
+## Copia propia del material del polvo: el ParticleProcessMaterial vive en player.tscn y lo
+## comparten todas las instancias, así que teñir el original pintaría de verde a cualquier otro
+## player de la escena. El color de arranque queda guardado como base del lerp de sprint.
+func _setup_run_dust_material() -> void:
+	if _run_dust == null:
+		return
+	var source := _run_dust.process_material as ParticleProcessMaterial
+	if source == null:
+		return
+	_run_dust_material = source.duplicate() as ParticleProcessMaterial
+	_run_dust_base_color = _run_dust_material.color
+	_run_dust.process_material = _run_dust_material
 
 func _set_double_jump_available(available: bool) -> void:
 	if _can_double_jump == available:

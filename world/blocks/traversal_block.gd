@@ -25,16 +25,34 @@ class_name TraversalBlock extends Node3D
 @export var enable_world_switch := false
 
 @export_group("Launch / bump")
-@export var horizontal_speed := 15.0:
+# El launch se define por el ARCO que querés, no por velocidades: distancia, altura y duración
+# describen literalmente dónde cae el jugador. El bloque deriva las velocidades y además impone su
+# propia gravedad durante el vuelo (igual que el salto del player, que también sale de altura +
+# duración), así los tres números se cumplen exactos en vez de quedar a merced de la gravedad global.
+# El bloque es DUEÑO del impulso: pisa el momentum que traías, no se le suma.
+## Distancia horizontal recorrida, en metros. Ya compensa el frenado del momentum en el aire, así
+## que es donde el jugador aterriza de verdad (si no toca nada antes y no corrige con el stick).
+@export var launch_distance := 6.43:
 	set(value):
-		horizontal_speed = value
+		launch_distance = value
 		if Engine.is_editor_hint() and is_node_ready():
 			_refresh_editor_previews()
-@export var vertical_speed := 20.0:
+## Altura de la cúspide del arco, en metros sobre el punto de salida.
+@export var launch_apex_height := 5.0:
 	set(value):
-		vertical_speed = value
+		launch_apex_height = value
 		if Engine.is_editor_hint() and is_node_ready():
 			_refresh_editor_previews()
+## Duración del vuelo, en segundos, hasta volver a la altura de salida. Es el knob de "velocidad":
+## a igual distancia y altura, más bajo = arco tenso y rápido, más alto = flotado.
+@export var launch_duration := 1.0:
+	set(value):
+		launch_duration = value
+		if Engine.is_editor_hint() and is_node_ready():
+			_refresh_editor_previews()
+## Segundos en que el bloque manda y el stick no puede estirar ni acortar el arco. Saltar o dashear
+## lo cancelan igual (son las salidas del jugador). 0 = control aéreo inmediato.
+@export var launch_lock_time := 0.35
 
 @export_group("Dash")
 @export var dash_distance := 4.0:
@@ -182,10 +200,49 @@ func _apply_launch(player: Player) -> void:
 	var dir := player.locomotion.last_move_dir
 	if dir.length_squared() < 0.0001:
 		dir = player.forward()
-	player.bump(dir, horizontal_speed, vertical_speed)
+	player.launch_arc(dir, _launch_horizontal_speed(), _launch_vertical_speed(),
+			_launch_arc_gravity(), launch_lock_time)
 	player.restore_double_jump()
 	player.restore_airdash()
 	_snap_camera_behind(dir)
+
+## Velocidad horizontal de salida para que, YA frenado por el drenaje del momentum, el jugador
+## recorra `launch_distance` en `launch_duration`. Es la inversa exacta de _horizontal_distance:
+## con frenado `a`, o alcanza el tiempo completo (caso lineal) o se detiene antes de llegar a él.
+func _launch_horizontal_speed() -> float:
+	var t := maxf(0.001, launch_duration)
+	var decay := _trajectory_horizontal_decay()
+	if decay <= 0.0:
+		return launch_distance / t
+	# Si la distancia pedida es menor que la que se recorre frenando desde el reposo del tramo,
+	# el jugador se detiene antes de que termine el vuelo: ahí la distancia sola define la velocidad.
+	if launch_distance < 0.5 * decay * t * t:
+		return sqrt(2.0 * decay * maxf(0.0, launch_distance))
+	return launch_distance / t + decay * t * 0.5
+
+## Impulso vertical para llegar a `launch_apex_height` en la mitad de `launch_duration`, bajo la
+## gravedad propia del arco. Misma fórmula que Player._jump_launch_vertical_speed.
+func _launch_vertical_speed() -> float:
+	return 4.0 * launch_apex_height / maxf(0.001, launch_duration)
+
+## Gravedad que impone el bloque durante el vuelo. Misma fórmula que Player._refresh_jump_vertical_
+## trajectory: es lo que hace que altura y duración se cumplan sin depender de la gravedad global.
+func _launch_arc_gravity() -> float:
+	var t := maxf(0.001, launch_duration)
+	return -8.0 * launch_apex_height / (t * t)
+
+## Velocidad horizontal REAL tras el techo global del player (`momentum_max_speed`), que sigue
+## mandando sobre todo impulso. Si recorta, el bloque no puede cumplir la distancia pedida: el
+## preview dibuja este valor y `_launch_exceeds_momentum_cap` lo avisa en el editor.
+func _launch_capped_horizontal_speed() -> float:
+	var wanted := _launch_horizontal_speed()
+	if tuning.player_tuning == null:
+		return wanted
+	return minf(wanted, tuning.player_tuning.momentum_max_speed)
+
+## True si la combinación de distancia/altura/duración pide más velocidad que el techo del player.
+func _launch_exceeds_momentum_cap() -> bool:
+	return _launch_horizontal_speed() > _launch_capped_horizontal_speed() + 0.01
 
 ## Empuja siempre hacia la cara -Z del bloque (misma convencion que Player.forward()), sin
 ## importar por donde llego el jugador: rotarlo en el editor cambia el rumbo, incluida Y.
@@ -440,7 +497,8 @@ func _build_dash_trajectory() -> void:
 	points.append_array(_sample_ballistic_arc(dash_end, bop_dir, dash_bop_forward_speed, dash_vertical_bop_speed))
 	_dash_trajectory = _build_trajectory_tube(points, World.COLOR_TRAVERSAL_DASH, World.COLOR_TRAVERSAL_DASH_EMISSION)
 
-## Trayectoria completa del launch/bump: parabola balistica desde horizontal_speed/vertical_speed.
+## Trayectoria completa del launch: la parabola que describen launch_distance / launch_apex_height /
+## launch_duration, ya con la gravedad propia del arco y el frenado del momentum aplicados.
 ## La direccion real en gameplay depende del input del jugador (last_move_dir); el preview asume
 ## fija la cara -Z del bloque, la misma convencion que ya usa el dash, solo para poder dibujar
 ## algo util en el editor.
@@ -453,17 +511,33 @@ func _build_launch_trajectory() -> void:
 	else:
 		horizontal_dir = horizontal_dir.normalized()
 	var points := PackedVector3Array([origin])
-	points.append_array(_sample_ballistic_arc(origin, horizontal_dir, horizontal_speed, vertical_speed))
-	_launch_trajectory = _build_trajectory_tube(points, World.COLOR_TRAVERSAL_LAUNCH, World.COLOR_TRAVERSAL_LAUNCH_EMISSION)
+	# Se dibuja la velocidad YA recortada por el techo del player: el preview tiene que mostrar el
+	# arco que el jugador va a volar de verdad, no el que el bloque querría.
+	points.append_array(_sample_ballistic_arc(origin, horizontal_dir,
+			_launch_capped_horizontal_speed(), _launch_vertical_speed(), _launch_arc_gravity()))
+	# Cuando el techo recorta, el tubo se pinta AMARILLO (el color de aviso del proyecto, el mismo
+	# del stun) en vez de rojo: es la señal de que el bloque no puede cumplir la distancia pedida y
+	# hay que bajar la distancia, subir la duración o subir momentum_max_speed en PlayerTuning.
+	var color := World.COLOR_TRAVERSAL_LAUNCH
+	var emission := World.COLOR_TRAVERSAL_LAUNCH_EMISSION
+	if _launch_exceeds_momentum_cap():
+		color = Color(1.0, 0.85, 0.15)
+		emission = Color(1.0, 0.65, 0.05)
+		push_warning("TraversalBlock '%s': el launch pide %.1f m/s pero el techo del player (momentum_max_speed) es %.1f. La distancia real va a ser menor que launch_distance." % [
+				name, _launch_horizontal_speed(), _launch_capped_horizontal_speed()])
+	_launch_trajectory = _build_trajectory_tube(points, color, emission)
 
 ## Muestrea una parabola balistica desde `start` hasta que vuelve a esa altura, leyendo gravedad
 ## y frenado de momentum en vivo de tuning.player_tuning (ver _trajectory_gravity /
 ## _trajectory_horizontal_decay). No incluye el punto inicial (el llamador ya lo tiene). Sin
 ## impulso vertical o sin PlayerTuning asignado no hay forma de cerrar la parabola, asi que no
 ## dibuja nada.
-func _sample_ballistic_arc(start: Vector3, horizontal_dir: Vector3, h_speed: float, v_speed: float) -> PackedVector3Array:
+## `arc_gravity` en 0 usa la gravedad global del player (el caso del bop del dash, que cae con la
+## gravedad normal). El launch pasa la suya, que es la que hace que su arco sea el del inspector.
+func _sample_ballistic_arc(start: Vector3, horizontal_dir: Vector3, h_speed: float, v_speed: float,
+		arc_gravity := 0.0) -> PackedVector3Array:
 	var points := PackedVector3Array()
-	var gravity := _trajectory_gravity()
+	var gravity := arc_gravity if arc_gravity < 0.0 else _trajectory_gravity()
 	if gravity >= 0.0 or v_speed <= 0.0:
 		return points
 	var t_total := -2.0 * v_speed / gravity

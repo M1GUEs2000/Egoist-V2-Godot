@@ -35,6 +35,8 @@ var _yaw_offset := 0.0
 var _vertical_anchor := 0.0
 var _vertical_anchor_set := false
 var _vertical_overrides: Array[float] = []
+var _manual_height_offset := 0.0
+var _manual_height_idle_time := 0.0
 ## Lado del muro hacia el que se corre la cámara en wall slide (-1/+1; 0 = todavía sin rumbo).
 var _wall_side := 0.0
 ## Cuán vertical es el movimiento sobre la pared (0 = lateral, 1 = caída seca → encuadre 2D).
@@ -54,6 +56,7 @@ func _physics_process(delta: float) -> void:
 	if target == null or tuning == null:
 		return
 	var player := target as Player
+	_update_manual_height(delta, player)
 	var enemy: EnemyBase = null
 	if player != null and player.lock_on.is_locked:
 		enemy = player.lock_on.current_target
@@ -70,7 +73,7 @@ func _update_free(delta: float, player: Player) -> void:
 			* (Basis(Vector3.RIGHT, deg_to_rad(-tuning.pitch)) * Vector3(0.0, 0.0, tuning.distance))
 	var follow_point := target.global_position
 	follow_point.y = _clamp_vertical(follow_point.y, delta)
-	_move_to(follow_point + offset, follow_point, delta)
+	_move_to(follow_point + offset + Vector3.UP * _manual_height_offset, follow_point, delta)
 
 ## Encuadra jugador + target: mantiene el yaw libre actual (no orbita a la espalda del jugador)
 ## y hace zoom in/out según la separación jugador-target, orbitando el punto de mira entre ambos
@@ -87,7 +90,32 @@ func _update_locked(delta: float, enemy: EnemyBase) -> void:
 	# anclara al lerp, un target alto la dejaría arriba y al soltar el lock el jugador quedaría
 	# fuera del tope con el ancla ya congelada (la cámara no volvía a bajar nunca).
 	focus.y += _clamp_vertical(target.global_position.y, delta) - target.global_position.y
-	_move_to(focus + offset, focus, delta)
+	_move_to(focus + offset + Vector3.UP * _manual_height_offset, focus, delta)
+
+## Desplaza solo la posición de la cámara: el punto de mira no cambia y el jugador queda centrado.
+## Al soltar el control vuelve al encuadre base tras una pausa, o inmediatamente al desplazarse.
+func _update_manual_height(delta: float, player: Player) -> void:
+	var input := Input.get_axis("camera_down", "camera_up")
+	if not is_zero_approx(input):
+		_manual_height_idle_time = 0.0
+		_manual_height_offset = clampf(
+			_manual_height_offset + input * tuning.manual_height_speed * delta,
+			-tuning.manual_height_limit,
+			tuning.manual_height_limit
+		)
+		return
+
+	var is_moving := player != null and Vector2(player.velocity.x, player.velocity.z).length_squared() > 0.01
+	if is_moving:
+		_manual_height_idle_time = tuning.manual_height_return_delay
+	else:
+		_manual_height_idle_time += delta
+	if _manual_height_idle_time >= tuning.manual_height_return_delay:
+		_manual_height_offset = move_toward(
+			_manual_height_offset,
+			0.0,
+			tuning.manual_height_return_speed * delta
+		)
 
 func _move_to(desired: Vector3, look_at_point: Vector3, delta: float) -> void:
 	if _snapped:

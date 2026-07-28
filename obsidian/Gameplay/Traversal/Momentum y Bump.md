@@ -48,7 +48,7 @@ El drenaje solo come el exceso. Como `bump_velocity` se suma encima del movimien
 ## Interacciones conocidas
 
 - Stun `PUSH` esta aislado del modelo de superficie: drena con `stun_bump_decay` para que recibir un golpe no se convierta en una fuente normal de traversal.
-- Wall slide hoy tiene dos drenajes actuando: `momentum_bleed_wall` sobre `bump_velocity` y `wall_slide_momentum_decay` sobre la velocidad tangente interna del slide. Si la pared frena demasiado, se valida jugando y se toca `momentum_bleed_wall`; no se borra el drenaje tangente.
+- Wall slide tiene dos drenajes actuando, pero **ya no compiten**: `momentum_bleed_wall` drena `bump_velocity`, mientras que la velocidad interna del slide la gobierna su propia rampa y su drenaje exponencial (`wall_slide_fall_lateral_halflife`, ver [[Wall Slide y Wall Jump]]). Desde la reescritura del 2026-07-27 el slide **no lee la velocidad de entrada como magnitud**: la usa solo para elegir rumbo y punto dentro de sus rangos, asi que `momentum_bleed_wall` ya no puede frenar el deslice — solo afecta el exceso que se arrastra al salir de la pared.
 - El dash boost antes podia llegar hasta `dash_bump_max_speed`; ahora, al pasar por `set_momentum()`, tambien respeta `momentum_max_speed`. Primer sospechoso si el dash se siente demasiado corto o apagado.
 
 ## Relacionado

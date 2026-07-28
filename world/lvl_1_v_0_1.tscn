@@ -69,7 +69,7 @@ radius = 0.55
 [node name="Lvl1 v0_1" type="Node3D" unique_id=149798636]
 
 [node name="Player" parent="." unique_id=1407604159 instance=ExtResource("1_ay86g")]
-transform = Transform3D(0.7241705, 0, 0.689621, 0, 1, 0, -0.689621, 0, 0.7241705, 2.9872355, 58.87435, -14.797397)
+transform = Transform3D(0.28284773, 0, -0.95916486, 0, 1, 0, 0.95916486, 0, 0.28284773, 81.10788, 10.081127, -141.12035)
 
 [node name="CameraRig" type="Node3D" parent="." unique_id=1612751166]
 script = ExtResource("5_ktyo2")
@@ -145,7 +145,7 @@ dash_vertical_bop_speed = 20.0
 hits_to_break = 50
 
 [node name="WorldSwitchPickup3" parent="Traversal Cubes" unique_id=457184539 instance=ExtResource("8_3ypg5")]
-transform = Transform3D(2.0092587, 5.9431273e-09, 0.05460252, -2.386751e-09, 5.005, -3.2422457e-11, -0.05460252, -8.074387e-11, 2.0092587, 77.261536, 11.599548, -9.115852)
+transform = Transform3D(2.0092587, 5.9431273e-09, 0.05460252, -2.386751e-09, 5.005, -3.2422457e-11, -0.05460252, -8.074387e-11, 2.0092587, 87.33591, 11.599548, -0.41525745)
 enable_world_switch = true
 dash_distance = 20.0
 dash_duration = 0.3
@@ -154,7 +154,7 @@ dash_vertical_bop_speed = 20.0
 hits_to_break = 50
 
 [node name="WorldSwitchPickup7" parent="Traversal Cubes" unique_id=937959750 instance=ExtResource("8_3ypg5")]
-transform = Transform3D(2.0092587, 5.9431273e-09, 0.05460252, -2.386751e-09, 5.005, -3.2422457e-11, -0.05460252, -8.074387e-11, 2.0092587, 92.61792, 11.599554, 6.180189)
+transform = Transform3D(2.0092587, 5.9431273e-09, 0.05460252, -2.386751e-09, 5.005, -3.2422457e-11, -0.05460252, -8.074387e-11, 2.0092587, 104.21871, 11.599554, 17.62834)
 enable_world_switch = true
 dash_distance = 20.0
 dash_duration = 0.3
@@ -166,8 +166,9 @@ hits_to_break = 50
 transform = Transform3D(2.4990773, 6.5309087e-09, 0.06791356, -2.9685947e-09, 5.5, -4.0326426e-11, -0.06791356, -8.872951e-11, 2.4990773, 105.137856, 17.699154, -25.889507)
 enable_launch = true
 enable_world_switch = true
-horizontal_speed = 38.475
-vertical_speed = 28.3
+launch_distance = 24.93
+launch_apex_height = 10.01
+launch_duration = 1.415
 dash_distance = 20.0
 dash_duration = 0.3
 dash_bop_forward_speed = 20.0
@@ -178,8 +179,9 @@ hits_to_break = 50
 transform = Transform3D(-0.06791393, 6.530908e-09, 2.4990773, 4.03268e-11, 5.5, -2.9685945e-09, -2.4990773, -8.872963e-11, -0.06791393, 75.52649, 29.34674, -52.8445)
 enable_launch = true
 enable_world_switch = true
-horizontal_speed = 38.475
-vertical_speed = 25.405
+launch_distance = 23.99
+launch_apex_height = 8.07
+launch_duration = 1.27
 dash_distance = 20.0
 dash_duration = 0.3
 dash_bop_forward_speed = 20.0
@@ -190,7 +192,7 @@ hits_to_break = 50
 transform = Transform3D(2.0092587, 5.9431273e-09, 0.05460252, -2.386751e-09, 5.005, -3.2422457e-11, -0.05460252, -8.074387e-11, 2.0092587, 65.113075, 43.218582, -110.16829)
 enable_launch = true
 enable_world_switch = true
-horizontal_speed = 30.0
+launch_distance = 21.25
 dash_distance = 20.0
 dash_duration = 0.3
 dash_bop_forward_speed = 20.0
@@ -279,7 +281,7 @@ dash_vertical_bop_speed = 20.0
 hits_to_break = 50
 
 [node name="Pared 30m" type="Node3D" parent="." unique_id=120914216]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -12.245277, 55.89248, -22.544289)
+transform = Transform3D(9.925, 0, 0, 0, 9.925, 0, 0, 0, 9.925, -16.637524, 55.89248, -22.544289)
 metadata/_edit_group_ = true
 
 [node name="StaticBody3D" type="StaticBody3D" parent="Pared 30m" unique_id=1532448596]
@@ -293,6 +295,26 @@ transform = Transform3D(1, 0, 0, 0, 15, 0, 0, 0, 30, 0, 0, 0)
 shape = SubResource("ConvexPolygonShape3D_5bvi1")
 
 [node name="WorldMembership" type="Node" parent="Pared 30m" unique_id=1640611138]
+script = ExtResource("4_e571o")
+mode = 1
+paint_prototype_material = true
+metadata/_custom_type_script = "uid://cr2mf5ypgksws"
+
+[node name="Pared 30m3" type="Node3D" parent="." unique_id=868189376]
+transform = Transform3D(9.925, 0, 0, 0, 9.925, 0, 0, 0, 9.925, 5.474779, 55.89248, 155.60922)
+metadata/_edit_group_ = true
+
+[node name="StaticBody3D" type="StaticBody3D" parent="Pared 30m3" unique_id=1985887651]
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Pared 30m3/StaticBody3D" unique_id=1935547735]
+transform = Transform3D(1, 0, 0, 0, 15, 0, 0, 0, 30, 0, 0, 0)
+mesh = SubResource("BoxMesh_m478f")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Pared 30m3/StaticBody3D" unique_id=1760875643]
+transform = Transform3D(1, 0, 0, 0, 15, 0, 0, 0, 30, 0, 0, 0)
+shape = SubResource("ConvexPolygonShape3D_5bvi1")
+
+[node name="WorldMembership" type="Node" parent="Pared 30m3" unique_id=2105203389]
 script = ExtResource("4_e571o")
 mode = 1
 paint_prototype_material = true
@@ -478,6 +500,60 @@ transform = Transform3D(10, 0, 0, 0, 1, 0, 0, 0, 10, 0, 0, 0)
 shape = SubResource("ConvexPolygonShape3D_s5n7p")
 
 [node name="WorldMembership" type="Node" parent="Plataforma 10x10_2" unique_id=1038806441]
+script = ExtResource("4_e571o")
+mode = 1
+paint_prototype_material = true
+metadata/_custom_type_script = "uid://cr2mf5ypgksws"
+
+[node name="Plataforma 10x10_16" type="StaticBody3D" parent="." unique_id=1901625673]
+transform = Transform3D(2, 0, 0, 0, 2, 0, 0, 0, 2, -3.8320155, 50.51889, 2.5606098)
+metadata/_edit_group_ = true
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Plataforma 10x10_16" unique_id=955760227]
+transform = Transform3D(10, 0, 0, 0, 1, 0, 0, 0, 10, 0, 0, 0)
+mesh = SubResource("BoxMesh_ica1u")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Plataforma 10x10_16" unique_id=2037448125]
+transform = Transform3D(10, 0, 0, 0, 1, 0, 0, 0, 10, 0, 0, 0)
+shape = SubResource("ConvexPolygonShape3D_s5n7p")
+
+[node name="WorldMembership" type="Node" parent="Plataforma 10x10_16" unique_id=1911077909]
+script = ExtResource("4_e571o")
+mode = 1
+paint_prototype_material = true
+metadata/_custom_type_script = "uid://cr2mf5ypgksws"
+
+[node name="Plataforma 10x10_17" type="StaticBody3D" parent="." unique_id=1385320157]
+transform = Transform3D(2, 0, 0, 0, 2, 0, 0, 0, 2, -3.8320155, 50.51889, 21.797434)
+metadata/_edit_group_ = true
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Plataforma 10x10_17" unique_id=1128401781]
+transform = Transform3D(10, 0, 0, 0, 1, 0, 0, 0, 10, 0, 0, 0)
+mesh = SubResource("BoxMesh_ica1u")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Plataforma 10x10_17" unique_id=84303995]
+transform = Transform3D(10, 0, 0, 0, 1, 0, 0, 0, 10, 0, 0, 0)
+shape = SubResource("ConvexPolygonShape3D_s5n7p")
+
+[node name="WorldMembership" type="Node" parent="Plataforma 10x10_17" unique_id=1708724011]
+script = ExtResource("4_e571o")
+mode = 1
+paint_prototype_material = true
+metadata/_custom_type_script = "uid://cr2mf5ypgksws"
+
+[node name="Plataforma 10x10_18" type="StaticBody3D" parent="." unique_id=1025933885]
+transform = Transform3D(2, 0, 0, 0, 2, 0, 0, 0, 2, -3.8320155, 50.51889, 40.570175)
+metadata/_edit_group_ = true
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Plataforma 10x10_18" unique_id=1462445797]
+transform = Transform3D(10, 0, 0, 0, 1, 0, 0, 0, 10, 0, 0, 0)
+mesh = SubResource("BoxMesh_ica1u")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Plataforma 10x10_18" unique_id=487516297]
+transform = Transform3D(10, 0, 0, 0, 1, 0, 0, 0, 10, 0, 0, 0)
+shape = SubResource("ConvexPolygonShape3D_s5n7p")
+
+[node name="WorldMembership" type="Node" parent="Plataforma 10x10_18" unique_id=311952506]
 script = ExtResource("4_e571o")
 mode = 1
 paint_prototype_material = true
@@ -885,7 +961,7 @@ paint_prototype_material = true
 metadata/_custom_type_script = "uid://cr2mf5ypgksws"
 
 [node name="Pared rebote 1_2" type="StaticBody3D" parent="Rebote recto2" unique_id=812300076]
-transform = Transform3D(0.9999999, 0, 0, 0, 1, 0, 0, 0, 1, -6.350975, 0, 23.510427)
+transform = Transform3D(0.9999999, 0, 0, 0, 1, 0, 0, 0, 1, -6.350975, 0, 31.470581)
 metadata/_edit_group_ = true
 
 [node name="MeshInstance3D" type="MeshInstance3D" parent="Rebote recto2/Pared rebote 1_2" unique_id=1320006524]
@@ -903,7 +979,7 @@ paint_prototype_material = true
 metadata/_custom_type_script = "uid://cr2mf5ypgksws"
 
 [node name="Pared rebote 1_3" type="StaticBody3D" parent="Rebote recto2" unique_id=246932283]
-transform = Transform3D(0.9999999, 0, 0, 0, 1, 0, 0, 0, 0.9999998, 7.750538, 1.9073486e-06, 48.114594)
+transform = Transform3D(0.9999999, 0, 0, 0, 1, 0, 0, 0, 0.9999998, 7.750538, 1.9073486e-06, 64.574554)
 metadata/_edit_group_ = true
 
 [node name="MeshInstance3D" type="MeshInstance3D" parent="Rebote recto2/Pared rebote 1_3" unique_id=1577746282]
@@ -921,7 +997,7 @@ paint_prototype_material = true
 metadata/_custom_type_script = "uid://cr2mf5ypgksws"
 
 [node name="Pared rebote 1_4" type="StaticBody3D" parent="Rebote recto2" unique_id=1903586732]
-transform = Transform3D(0.9999999, 0, 0, 0, 1, 0, 0, 0, 0.9999998, -6.879677, 0, 73.0185)
+transform = Transform3D(0.9999999, 0, 0, 0, 1, 0, 0, 0, 0.9999998, -6.879677, 0, 94.06566)
 metadata/_edit_group_ = true
 
 [node name="MeshInstance3D" type="MeshInstance3D" parent="Rebote recto2/Pared rebote 1_4" unique_id=38208983]

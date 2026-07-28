@@ -12,6 +12,17 @@ class_name CameraTuning extends Resource
 ## Suavizado del follow (posicion). Mas alto = alcanza al target mas rapido.
 @export_range(0.1, 20.0, 0.1) var damping := 5.0
 
+@export_group("Altura manual")
+## Cuánto puede subir o bajar la cámara respecto a su encuadre base. El jugador sigue siendo el
+## punto de mira, así que permanece centrado mientras se ajusta la perspectiva.
+@export_range(0.0, 20.0, 0.25) var manual_height_limit := 4.0
+## Velocidad (m/s) del ajuste vertical manual con `camera_up`/`camera_down`.
+@export_range(0.1, 20.0, 0.1) var manual_height_speed := 6.0
+## Segundos sin ajustar la altura antes de volver al encuadre base si el jugador está quieto.
+@export_range(0.0, 5.0, 0.1) var manual_height_return_delay := 1.0
+## Velocidad (m/s) con la que la cámara recupera su altura base.
+@export_range(0.1, 30.0, 0.1) var manual_height_return_speed := 12.0
+
 @export_group("Rotacion por stick")
 ## Velocidad de giro mientras se mantiene el stick, en grados por segundo.
 ## La rotacion es libre (360, sin tope) y no se recentra sola.
