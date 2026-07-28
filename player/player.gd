@@ -245,7 +245,6 @@ func _physics_process(delta: float) -> void:
 	mover.finish_partial_vertical(before_move)
 	wall_slide.update_after_move(horizontal + bump_velocity, input_dir)
 	floor_slide.update_after_move(horizontal + bump_velocity, input_dir)
-	enemy_bounce.update_after_move(horizontal + bump_velocity)
 
 	if World.on_solid_floor(self):
 		vertical_velocity = -1.0

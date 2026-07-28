@@ -199,6 +199,7 @@ var _own_materials: Dictionary[MeshInstance3D, StandardMaterial3D] = {}
 @onready var ground_sense: Area3D = get_node_or_null("GroundSense") as Area3D
 @onready var ragdoll_body: RigidBody3D = get_node_or_null("Ragdoll") as RigidBody3D
 @onready var _body_shape: CollisionShape3D = get_node_or_null("CollisionShape3D") as CollisionShape3D
+var _bounce_hitbox: EnemyBounceHitbox
 ## Floater (primitiva vertical): politica de caida temporal. Se instancia por codigo en _ready, no
 ## es nodo de escena (asi no hay que tocar cada escena de enemigo). Ver combat/floater.gd.
 var floater: Floater
@@ -210,6 +211,7 @@ func _ready() -> void:
 	add_to_group("enemy")
 	collision_layer = World.LAYER_ENEMY
 	collision_mask = World.LAYER_WORLD | World.LAYER_PLAYER | World.LAYER_ENEMY
+	_setup_bounce_hitbox()
 	_air_gravity = airborne_gravity
 	floater = Floater.new()
 	floater.name = "Floater"
@@ -755,6 +757,8 @@ func apply_spike_hit(damage: float, push_direction: Vector3, stun: StunSettings,
 func _on_membership_changed(active_now: bool) -> void:
 	_is_active = active_now
 	collision_layer = World.LAYER_ENEMY if _is_active else 0
+	if _bounce_hitbox != null:
+		_bounce_hitbox.set_active(_is_active)
 	# La colision fisica es un OR bidireccional (A.layer & B.mask != 0 o B.layer & A.mask != 0):
 	# vaciar solo collision_layer no basta, porque el mask del enemigo seguia incluyendo al jugador
 	# y esa direccion sola ya bastaba para que siguiera siendo solido en el otro mundo. Inactivo solo
@@ -772,6 +776,13 @@ func _on_membership_changed(active_now: bool) -> void:
 
 func on_world_changed() -> void:
 	pass
+
+func _setup_bounce_hitbox() -> void:
+	if _body_shape == null or _body_shape.shape == null:
+		return
+	_bounce_hitbox = EnemyBounceHitbox.new()
+	add_child(_bounce_hitbox)
+	_bounce_hitbox.setup(self, _body_shape)
 
 func on_hurtbox_hit(from: Node, damage: float, hit_direction: Vector3, stun: StunSettings) -> void:
 	if not can_receive_hit():
@@ -1244,6 +1255,8 @@ func _set_run_dust(active: bool) -> void:
 
 func _die() -> void:
 	_dead = true
+	if _bounce_hitbox != null:
+		_bounce_hitbox.set_active(false)
 	if _ragdolling:
 		# Murio a mitad del ragdoll: apaga la fisica y devuelve el cuerpo a la vista para la
 		# reaccion de muerte normal.

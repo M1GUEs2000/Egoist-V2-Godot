@@ -12,14 +12,15 @@ hito: H1
 
 # Rebote en Enemigos
 
-Rebote manual desde enemigos: el jugador no rebota por contacto, sino al pedir salto dentro de una ventana breve tras tocar fisicamente un enemigo. La superficie del enemigo es demasiado chica para slidear; se lee como impulso instantaneo.
+Rebote manual desde enemigos: el jugador no rebota por contacto, sino al pedir salto dentro de una ventana breve tras entrar en la caja de rebote del enemigo. La superficie se lee como impulso instantaneo.
 
 ## Implementado en Godot
 
 - `PlayerEnemyBounce` es nodo hijo `EnemyBounce` del player.
 - `Player._on_jump()` mantiene el orden: suelo, wall jump, enemy bounce, doble salto.
-- La deteccion usa las colisiones reales de `CharacterBody3D`: collider con `collision_layer & World.LAYER_ENEMY`.
-- No hay `Area3D`, no se tocan capas y no se consulta `is_dead()` ni afiliacion de mundo. Cadaveres y enemigos fuera de mundo ya quedan con `collision_layer = 0`.
+- Cada `EnemyBase` crea un `BounceHitbox` (`Area3D`) con `BoxShape3D` derivado de su `CollisionShape3D` corporal. Capsula, esfera, cilindro y caja se convierten a una caja con sus mismas dimensiones.
+- La caja detecta solo `World.LAYER_PLAYER`; no bloquea movimiento ni participa en dano. La cara mas cercana al jugador define la normal del rebote.
+- Enemigos inactivos por mundo y enemigos muertos desactivan su caja, igual que su colision corporal.
 
 ## Reglas
 

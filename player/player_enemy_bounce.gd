@@ -1,6 +1,6 @@
 class_name PlayerEnemyBounce extends Node
-## Rebote manual desde contactos fisicos con enemigos. Player orquesta el input; este modulo
-## recuerda el ultimo contacto valido y decide el impulso cuando el jugador pide salto.
+## Rebote manual desde la BounceHitbox en caja de cada enemigo. Player orquesta el input;
+## este modulo recuerda el ultimo contacto valido y decide el impulso al pedir salto.
 
 var _body: Player
 var _last_enemy: Node
@@ -16,17 +16,12 @@ var _move_lock_until := -999.0
 func setup(body: Player) -> void:
 	_body = body
 
-func update_after_move(horizontal_velocity: Vector3) -> void:
+## Llamado por la caja proporcional del enemigo al entrar el cuerpo del Player.
+func remember_hitbox_contact(enemy: Node, normal: Vector3) -> void:
 	if _body == null:
 		return
-	var contact_speed := Vector3(horizontal_velocity.x, 0.0, horizontal_velocity.z).length()
-	for index in range(_body.get_slide_collision_count()):
-		var collision := _body.get_slide_collision(index)
-		if collision == null:
-			continue
-		var collider := collision.get_collider() as Node
-		if _remember_contact_if_enemy(collider, collision.get_normal(), contact_speed):
-			return
+	var contact_speed := Vector3(_body.velocity.x, 0.0, _body.velocity.z).length()
+	_remember_contact_if_enemy(enemy, normal, contact_speed)
 
 func try_bounce(input_dir: Vector3) -> bool:
 	# Un Mover EXCLUSIVO (launcher/dash) bloquea el rebote; el NO-EXCLUSIVO (plunge) NO: rebotar en un
