@@ -32,6 +32,8 @@ var _air_charge_fall_applied := false
 var _lock_back_tap_until := -999.0
 ## Fin de la ventana que deja un tap hacia adelante relativo al lock-on antes de pulsar Y.
 var _lock_forward_tap_until := -999.0
+## El gesto direccional debe salir de neutral para que girar el stick no lo active.
+var _lock_y_tap_armed := false
 
 @onready var buffer: InputBuffer = $InputBuffer
 
@@ -97,22 +99,26 @@ func _input(event: InputEvent) -> void:
 	elif event.is_action_released("attack_x"):
 		buffer.release()
 	elif event.is_action_pressed("attack_y"):
+		_track_lock_y_tap()
 		if not _try_lock_forward_y_push() and not _try_lock_back_y_launcher():
 			_on_press(slot_y, World.Slot.Y)
 	elif event.is_action_released("attack_y"):
 		buffer.release()
-	elif event.is_action_pressed("move_up") or event.is_action_pressed("move_down") \
-			or event.is_action_pressed("move_left") or event.is_action_pressed("move_right"):
-		_remember_lock_y_gestures()
-
-## Guarda taps relativos al target. La locomocion convierte camara -> mundo y los compara contra
-## jugador -> target, asi "adelante" y "atras" no quedan fijos al mundo.
-func _remember_lock_y_gestures() -> void:
-	if _body == null or not _body.lock_on.is_locked:
-		return
-	if slot_y == null:
+## Solo registra la primera direccion despues de neutral. Asi girar el stick de forma continua
+## no abre un especial adelante/atras y el gesto sigue siendo relativo al target lockeado.
+func _track_lock_y_tap() -> void:
+	if _body == null or _body.is_stunned() or not _body.lock_on.is_locked or slot_y == null:
+		_lock_y_tap_armed = false
+		_lock_back_tap_until = -999.0
+		_lock_forward_tap_until = -999.0
 		return
 	var input := _body.locomotion.read_move_input()
+	if not _body.locomotion.has_move_input(input):
+		_lock_y_tap_armed = true
+		return
+	if not _lock_y_tap_armed:
+		return
+	_lock_y_tap_armed = false
 	var back_window := slot_y.lock_back_y_launcher_window()
 	if back_window > 0.0 and _body.locomotion.input_is_away_from_locked_target(input):
 		_lock_back_tap_until = World.now() + back_window
@@ -204,6 +210,7 @@ func current_parry_poise() -> float:
 func _process(delta: float) -> void:
 	if _body == null:
 		return
+	_track_lock_y_tap()
 	# Glow de carga: la hoja del arma presionada brilla según el progreso de carga.
 	if _charging_weapon != null:
 		var charge_progress := buffer.charge_progress()

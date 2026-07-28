@@ -58,6 +58,7 @@ rebote del Y cargado aereo esta desactivado.
 - `SwordTuning` controla ventanas, angulos, dash cargado, launcher y el `push` (arco del empuje armado por `arm_push`). *(2026-07-09)*
 - El launcher comun de la Espada fija el facing al target bloqueado y corta input/momentum horizontal durante el swing. En suelo, tap atras + Y mueve solo al enemigo; en aire es un plunge con los Movers de Player y Enemy. Y cargado terrestre y sweet spot del X elevan tambien al Player. *(2026-07-24)*
 - Tap adelante + Y reutiliza el spin final y `PushSettings` de `X X espera X X`; su Mover se clona y orienta hacia el target antes de mover al Player. *(2026-07-24)*
+- Los gestos `tap atras/adelante + Y` solo se arman desde input de movimiento neutral y consumen la primera direccion al salir de neutral. Girar el stick de forma continua no debe crear un especial al atravesar esas direcciones. *(2026-07-28)*
 - Habilidad especial de X cargado existe parcialmente por ventana de kill.
 - La hoja brilla al cargar un ataque (glow de carga, ver [[Combate]]). *(2026-07-06)*
 - **Y cargado aereo DESACTIVADO temporalmente** *(2026-07-20)*: usa `slam_bounce` (rebote balistico
