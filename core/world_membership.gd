@@ -95,7 +95,8 @@ var _echo_has_last_position := false
 var _shell_meshes: Array[MeshInstance3D] = []
 var _shell_materials: Array[ShaderMaterial] = []
 var _shell_on := false
-var _pulse := 0.0  # 0..1: la onda del latido, compartida por el borde y el humo
+var _pulse := 0.0  # valor vertical de la senoide; por debajo de 0 no hay presencia visible
+var _pulse_progress := 0.0  # 0..1 entre el valle y la cresta, para interpolar contorno y brillo
 var _afterimage_host: Node3D
 var _afterimage_next_at := 0.0
 
@@ -162,29 +163,39 @@ func _smoke_vector2(property_name: StringName, fallback: Vector2) -> Vector2:
 		return fallback
 	return value as Vector2
 
-func _smoke_pulse_speed() -> float:
-	var interval := _smoke_float(&"pulse_interval", 1.25)
-	if interval <= 0.0:
-		return 0.0
-	return 1.0 / interval
-
 func _smoke_pulse() -> float:
-	var speed := _smoke_pulse_speed()
-	if speed <= 0.0:
+	var width := _smoke_float(&"pulse_curve_width", 1.25)
+	if width <= 0.0:
 		return 0.0
-	var phase := fposmod(World.now() * speed, 1.0)
-	return pow(phase, _smoke_float(&"pulse_exponent", 4.0))
+	var height := _smoke_float(&"pulse_curve_height", 1.0)
+	var midpoint := _smoke_float(&"pulse_curve_midpoint", 0.0)
+	return midpoint + height * sin(World.now() * TAU / width)
 
-func _pulse_time_left() -> float:
-	var speed := _smoke_pulse_speed()
-	if speed <= 0.0:
+func _update_pulse_progress() -> void:
+	var height := _smoke_float(&"pulse_curve_height", 1.0)
+	var midpoint := _smoke_float(&"pulse_curve_midpoint", 0.0)
+	if height <= 0.0:
+		_pulse_progress = 1.0 if _pulse > midpoint else 0.0
+		return
+	_pulse_progress = clampf(inverse_lerp(midpoint - height, midpoint + height, _pulse), 0.0, 1.0)
+
+func _is_pulse_visible() -> bool:
+	return _pulse > 0.0
+
+func _pulse_visible_time_left() -> float:
+	var width := _smoke_float(&"pulse_curve_width", 1.25)
+	var height := _smoke_float(&"pulse_curve_height", 1.0)
+	var midpoint := _smoke_float(&"pulse_curve_midpoint", 0.0)
+	if width <= 0.0 or height <= 0.0 or not _is_pulse_visible():
 		return 0.0
-	var phase := fposmod(World.now() * speed, 1.0)
-	return (1.0 - phase) / speed
-
-func _visible_pulse() -> float:
-	var threshold := _smoke_float(&"pulse_visibility_threshold", 0.15)
-	return _pulse if _pulse >= threshold else 0.0
+	var threshold := -midpoint / height
+	if threshold <= -1.0:
+		return INF
+	if threshold >= 1.0:
+		return 0.0
+	var phase := fposmod(World.now() * TAU / width, TAU)
+	var descending_zero := PI - asin(threshold)
+	return fposmod(descending_zero - phase, TAU) * width / TAU
 
 ## Prepara una ShaderMaterial de cascara por cada mesh del dueño. No se aplica todavia: vive en
 ## `material_override`, que PISA el material real sin destruirlo — al volver a este mundo se pone
@@ -214,18 +225,20 @@ func _set_shell_active(on: bool) -> void:
 ## El latido del borde. Es el reloj de toda la presencia: esta misma onda tambien empuja el humo.
 func _update_shell(color: Color) -> void:
 	_pulse = _smoke_pulse()
-	# La cascara depende exclusivamente del pulso: entre pulsos no tiene energia ni relleno.
-	var visible_pulse := _visible_pulse()
-	var rim_energy := _smoke_float(&"rim_max_energy", other_world_rim_max_energy) * visible_pulse
-	var fill_energy := _smoke_float(&"fill_energy", other_world_fill_energy) * visible_pulse
+	_update_pulse_progress()
+	# El valor se interpola sobre toda la senoide. Bajo 0 no se redibuja: al reaparecer conserva
+	# exactamente los valores que le correspondian en ese punto, sin reiniciar la curva.
+	var visible := _is_pulse_visible()
+	var rim_energy := lerpf(_smoke_float(&"rim_min_energy", 0.0),
+			_smoke_float(&"rim_max_energy", other_world_rim_max_energy), _pulse_progress)
+	var rim_alpha := lerpf(_smoke_float(&"rim_min_alpha", 0.0),
+			_smoke_float(&"rim_max_alpha", 1.0), _pulse_progress)
 	for material in _shell_materials:
 		material.set_shader_parameter("rim_color", color)
 		material.set_shader_parameter("rim_energy", rim_energy)
 		material.set_shader_parameter("rim_sharpness", _smoke_float(&"rim_sharpness", other_world_rim_sharpness))
-		material.set_shader_parameter("fill_energy", fill_energy)
-		# Opacidad separada del glow: visible_pulse ya esta acotada 0..1, asi que rampea
-		# durante TODO el pulso en vez de saturarse apenas rim_energy cruza 1.0 (ver shader).
-		material.set_shader_parameter("rim_alpha", visible_pulse)
+		material.set_shader_parameter("fill_energy", _smoke_float(&"fill_energy", other_world_fill_energy))
+		material.set_shader_parameter("rim_alpha", rim_alpha if visible else 0.0)
 
 ## Estela: copias del mesh que quedan CLAVADAS donde pasó el cuerpo (por eso cuelgan de un host
 ## fijo en la escena y no del dueño — si fueran hijas suyas lo seguirian y no habria estela).
@@ -336,11 +349,11 @@ func _update_other_world_echo(delta: float) -> void:
 	_other_world_echo_anchor.global_position = _target.to_global(_other_world_echo_local_center)
 	var is_other_world := other_world_echo_enabled and mode != Mode.BOTH and mode != Mode.FOLLOWS \
 			and not is_active
-	_other_world_echo.visible = is_other_world
-	_other_world_echo.emitting = is_other_world
-	_other_world_echo_light.visible = is_other_world
 	_set_shell_active(is_other_world)
 	if not is_other_world or _other_world_echo_material == null:
+		_other_world_echo.visible = false
+		_other_world_echo.emitting = false
+		_other_world_echo_light.visible = false
 		_echo_last_position = _target.global_position
 		_echo_has_last_position = true
 		return
@@ -355,14 +368,18 @@ func _update_other_world_echo(delta: float) -> void:
 	_echo_has_last_position = true
 	var color := World.world_emission(affiliation)
 
-	_update_shell(color)  # escribe _pulse: el reloj del que cuelga todo lo de abajo
+	_update_shell(color)
+	var pulse_visible := _is_pulse_visible()
+	_other_world_echo.visible = pulse_visible
+	_other_world_echo.emitting = pulse_visible
+	_other_world_echo_light.visible = pulse_visible
 
 	var motion := clampf(speed / maxf(0.01, _smoke_float(&"motion_speed", other_world_echo_motion_speed)), 0.0, 1.0)
-	# El humo respira con el latido del borde en vez de quedarse plano.
+	# El humo sigue el mismo progreso valle-cresta que el borde.
 	var energy := lerpf(_smoke_float(&"min_energy", other_world_echo_min_energy),
 			_smoke_float(&"max_energy", other_world_echo_max_energy), motion) \
-			+ _pulse * _smoke_float(&"smoke_pulse_boost", other_world_smoke_pulse_boost)
-	var particle_glow := maxf(1.0, _pulse * _smoke_float(&"particle_pulse_glow", 8.0))
+			+ _pulse_progress * _smoke_float(&"smoke_pulse_boost", other_world_smoke_pulse_boost)
+	var particle_glow := maxf(1.0, _pulse_progress * _smoke_float(&"particle_pulse_glow", 8.0))
 	var particle_emission := color * particle_glow
 	particle_emission.a = color.a
 	_other_world_echo_material.albedo_color = color
@@ -371,9 +388,9 @@ func _update_other_world_echo(delta: float) -> void:
 	_other_world_echo_light.light_color = color
 	_other_world_echo_light.light_energy = energy
 
-	# Conserva los frames saltados, pero solo durante la ventana visible de este mismo pulso.
-	var afterimage_lifetime_in_pulse := minf(afterimage_lifetime, _pulse_time_left())
-	if afterimages_enabled and _visible_pulse() > 0.0 and speed >= afterimage_min_speed \
+	# Conserva los frames saltados, pero solo durante el tramo positivo de esta misma senoide.
+	var afterimage_lifetime_in_pulse := minf(afterimage_lifetime, _pulse_visible_time_left())
+	if afterimages_enabled and pulse_visible and speed >= afterimage_min_speed \
 			and afterimage_lifetime_in_pulse > 0.01 and World.now() >= _afterimage_next_at:
 		_afterimage_next_at = World.now() + afterimage_interval
 		_spawn_afterimage(color, afterimage_lifetime_in_pulse)

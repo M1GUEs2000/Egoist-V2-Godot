@@ -33,7 +33,7 @@ Todo dueño de `WorldMembership` (enemigo, plataforma, bloque o estructura) lo h
 
 ### Capa POR PULSOS — el latido
 
-El cuerpo fuera de mundo se muestra como **cascara**: interior vacio, **contorno encendido** (fresnel, `visual/other_world_shell.gdshader`). Ese borde **late**, y el latido es el **reloj de toda la presencia**: cuando el borde late, el humo tambien sube un poco de brillo (`other_world_smoke_pulse_boost`). No son dos efectos sueltos corriendo en paralelo — el pulso manda y el humo lo acompaña.
+El cuerpo fuera de mundo se muestra como **cascara**: interior vacio, **contorno encendido** (fresnel, `visual/other_world_shell.gdshader`). El latido es una senoide con `anchura`, `altura` y `mitad`: la linea `0` es el umbral. Por debajo o en `0`, no se ve cascara, humo ni estela; por encima, contorno y brillo interpolan entre sus minimos y maximos segun el punto real de la curva. Al cruzar hacia arriba no reinicia ni remapea: reaparece con el valor que le corresponde en ese punto. El pulso manda toda la presencia.
 
 > [!important] El cuerpo ya NO se esconde
 > `hide_when_inactive` **dejo de apagar `visible`**; ahora solo apaga la colision. La lectura visual la resuelve la cascara. Es lo que permite que un bloque/plataforma del otro mundo tenga un borde donde brillar — antes desaparecia entero y solo quedaba el humo flotando. Si se apaga `other_world_echo_enabled` no hay cascara, y ahi si el objeto vuelve a esconderse (un cuerpo solido del otro mundo se confundiria con algo golpeable).
@@ -45,7 +45,7 @@ La cascara y el humo se aplican via `material_override`, que **pisa el material 
 
 `BOTH` y `FOLLOWS` no muestran nada de esto: nunca estan fuera del mundo actual.
 
-Tuneables (exports de `WorldMembership`): humo (`other_world_echo_*`), latido del borde (`other_world_rim_max_energy`, `other_world_pulse_speed`, `other_world_rim_sharpness`, `other_world_fill_energy`), contagio al humo (`other_world_smoke_pulse_boost`) y estela (`afterimages_enabled`, `afterimage_interval`, `afterimage_lifetime`, `afterimage_min_speed`, `afterimage_rim_energy`). *(pendiente de tunear jugando)*
+Tuneables globales (`data/other_world_smoke_tuning.tres`): curva (`pulse_curve_width`, `pulse_curve_height`, `pulse_curve_midpoint`), contorno (`rim_min_alpha`, `rim_max_alpha`), brillo (`rim_min_energy`, `rim_max_energy`), humo (`other_world_echo_*`, `smoke_pulse_boost`) y estela (`afterimages_enabled`, `afterimage_interval`, `afterimage_lifetime`, `afterimage_min_speed`, `afterimage_rim_energy`). *(pendiente de tunear jugando)*
 
 ## Trigger global
 

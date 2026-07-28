@@ -46,8 +46,8 @@ func _ready() -> void:
 	assert(membership.is_shell_active())
 	var echo_smoke := membership._other_world_echo
 	var echo_light := membership._other_world_echo_light
-	assert(echo_smoke != null and echo_smoke.visible and echo_smoke.emitting)
-	assert(echo_light != null and echo_light.visible)
+	assert(echo_smoke != null)
+	assert(echo_light != null)
 	var echo_energy_at_rest := echo_light.light_energy
 	body.global_position += Vector3.RIGHT * 0.4
 	membership._update_other_world_echo(0.1)

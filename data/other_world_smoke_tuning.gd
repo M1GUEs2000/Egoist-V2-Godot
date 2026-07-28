@@ -53,14 +53,20 @@ class_name OtherWorldSmokeTuning extends Resource
 @export var light_volumetric_energy := 0.2
 
 @export_group("Pulso")
-## Energia del borde en la cresta del latido.
+## Anchura temporal de una vuelta completa de la senoide, en segundos. Mas alto = pulso mas lento.
+@export_range(0.01, 60.0, 0.01) var pulse_curve_width := 1.25
+## Distancia vertical entre la mitad de la curva y su pico o valle.
+@export_range(0.01, 20.0, 0.01) var pulse_curve_height := 1.0
+## Altura de la linea media de la senoide. Puede ser negativa; solo se ve por encima de 0.
+@export_range(-20.0, 20.0, 0.01) var pulse_curve_midpoint := 0.0
+## Opacidad del contorno en el valle de la curva, antes de aplicar el umbral de visibilidad.
+@export_range(0.0, 1.0, 0.01) var rim_min_alpha := 0.0
+## Opacidad del contorno en la cresta de la curva.
+@export_range(0.0, 1.0, 0.01) var rim_max_alpha := 1.0
+## Energia HDR del brillo del contorno en el valle, antes de aplicar el umbral de visibilidad.
+@export var rim_min_energy := 0.0
+## Energia HDR del brillo del contorno en la cresta de la curva.
 @export var rim_max_energy := 2.4
-## Tiempo entre pulsos, en segundos. Mas alto = pulso mas lento.
-@export var pulse_interval := 1.25
-## Curva exponencial del pulso. 1 = lineal; 8+ = casi todo aparece al final.
-@export_range(1.0, 24.0, 0.1) var pulse_exponent := 4.0
-## Valor minimo del pulso para mostrar el borde y las siluetas de la estela.
-@export_range(0.0, 1.0, 0.01) var pulse_visibility_threshold := 0.15
 ## Cuanto del pulso se suma al brillo del humo. 0 = el humo no late.
 @export var smoke_pulse_boost := 0.35
 ## Brillo HDR aplicado directamente al color de emision de las particulas durante el pulso.
