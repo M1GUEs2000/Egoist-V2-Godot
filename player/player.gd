@@ -232,6 +232,7 @@ func _on_jump() -> void:
 		_set_double_jump_available(false)
 		_start_jump_impulse(_jump_direction_from_input())
 		air_state = AirState.AIRBORNE
+		_burst_double_jump()
 
 ## Salto base y doble salto comparten una parabola dirigida definida por altura, distancia y
 ## duracion. La fuerza vertical y la gravedad se calculan: no son knobs de tuning.
@@ -251,6 +252,19 @@ func _start_jump_impulse(direction: Vector3) -> void:
 	_refresh_jump_vertical_trajectory()
 	_refresh_jump_horizontal_velocity()
 	locomotion.set_air_velocity(Vector3.ZERO)
+
+## Estela verde a los pies al gastar el doble salto (mismo verde de traversal que el
+## bloque/dodge). World.spawn_trail_burst emite motas continuamente en los pies del jugador
+## mientras dura, y las deja atras en el mundo (no pegadas) para que se vean como una estela
+## que lo sigue, cada una desvaneciendose sola.
+func _burst_double_jump() -> void:
+	if not tuning.double_jump_burst_enabled:
+		return
+	World.spawn_trail_burst(self, Vector3(0.0, 0.1, 0.0),
+			World.COLOR_TRAVERSAL_DASH, World.COLOR_TRAVERSAL_DASH_EMISSION,
+			tuning.double_jump_burst_amount, tuning.double_jump_burst_speed,
+			tuning.double_jump_burst_gravity, tuning.double_jump_burst_lifetime,
+			tuning.double_jump_burst_size)
 
 func _jump_direction_from_input() -> Vector3:
 	var input := locomotion.read_move_input()

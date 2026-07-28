@@ -133,7 +133,10 @@ static func make_color_motes(color: Color, emission: Color, amount: int, lifetim
 
 ## Una mota: quad unshaded + billboard + additive, puro color que suma luz. Es la receta
 ## visual compartida por el estallido de los bloques de traversal y los emisores continuos.
-static func make_mote_mesh(color: Color, emission: Color, size: float) -> QuadMesh:
+## `fade_over_life` prende vertex_color_use_as_albedo para que el color_ramp del
+## ParticleProcessMaterial pueda pisar el alpha por mota a lo largo de su vida (ver
+## spawn_trailing_burst); sin esto el color_ramp no tiene efecto visual.
+static func make_mote_mesh(color: Color, emission: Color, size: float, fade_over_life := false) -> QuadMesh:
 	var mesh := QuadMesh.new()
 	mesh.size = Vector2(size, size)
 	var material := StandardMaterial3D.new()
@@ -144,8 +147,66 @@ static func make_mote_mesh(color: Color, emission: Color, size: float) -> QuadMe
 	material.emission_enabled = true
 	material.emission = emission
 	material.albedo_color = color
+	if fade_over_life:
+		material.vertex_color_use_as_albedo = true
 	mesh.material = material
 	return mesh
+
+## Estela: motas que nacen continuamente en los pies de `follow` mientras dura `duration`, y
+## quedan ATRAS en el mundo (local_coords=false, misma receta que make_color_motes) en vez de
+## viajar pegadas al jugador — asi se ve como una estela que lo sigue, no como un aura rigida.
+## Cada mota se apaga sola via color_ramp (alpha 1 -> 0 a lo largo de su vida). Lo usa el
+## estallido verde del doble salto (ver Player._burst_double_jump).
+static func spawn_trail_burst(follow: Node3D, local_offset: Vector3, color: Color, emission: Color,
+		amount: int, speed: float, gravity: float, duration: float, size: float) -> void:
+	if follow == null or amount <= 0 or duration <= 0.0:
+		return
+	var particles := GPUParticles3D.new()
+	particles.emitting = false
+	particles.one_shot = false
+	particles.amount = amount
+	particles.lifetime = duration
+	particles.local_coords = false  # las motas quedan atras: forman la estela al moverse el jugador
+
+	var process := ParticleProcessMaterial.new()
+	process.emission_shape = ParticleProcessMaterial.EMISSION_SHAPE_SPHERE
+	process.emission_sphere_radius = 0.15
+	process.direction = Vector3(0.0, 1.0, 0.0)
+	process.spread = 50.0
+	process.initial_velocity_min = speed * 0.3
+	process.initial_velocity_max = speed
+	process.gravity = Vector3(0.0, -gravity, 0.0)
+	process.scale_min = 0.6
+	process.scale_max = 1.0
+	var fade := Gradient.new()
+	fade.offsets = PackedFloat32Array([0.0, 1.0])
+	fade.colors = PackedColorArray([Color(1.0, 1.0, 1.0, 1.0), Color(1.0, 1.0, 1.0, 0.0)])
+	var fade_ramp := GradientTexture1D.new()
+	fade_ramp.gradient = fade
+	process.color_ramp = fade_ramp
+	particles.process_material = process
+
+	particles.draw_pass_1 = make_mote_mesh(color, emission, size, true)
+
+	follow.add_child(particles)
+	particles.position = local_offset
+	particles.emitting = true
+
+	# No es one_shot (necesitamos emision continua durante `duration`, no un estallido), asi que
+	# se apaga y libera con timers: corta la emision al cumplirse `duration`, y libera el nodo
+	# una vida despues para dar tiempo a que la ultima mota emitida termine de desvanecerse.
+	var tree := follow.get_tree()
+	if tree == null:
+		return
+	tree.create_timer(duration).timeout.connect(func():
+		if not is_instance_valid(particles):
+			return
+		particles.emitting = false
+		tree.create_timer(duration).timeout.connect(func():
+			if is_instance_valid(particles):
+				particles.queue_free()
+		)
+	)
 
 ## Color base de una pieza segun el mundo al que pertenece.
 static func world_color(kind: Kind) -> Color:

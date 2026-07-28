@@ -42,6 +42,19 @@ class_name PlayerTuning extends Resource
 @export_range(0.0, 100.0, 1.0) var jump_apex_slowdown_window_percent := 30.0
 ## Fraccion del control aereo normal tras liberarse. 0 = sin correccion; mas alto = se frena y gira con mayor facilidad; 1 = control aereo normal.
 @export_range(0.0, 1.0) var jump_post_release_air_control_scale := 0.4
+## Estallido verde a los pies al gastar el doble salto (mismo verde que el bloque/dodge de traversal).
+@export var double_jump_burst_enabled := true
+## Cantidad de motas del estallido de doble salto.
+@export_range(0, 128, 1) var double_jump_burst_amount := 20
+## Velocidad de salida de las motas en m/s.
+@export var double_jump_burst_speed := 4.0
+## Gravedad que tira las motas hacia abajo tras estallar (m/s^2 del emisor).
+@export var double_jump_burst_gravity := 6.0
+## Cuanto dura la estela: tiempo emitiendo motas en los pies del jugador y vida de cada mota
+## (nace, desvanece y muere en esta ventana). Mas alto = estela mas larga y persistente.
+@export_range(0.05, 3.0, 0.05) var double_jump_burst_lifetime := 0.3
+## Lado de cada mota del estallido en metros.
+@export_range(0.01, 0.5, 0.01) var double_jump_burst_size := 0.12
 
 @export_group("Wall slide")
 ## Velocidad mínima de empuje CONTRA la pared para engancharse al slide (m/s).
