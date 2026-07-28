@@ -27,10 +27,10 @@ var _traversal_cooldown_until := -999.0
 var _swing_id := 0
 var _player: Player
 
-## Cola de taps de combate que llegaron mas rapido que `tuning.tap_cadence`: no se pierden,
-## salen apenas la cadencia lo permite (ver _process). Capada por el margen que quede antes de
-## max_taps, no por tiempo: mashear no acelera la cadencia, solo llena la cola hasta el limite.
-var _pending_taps := 0
+## Solo un segundo tap puede esperar a la cadencia. Vence rapido para que mashear no convierta un
+## input aislado en una rafaga tardia.
+var _pending_tap := false
+var _pending_tap_expires_at := -999.0
 var _next_tap_ready_at := -999.0
 
 @onready var _hitbox: Hitbox = $ArmHitbox
@@ -87,16 +87,20 @@ func _refresh_regen() -> void:
 func _notify_taps() -> void:
 	taps_changed.emit(taps_available(), tuning.max_taps)
 
-## Flush de la cola de taps bufferizados, al ritmo de `tuning.tap_cadence`. El stun descarta la
-## cola entera: _input ya no deja encolar mientras estas aturdido, pero sin esto los taps que
-## entraron ANTES del golpe seguian saliendo durante el stun.
+## Ejecuta el unico segundo tap bufferizado cuando toca la cadencia. Si no alcanza a salir dentro
+## de `tap_buffer_duration`, se descarta; el stun tambien lo descarta.
 func _flush_tap_buffer() -> void:
 	if _player.is_stunned():
-		_pending_taps = 0
+		_pending_tap = false
 		return
-	if _pending_taps <= 0 or World.now() < _next_tap_ready_at:
+	if not _pending_tap:
 		return
-	_pending_taps -= 1
+	if World.now() > _pending_tap_expires_at:
+		_pending_tap = false
+		return
+	if World.now() < _next_tap_ready_at:
+		return
+	_pending_tap = false
 	var target := _resolve_target()
 	if target != null:
 		_fire_tap(target)  # si el target ya no existe, el tap en cola se pierde (no hay a quien pegarle)
@@ -104,6 +108,8 @@ func _flush_tap_buffer() -> void:
 func _input(event: InputEvent) -> void:
 	if _player != null and _player.is_stunned():
 		return
+	if event is InputEventKey and (event as InputEventKey).is_echo():
+		return  # mantener la tecla no genera taps adicionales
 	if event.is_action_pressed("arm_attack"):
 		_try_tap()
 
@@ -150,19 +156,19 @@ func _find_skeleton(root: Node) -> Skeleton3D:
 			return found
 	return null
 
-## Un tap de combate no pega mas rapido que `tuning.tap_cadence`: si todavia no toca, se guarda
-## en `_pending_taps` en vez de perderse (ver _flush_tap_buffer), capado por el margen que quede
-## antes de max_taps. El traversal (bloques) no pasa por la cola: no tiene sentido encolar
-## teletransportes, ya tiene su propio cooldown corto.
+## Un tap de combate no pega mas rapido que `tuning.tap_cadence`: solo un segundo press puede
+## quedar bufferizado y vence en `tap_buffer_duration`. El traversal no se bufferiza.
 func _try_tap() -> void:
 	var target := _resolve_target()
 	if target != null:
-		if _taps_used + _pending_taps >= tuning.max_taps:
+		var reserved := 1 if _pending_tap else 0
+		if _taps_used + reserved >= tuning.max_taps:
 			return  # reserva agotada (o comprometida por la cola): el apreton se pierde
-		if _pending_taps == 0 and World.now() >= _next_tap_ready_at:
+		if not _pending_tap and World.now() >= _next_tap_ready_at:
 			_fire_tap(target)
-		else:
-			_pending_taps += 1  # sin _notify_taps: el icono se apaga cuando el golpe SALE
+		elif not _pending_tap:
+			_pending_tap = true
+			_pending_tap_expires_at = World.now() + tuning.tap_buffer_duration
 		return
 	var block := _nearest_dash_block()
 	if block != null:
@@ -249,15 +255,28 @@ func _resolve_target() -> EnemyBase:
 	return _player.lock_on.nearest_in_cone(_player.forward())
 
 func _on_hit(hurtbox: Hurtbox, _died: bool) -> void:
-	# Reaccion aerea propia del Brazo: hang corto (Floater de hold total) + freno del momentum
-	# horizontal (decelera cada golpe). El guard de is_on_floor vive en Player.register_arm_air_hit;
-	# is_airborne evita el passthrough en el caso terrestre.
-	var hang := tuning.air_hang_floater
-	if _player.is_airborne() and hang != null:
-		_player.register_arm_air_hit(hang.duration, hang.fall_scale, tuning.air_horizontal_keep)
+	_apply_universal_float(hurtbox)
 	if _player.meter != null:
 		_player.meter.gain_bars(tuning.meter_gain_on_hit)
 	_spawn_impact_vfx(hurtbox)
+
+## El Brazo no tiene un hang propio: al conectar pide Floater para ambos cuerpos, con perfiles
+## tuneables e independientes. El Enemy solo acepta su solicitud si ya esta aereo y quebrado.
+func _apply_universal_float(hurtbox: Hurtbox) -> void:
+	var player_float := tuning.air_player_floater
+	if player_float != null and player_float.duration > 0.0:
+		# Mantiene el freno horizontal ya tuneado del Brazo; su parte vertical solo inicia Floater.
+		_player.register_arm_air_hit(player_float.duration, player_float.fall_scale,
+				tuning.air_horizontal_keep)
+
+	var enemy_float := tuning.air_enemy_floater
+	if enemy_float == null or enemy_float.duration <= 0.0:
+		return
+	var target: Node = hurtbox.owner_node
+	if target is EnemyBase:
+		(target as EnemyBase).request_float(enemy_float.duration, enemy_float.fall_scale)
+	elif target.has_method("request_float"):
+		target.call("request_float", enemy_float.duration, enemy_float.fall_scale)
 
 ## Mismo VFX que el aura, pero one-shot y clavado en el punto de impacto (se agrega al mundo, no
 ## al brazo, para que se quede quieto). Se auto-libera al terminar. Solo visual.

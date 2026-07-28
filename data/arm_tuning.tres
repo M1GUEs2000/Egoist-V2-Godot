@@ -5,9 +5,13 @@
 [ext_resource type="PackedScene" uid="uid://ccg2qrwq3kse7" path="res://visual/arm_vfx_pulse.tscn" id="3_vk5ia"]
 [ext_resource type="Script" uid="uid://br6k3bi45tkio" path="res://data/floater_settings.gd" id="4_floater"]
 
-[sub_resource type="Resource" id="Resource_air_hang_floater"]
+[sub_resource type="Resource" id="Resource_air_enemy_floater"]
 script = ExtResource("4_floater")
-duration = 0.1
+duration = 10.0
+
+[sub_resource type="Resource" id="Resource_air_player_floater"]
+script = ExtResource("4_floater")
+duration = 2.0
 
 [resource]
 script = ExtResource("1_tuning")
@@ -15,9 +19,11 @@ stun = ExtResource("2_stun")
 max_taps = 3
 cooldown_duration = 1.0
 tap_cadence = 0.3
+tap_buffer_duration = 0.15
 hitbox_radius = 1.0
 meter_gain_on_hit = 0.01
-air_hang_floater = SubResource("Resource_air_hang_floater")
+air_player_floater = SubResource("Resource_air_player_floater")
+air_enemy_floater = SubResource("Resource_air_enemy_floater")
 air_horizontal_keep = 0.201
 traversal_lock_max_range = 25.0
 traversal_lock_half_angle = 100.0

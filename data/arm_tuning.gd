@@ -13,20 +13,23 @@ class_name ArmTuning extends Resource
 ## la reserva no esta completa, asi que gastar un solo golpe ya empieza a devolverlo. Si faltan
 ## varios se recuperan de a uno cada `cooldown_duration`. Gastar mientras corre no lo reinicia.
 @export var cooldown_duration := 3.0
-## Segundos minimos entre dos golpes consecutivos (cadencia). Aplastar el input mas rapido que
-## esto no pega mas rapido: los taps de mas se guardan en cola y salen a este ritmo, sin
-## perderse, hasta agotar max_taps.
+## Segundos minimos entre dos golpes consecutivos (cadencia).
 @export var tap_cadence := 0.15
+## Un segundo tap durante la cadencia puede esperar como maximo este tiempo. Solo hay un tap
+## bufferizado: mas inputs no forman una rafaga ni consumen cargas por adelantado.
+@export var tap_buffer_duration := 0.5
 ## Segundos que el hitbox queda activo sobre el target (ventana de detección, no viaje visual).
 @export var travel_time := 0.1
 ## Radio de la esfera de golpe que se posiciona sobre el target.
 @export var hitbox_radius := 0.35
 ## Meter que gana un golpe conectado. Propio y bajo, independiente de WeaponTuning/PlayerTuning.
 @export var meter_gain_on_hit := 1.0
-## Hold del jugador cuando el Brazo conecta en el aire: un Floater (request_float via
-## register_arm_air_hit), el mismo primitivo que usan los demas ataques. Sin escalado por combo: es un
-## perfil fijo por golpe. duration 0 = sin hang vertical; fall_scale 0 = hold total. Ver combat/floater.gd.
-@export var air_hang_floater: FloaterSettings
+## Perfil del Floater que el Brazo pide para el Player al conectar. duration 0 = sin hang vertical;
+## fall_scale 0 = hold total. Es independiente del perfil que recibe el Enemy.
+@export var air_player_floater: FloaterSettings
+## Perfil del Floater que el Brazo pide para el Enemy golpeado. EnemyBase solo lo acepta si el
+## objetivo ya esta aereo y quebrado: Floater sostiene un juggle, no crea un launcher.
+@export var air_enemy_floater: FloaterSettings
 ## Fraccion del momentum HORIZONTAL (bump) que sobrevive cada golpe aereo del Brazo: a diferencia
 ## de la vertical (pausa que conserva), la horizontal DECELERA — cada golpe la frena. 1.0 = no
 ## frena, 0.5 = la parte a la mitad por golpe, 0.0 = la mata.
