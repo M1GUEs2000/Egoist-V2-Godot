@@ -6,13 +6,13 @@
 [ext_resource type="Script" uid="uid://t5yeryvd8mn1" path="res://combat/break_on_death.gd" id="4_break"]
 [ext_resource type="Script" uid="uid://dvxrsptoplacw" path="res://combat/hurtbox.gd" id="5_hurtbox"]
 
-[sub_resource type="BoxMesh" id="BoxMesh_body"]
+[sub_resource type="SphereMesh" id="SphereMesh_body"]
 
 [sub_resource type="StandardMaterial3D" id="Mat_body"]
 albedo_color = Color(0.06, 0.06, 0.065, 1)
 
-[sub_resource type="BoxShape3D" id="BoxShape3D_hurtbox"]
-size = Vector3(1.1, 1.1, 1.1)
+[sub_resource type="SphereShape3D" id="SphereShape3D_hurtbox"]
+radius = 0.55
 
 [node name="TraversalBlock" type="Node3D" unique_id=441635832]
 script = ExtResource("1_block")
@@ -21,7 +21,7 @@ boost_existing_bump_momentum = true
 
 [node name="Mesh" type="MeshInstance3D" parent="." unique_id=1926644517]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.55, 0)
-mesh = SubResource("BoxMesh_body")
+mesh = SubResource("SphereMesh_body")
 surface_material_override/0 = SubResource("Mat_body")
 
 [node name="GlowSegments" type="Node3D" parent="." unique_id=83947876]
@@ -39,4 +39,4 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.55, 0)
 script = ExtResource("5_hurtbox")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="Hurtbox" unique_id=1078917030]
-shape = SubResource("BoxShape3D_hurtbox")
+shape = SubResource("SphereShape3D_hurtbox")

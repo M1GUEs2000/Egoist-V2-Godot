@@ -72,9 +72,12 @@ static func paint_all_surfaces(root: Node, material: Material) -> void:
 ## Estallido one-shot de motas de un color, en `position` global. Se cuelga de `host` (que debe
 ## estar en el arbol) y se libera solo al terminar. Motas unshaded + billboard + additive: puro
 ## color que suma luz. Lo usan el bloque de traversal al golpearlo y el bop de salida del dash
-## verde (ver TraversalBlock y PlayerDash).
+## verde (ver TraversalBlock y PlayerDash). Nacen en la SUPERFICIE de una esfera de `radius` (no
+## en el centro) y salen disparadas derecho hacia afuera desde ahi (velocidad radial): asi el
+## estallido lee como que sale de los filos/cara del cuerpo, no de un punto interno.
 static func spawn_color_burst(host: Node, position: Vector3, color: Color, emission: Color,
-		amount: int, speed: float, gravity: float, lifetime: float, size: float) -> void:
+		amount: int, speed: float, gravity: float, lifetime: float, size: float,
+		radius := 0.4) -> void:
 	if host == null or amount <= 0:
 		return
 	var particles := GPUParticles3D.new()
@@ -86,12 +89,13 @@ static func spawn_color_burst(host: Node, position: Vector3, color: Color, emiss
 	particles.local_coords = false
 
 	var process := ParticleProcessMaterial.new()
-	process.emission_shape = ParticleProcessMaterial.EMISSION_SHAPE_SPHERE
-	process.emission_sphere_radius = 0.4
-	process.direction = Vector3(0.0, 1.0, 0.0)
-	process.spread = 180.0  # esfera completa: sale para todos lados
-	process.initial_velocity_min = speed * 0.4
-	process.initial_velocity_max = speed
+	process.emission_shape = ParticleProcessMaterial.EMISSION_SHAPE_SPHERE_SURFACE
+	process.emission_sphere_radius = radius
+	# Sin direction/spread ni initial_velocity: la velocidad radial usa el vector centro->punto
+	# de nacimiento de cada mota (su posicion en la superficie), asi que cada una sale recta
+	# hacia afuera desde donde nacio en vez de una direccion aleatoria compartida.
+	process.radial_velocity_min = speed * 0.4
+	process.radial_velocity_max = speed
 	process.gravity = Vector3(0.0, -gravity, 0.0)
 	process.scale_min = 0.6
 	process.scale_max = 1.0

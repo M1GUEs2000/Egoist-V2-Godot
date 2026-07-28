@@ -86,6 +86,9 @@ class_name TraversalBlock extends Node3D
 @export var hits_to_break := 0
 
 const INDESTRUCTIBLE_HEALTH := 999999.0
+## Resolucion de los gajos de esfera del glow (anillos a lo largo del corte y pasos del giro).
+const SEGMENT_MESH_RINGS := 12
+const SEGMENT_MESH_RADIAL := 32
 
 var _last_dash_hit_time := -999.0
 var _segment_materials: Array[StandardMaterial3D] = []
@@ -267,15 +270,20 @@ func _burst_impact() -> void:
 	for i in range(mini(colors.size(), emissions.size())):
 		_spawn_burst(colors[i], emissions[i])
 
-## Un estallido del centro del bloque, colgado del PADRE (no de self): si el golpe rompe el
-## bloque (BreakOnDeath), la explosion sobrevive hasta apagarse.
+## Un estallido de la SUPERFICIE del bloque (cada mota nace en la cascara de la esfera y sale
+## recta hacia afuera desde ahi, no desde el centro), colgado del PADRE (no de self): si el
+## golpe rompe el bloque (BreakOnDeath), la explosion sobrevive hasta apagarse. El radio sigue
+## la escala real del bloque (varias instancias de la escena estan escaladas 2x-5x) para que el
+## estallido calce con el cuerpo visible.
 func _spawn_burst(color: Color, emission: Color) -> void:
 	var host := get_parent()
 	if host == null:
 		host = self
+	var scale := global_transform.basis.get_scale()
+	var burst_radius := 0.55 * (scale.x + scale.y + scale.z) / 3.0
 	World.spawn_color_burst(host, global_position + Vector3(0.0, 0.55, 0.0), color, emission,
 			tuning.burst_amount, tuning.burst_speed, tuning.burst_gravity,
-			tuning.burst_lifetime, tuning.burst_size)
+			tuning.burst_lifetime, tuning.burst_size, burst_radius)
 
 func _rebuild_glow_segments() -> void:
 	for child in _glow_segments.get_children():
@@ -287,14 +295,15 @@ func _rebuild_glow_segments() -> void:
 	var count := colors.size()
 	for i in range(count):
 		var segment := MeshInstance3D.new()
-		var mesh := BoxMesh.new()
-		# Cada segmento cubre TODO el alto/fondo del bloque y una fraccion del ancho, para
-		# que se prenda el bloque entero (no solo una franja arriba). 1.02 = un pelin mas
-		# grande que el cuerpo (1x1) para envolverlo sin z-fighting.
-		mesh.size = Vector3(1.02 / float(count), 1.02, 1.02)
-		segment.mesh = mesh
-		# Tileado a lo ancho en x; y=0.55 = centro del cuerpo del bloque (Mesh del .tscn).
-		segment.position = Vector3(_segment_x(i, count), 0.55, 0.0)
+		# Cada segmento es un gajo de esfera cortado por planos verticales en x: la misma
+		# particion en franjas iguales de ancho que tenia el cubo, para que se prenda el
+		# bloque entero (no solo una franja arriba). Radio 0.51 = un pelin mas grande que el
+		# cuerpo (esfera de radio 0.5) para envolverlo sin z-fighting.
+		var x0 := -0.51 + float(i) * 1.02 / float(count)
+		segment.mesh = _build_sphere_slab_mesh(x0, x0 + 1.02 / float(count), 0.51)
+		# Todos los gajos se generan centrados en el cuerpo; y=0.55 = centro del cuerpo
+		# del bloque (Mesh del .tscn).
+		segment.position = Vector3(0.0, 0.55, 0.0)
 		var material := StandardMaterial3D.new()
 		material.emission_enabled = true
 		segment.set_surface_override_material(0, material)
@@ -306,6 +315,42 @@ func _rebuild_glow_segments() -> void:
 ## Centro en x del segmento i, con el bloque partido en `count` franjas iguales.
 func _segment_x(i: int, count: int) -> float:
 	return -0.51 + (float(i) + 0.5) * 1.02 / float(count)
+
+## Gajo de esfera: la porcion de superficie con x entre `x0` y `x1` (cortes por planos
+## verticales, la misma particion en franjas que tenian las cajas del cuerpo cubico).
+## Godot no trae primitiva de esfera parcial, asi que se genera con SurfaceTool. Sin tapas
+## en los cortes: los gajos vecinos continuan la superficie y el interior nunca se ve.
+func _build_sphere_slab_mesh(x0: float, x1: float, radius: float) -> ArrayMesh:
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var alpha_start := acos(clampf(x1 / radius, -1.0, 1.0))
+	var alpha_end := acos(clampf(x0 / radius, -1.0, 1.0))
+	for i in range(SEGMENT_MESH_RINGS):
+		var alpha_a := lerpf(alpha_start, alpha_end, float(i) / float(SEGMENT_MESH_RINGS))
+		var alpha_b := lerpf(alpha_start, alpha_end, float(i + 1) / float(SEGMENT_MESH_RINGS))
+		for j in range(SEGMENT_MESH_RADIAL):
+			var beta_a := TAU * float(j) / float(SEGMENT_MESH_RADIAL)
+			var beta_b := TAU * float(j + 1) / float(SEGMENT_MESH_RADIAL)
+			var p00 := _sphere_slab_point(radius, alpha_a, beta_a)
+			var p01 := _sphere_slab_point(radius, alpha_a, beta_b)
+			var p10 := _sphere_slab_point(radius, alpha_b, beta_a)
+			var p11 := _sphere_slab_point(radius, alpha_b, beta_b)
+			_add_slab_triangle(st, p00, p01, p10)
+			_add_slab_triangle(st, p01, p11, p10)
+	return st.commit()
+
+## Punto de la esfera con x como eje de los cortes: `alpha` recorre de +x a -x y `beta`
+## gira el anillo alrededor de ese eje.
+func _sphere_slab_point(radius: float, alpha: float, beta: float) -> Vector3:
+	var ring := radius * sin(alpha)
+	return Vector3(radius * cos(alpha), ring * cos(beta), ring * sin(beta))
+
+## Triangulo con winding horario visto desde afuera (front face en Godot) y normal suave
+## radial por vertice.
+func _add_slab_triangle(st: SurfaceTool, a: Vector3, b: Vector3, c: Vector3) -> void:
+	for point: Vector3 in [a, b, c]:
+		st.set_normal(point.normalized())
+		st.add_vertex(point)
 
 ## Derrame hacia abajo: un cono de luz + una columna de particulas POR FEATURE, alineados con
 ## la franja de color que le toca en el cuerpo. Asi el bloque marca el piso debajo y se lee
