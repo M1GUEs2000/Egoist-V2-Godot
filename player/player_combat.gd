@@ -21,9 +21,16 @@ signal slots_changed(slot_x_weapon: WeaponBase, slot_y_weapon: WeaponBase)
 ## Lo consume EVADE (GroundedEnemy._on_player_attack_telegraphed); DEFEND lo reusara.
 signal attack_telegraphed(origin: Vector3, direction: Vector3)
 
+## Barras que consumiría el cargado en curso si se soltara AHORA, y el color con el que brilla la
+## hoja mientras carga. Lo pinta el HUD sobre el meter: las barras condenadas laten. Sale en 0 (con
+## el color que traía) cuando el press deja de estar cargado.
+signal charge_meter_preview_changed(bars: float, glow: Color)
+
 var _body: Player
 var _last_attack_time := -999.0
 var _charging_weapon: WeaponBase  # arma del último press: recibe el glow de carga
+var _charging_slot := World.Slot.X  # slot de ese press: decide cuánto meter costaría el cargado
+var _charge_preview := 0.0  # último valor emitido en charge_meter_preview_changed
 var _active_weapon: WeaponBase  # arma visible actualmente
 var _attack_kind := AttackKind.NORMAL  # tipo del ultimo ataque iniciado (lo lee el parry)
 var _rest_rotations := {}  # WeaponBase → Quaternion
@@ -89,6 +96,14 @@ func cancel_input() -> void:
 ## velocidad) y el animation controller (blend de pose al caminar cargando).
 func is_charging() -> bool:
 	return buffer.charge_progress() > 0.0
+
+## Barras que consumiría el cargado en curso si se soltara AHORA. Cero mientras el press todavía no
+## escaló a carga: por debajo del umbral soltar da un tap, y un tap es gratis. El monto lo decide el
+## arma (charged_meter_cost), que es la única que sabe si su cargado escala por nivel o sale gratis.
+func charge_meter_preview() -> float:
+	if _charging_weapon == null or buffer.charge_progress() < 1.0:
+		return 0.0
+	return _charging_weapon.charged_meter_cost(_charging_slot, buffer.held_duration())
 
 ## El jugador tiene las armas afuera si atacó hace poco.
 func weapons_out() -> bool:
@@ -200,6 +215,7 @@ func _on_press(weapon: WeaponBase, slot: World.Slot) -> void:
 	_body.fire_action_world_switch()
 	_last_attack_time = World.now()
 	_charging_weapon = weapon
+	_charging_slot = slot
 	# Baseline: el press arranca como tap (NORMAL). Si escala a hold, _fire_hold lo pasa a cargado
 	# antes de que salga el swing cargado — asi el parry lee el tipo correcto.
 	_attack_kind = AttackKind.NORMAL
@@ -252,6 +268,7 @@ func _process(delta: float) -> void:
 		if not _air_charge_fall_applied and charge_progress >= 1.0:
 			_air_charge_fall_applied = true
 			_body.apply_air_charge_float()
+	_update_charge_preview()
 	if weapons_out():
 		return
 	for weapon in _weapons():
@@ -262,6 +279,17 @@ func _process(delta: float) -> void:
 			continue
 		var max_step := deg_to_rad(_body.tuning.weapon_pose_rotate_speed) * delta
 		weapon.quaternion = weapon.quaternion.slerp(target, minf(1.0, max_step / angle))
+
+## Avisa al HUD solo cuando el monto cambia. El Mazo lo mueve a saltos mientras cargás (una barra
+## por vuelta) y el sweet spot de la Espada lo abarata a mitad de carga, así que esto no es constante
+## durante un mismo press.
+func _update_charge_preview() -> void:
+	var preview := charge_meter_preview()
+	if is_equal_approx(preview, _charge_preview):
+		return
+	_charge_preview = preview
+	var glow := _charging_weapon.charge_glow_color if _charging_weapon != null else Color.WHITE
+	charge_meter_preview_changed.emit(preview, glow)
 
 ## Slots únicos (X e Y pueden apuntar a la misma arma: setup y pose una sola vez).
 func _weapons() -> Array[WeaponBase]:

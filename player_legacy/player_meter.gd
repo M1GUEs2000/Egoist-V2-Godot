@@ -29,20 +29,20 @@ func fraction() -> float:
 func affordable_bars() -> int:
 	return int(floor(_meter / _body.tuning.meter_charged_cost))
 
-func gain_on_hit() -> void:
-	_add(_body.tuning.meter_gain_on_hit)
+func gain_on_hit(bars_amount: float) -> void:
+	_add(bars_amount)
 
 func gain_bars(amount: float) -> void:
 	_add(amount)
 
 ## Al matar: si venimos de un cargado (ventana abierta), recuperás 1 barra completa
 ## (habilidad especial de la Espada). Si no, la ganancia normal de kill.
-func gain_on_kill() -> void:
+func gain_on_kill(bars_amount: float) -> void:
 	if World.now() <= _charged_kill_expiry:
 		_charged_kill_expiry = -999.0
 		_add(1.0)
 	else:
-		_add(_body.tuning.meter_gain_on_kill)
+		_add(bars_amount)
 
 ## Gasta el coste del dodge. Devuelve si había suficiente (para el futuro dodge
 ## degradado sin meter). Hoy el dodge no se bloquea: gasta lo que haya hasta 0.

@@ -30,10 +30,14 @@ class_name PlayerTuning extends Resource
 # nivel 1 ese canal vale 1.4x, a nivel 0.5 vale 1.2x. En 0 el canal no participa del sprint.
 ## Segundos de boton sostenido para pasar de sprint 0 a pleno. Mas bajo = arranca lanzado enseguida.
 @export var sprint_charge_seconds := 1.2
-## Segundos en volver de sprint pleno a 0 al soltar el boton, pisando suelo. En el aire el nivel
-## queda congelado (el salto y la cadena de paredes heredan el sprint del despegue), asi que este
-## drenaje solo corre en tierra. Mas bajo = perdes la carrera apenas soltas.
+## Segundos en volver de sprint pleno a 0 al soltar el boton. Corre igual en tierra que en el aire:
+## soltar en pleno salto tambien apaga la carrera. Mas bajo = perdes la carrera apenas soltas.
 @export var sprint_decay_seconds := 0.6
+## Fraccion del meter COMPLETO por segundo que cuesta tener el sprint activo (nivel > 0). Es sobre
+## el total, no por barra: 0.1 = 10% del meter por segundo, o sea un meter lleno se vacia en 10s
+## corriendo, valga 2 o 5 barras. Sin meter no se puede cargar y el nivel cae solo: el sprint
+## compite con el gasto de combate en vez de ser gratis.
+@export_range(0.0, 1.0, 0.01) var sprint_meter_drain_per_second := 0.1
 ## Si el sprint exige ademas input direccional. true = frenar en seco corta la carga aunque sostengas
 ## el boton; false = el boton solo alcanza (el nivel sube incluso parado).
 @export var sprint_requires_move_input := true
@@ -321,14 +325,13 @@ class_name PlayerTuning extends Resource
 @export_range(0.01, 0.5, 0.01) var dash_bop_burst_size := 0.12
 
 @export_group("Meter")
+# Acá vive lo que el meter CUESTA, porque el gasto es del jugador. Lo que el meter GANA es de la
+# fuente: cada arma trae su `WeaponTuning.meter_gain_on_hit` / `meter_gain_on_kill`, el Brazo el
+# suyo (`ArmTuning`) y los bloques el de su escena.
 ## Barras máximas de meter (hasta 5 con mejoras, futuro).
 @export var meter_max_bars := 2
 ## Barras al empezar (arranca vacío; subir para testear ataques cargados).
 @export var meter_start_bars := 0.0
-## Meter ganado por pegarle a un enemigo (en barras).
-@export var meter_gain_on_hit := 0.1
-## Meter ganado por matar a un enemigo (en barras).
-@export var meter_gain_on_kill := 0.5
 ## Costo del dash/dodge (en barras; 0.15 = 15% de una barra).
 @export var meter_dash_cost := 0.15
 ## Costo del ataque cargado / sweet spot (en barras).

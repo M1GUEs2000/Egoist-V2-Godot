@@ -4,9 +4,12 @@ class_name PlayerSprint extends Node
 ## solo escala. Con nivel 0 todos los canales devuelven 1.0 y el juego se comporta exactamente
 ## como si el modulo no existiera — el "base" sigue siendo el de siempre.
 ##
-## Carga: boton `sprint` sostenido en el suelo (sube a `sprint_charge_seconds`). En el aire el
-## nivel queda CONGELADO, asi el salto, el wall slide, el wall jump y toda la cadena de paredes
-## heredan el sprint con el que despegaste. Recien vuelve a bajar al pisar suelo sin sostenerlo.
+## Carga: boton `sprint` sostenido (sube a `sprint_charge_seconds`), en tierra y en el aire por
+## igual. Soltar lo apaga siempre: el nivel ya no queda congelado al despegar, asi que sostener el
+## boton es lo unico que mantiene el sprint durante el salto y la cadena de paredes.
+##
+## Tener el sprint activo CUESTA meter (`sprint_meter_drain_per_second` barras por segundo). Sin
+## meter no se puede cargar y el nivel cae solo: la carrera compite con el gasto de combate.
 ##
 ## El multiplicador se aplica SIEMPRE en el consumidor, nunca escribiendo sobre PlayerTuning: asi
 ## `tuning.move_speed` sigue siendo la referencia base para los calculos que la usan como UNIDAD
@@ -40,16 +43,18 @@ func setup(body: Player) -> void:
 func tick(delta: float) -> void:
 	if _body == null:
 		return
-	# En el aire el nivel queda congelado: lo que ganaste corriendo viaja con el salto y con la
-	# cadena de paredes entera. Sin esto, el sprint no le llegaria nunca al wall jump.
-	if not _body.is_grounded():
-		return
 	var t := _body.tuning
 	var previous := level
 	if _is_charging():
 		level = minf(1.0, level + delta / maxf(0.001, t.sprint_charge_seconds))
 	else:
 		level = maxf(0.0, level - delta / maxf(0.001, t.sprint_decay_seconds))
+	# El sprint se cobra mientras este encendido, no solo mientras lo cargues: el tramo de decay
+	# todavia te esta dando bono, asi que todavia paga. El costo es fraccion del meter completo,
+	# asi que subir las barras maximas no abarata la carrera.
+	if level > 0.0 and _body.meter != null:
+		var drain := t.sprint_meter_drain_per_second * float(_body.meter.bars()) * delta
+		_body.meter.gain_bars(-drain)
 	if not is_equal_approx(level, previous):
 		level_changed.emit(level)
 
@@ -68,6 +73,9 @@ func cancel() -> void:
 
 func _is_charging() -> bool:
 	if not Input.is_action_pressed("sprint"):
+		return false
+	# Sin meter no hay carrera: el nivel se cae solo aunque sigas apretando.
+	if _body.meter != null and _body.meter.meter() <= 0.0:
 		return false
 	if not _body.tuning.sprint_requires_move_input:
 		return true

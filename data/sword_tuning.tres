@@ -161,5 +161,7 @@ push_at = 0.65
 parry_poise_normal = 10.0
 parry_poise_charged_x = 9.0
 parry_poise_charged_y = 12.0
+meter_gain_on_hit = 1.0
+meter_gain_on_kill = 0.5
 sweet_spot_start = 0.4
 sweet_spot_particle_color = Color(1, 0.015686275, 0.101960786, 1)

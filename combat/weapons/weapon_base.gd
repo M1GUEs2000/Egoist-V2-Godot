@@ -170,6 +170,14 @@ func should_reset_pose_on_press() -> bool:
 func charge_level(_held_time: float) -> int:
 	return 1
 
+## Barras que costaría soltar AHORA el cargado de este slot. Es SOLO el preview del HUD (ver
+## PlayerCombat.charge_meter_preview): el cobro real lo sigue haciendo cada rutina con
+## spend_charged. Default: el precio de lista de un cargado. Cada arma cuyo cargado salga gratis,
+## escale por nivel o lleve descuento lo sobreescribe — si esto miente, el HUD marca barras que
+## no se van a gastar, que es peor que no mostrar nada.
+func charged_meter_cost(_slot: World.Slot, _held_time: float) -> float:
+	return _player.tuning.meter_charged_cost if _player != null else 0.0
+
 # ---- Motor genérico de cadenas de golpes (ex PlayAerialCombo, hoy también terrestre) ----
 
 ## Un tap mientras corre una cadena del mismo tipo: encola el siguiente golpe si la
@@ -350,9 +358,9 @@ func register_weapon_hit(hurtbox: Hurtbox, died: bool, cuts_air_momentum := true
 		_register_air_hit_float(cuts_air_momentum)
 	var meter := _player.meter
 	if meter != null:
-		meter.gain_on_hit()
+		meter.gain_on_hit(tuning.meter_gain_on_hit)
 		if died:
-			meter.gain_on_kill()
+			meter.gain_on_kill(tuning.meter_gain_on_kill)
 	if died:
 		if _player.is_airborne():
 			_player.apply_air_kill_reset()

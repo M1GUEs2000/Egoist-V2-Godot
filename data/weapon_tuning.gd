@@ -60,6 +60,17 @@ class_name WeaponTuning extends Resource
 ## Poise que mete un parry hecho con el CARGADO Y (aéreo o suelo comparten valor).
 @export var parry_poise_charged_y := 8.0
 
+@export_group("Meter")
+# El meter que GANA el jugador es por arma, no global: cada arma decide cuanto paga golpear con
+# ella. Lo que el meter CUESTA (dash, cargados, sprint) sigue en PlayerTuning, porque es del
+# jugador y no del arma. Otras fuentes de meter (Brazo, bloques) tienen su propio knob.
+## Meter ganado por conectar un golpe con esta arma, en barras. Un arma lenta y pesada puede
+## cobrar mas por golpe que una rapida sin desbalancear el ritmo de barras por segundo.
+@export var meter_gain_on_hit := 1.0
+## Meter ganado por matar con esta arma, en barras. Se suma aparte del golpe que remato.
+## No aplica si la muerte cae dentro de la ventana del cargado: esa devuelve 1 barra completa.
+@export var meter_gain_on_kill := 0.5
+
 @export_group("Sweet spot (carga)")
 ## Segundo de carga en que ABRE la ventana de sweet spot, contado desde el press (no desde el
 ## hold threshold). Soltar el cargado dentro de la ventana lo convierte en sweet spot; el efecto

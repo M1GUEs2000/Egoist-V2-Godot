@@ -106,6 +106,16 @@ func hold(slot: World.Slot, _level: int) -> void:
 	else:
 		_hold_y()
 
+## Preview del HUD. X cargado paga con el descuento del sweet spot (_hold_x); Y cargado solo cuesta
+## en el aire (_aerial_charged_y), porque el launcher terrestre es gratis.
+func charged_meter_cost(slot: World.Slot, held_time: float) -> float:
+	if _player == null:
+		return 0.0
+	var full := _player.tuning.meter_charged_cost
+	if slot == World.Slot.X:
+		return full * tuning.meter_cost_scale(tuning.in_sweet_spot(held_time))
+	return full if _player.is_airborne() else 0.0
+
 ## Tap atras relativo al target lockeado seguido de Y. No consume meter y puede salir tanto
 ## en suelo como en aire porque reutiliza el launcher terrestre y sus Movers.
 func try_lock_back_y_launcher() -> bool:

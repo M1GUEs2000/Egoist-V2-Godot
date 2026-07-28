@@ -67,6 +67,17 @@ func hold(slot: World.Slot, requested_level: int) -> void:
 func is_charged_move_active() -> bool:
 	return _charged_move_active
 
+## Preview del HUD. En el aire el X cargado cuesta 1 barra fija; en suelo cobra una barra por vuelta
+## y se recorta a lo que alcanza, igual que _hold_x. El Y cargado no gasta meter en este build
+## (launcher terrestre gratis; en aire cae al combo aereo normal).
+func charged_meter_cost(slot: World.Slot, held_time: float) -> float:
+	if _player == null or slot != World.Slot.X:
+		return 0.0
+	var full := _player.tuning.meter_charged_cost
+	if _player.is_airborne():
+		return full
+	return full * float(mini(charge_level(held_time), _player.meter.affordable_bars()))
+
 func charge_level(held_time: float) -> int:
 	var t := _t()
 	var hold_threshold := _player.tuning.input_hold_threshold if _player != null else 0.0

@@ -21,14 +21,26 @@ const ARM_TAP_COLOR := Color(0.62, 0.25, 0.95)
 const ARM_TAP_SPENT_COLOR := Color(0.32, 0.34, 0.36, 0.35)
 const ARM_TAP_ICON_SIZE := Vector2(16.0, 16.0)
 
+## Preview del cargado: las barras que el ataque en curso va a consumir laten sobre el meter. El
+## color lo trae el arma (WeaponBase.charge_glow_color), así el meter late del mismo tono que la
+## hoja; acá solo viven el ritmo y el rango de alpha del latido.
+const METER_SPEND_PULSE_HZ := 2.4
+const METER_SPEND_ALPHA_MIN := 0.3
+const METER_SPEND_ALPHA_MAX := 0.85
+
 var _player: Player
 var _health: Health
 var _meter: PlayerMeter
 var _meter_segments: Array[ProgressBar] = []
+var _meter_spend_overlays: Array[ColorRect] = []
 var _arm_tap_icons: Array[ColorRect] = []
+## Barras que consumirá el cargado en curso (0 = nadie está cargando) y color de su glow.
+var _spend_preview := 0.0
+var _spend_color := Color.WHITE
 
 func _ready() -> void:
 	layer = 10
+	set_process(false)  # solo late mientras hay un cargado que previsualizar
 	WorldManager.world_changed.connect(_on_world_changed)
 	GameManager.state_changed.connect(_on_state_changed)
 	_on_world_changed(WorldManager.current)
@@ -55,6 +67,9 @@ func _bind_player() -> void:
 		player.dash.airdash_changed.connect(_on_airdash_changed)
 	if player.arm != null and not player.arm.taps_changed.is_connected(_on_arm_taps_changed):
 		player.arm.taps_changed.connect(_on_arm_taps_changed)
+	if player.combat != null and not player.combat.charge_meter_preview_changed.is_connected(
+			_on_charge_meter_preview_changed):
+		player.combat.charge_meter_preview_changed.connect(_on_charge_meter_preview_changed)
 
 	_update_health()
 	_on_meter_changed(_meter.meter(), _meter.bars())
@@ -100,11 +115,15 @@ func _on_meter_changed(current: float, max_bars: int) -> void:
 		_rebuild_meter(safe_max)
 	for index in range(_meter_segments.size()):
 		_meter_segments[index].value = clampf(current - float(index), 0.0, 1.0)
+	# El meter puede bajar durante la carga (el sprint drena mientras cargás), así que el tramo
+	# marcado se recalcula acá también: siempre cuelga del tope actual, no del que había al empezar.
+	_update_meter_spend_overlays()
 
 func _rebuild_meter(max_bars: int) -> void:
 	for child in _meter_bars.get_children():
 		child.queue_free()
 	_meter_segments.clear()
+	_meter_spend_overlays.clear()
 
 	for index in range(max_bars):
 		var segment := ProgressBar.new()
@@ -118,6 +137,58 @@ func _rebuild_meter(max_bars: int) -> void:
 		segment.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		_meter_bars.add_child(segment)
 		_meter_segments.append(segment)
+
+		# El marcador de gasto va POR ENCIMA del relleno del segmento y se posiciona por anchors,
+		# no por píxeles: así el tramo marcado sigue siendo exacto sin importar cuánto mida la barra.
+		var overlay := ColorRect.new()
+		overlay.name = "MeterSpend%d" % (index + 1)
+		overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		overlay.visible = false
+		segment.add_child(overlay)
+		_meter_spend_overlays.append(overlay)
+
+## Cuánto va a costar el cargado en curso. Llega en 0 al soltar (o al bajar del umbral de carga):
+## ahí se apaga el latido y el HUD deja de procesar.
+func _on_charge_meter_preview_changed(bars: float, glow: Color) -> void:
+	_spend_preview = bars
+	if bars > 0.0:
+		_spend_color = glow
+	set_process(bars > 0.0)
+	_update_meter_spend_overlays()
+
+## Late el tramo marcado. El alpha es lo único animado: la posición ya la fijó el overlay.
+func _process(_delta: float) -> void:
+	var wave := 0.5 + 0.5 * sin(World.now() * TAU * METER_SPEND_PULSE_HZ)
+	var alpha := lerpf(METER_SPEND_ALPHA_MIN, METER_SPEND_ALPHA_MAX, wave)
+	for overlay in _meter_spend_overlays:
+		if overlay.visible:
+			overlay.color.a = alpha
+
+## Marca el tramo del meter que el cargado se va a comer: se descuenta desde el TOPE hacia abajo,
+## así que con 1.5 barras y un cargado de 1 el tramo arranca en 0.5 y tapa la mitad alta de la
+## primera barra más la segunda entera — se ve exactamente lo que queda después de soltar.
+func _update_meter_spend_overlays() -> void:
+	if _meter == null:
+		return
+	var top := _meter.meter()
+	var bottom := maxf(0.0, top - _spend_preview)
+	for index in range(_meter_spend_overlays.size()):
+		var overlay := _meter_spend_overlays[index]
+		# Cada segmento cubre el rango [index, index + 1] del meter: recortamos el tramo contra él.
+		var low := clampf(bottom - float(index), 0.0, 1.0)
+		var high := clampf(top - float(index), 0.0, 1.0)
+		overlay.visible = _spend_preview > 0.0 and high > low
+		if not overlay.visible:
+			continue
+		overlay.anchor_left = low
+		overlay.anchor_right = high
+		overlay.anchor_top = 0.0
+		overlay.anchor_bottom = 1.0
+		overlay.offset_left = 0.0
+		overlay.offset_right = 0.0
+		overlay.offset_top = 0.0
+		overlay.offset_bottom = 0.0
+		overlay.color = Color(_spend_color.r, _spend_color.g, _spend_color.b, overlay.color.a)
 
 ## Un icono morado por golpe de brazo: encendidos los que quedan, apagados los gastados. Mientras
 ## corre el cooldown quedan todos apagados y se encienden de golpe al recuperarse.
