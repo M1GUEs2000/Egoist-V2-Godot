@@ -21,7 +21,7 @@ Esta nota es el indice del sistema. El detalle vive en una subnota por modulo o 
 | Pieza | Modulos | Estado | Nota |
 |---|---|---|---|
 | Movimiento base | `Player`, `PlayerLocomotion` | E3 | [[Movimiento Base]] |
-| Sprint | `PlayerSprint` | E3 | [[Sprint]] |
+| Sprint | `PlayerSprint` | E2 | [[Sprint]] |
 | Dash / airdash | `PlayerDash` | E4 | [[Dash y Airdash]] |
 | Launcher / aire | `PlayerLauncher` | E2 | [[Launcher y Aire]] |
 | Momentum por bump | `Player.bump()` | E1 | [[Momentum y Bump]] |

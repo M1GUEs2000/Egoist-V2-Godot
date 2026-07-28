@@ -26,7 +26,7 @@ Arma base / equilibrada. Velocidad media. Sirve para mantener el flujo del comba
 | X cargado sweet spot | Tras atravesar al primer enemigo, ejecuta un launcher sin gastar otra barra. |
 | Tap adelante + X (lock-on) | Vueltas estaticas: no mueven al Player, no empujan al enemigo y nunca disparan proyectil en piso. RT gasta medio meter, activa el brillo y usa su cantidad de vueltas tuneable. |
 | Tap atras + X (lock-on) | Animacion del launcher con golpe de hoja normal y retroceso del Player mediante `tap_back_x_player_mover`; no eleva ni mueve al enemigo. Si RT esta presionado al llegar X dentro de `tap_back_x_window`, gasta medio meter, el Mover usa el perfil RT mas rapido y dispara un proyectil al terminar. |
-| Y cargado            | Launcher. Area pequena/media.                                                                                              |
+| Y cargado            | Launcher. Area pequena/media. Gasta 1 barra (con kill window, como el X cargado); sin barra cae al tap normal. *(2026-07-28: antes era gratis)* |
 | Tap atras + Y (lock-on) | Launcher sin gastar barra que eleva solo al enemigo con `tap_back_y_enemy_mover`. "Atras" se calcula alejandose del objetivo lockeado y Y debe llegar dentro de `tap_back_y_window`; al iniciar, el Player vuelve a encarar al objetivo y limpia su momentum horizontal. |
 | Tap adelante + Y (lock-on) | Vuelta final de `X X espera X X`: avanza al Player con `tap_forward_y_player_mover` hacia el objetivo bloqueado, sin empujar al enemigo. Y debe llegar dentro de `tap_forward_y_window`. |
 | Y cargado sweet spot | Golpe hacia arriba que sube a los enemigos un poco. Despues te elevas con otro Y. Aumenta un poco el AOE.                  |

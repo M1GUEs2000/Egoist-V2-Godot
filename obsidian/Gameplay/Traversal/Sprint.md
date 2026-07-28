@@ -6,7 +6,7 @@ tags:
   - sistema
   - traversal
 status: active
-system_status: E3
+system_status: E2
 hito: H1
 ---
 
@@ -18,16 +18,43 @@ Modulo componible `PlayerSprint` (nodo hijo `Sprint` del player). Tuning en `Pla
 
 El sprint **no es una velocidad aparte**: es un **nivel 0-1** que multiplica los valores que ya existen. Con el nivel en 0 el movimiento es identico al de siempre — todo lo demas del `PlayerTuning` sigue siendo el BASE.
 
-- Carga: boton `sprint` sostenido **en el suelo**, sube a lo largo de `sprint_charge_seconds`.
-- Descarga: al soltar, baja a lo largo de `sprint_decay_seconds`, tambien solo en el suelo.
+- Carga: boton `sprint` sostenido, sube a lo largo de `sprint_charge_seconds`. En tierra y en aire por igual.
+- Descarga: al soltar, baja a lo largo de `sprint_decay_seconds`, tambien en los dos.
 - `sprint_requires_move_input`: si `true`, frenar en seco corta la carga aunque se sostenga el boton.
 - El stun lo tira a **cero de golpe** (`cancel()`): comerse un golpe apaga la carrera.
+- **Cuesta meter mientras esta encendido** (nivel > 0), no solo mientras se carga: el tramo de decay todavia da bono, asi que todavia paga.
 
-## Regla 1 — En el aire el nivel queda congelado
+## Regla 1 — Sostener el boton es lo unico que lo mantiene
 
-`tick` corta temprano si el player no esta en el suelo. Lo que se gano corriendo **viaja con el salto y con la cadena de paredes entera**, y recien vuelve a bajar al pisar suelo sin sostener el boton.
+*(2026-07-28, reemplaza el congelado en el aire)*
 
-Sin esto el sprint no le llegaria nunca al wall jump: se descargaria en el aire antes de que el rebote lo leyera.
+`tick` corre igual en tierra que en aire: soltar el boton en pleno salto tambien apaga la carrera, y
+el nivel decae mientras volas.
+
+> [!note] Lo que habia antes y por que se fue
+> Hasta 2026-07-27 el nivel quedaba **congelado** al despegar: lo que ganabas corriendo viajaba con
+> el salto y con la cadena de paredes entera. Eso existia para que el sprint le llegara al wall
+> jump, pero lo volvia gratis — una vez cargado, la cadena entera heredaba el bono sin que costara
+> nada sostenerlo. Con el sprint cobrando meter, congelarlo en el aire seria regalar el bono justo
+> donde mas rinde.
+
+**Consecuencia a mirar jugando:** el wall jump y el momentum leen el nivel en el aire. Antes lo
+heredaban del despegue; ahora, si soltas a mitad de cadena, el rebote sale con bono menor. Es el
+cambio buscado, pero es lo que hay que sentir.
+
+## Regla 3 — El costo es fraccion del meter, no barras
+
+`sprint_meter_drain_per_second` es la fraccion del meter **completo** que se drena por segundo:
+`0.1` = 10% del total por segundo, o sea un meter lleno se vacia en 10s corriendo, valga 2 barras o
+5. Se cobra sobre el total y no por barra a proposito: subir `meter_max_bars` (la mejora futura a 5
+barras, ver [[Meter]]) no tiene que abaratar la carrera.
+
+Sin meter no se puede cargar: el nivel cae solo aunque se siga apretando. *(2026-07-28)*
+
+> [!warning] Con la carga actual el cobro es casi por presion
+> `sprint_charge_seconds = 0.2` y `sprint_decay_seconds = 0.1` hacen que el nivel suba y baje casi
+> instantaneo, asi que en la practica se paga mientras el boton esta apretado. Si se alargan esos
+> tiempos, el tramo de decay empieza a pesar en el costo.
 
 ## Regla 2 — El multiplicador se aplica en el consumidor, nunca sobre el Resource
 
@@ -77,19 +104,38 @@ Knobs en `PlayerTuning` grupo *Dust FX*: `sprint_trail_min_level`, `sprint_trail
 
 `Player._stop_movement_fx()` corta polvo y estela de una. Lo usan los cortes tempranos del frame (stun, Mover total, dash): ahi el player no se mueve por locomocion y el calculo normal de la estela nunca llega a correr, asi que sin eso quedaria emitiendo colgada.
 
-## Cambio de direccion pendiente
+## Cambio de direccion — hecho
 
-Se va a convertir en un **estado de velocidad** en vez de un sprint: sostener el boton para mantenerlo y que **consuma meter** mientras dura, en vez del modelo actual de cargar y quedar activo gratis. Eso lo vuelve un recurso que compite con el gasto de combate (ver [[Meter]]) y no una mejora permanente de movilidad.
+*(2026-07-28)*
 
-Afecta la carga (`sprint_charge_seconds` / `sprint_decay_seconds`) y el congelado en el aire: si el nivel cuesta meter, mantenerlo congelado durante toda una cadena de paredes deja de ser gratis y hay que decidir si se sigue cobrando en el aire. Los canales de escalado no cambian.
+El sprint dejo de ser una mejora de movilidad gratis y paso a ser un **estado de velocidad que
+consume meter**: se sostiene el boton para mantenerlo, se paga mientras dura y compite con el gasto
+de combate (ver [[Meter]]). Con eso se resolvieron las dos preguntas que quedaban abiertas:
+
+- **Se sigue cobrando en el aire?** Si — y ademas se descongelo el nivel, porque cobrar por algo
+  congelado no tiene sentido (ver Regla 1).
+- **Cambia la carga?** No se toco `sprint_charge_seconds` / `sprint_decay_seconds`; con los valores
+  actuales el cobro termina siendo casi por presion de boton.
+
+Los canales de escalado no cambiaron.
 
 ## Verificacion
 
-Estado **E3**: aprobado jugando, incluidos los canales nuevos de velocidad final y aceleracion de la rampa del wall slide. Lo que queda es iterar porcentajes como ajuste fino. *(2026-07-27)*
+Estado **E2** (bajo de E3 por la regresion: se modifico un sistema aprobado jugando). Los knobs
+existen y la direccion esta clara; falta re-probar jugando el sprint sin congelado y el costo de
+meter. *(2026-07-28)*
+
+Lo aprobado antes de este cambio, y que sigue en pie salvo que el aire lo desmienta: los canales de
+velocidad final y aceleracion de la rampa del wall slide. *(2026-07-27)*
+
+> [!bug] Sin verificar headless
+> El cambio se commiteo sin correr `--import` ni los smokes: no habia Godot instalado en la maquina
+> donde se escribio. *(2026-07-28)*
 
 ## Relacionado
 
 - [[Wall Slide y Wall Jump]]
 - [[Movimiento Base]]
 - [[Momentum y Bump]]
+- [[Meter]]
 - [[Traversal]]

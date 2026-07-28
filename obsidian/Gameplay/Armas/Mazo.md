@@ -76,7 +76,9 @@ Arma de mas dano. Controla masas. Tiene bastante knockback. Tumba a los enemigos
   durante el paso, asi se activa al chocar con un enemigo durante el dash; si no toca a nadie, la
   ventana cubre igual el final. El enemigo golpeado pide su propio `ground_y_launcher_enemy_mover`
   (Mover UP + Floater); el jugador no recibe perfil vertical. El salto para perseguirlos sigue
-  siendo manual. No gasta meter por ahora y no tiene niveles ni sweet spot. *(2026-07-21)*
+  siendo manual. No tiene niveles ni sweet spot. *(2026-07-21)* Gasta **1 barra**, sin kill window
+  (la barra de regalo al matar dentro del cargado es la especialidad de la Espada, no del Mazo);
+  sin barra cae al tap normal. *(2026-07-28, antes era gratis)*
 - Aéreo: tap X sin carga es un **combo de 2** (un tap por golpe, corre a `swing_time` porque
   el Mazo es pesado) — golpe 1 jab con el mango (`thrust`, `air_handle_reach`, sin push) y
   golpe 2 cabezazo horizontal que arma el `push` a mitad del swing (`push_at`);
@@ -104,7 +106,11 @@ Arma de mas dano. Controla masas. Tiene bastante knockback. Tumba a los enemigos
 - Probar jugando cada fila de la tabla contra un `HitDummy`/enemigo, en especial el launcher
   terrestre (ahora que si eleva al enemigo).
 - Tunear `mace_tuning.tres` con el feel real, incluido `ground_y_launcher_enemy_mover`.
-- Definir si el Y cargado terrestre gasta meter, y si recupera niveles/sweet spot.
+- Definir si el Y cargado terrestre recupera niveles/sweet spot. Lo del meter ya se decidio: gasta
+  1 barra. *(2026-07-28)*
+- Tunear `meter_gain_on_hit` / `meter_gain_on_kill` propios del Mazo (hoy iguales a los de la
+  Espada). Su `swing_time` es mas largo, asi que a igual ganancia por golpe genera meter mas
+  lento — decidir si eso es identidad o desventaja. Ver [[Meter]]. *(2026-07-28)*
 - Diseñar el "bouncer" balistico (ver [[Plan Autoridad Vertical]] F5) antes de retomar un Y
   cargado aereo para el Mazo.
 

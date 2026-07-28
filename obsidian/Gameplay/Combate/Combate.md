@@ -31,6 +31,15 @@ Combate del jugador: slots X/Y, espada, hitboxes, parry, meter, combo aereo e in
 
 ## Reglas actuales
 
+- El meter que se GANA lo decide la fuente (cada arma trae su `WeaponTuning.meter_gain_on_hit` /
+  `meter_gain_on_kill`); el que se GASTA vive en `PlayerTuning`. `PlayerMeter` no lee ganancias: las
+  recibe. Detalle en [[Meter]]. *(2026-07-28, reemplaza la ganancia global unica para todas las armas)*
+- **Ningun cargado es gratis**: el Y cargado terrestre (launcher) de Espada y Mazo pasa a costar 1
+  barra, y sin barra cae al tap normal. El gesto `tap atras + Y` del lock-on sigue gratis porque es
+  un tap, no un cargado. *(2026-07-28, pendiente de tunear jugando)*
+- Mientras un ataque esta cargado, el HUD **late** sobre el tramo de meter que va a consumir,
+  descontado desde el tope hacia abajo. El monto lo calcula el arma
+  (`WeaponBase.charged_meter_cost`), no el HUD. Ver [[Meter]] > Preview de gasto. *(2026-07-28)*
 - Slot X es ataque ligero; slot Y es ataque pesado.
 - La misma arma cambia comportamiento segun slot.
 - Las armas son procedurales hasta H3: no dependen de animaciones de combate.
