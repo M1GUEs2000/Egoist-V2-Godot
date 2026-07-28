@@ -121,13 +121,7 @@ Chequeos de regresion headless: `world/wall_slide_probe.tscn` (cae pegado a una 
 
 Estado **E3**: la reescritura fue **aprobada jugando** — rampa, trepada con tope de angulo, rebote por rangos y cooldown de re-enganche. Lo que queda es iterar valores como ajuste fino, no buscar la direccion del feel. El sistema paso por la regresion E3 → E2 al reescribirse y volvio a E3 en la misma sesion. *(2026-07-27)*
 
-> [!warning] Wall Impulse: falta integrarlo al loop jugable
-> El sistema esta completo en codigo (`WallImpulseSurface`, `WallImpulseTuning`,
-> `data/wall_impulse_default.tres`) y sus paredes —`assets/models/walls/wall_curve.tscn` y
-> `wall_spiral.tscn`— estan colocadas **8 veces en `world/lvl_1_v_0_1.tscn`**. Pero ese nivel no es
-> la escena principal ni lo carga nadie: solo se llega abriendolo a mano en el editor. Sus rangos de
-> wall jump por pared (2026-07-27) se agregaron sin poder probarse jugando. Integrar el nivel al
-> loop es el paso pendiente antes de tunear el carril.
+Wall Impulse esta integrado y jugable: sus paredes (`assets/models/walls/wall_curve.tscn` y `wall_spiral.tscn`) estan colocadas 8 veces en `world/lvl_1_v_0_1.tscn`, que es la **escena principal** del proyecto. Sus rangos de wall jump por pared (2026-07-27) tambien se probaron jugando.
 
 ## Relacionado
 

@@ -77,6 +77,12 @@ Knobs en `PlayerTuning` grupo *Dust FX*: `sprint_trail_min_level`, `sprint_trail
 
 `Player._stop_movement_fx()` corta polvo y estela de una. Lo usan los cortes tempranos del frame (stun, Mover total, dash): ahi el player no se mueve por locomocion y el calculo normal de la estela nunca llega a correr, asi que sin eso quedaria emitiendo colgada.
 
+## Cambio de direccion pendiente
+
+Se va a convertir en un **estado de velocidad** en vez de un sprint: sostener el boton para mantenerlo y que **consuma meter** mientras dura, en vez del modelo actual de cargar y quedar activo gratis. Eso lo vuelve un recurso que compite con el gasto de combate (ver [[Meter]]) y no una mejora permanente de movilidad.
+
+Afecta la carga (`sprint_charge_seconds` / `sprint_decay_seconds`) y el congelado en el aire: si el nivel cuesta meter, mantenerlo congelado durante toda una cadena de paredes deja de ser gratis y hay que decidir si se sigue cobrando en el aire. Los canales de escalado no cambian.
+
 ## Verificacion
 
 Estado **E3**: aprobado jugando, incluidos los canales nuevos de velocidad final y aceleracion de la rampa del wall slide. Lo que queda es iterar porcentajes como ajuste fino. *(2026-07-27)*
