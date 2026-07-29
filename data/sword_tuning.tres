@@ -83,30 +83,6 @@ stop_on = 3
 float_duration = 0.5
 float_fall_scale = 0.1
 
-[sub_resource type="Resource" id="Resource_tap_back_y_enemy_mover"]
-script = ExtResource("4_mover")
-distance = 5.0
-speed = 33.0
-stop_on = 3
-float_duration = 0.5
-
-[sub_resource type="Resource" id="Resource_tap_back_y_air_enemy_mover"]
-script = ExtResource("4_mover")
-direction = Vector3(0, -1, 0)
-distance = 100.0
-speed = 20.0
-acceleration = 10.0
-stop_on = 3
-
-[sub_resource type="Resource" id="Resource_tap_back_y_air_player_mover"]
-script = ExtResource("4_mover")
-direction = Vector3(0, -1, 0)
-distance = 100.0
-speed = 20.0
-acceleration = 10.0
-stop_on = 3
-mode = 1
-
 [sub_resource type="Resource" id="Resource_swordpush"]
 script = ExtResource("3_push")
 
@@ -117,22 +93,47 @@ grounded = 0.4
 
 [sub_resource type="Resource" id="Resource_tap_back_x_air_enemy_mover"]
 script = ExtResource("4_mover")
-distance = 2.0
+distance = 3.0
 stop_on = 3
-float_duration = 0.3
+float_duration = 0.4
 
 [sub_resource type="Resource" id="Resource_tap_back_x_air_player_mover"]
 script = ExtResource("4_mover")
-distance = 2.0
+distance = 1.0
 stop_on = 3
 float_duration = 0.3
 
 [sub_resource type="Resource" id="Resource_tap_back_x_player_mover"]
 script = ExtResource("4_mover")
-distance = 5.0
-speed = 30.0
+distance = 3.0
+speed = 10.0
 acceleration = 10.0
 stop_on = 13
+
+[sub_resource type="Resource" id="Resource_tap_back_y_air_enemy_mover"]
+script = ExtResource("4_mover")
+direction = Vector3(0, -1, 0)
+distance = 100.0
+speed = 30.0
+acceleration = 20.0
+stop_on = 3
+
+[sub_resource type="Resource" id="Resource_tap_back_y_air_player_mover"]
+script = ExtResource("4_mover")
+direction = Vector3(0, -1, 0)
+distance = 100.0
+speed = 30.0
+acceleration = 20.0
+stop_on = 3
+mode = 1
+
+[sub_resource type="Resource" id="Resource_tap_back_y_enemy_mover"]
+script = ExtResource("4_mover")
+distance = 5.0
+speed = 33.0
+acceleration = 10.0
+stop_on = 3
+float_duration = 0.5
 
 [sub_resource type="Resource" id="Resource_tap_forward_x_air_floater"]
 script = ExtResource("5_floater")
@@ -140,8 +141,8 @@ duration = 0.3
 
 [sub_resource type="Resource" id="Resource_tap_forward_y_player_mover"]
 script = ExtResource("4_mover")
-distance = 5.0
-speed = 30.0
+distance = 2.0
+speed = 10.0
 acceleration = 10.0
 stop_on = 13
 
@@ -149,24 +150,24 @@ stop_on = 13
 script = ExtResource("1_tuning")
 combo_window = 0.8
 ground_wait_branch_threshold = 0.2
+air_finisher_enemy_spike_mover = SubResource("Resource_air_finisher_enemy_spike_mover")
+air_wait_spin_player_mover = SubResource("Resource_air_wait_spin_player_mover")
+air_plunge_player_mover = SubResource("Resource_air_plunge_player_mover")
+air_plunge_enemy_mover = SubResource("Resource_air_plunge_enemy_mover")
+air_hit_enemy_floater = SubResource("Resource_air_hit_enemy_floater")
 charged_dash_distance = 11.0
 charged_dash_duration = 0.19
 charged_dash_damage = 5.0
 charged_dash_stun = SubResource("Resource_810ig")
 ground_charged_y_player_mover = SubResource("Resource_ground_y_player_mover")
 ground_charged_y_enemy_mover = SubResource("Resource_ground_y_enemy_mover")
-tap_forward_y_player_mover = SubResource("Resource_tap_forward_y_player_mover")
+aerial_charged_y_player_mover = SubResource("Resource_aerial_y_player_mover")
+aerial_charged_y_enemy_spike_mover = SubResource("Resource_aerial_y_enemy_spike_mover")
+tap_forward_x_air_floater = SubResource("Resource_tap_forward_x_air_floater")
 tap_back_x_player_mover = SubResource("Resource_tap_back_x_player_mover")
 tap_back_x_air_player_mover = SubResource("Resource_tap_back_x_air_player_mover")
 tap_back_x_air_enemy_mover = SubResource("Resource_tap_back_x_air_enemy_mover")
-tap_forward_x_air_floater = SubResource("Resource_tap_forward_x_air_floater")
-aerial_charged_y_player_mover = SubResource("Resource_aerial_y_player_mover")
-aerial_charged_y_enemy_spike_mover = SubResource("Resource_aerial_y_enemy_spike_mover")
-air_plunge_enemy_mover = SubResource("Resource_air_plunge_enemy_mover")
-air_plunge_player_mover = SubResource("Resource_air_plunge_player_mover")
-air_wait_spin_player_mover = SubResource("Resource_air_wait_spin_player_mover")
-air_finisher_enemy_spike_mover = SubResource("Resource_air_finisher_enemy_spike_mover")
-air_hit_enemy_floater = SubResource("Resource_air_hit_enemy_floater")
+tap_forward_y_player_mover = SubResource("Resource_tap_forward_y_player_mover")
 tap_back_y_enemy_mover = SubResource("Resource_tap_back_y_enemy_mover")
 tap_back_y_air_player_mover = SubResource("Resource_tap_back_y_air_player_mover")
 tap_back_y_air_enemy_mover = SubResource("Resource_tap_back_y_air_enemy_mover")

@@ -149,7 +149,8 @@ class_name SwordTuning extends WeaponTuning
 @export_subgroup("Aire — Mover", "tap_back_x_air_")
 ## Ascenso del Player. Al terminar sostiene con gravedad cero segun su float_duration.
 @export var tap_back_x_air_player_mover: MoverSettings
-## Ascenso del Enemy golpeado, con el mismo hang del Player.
+## Ascenso del Enemy golpeado. Lleva su propia distancia y su propio hang: separarlo del Player
+## es lo que deja abrir o cerrar la brecha vertical entre los dos cuerpos.
 @export var tap_back_x_air_enemy_mover: MoverSettings
 
 @export_group("Tap Y adelante — avance con vuelta", "tap_forward_y_")

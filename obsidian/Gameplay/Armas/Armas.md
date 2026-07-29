@@ -35,6 +35,29 @@ hito: H1
 | [[Dagas]] | Movilidad, persecucion, teletransporte. | H2 |
 | [[Punos]] | Agarre, mover enemigos o moverte tu, conecta con world switch. | H2 |
 
+## Organizacion del tuning
+
+Cada arma tiene su recurso propio (`SwordTuning`, `MaceTuning`) que extiende `WeaponTuning`, con la instancia editable en `data/`. Lo que es transversal al arma —swing time, push, parry, meter, sweet spot— vive en `WeaponTuning`; lo que es personalidad de un golpe vive en el recurso del arma.
+
+El inspector se agrupa por **tipo de ataque, nunca por tipo de dato**. No existe un grupo "Movers" ni "Floaters": cada perfil vive junto al golpe que lo emite.
+
+| Nivel | Que separa | Ejemplo |
+|---|---|---|
+| `@export_category` | Familia de ataque | Ataques normales (tap) · Cargados (hold) · Taps direccionales |
+| `@export_group` | Golpe concreto, con prefijo de nombre para que el inspector lo recorte | `Tap Y atras`, prefijo `tap_back_y_` |
+| `@export_subgroup` | Tramo y primitiva | `Suelo — Mover`, `Aire — Mover`, `Aire — Floater` |
+| Campo | Cuerpo receptor | `tap_back_y_air_player_mover` / `tap_back_y_air_enemy_mover` |
+
+Reglas:
+
+- **Un campo por cuerpo que el golpe realmente mueve.** Un Mover o un Floater solo controla a su dueno (ver [[Mover y Floater]]), asi que mover a los dos son dos perfiles. Si el golpe toca a uno solo, hay un campo solo: no se crean campos vacios por simetria.
+- **Un perfil por golpe.** Dos golpes que hoy se sienten igual llevan perfiles separados igual, para poder tunearlos aparte sin que uno arrastre al otro.
+- **Nombre = gesto + tramo + cuerpo + primitiva**, en ese orden: `tap_back_y_air_enemy_mover`. El prefijo del grupo hace que el inspector muestre solo la cola.
+- Lo que comparten varios golpes va a un grupo `Comun a varios golpes`, no se duplica.
+- Todo `@export` de tuning lleva comentario `##` encima (que hace, unidades, efecto): es el tooltip del inspector.
+
+[[Espada]] es la referencia implementada de esta organizacion.
+
 ## Notas
 
 - El orden de desbloqueo por area vive en [[Areas]].
@@ -44,6 +67,7 @@ hito: H1
 ## Relacionado
 
 - [[Combate]]
+- [[Mover y Floater]]
 - [[Areas]]
 - [[README]]
 

@@ -48,16 +48,16 @@ Cada hook tiene su getter de ventana. La implementacion generica vive en `player
 
 | Gesto | Suelo | Aire |
 |---|---|---|
-| Tap adelante + X | Dos vueltas estaticas: sin Mover ni push. | Dos vueltas con Floater de `0.3 s` y gravedad `0` para Player y objetivos conectados. |
-| Tap atras + X | Clip de launcher con golpe normal y Mover de retroceso solo para Player. | Una vuelta; Player y objetivos conectados suben `2` unidades con Movers y terminan en Floater. |
+| Tap adelante + X | Dos vueltas estaticas: sin Mover ni push. | Dos vueltas con Floater de gravedad `0` para Player y objetivos conectados. |
+| Tap atras + X | Clip de launcher con golpe normal y Mover de retroceso solo para Player. | Una vuelta; Player y objetivos conectados suben con sus Movers y terminan en hang. |
 | Tap adelante + Y | Vuelta final que avanza al Player con `tap_forward_y_player_mover`, sin push. | Misma vuelta y avance; arma `PushSettings` para el enemigo. |
-| Tap atras + Y | Launcher sin barra que mueve solo al Enemy. | Hachazo que inicia el plunge de Player y objetivos conectados. |
+| Tap atras + Y | Launcher sin barra que mueve solo al Enemy con `tap_back_y_enemy_mover`. | Hachazo que inicia el plunge de Player y objetivos conectados. |
 
-Los knobs son `lock_forward_x_static_spin_window`, `lock_back_x_retreat_window`, `lock_forward_y_push_window` y `lock_back_y_launcher_window`. Los perfiles de desplazamiento y hang asociados se documentan en [[Mover y Floater]].
+Los knobs son `tap_forward_x_window`, `tap_back_x_window`, `tap_forward_y_window` y `tap_back_y_window`. Cada gesto lleva sus propios perfiles de desplazamiento y hang, separados de los del resto de los golpes; la lista completa esta en [[Espada]] y la primitiva en [[Mover y Floater]].
 
 ## Como agregar un gesto a un arma
 
-1. Agregar el campo de ventana al `WeaponTuning` especifico del arma y dejarlo en `0` si debe permanecer apagado por defecto.
+1. Agregar el campo de ventana al `WeaponTuning` especifico del arma y dejarlo en `0` si debe permanecer apagado por defecto. Va en su propio grupo del gesto, con los perfiles del golpe en subgrupos por tramo; la convencion esta en [[Armas]].
 2. Sobrescribir el getter y el hook adecuado en la clase del arma. El hook debe devolver `true` solo si inicio la rutina especial.
 3. Iniciar el movimiento, hitboxes y efectos desde la rutina del arma. `PlayerCombat` no decide coreografia.
 4. Probar sin lock-on, con stick sostenido, cambiando rapidamente de direccion y venciendo la ventana: todos deben caer al ataque normal.

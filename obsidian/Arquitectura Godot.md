@@ -124,6 +124,7 @@ Los custom statuses del plugin viven en la config local (`.obsidian/`, no versio
 | Direccion de un golpe recibido | Se calcula desde el ATACANTE, nunca desde la hitbox (ver [[Stun]]) |
 | UI | `CanvasLayer`/Control que escucha senales |
 | Tuneables legibles | Todo `@export` de tuning lleva comentario `##` encima (tooltip en el inspector: que hace, unidades, efecto) |
+| Tuning de un arma | Inspector agrupado por tipo de ataque, nunca por tipo de dato: un perfil por golpe y por cuerpo (ver [[Armas]]) |
 
 ## Mapa Unity V1 a Godot V2
 

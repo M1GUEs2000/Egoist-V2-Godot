@@ -128,6 +128,7 @@ Antes de agregar una mecanica, elegir una sola fuente de autoridad por tramo: Mo
 ## Relacionado
 
 - [[Combate]]
+- [[Armas]]
 - [[Espada]]
 - [[Mazo]]
 - [[brazo-combate|Brazo Combate]]
