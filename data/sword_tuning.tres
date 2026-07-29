@@ -98,7 +98,7 @@ speed = 10.0
 acceleration = 10.0
 stop_on = 13
 
-[sub_resource type="Resource" id="Resource_tap_back_x_sprint_air_player_mover"]
+[sub_resource type="Resource" id="Resource_tap_back_x_meter_air_player_mover"]
 script = ExtResource("4_mover")
 distance = 2.0
 stop_on = 3
@@ -110,7 +110,7 @@ mode = 1
 float_duration = 0.3
 metadata/_custom_type_script = "uid://dsps3sxfd8wmx"
 
-[sub_resource type="Resource" id="Resource_tap_back_x_sprint_player_mover"]
+[sub_resource type="Resource" id="Resource_tap_back_x_meter_player_mover"]
 script = ExtResource("4_mover")
 speed = 18.0
 acceleration = 20.0
@@ -176,13 +176,13 @@ aerial_charged_y_player_mover = SubResource("Resource_aerial_y_player_mover")
 aerial_charged_y_enemy_spike_mover = SubResource("Resource_aerial_y_enemy_spike_mover")
 tap_forward_x_air_floater = SubResource("Resource_tap_forward_x_air_floater")
 tap_back_x_player_mover = SubResource("Resource_tap_back_x_player_mover")
-tap_back_x_sprint_player_mover = SubResource("Resource_tap_back_x_sprint_player_mover")
-tap_back_x_sprint_projectile_enemy_mover = SubResource("Resource_16nml")
-tap_back_x_sprint_air_player_mover = SubResource("Resource_tap_back_x_sprint_air_player_mover")
-tap_back_x_sprint_air_spins = 1
-tap_back_x_sprint_air_projectile_enemy_mover = SubResource("Resource_m478f")
-tap_x_sprint_flash_energy = 2.7
-tap_x_sprint_flash_duration = 0.3
+tap_back_x_meter_player_mover = SubResource("Resource_tap_back_x_meter_player_mover")
+tap_back_x_meter_projectile_enemy_mover = SubResource("Resource_16nml")
+tap_back_x_meter_air_player_mover = SubResource("Resource_tap_back_x_meter_air_player_mover")
+tap_back_x_meter_air_spins = 1
+tap_back_x_meter_air_projectile_enemy_mover = SubResource("Resource_m478f")
+tap_x_meter_flash_energy = 2.7
+tap_x_meter_flash_duration = 0.3
 tap_forward_y_player_mover = SubResource("Resource_tap_forward_y_player_mover")
 tap_back_y_enemy_mover = SubResource("Resource_tap_back_y_enemy_mover")
 tap_back_y_air_player_mover = SubResource("Resource_tap_back_y_air_player_mover")

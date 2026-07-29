@@ -42,18 +42,32 @@ meter mas lento. Si tienen que empatar, se sube el hit del Mazo.
 | Dash / dodge | `meter_dash_cost` | fraccion de barra |
 | Ataque cargado | `meter_charged_cost` | 1 barra (× nivel en el Mazo, × descuento del sweet spot) |
 | Sprint activo | `sprint_meter_drain_per_second` | fraccion del meter COMPLETO por segundo (ver [[Sprint]]) |
-| Variante RT de un tap direccional | `SwordTuning.tap_x_sprint_meter_cost` | media barra, por arma (ver [[Taps Direccionales]]) |
+| Variante RT de un tap direccional | `SwordTuning.tap_x_meter_cost` | media barra, por arma (ver [[Taps Direccionales]]) |
 
 Los cargados usan `spend_charged` (pide barras enteras y abre la kill window); los gestos puntuales
 que cobran fracciones sin abrir esa ventana usan `spend_bars`.
 
-> [!warning] El boton `sprint` cobra dos veces
-> La variante RT de los taps direccionales se activa con `Input.is_action_pressed("sprint")` — el
-> mismo boton que carga el sprint. Sostenerlo con input de movimiento drena meter *y* le cobra media
-> barra al tap: dos gastos distintos por el mismo gesto de mano. Puede ser exactamente lo que se
-> quiere (RT = "gasto recurso para ir mas fuerte"), pero **no esta tuneado como un costo unico** y
-> es lo primero que se va a sentir raro al jugar. Si molesta, las salidas son separar el boton del
-> gesto RT o descontarle al tap lo que ya cobro el sprint. *(2026-07-28)*
+## El meter button
+
+> [!important] El boton se llama `meter_button`, no `sprint`
+> No es el boton de correr: es el boton de **gastar meter**, y tiene **dos funciones**, una por
+> mecanica madre. *(2026-07-28: renombrado desde `sprint`, nombre que describia solo la mitad de lo
+> que hace.)*
+
+| Funcion | Mecanica madre | Que hace |
+|---|---|---|
+| Sprint | Traversal | Sostenerlo moviendose sube el nivel de sprint (velocidad, salto, cadenas de pared). Drena meter mientras esta activo. Ver [[Sprint]] |
+| Taps direccionales reforzados | Combate | Sostenerlo al ejecutar un tap direccional paga media barra y saca la variante fuerte: mas vueltas, Movers propios, proyectil y flash. Ver [[Taps Direccionales]] |
+
+Lo que unifica las dos: apretarlo significa **"quemo recurso para ir mas fuerte"**, corras o pelees.
+Por eso el mismo boton sirve para traversal y para combate, y por eso el nombre viejo confundia — un
+jugador que lee "sprint" no espera que le cueste barra pegar.
+
+> [!warning] Cobra dos veces y nadie lo tuneo asi
+> Sostenerlo con input de movimiento paga el **drenaje del sprint** y el **costo del tap** a la vez:
+> dos gastos por el mismo gesto de mano. Es coherente con lo que el boton significa, pero no esta
+> tuneado como un costo unico. Si al jugarlo se siente caro, las salidas son descontarle al tap lo
+> que ya cobro el sprint, o cobrar solo el mayor de los dos. *(2026-07-28)*
 
 El sprint es el gasto nuevo y el unico **continuo**: los demas son pagos puntuales. Su costo se
 expresa como fraccion del total y no en barras, asi subir `meter_max_bars` no abarata la carrera.

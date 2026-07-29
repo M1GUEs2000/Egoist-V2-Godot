@@ -14,11 +14,17 @@ hito: H1
 
 Modulo componible `PlayerSprint` (nodo hijo `Sprint` del player). Tuning en `PlayerTuning` grupo `Sprint`.
 
+> [!important] El sprint es una funcion del meter button, no un boton propio
+> Se activa con `meter_button` (RT), el mismo boton que refuerza los taps direccionales de arma.
+> No es "el boton de correr": es el boton de **gastar meter**, y correr es una de sus dos funciones
+> (la otra es de combate, ver [[Meter]] > El meter button). Sostenerlo moviendose paga las dos cosas
+> a la vez. *(2026-07-28: el input action se llamaba `sprint`)*
+
 ## Que es
 
 El sprint **no es una velocidad aparte**: es un **nivel 0-1** que multiplica los valores que ya existen. Con el nivel en 0 el movimiento es identico al de siempre — todo lo demas del `PlayerTuning` sigue siendo el BASE.
 
-- Carga: boton `sprint` sostenido, sube a lo largo de `sprint_charge_seconds`. En tierra y en aire por igual.
+- Carga: boton `meter_button` sostenido, sube a lo largo de `sprint_charge_seconds`. En tierra y en aire por igual.
 - Descarga: al soltar, baja a lo largo de `sprint_decay_seconds`, tambien en los dos.
 - `sprint_requires_move_input`: si `true`, frenar en seco corta la carga aunque se sostenga el boton.
 - El stun lo tira a **cero de golpe** (`cancel()`): comerse un golpe apaga la carrera.

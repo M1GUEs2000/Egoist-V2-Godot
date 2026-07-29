@@ -56,7 +56,7 @@ Arma base / equilibrada. Velocidad media. Sirve para mantener el flujo del comba
 - El launcher comun de la Espada fija el facing al target bloqueado y corta input/momentum horizontal durante el swing. Y cargado terrestre y sweet spot del X elevan tambien al Player. *(2026-07-24)*
 - Los gestos `tap atras/adelante + Y` solo se arman desde input de movimiento neutral y consumen la primera direccion al salir de neutral. Girar el stick de forma continua no debe crear un especial al atravesar esas direcciones. *(2026-07-28)*
 - Los cuatro gestos direccionales de X/Y, sus ventanas y sus rutas de suelo/aire se documentan en [[Taps Direccionales]].
-- En Espada, RT combinado con `tap adelante/atras + X` cuesta `tap_x_sprint_meter_cost` y activa flash y valores mejorados. Los RT aereos tienen Floaters separados por ataque y cuerpo. Adelante X nunca dispara. Atras X dispara con RT; suelo y aire definen launchers independientes dentro de su ataque. *(2026-07-28)*
+- En Espada, el meter button (`meter_button`, RT — el mismo que carga el sprint, ver [[Meter]] > El meter button) combinado con `tap adelante/atras + X` cuesta `tap_x_meter_cost` y activa flash y valores mejorados. Los RT aereos tienen Floaters separados por ataque y cuerpo. Adelante X nunca dispara. Atras X dispara con RT; suelo y aire definen launchers independientes dentro de su ataque. *(2026-07-28)*
 - Mantener X despues de cualquier tap X direccional sigue cargando desde ese mismo press: la hoja muestra el progreso durante el tap, pero el cargado no se ejecuta hasta que hayan terminado tanto sus vueltas como su Mover. El float aereo de carga tambien espera ese cierre para no competir por la autoridad vertical. El flash RT usa un overlay HDR rojo-anaranjado sobre todas las mallas reales de `Visual`, igual que el brillo de [[Wall Slide y Wall Jump]]. *(2026-07-28)*
 - El Sweet Spot del X cargado reduce su coste y encadena launcher al conectar; el Y cargado aun no consume ese flag. Ver [[Sweet Spots]].
 - Habilidad especial de X cargado existe parcialmente por ventana de kill.
@@ -112,10 +112,10 @@ Ventanas en segundos; `0` desactiva el gesto. El contrato de input esta en [[Tap
 
 | Gesto | Ventana | Perfiles |
 |---|---|---|
-| Tap adelante + X | `tap_forward_x_window` | Aire normal: `tap_forward_x_air_floater`. Aire RT: `tap_forward_x_sprint_air_player_floater` / `tap_forward_x_sprint_air_enemy_floater`. Nunca dispara proyectil. |
-| Tap atras + X | `tap_back_x_window` | Suelo RT: Mover + `tap_back_x_sprint_projectile_enemy_mover`. Aire RT: Mover/vueltas, Floaters Player/Enemy y launcher propios bajo `tap_back_x_sprint_air_*`. |
+| Tap adelante + X | `tap_forward_x_window` | Aire normal: `tap_forward_x_air_floater`. Aire RT: `tap_forward_x_meter_air_player_floater` / `tap_forward_x_meter_air_enemy_floater`. Nunca dispara proyectil. |
+| Tap atras + X | `tap_back_x_window` | Suelo RT: Mover + `tap_back_x_meter_projectile_enemy_mover`. Aire RT: Mover/vueltas, Floaters Player/Enemy y launcher propios bajo `tap_back_x_meter_air_*`. |
 
-El vuelo, dano y visual del proyectil siguen compartidos bajo `tap_x_sprint_projectile_*`, pero cada ataque que dispara posee su propio Mover launcher. Un launcher en `null` conserva el proyectil y desactiva solo su elevacion.
+El vuelo, dano y visual del proyectil siguen compartidos bajo `tap_x_meter_projectile_*`, pero cada ataque que dispara posee su propio Mover launcher. Un launcher en `null` conserva el proyectil y desactiva solo su elevacion.
 | Tap adelante + Y | `tap_forward_y_window` | `tap_forward_y_player_mover` en suelo y aire, clonado y orientado hacia el target. Al enemigo no lo mueve un Mover: en aire lo desplaza el `push`. |
 | Tap atras + Y | `tap_back_y_window` | Suelo: `tap_back_y_enemy_mover`; el Player no se mueve, por eso no tiene perfil. Aire: `tap_back_y_air_player_mover` / `tap_back_y_air_enemy_mover`. |
 

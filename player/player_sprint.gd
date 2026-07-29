@@ -4,12 +4,17 @@ class_name PlayerSprint extends Node
 ## solo escala. Con nivel 0 todos los canales devuelven 1.0 y el juego se comporta exactamente
 ## como si el modulo no existiera — el "base" sigue siendo el de siempre.
 ##
-## Carga: boton `sprint` sostenido (sube a `sprint_charge_seconds`), en tierra y en el aire por
-## igual. Soltar lo apaga siempre: el nivel ya no queda congelado al despegar, asi que sostener el
-## boton es lo unico que mantiene el sprint durante el salto y la cadena de paredes.
+## Carga: boton `meter_button` sostenido (sube a `sprint_charge_seconds`), en tierra y en el aire
+## por igual. Soltar lo apaga siempre: el nivel ya no queda congelado al despegar, asi que sostener
+## el boton es lo unico que mantiene el sprint durante el salto y la cadena de paredes.
 ##
 ## Tener el sprint activo CUESTA meter (`sprint_meter_drain_per_second` barras por segundo). Sin
 ## meter no se puede cargar y el nivel cae solo: la carrera compite con el gasto de combate.
+##
+## `meter_button` NO es "el boton de correr": es el boton de GASTAR METER, y el sprint es una de sus
+## dos funciones. La otra son las variantes reforzadas de los taps direccionales de arma (ver
+## Sword._try_spend_tap_x_meter). Sostenerlo moviendose paga las dos cosas a la vez — drenaje del
+## sprint mas el costo del tap — y eso todavia no esta tuneado como un costo unico.
 ##
 ## El multiplicador se aplica SIEMPRE en el consumidor, nunca escribiendo sobre PlayerTuning: asi
 ## `tuning.move_speed` sigue siendo la referencia base para los calculos que la usan como UNIDAD
@@ -72,7 +77,7 @@ func cancel() -> void:
 	level_changed.emit(level)
 
 func _is_charging() -> bool:
-	if not Input.is_action_pressed("sprint"):
+	if not Input.is_action_pressed("meter_button"):
 		return false
 	# Sin meter no hay carrera: el nivel se cae solo aunque sigas apretando.
 	if _body.meter != null and _body.meter.meter() <= 0.0:

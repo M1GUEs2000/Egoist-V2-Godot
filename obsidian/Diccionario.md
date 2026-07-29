@@ -47,10 +47,37 @@ y **pierde el bonus** de poise. Fuente: [[Stun]] › Armadura, [[Armored Enemy]]
 Recurso de combate medido en **barras** (`PlayerMeter`). **Se gana golpeando** (y más al matar) y
 se gasta en acciones especiales:
 
-- **Ataques cargados:** gastan **una barra completa** (el Mazo gasta 1 por nivel de vuelta).
+- **Ataques cargados:** gastan **una barra completa** (el Mazo gasta 1 por nivel de vuelta). Eso
+  incluye el **launcher terrestre** (Y cargado), que hasta 2026-07-28 era el único cargado gratis.
 - **Dash:** gasta una **fracción** de barra. **Sin meter el dodge queda degradado**; con barra el
   dodge puede hacer daño.
+- **Sprint:** gasta una **fracción del meter completo por segundo** mientras está activo (ver
+  *Meter button* acá abajo y [[Sprint]]).
+- **Variantes RT de los taps direccionales:** media barra por gesto, por arma.
 - **X cargado de la Espada:** recupera una barra si **mata** dentro de una ventana.
+
+Cuánto meter se **gana** lo decide la fuente (cada arma trae el suyo); cuánto **cuesta** vive en
+`PlayerTuning`.
+
+## Meter button
+
+El botón (`meter_button`, RT) **no es el botón de correr**: es el botón de **gastar meter**, y tiene
+**dos funciones** —una por mecánica madre—:
+
+| Función | Mecánica madre | Qué hace |
+|---|---|---|
+| **Sprint** | Traversal | Sostenerlo moviéndose sube el nivel de sprint, que escala velocidad, salto y cadenas de pared. Drena meter mientras está activo. |
+| **Taps direccionales reforzados** | Combate | Sostenerlo al ejecutar un tap direccional de arma paga media barra y saca la variante fuerte (más vueltas, Movers propios, proyectil, flash). |
+
+La idea que unifica las dos: **apretar ese botón significa "quemo recurso para ir más fuerte"**,
+corras o pelees. Por eso el mismo botón sirve para traversal y para combate. *(2026-07-28: antes se
+llamaba `sprint`, nombre que solo describía la mitad de lo que hace.)*
+
+> [!warning] Cobra dos veces
+> Sostenerlo con input de movimiento paga **el drenaje del sprint y el costo del tap a la vez**.
+> Es coherente con lo que el botón significa, pero **nadie lo tuneó como un costo único**.
+
+Fuente: [[Meter]], [[Sprint]], [[Taps Direccionales]].
 
 Futuro (no implementado): capacidad hasta 5 barras, perfect dodge genera meter, habilidad suprema
 con barras llenas. Fuente: [[Meter]], [[Combate]].

@@ -24,7 +24,7 @@ class_name PlayerTuning extends Resource
 @export var attack_step_distance := 0.7
 
 @export_group("Sprint")
-# El sprint NO es una velocidad aparte: es un nivel 0-1 (boton `sprint` sostenido) que multiplica
+# El sprint NO es una velocidad aparte: es un nivel 0-1 (boton `meter_button` sostenido) que multiplica
 # los valores de abajo. Todo lo demas de este Resource sigue siendo el BASE — con el sprint en 0 el
 # movimiento es identico al de siempre. Cada bono es un PORCENTAJE aplicado a sprint pleno: 40 = a
 # nivel 1 ese canal vale 1.4x, a nivel 0.5 vale 1.2x. En 0 el canal no participa del sprint.

@@ -21,7 +21,7 @@ Los taps direccionales son gestos de combate relativos al objetivo de lock-on. U
 - La direccion se mide en el plano horizontal contra el vector Player -> objetivo: adelante se acerca al objetivo y atras se aleja.
 - El gesto debe empezar desde input de movimiento neutral. Solo se registra la primera direccion al salir de neutral; mantener o girar el stick no abre otra ventana.
 - La ventana se mantiene por slot y direccion: adelante/atras para X y adelante/atras para Y son independientes.
-- Pulsar X o Y dentro de la ventana la consume una vez. El especial entra como ataque normal y no espera el release. Por defecto no gasta meter; cada arma puede documentar una variante opcional de ese gesto que cobre meter, como la Espada con RT + X.
+- Pulsar X o Y dentro de la ventana la consume una vez. El especial entra como ataque normal y no espera el release. Por defecto no gasta meter; cada arma puede documentar una variante opcional de ese gesto que cobre meter, como la Espada con `meter_button` (RT) + X. Ese boton es el mismo que carga el sprint: significa "gasto meter", no "corro" (ver [[Meter]] > El meter button).
 - En los taps X de Espada, mantener el boton despues del press alimenta la carga normal. El tap sale de inmediato, pero el cargado queda retenido hasta que finalicen la coreografia y el Mover del gesto; no puede cancelar el movimiento a mitad.
 - Un valor de ventana `0` desactiva ese gesto para el arma.
 
