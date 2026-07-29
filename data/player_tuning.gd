@@ -225,6 +225,10 @@ class_name PlayerTuning extends Resource
 @export var enemy_bounce_cooldown := 0.25
 ## Tiempo en que el rebote lateral manda: bloquea el input de movimiento un instante. El stomp no lo usa.
 @export var enemy_bounce_lock_time := 0.2
+## Stun que aplica el rebote (poise, nunca daño). Es lo que le da derecho al push a desplazar al
+## enemigo: `EnemyBase.push()` solo mueve si la reserva quedo quebrada, asi que sin esto el empujon
+## se descarta entero. Null = el rebote no stunea y solo empuja a un enemigo ya stuneado o aereo.
+@export var enemy_bounce_stun: StunSettings
 ## Reaccion opcional del enemigo al rebote. Null = sin reaccion.
 @export var enemy_bounce_push: PushSettings
 

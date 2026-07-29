@@ -62,6 +62,16 @@ static func can_damage_enemy(attacker: EnemyBase, target: EnemyBase) -> bool:
 # enemigos: si queda null en _ready se resuelve al .tres comun. Se puede sobreescribir por enemigo.
 @export var parry_tuning: ParryTuning
 
+## Margen (m) que la BounceHitbox suma a cada lado de la caja derivada del cuerpo. La caja cruda
+## coincide con la colision solida, que frena al jugador antes de que llegue a solaparla: sin margen
+## el rebote casi no se puede pedir. Subir para poder rebotar desde mas lejos y desde mas arriba.
+@export var bounce_hitbox_margin := 0.45
+
+## Dibuja el wireframe de la BounceHitbox mientras se juega: cian = caja viva, verde = el jugador
+## esta adentro y el rebote es pedible. Se ve a traves del enemigo. Es ayuda de tuning para calibrar
+## `bounce_hitbox_margin`; prenderlo o apagarlo no cambia ninguna colision ni ningun contacto.
+@export var bounce_hitbox_debug := true
+
 @export var airborne_gravity := -20.0
 ## Tope de distancia del Mover de spike (slam). El spike termina de verdad al tocar el piso
 ## (STOP_ON_FLOOR); esto es solo la red de seguridad para que nunca baje infinito si no hay suelo.
@@ -363,8 +373,11 @@ func is_ragdolling() -> bool:
 ## golpe la va a cobrar despues en on_hurtbox_hit. Los que corren DESPUES del golpe (push, slam,
 ## slam_arc, en landed) no lo pasan: para entonces el stun ya entro y alcanza con is_stunned().
 func _breaks_poise(stun: StunSettings = null) -> bool:
-	if is_stunned() or _ragdolling:
-		return true  # reserva ya quebrada (stun) o cuerpo caido (ragdoll): el juggle entra directo
+	if is_stunned() or _ragdolling or is_airborne():
+		# Reserva ya quebrada (stun), cuerpo caido (ragdoll) o EN EL AIRE: el juggle entra directo.
+		# Sin pies en el piso no hay postura que defender, asi que un enemigo aereo no tiene poise
+		# que oponer: todo desplazamiento entra por completo mientras siga sin tocar el suelo.
+		return true
 	if stun == null or poise == null:
 		return false
 	return poise.would_break(stun.poise_damage, is_armored())
@@ -614,7 +627,9 @@ func slam_arc(down_speed: float, bounce_dir: Vector3, bounce_up_speed: float,
 ## reserva, no se mueve. El rebote del jugador (PlayerEnemyBounce) no trae poise propio, asi que
 ## solo empuja a un enemigo ya stuneado.
 func push(direction: Vector3, settings: PushSettings) -> void:
-	if not can_receive_hit() or not is_stunned() or _ragdolling:
+	# Pasa por el gate universal, no por is_stunned() a mano: asi el enemigo aereo (que no tiene
+	# poise que oponer) recibe el push completo aunque nunca haya entrado en STUNNED.
+	if not can_receive_hit() or not _breaks_poise() or _ragdolling:
 		return
 	direction.y = 0.0
 	if direction.length_squared() < 0.0001:
@@ -782,7 +797,7 @@ func _setup_bounce_hitbox() -> void:
 		return
 	_bounce_hitbox = EnemyBounceHitbox.new()
 	add_child(_bounce_hitbox)
-	_bounce_hitbox.setup(self, _body_shape)
+	_bounce_hitbox.setup(self, _body_shape, bounce_hitbox_margin, bounce_hitbox_debug)
 
 func on_hurtbox_hit(from: Node, damage: float, hit_direction: Vector3, stun: StunSettings) -> void:
 	if not can_receive_hit():
