@@ -93,30 +93,78 @@ if target is EnemyBase:
     (target as EnemyBase).request_mover(enemy_profile, tuning.stun)
 ```
 
-`WeaponBase.run_vertical_window(...)` es la utilidad para ataques cuyo hitbox debe solicitar primero el Mover del enemigo y luego cobrar el dano. Conecta al objetivo mediante `Hitbox.about_to_hit`, de modo que el stun del mismo golpe ya lo ve en el aire.
+`WeaponBase.run_vertical_window(...)` es la utilidad para ataques cuyo hitbox debe solicitar primero el Mover del enemigo y luego cobrar el dano. Conecta al objetivo mediante `Hitbox.about_to_hit`, de modo que el stun del mismo golpe ya lo ve en el aire. Es el **mecanismo**; los ataques migrados no lo llaman directo sino a traves de `run_vertical_window_from_profile`, que saca los dos Movers del perfil del gesto.
 
 ### Ejemplos vigentes
 
-- Espada: `ground_charged_y_player_mover` y `ground_charged_y_enemy_mover` para el Y cargado terrestre.
-- Espada: `air_wait_spin_player_mover` para el hop de la rama aerea de espera y `air_plunge_player_mover` en modo `PARTIAL` para el plunge.
-- Espada: `tap_back_x_air_player_mover` y `tap_back_x_air_enemy_mover` suben ambos cuerpos dos unidades y terminan en hang.
-- Mazo: su launcher terrestre usa perfiles propios para Player y Enemy a traves de la misma ventana vertical.
+- Espada: los **especiales** (taps de X, taps de Y, cargados de Y) sacan sus Movers de un `AttackMovementProfile`; ver la seccion siguiente.
+- Espada: `air_wait_spin_player_mover` para el hop de la rama aerea de espera y `air_plunge_player_mover` en modo `PARTIAL` para el plunge del combo. Los combos siguen con campos sueltos a proposito.
+- Mazo: su launcher terrestre usa `run_vertical_window` con perfiles sueltos; todavia no migro.
 
 ## Perfil de movimiento por ataque
 
-`AttackMovementProfile` (`data/attack_movement_profile.gd`) agrupa, para UNA variante de ataque (gesto x tramo x RT), todo lo que ese golpe le hace a la posicion de los cuerpos. No cambia las primitivas ni quien tiene autoridad: es un contenedor de datos que `WeaponBase.run_attack_movement` traduce a `request_mover` / `request_float`, con los mismos gates de siempre. *(2026-07-29)*
+`AttackMovementProfile` (`data/attack_movement_profile.gd`) agrupa, para UN gesto de ataque (gesto x tramo), todo lo que ese golpe le hace a la posicion de los cuerpos. No cambia las primitivas ni quien tiene autoridad: es un contenedor de datos que `WeaponBase.run_attack_movement` traduce a `request_mover` / `request_float`, con los mismos gates de siempre. *(2026-07-29)*
 
 | Slot | Que es |
 |---|---|
 | `player_travel` + `player_direction` | Recorrido del Player. `PROFILE` respeta la direccion del `MoverSettings` (verticales); `PLAYER_FORWARD` / `PLAYER_BACK` la recalculan contra el facing y clonan el perfil. |
-| `player_hang` + `player_hang_at` | Hang del Player, al iniciar el golpe (`START`) o al cerrar el recorrido (`TRAVEL_END`). |
+| `player_travel_at_window_end` | El recorrido del Player espera al cierre de la ventana de dano en vez de salir con el golpe. Gemelo de `WINDOW_END`: en un plunge, caer durante el swing te saca de rango. |
+| `player_hang` | Hang del Player AL INICIAR el golpe. Solo vale en ataques sin recorrido (ver abajo). |
+| `enemy_travel` + `enemy_travel_at` | Recorrido del Enemy y en que momento sale. Ver la seccion siguiente. |
+| `enemy_travel_aligns_y` | Antes de mover al enemigo, lo sube/baja a tu altura. Es lo que hace que un plunge se sienta "bajamos juntos". Solo alinea si el Mover va a entrar (aereo y quebrado). |
 | `enemy_on_hit` | Hang de cada enemigo que conecta, renovado por golpe. `null` = cae al hold generico del arma. |
-| `fires_projectile` + `projectile_enemy_mover` | Disparo al cerrar el recorrido y el launcher que aplica. Un recorrido cancelado no dispara. |
-| `overrides_air_hit` | El golpe se hace cargo de la vertical del Player: el arma no le aplica encima su air-hit-stall generico. |
+| `rt_*_bonus` | Bonos en % de la variante RT sobre los slots del Player. Ver mas abajo. |
+| `rt_only` | El movimiento del golpe existe SOLO con RT: sin barra el perfil entero no se cobra. |
+| `rt_fires_projectile` + `rt_projectile_enemy_mover` | Disparo al cerrar el recorrido y el launcher que aplica. Siempre premio de RT. Un recorrido cancelado no dispara. |
+| `overrides_air_hit` | El golpe se hace cargo de la vertical del Player: el arma no le aplica encima su air-hit-stall generico. Aplica con RT y sin RT: es regla del gesto, no recompensa. |
 
-Reglas que se mantienen: un slot por cuerpo, un perfil por variante (dos golpes que hoy se sienten igual llevan perfiles separados), y un slot en `null` significa "este golpe no hace eso". Un perfil entero en `null` significa que el golpe no mueve a nadie — es el caso real de tap adelante + X en suelo.
+Reglas que se mantienen: un slot por cuerpo, un perfil por gesto (dos gestos que hoy se sienten igual llevan perfiles separados), y un slot en `null` significa "este golpe no hace eso". Un perfil entero en `null` significa que el golpe no mueve a nadie — es el caso real de tap adelante + X en suelo.
 
-Lo consume [[Espada]] en sus taps de X. Los taps de Y siguen con campos sueltos; cuando migren hace falta agregar el slot `enemy_travel`.
+Lo consumen **todos los ataques especiales** de [[Espada]]: los cuatro taps direccionales de X, los taps de Y y los cargados de Y. Quedan afuera a proposito el **X cargado**, que mueve al Player con `force_dash` (i-frames, hitbox propio, reposicionamiento al atravesar) y no con un Mover —darle un slot seria un campo que miente—, y los **combos normales**, cuyo Mover sale en un beat concreto de una cadena de varias fases: eso es coreografia, y vive en codigo igual que la secuencia de swings. *(2026-07-29)*
+
+### Cuando sale el recorrido del Enemy
+
+El mismo slot `enemy_travel` alimenta tres momentos, y **solo el perfil puede distinguirlos**, por eso este eje es tuning y no codigo: el momento cambia lo que se siente, no solo cuando ocurre. *(2026-07-29)*
+
+| `enemy_travel_at` | Cuando | Para que | Quien lo cobra |
+|---|---|---|---|
+| `BEFORE_DAMAGE` | En `about_to_hit`, antes del dano | El Stun del mismo golpe ya lo ve en el aire — es lo que convierte un launcher en abre-juggle en vez de empujon | Solo un golpe con ventana vertical (`run_vertical_window_from_profile`) |
+| `ON_HIT` | Al conectar, despues del dano | Spikes y empujones a los que les da igual lo que vio el Stun | `WeaponBase._on_hit`, para **cualquier** golpe del arma |
+| `WINDOW_END` | Al cerrar la ventana, sobre todo lo golpeado en ella | Plunges: arrancar el recorrido durante el swing saca al objetivo del alcance del propio golpe | El cierre de `begin_damage_window` |
+
+`ON_HIT` y `WINDOW_END` los cobra `WeaponBase` sin que la rutina del arma pida nada. Esa es la razon de ser del componente: **agregar o sacar movimiento de un especial es poner o vaciar un slot en el inspector**, no editar la rutina del golpe. `BEFORE_DAMAGE` es la excepcion —necesita una ventana vertical— y en un golpe que no la tiene es un momento que nunca llega.
+
+`enemy_travel` **no tiene bonos de RT**: hoy ningun gesto que mueva al Enemy tiene variante RT (los taps de Y son gratis, los cargados cobran barra entera y sin rama), asi que serian sliders muertos. Se agregan cuando exista el primer caso real.
+
+### Quien pide el hang del Player: el arma o el Mover
+
+Hay dos formas de colgar al Player y **no son intercambiables ni deben convivir**:
+
+| | Quien lo dispara | Cuando |
+|---|---|---|
+| `player_hang` | El arma, via `Player.request_float` (con sus gates de piso y dash) | Al iniciar el golpe |
+| `player_travel.float_duration` | El propio Mover, directo al componente, en `_finish` | Al cerrar el recorrido, y solo si NO se cancelo |
+
+La regla es: **si hay recorrido, el hang lo pide el Mover; si no hay recorrido, lo pide el arma.** No es prolijidad — un Floater arrancado mientras corre un Mover **no se aplica nunca**: en `TOTAL` el loop del Player hace `return` antes de leer el Floater, y en `PARTIAL` el Mover le sobreescribe la vertical el mismo frame. Por eso no existe un `player_hang_at`: el momento no es una eleccion, lo decide si el golpe viaja o no. `run_attack_movement` emite un `push_warning` si un perfil trae los dos, en vez de fallar en silencio.
+
+### RT como porcentaje, no como perfil aparte
+
+La variante RT de un gesto no es otro perfil: son **bonos en % sobre la misma base**, aplicados en el consumidor. Mismo modelo que [[Sprint]] — el valor base vive una sola vez y "sin RT" es literalmente multiplicar por `1.0`, no una rama aparte. *(2026-07-29)*
+
+| Bono | Sobre que |
+|---|---|
+| `rt_player_travel_distance_bonus` | Metros del recorrido del Player. |
+| `rt_player_travel_speed_bonus` | Velocidad inicial del recorrido. |
+| `rt_player_travel_acceleration_bonus` | Aceleracion. Va aparte de la velocidad: subir solo el arranque deja un recorrido que se siente lavado al final. |
+| `rt_player_hang_bonus` | Segundos de hang del Player. Escala **el que ese golpe use** —`player_hang.duration` o `player_travel.float_duration`— asi el slider vale igual en los dos casos. |
+| `rt_enemy_hang_bonus` | Segundos de `enemy_on_hit`. `-100` lo apaga sin devolver al enemigo al hold generico: el perfil sigue siendo el dueno del hang, solo que pidiendo cero. |
+
+Dos cosas quedan afuera del modelo a proposito:
+
+- **El `fall_scale` no lleva %.** `0` es hold total y `0` por cualquier bono sigue siendo `0`; ademas el rango esta clampeado a 0-1, asi que un bono positivo no tendria a donde ir. Si RT tiene que cambiar COMO caes y no solo cuanto, eso es un campo propio.
+- **`rt_projectile_enemy_mover` va a mano.** Es el unico Mover del perfil que no le pertenece al Player, asi que no comparte escala con nada.
+
+Un bono se recorta en `0`: `-100` apaga el canal en vez de invertirlo. Distancias y duraciones negativas no significan nada.
 
 ## Cancelacion y orden
 

@@ -104,33 +104,41 @@ El hold simetrico del jugador, `air_hit_player_floater`, vive en `WeaponTuning`:
 | `charged_dash_behind_offset` | Distancia de salida al otro lado del primer enemigo impactado, medida sobre la trayectoria del dash. |
 | `charged_fallback_angle` | Swing degradado del X cargado sin barra. |
 | `ground_charged_y_hitbox_duration` / `ground_charged_y_deals_damage` | Ventana activa y dano del launcher terrestre. |
-| `ground_charged_y_player_mover` / `ground_charged_y_enemy_mover` | Launcher Y terrestre: Mover UP de cada cuerpo, cada uno con su Floater de hang en el tope. |
-| `aerial_charged_y_player_mover` / `aerial_charged_y_enemy_spike_mover` | Y cargada aerea: auto-launch del Player y spike lineal descendente del Enemy. Sin uso mientras el move este desactivado. |
+| `ground_charged_y` | Perfil del launcher Y terrestre: Mover UP de cada cuerpo, cada uno con su Floater de hang en el tope. El del Enemy en `BEFORE_DAMAGE`, para que el Stun del mismo golpe ya lo vea en el aire. |
+| `aerial_charged_y` | Perfil de la Y cargada aerea: auto-launch del Player y spike lineal descendente del Enemy en `ON_HIT`. Sin uso mientras el move este desactivado. |
 
 ### Taps direccionales
 
 Ventanas en segundos; `0` desactiva el gesto. El contrato de input esta en [[Taps Direccionales]].
 
-**Los taps de X ya no listan Movers y Floaters sueltos.** Cada variante (gesto x tramo x RT) tiene UN `AttackMovementProfile` con todo lo que ese golpe le hace a la posicion de los cuerpos; debajo quedan los knobs de coreografia e input. Ver [[Mover y Floater]] > Perfil de movimiento por ataque. *(2026-07-29)*
+**Ningun especial lista ya Movers y Floaters sueltos, y la variante RT tampoco duplica el perfil.** Cada GESTO (gesto x tramo) tiene UN `AttackMovementProfile` con todo lo que le hace a la posicion de los cuerpos, y RT vive adentro como porcentajes sobre esa misma base. Debajo quedan los knobs de coreografia e input, que si conservan su valor propio para RT porque no son posicion. Ver [[Mover y Floater]] > Perfil de movimiento por ataque. *(2026-07-29)*
 
-| Gesto | Perfiles | Coreografia e input |
+| Gesto | Perfil | Coreografia, input y dano RT |
 |---|---|---|
-| Tap adelante + X | `tap_forward_x_ground` · `tap_forward_x_ground_meter` · `tap_forward_x_air` · `tap_forward_x_air_meter` | `tap_forward_x_window` · `tap_forward_x_spins` · `tap_forward_x_meter_spins` |
-| Tap atras + X | `tap_back_x_ground` · `tap_back_x_ground_meter` · `tap_back_x_air` · `tap_back_x_air_meter` | `tap_back_x_window` · `tap_back_x_air_spins` · `tap_back_x_meter_air_spins` |
-| Tap adelante + Y | `tap_forward_y_player_mover` en suelo y aire, clonado y orientado hacia el target. Al enemigo no lo mueve un Mover: en aire lo desplaza el `push`. | `tap_forward_y_window` |
-| Tap atras + Y | Suelo: `tap_back_y_enemy_mover`; el Player no se mueve, por eso no tiene perfil. Aire: `tap_back_y_air_player_mover` / `tap_back_y_air_enemy_mover`. | `tap_back_y_window` |
+| Tap adelante + X | `tap_forward_x_ground` · `tap_forward_x_air` | `tap_forward_x_window` · `tap_forward_x_spins` · `tap_forward_x_meter_spins` · `tap_forward_x_ground_meter_damage_bonus` · `tap_forward_x_air_meter_damage_bonus` |
+| Tap atras + X | `tap_back_x_ground` · `tap_back_x_air` | `tap_back_x_window` · `tap_back_x_air_spins` · `tap_back_x_meter_air_spins` · `tap_back_x_ground_meter_damage_bonus` · `tap_back_x_air_meter_damage_bonus` |
+| Tap adelante + Y | `tap_forward_y`, con `player_direction` en `PLAYER_FORWARD`. Al enemigo no lo mueve un Mover: en aire lo desplaza el `push`, por eso `enemy_travel` esta vacio. | `tap_forward_y_window` |
+| Tap atras + Y | `tap_back_y_ground` (solo sube al Enemy, `BEFORE_DAMAGE`; el slot del Player queda vacio) · `tap_back_y_air` (plunge: los dos bajan en `WINDOW_END`, con `enemy_travel_aligns_y`) | `tap_back_y_window` |
 
-Los dos perfiles de **adelante X en suelo estan en `null` a proposito**: ese golpe son vueltas puras y no mueve a nadie. Un perfil vacio es la forma de decirlo.
+Que hace RT en cada gesto de X, ya expresado como bonos:
 
-El vuelo, dano y visual del proyectil siguen compartidos bajo `tap_x_meter_projectile_*`, pero cada perfil que dispara trae su propio launcher (`projectile_enemy_mover`). Un launcher en `null` conserva el proyectil y desactiva solo su elevacion.
+| Gesto | Base | Con RT |
+|---|---|---|
+| Adelante X suelo | perfil en `null`: vueltas puras, no mueve a nadie | igual, solo mas vueltas |
+| Adelante X aire | cuelga al Player y al Enemy que conecta | `rt_player_hang_bonus -100` (el Player no cuelga) y `rt_enemy_hang_bonus -33` |
+| Atras X suelo | retrocede 3 m a 10 m/s | `+33%` distancia, `+80%` velocidad, `+100%` aceleracion, y dispara |
+| Atras X aire | vueltas en el sitio, sin recorrido | `rt_only`: aparece el retroceso de 2 m, cuelga al cerrarlo y dispara |
 
-Los taps de **Y todavia no migraron**: siguen con campos sueltos. Cuando migren hace falta agregarle al perfil un slot `enemy_travel` (hoy `tap_back_y_enemy_mover` y `tap_back_y_air_enemy_mover`), que no se creo antes por no dejar un campo muerto en el inspector.
+Ademas, cada tramo tiene su **bono % de dano con RT**, hoy en `0` (RT pega igual, solo hace mas cosas). Vive en el tuning y no en el perfil porque el dano no es posicion: ver [[Armas]] > La variante RT es un porcentaje. El bono escala el `1.0` base del hitbox y lo limpia la entrada del ataque siguiente — por eso la Espada ahora llama `reset_hit_profile()` en sus siete entradas de ataque, como ya hacia el [[Mazo]]. Sin eso, un tap RT dejaba el combo posterior pegando de mas. *(2026-07-29)*
+
+El vuelo, dano y visual del proyectil siguen compartidos bajo `tap_x_meter_projectile_*`, pero cada perfil que dispara trae su propio launcher (`rt_projectile_enemy_mover`), a mano y sin porcentajes: es el unico Mover del perfil que no le pertenece al Player. Un launcher en `null` conserva el proyectil y desactiva solo su elevacion.
+
+Los taps de Y y los cargados de Y tambien migraron: el Resource sumo `enemy_travel` con su eje `enemy_travel_at` (tres momentos) y `enemy_travel_aligns_y`. Los unicos especiales sin perfil son el **X cargado** (mueve con `force_dash`) y los **combos normales** (su Mover sale en un beat de la cadena); el porque esta en [[Armas]] > Todos los especiales llevan perfil. *(2026-07-29)*
 
 ## Pendiente H1
 
-- Migrar los taps de **Y** a `AttackMovementProfile` (los de X ya estan). Requiere agregarle al Resource el slot `enemy_travel`.
-- **Correr la verificacion headless del refactor de perfiles** (`--import`, `--quit-after 2` y los dos smokes): quedo commiteado sin verificar. *(2026-07-29)*
-- Tunear taps RT. Cinco slots siguen vacios en `sword_tuning.tres`: los hangs de Player y Enemy de adelante X RT aereo, el recorrido de atras X aereo normal, y el hang de Player de atras X RT aereo.
+- **Correr la verificacion headless de los tres refactors de perfiles** (`--import`, `--quit-after 2` y los dos smokes): quedaron commiteados sin verificar. *(2026-07-29)*
+- Tunear los bonos de RT jugando. Los cinco slots vacios que quedaban desaparecieron al pasar RT a porcentajes —"sin RT no hace nada" ahora es un valor y no un hueco—, pero los bonos actuales son la traduccion literal de los perfiles viejos, no una decision de feel.
 - Tunear `sword_tuning.tres`.
 - Validar que hold no dispare tap si se decide carga exclusiva.
 - Confirmar dano distinto por golpes finales/cargados.

@@ -79,8 +79,12 @@ var _thrust_reach := 0.0
 ## sueltos que cada arma guardaba por gesto para reconectar sus Movers y Floaters.
 var _movement_profile: AttackMovementProfile
 var _movement_profile_routine_id := -1
-## Los slots que esperan el cierre del recorrido (hang TRAVEL_END, proyectil) se cobran una sola
-## vez; una cancelacion tambien los quema, para no dejar disparos tardios de un recorrido abortado.
+## Si el gesto en curso pago RT. Se guarda al armar el movimiento y no se vuelve a leer el input:
+## los slots diferidos (proyectil, hang del enemigo por golpe) tienen que cobrarse con la misma
+## variante con la que arranco el golpe, aunque el jugador suelte el boton a mitad de la rutina.
+var _movement_profile_with_meter := false
+## El proyectil se cobra una sola vez al cerrar el recorrido; una cancelacion tambien lo quema, para
+## no dejar disparos tardios de un recorrido abortado.
 var _movement_profile_travel_done := false
 
 @onready var _hand: Node3D = $Hand
@@ -320,6 +324,9 @@ func begin_damage_window(duration: float) -> void:
 	_blade_hitbox.end_swing()
 	if _air_disc_hitbox != null:
 		_air_disc_hitbox.end_swing()
+	# Los recorridos WINDOW_END del perfil se cobran acá y no en cada arma: es el único punto que
+	# sabe que la ventana cerró bien. Si el perfil no pidió ese momento, no hace nada.
+	_run_window_end_travel()
 
 func end_damage_window() -> void:
 	_window_id += 1
@@ -399,6 +406,9 @@ func _on_hit(hurtbox: Hurtbox, died: bool) -> void:
 	_window_hits.append(hurtbox)
 	if _armed_push != null:
 		_push_target(hurtbox, _armed_push)
+	# Recorrido ON_HIT del perfil: sale para cualquier golpe del arma sin que la rutina pida nada,
+	# así prenderlo o apagarlo es solo poner/sacar el Mover en el inspector.
+	request_profile_enemy_travel(hurtbox)
 	register_weapon_hit(hurtbox, died, not is_charged_move_active())
 	VfxInjector.spawn_impact(tuning.hit_vfx_scene, _player.get_parent(), hurtbox.global_position,
 			tuning.hit_vfx_scale)
@@ -467,44 +477,180 @@ func arm_sweet_spot(held_time: float) -> void:
 	set_sweet_spot_window(false)
 
 # ---- Movimiento por ataque (ver data/attack_movement_profile.gd) ----
-## Arma el movimiento de una variante de ataque desde su perfil. Lo que pasa en el acto (recorrido
-## del Player, hang START) sale aca; lo diferido (hang TRAVEL_END, proyectil, hang del enemigo por
-## golpe) lo cobra este mismo nodo cuando llega su momento, leyendo el perfil activo. Un perfil
-## nuevo reemplaza al anterior y el id de rutina lo hace caducar solo.
+## Arma el movimiento de un gesto desde su perfil. Lo que pasa en el acto (recorrido del Player, hang
+## de inicio) sale aca; todo lo diferido —recorrido del Enemy en cualquiera de sus tres momentos,
+## hang del enemigo por golpe, proyectil— lo cobra este mismo nodo cuando llega su momento, leyendo
+## el perfil activo. Por eso el arma no tiene que pedir nada por gesto: agregar o sacar un Mover es
+## poner o vaciar un slot en el inspector. Un perfil nuevo reemplaza al anterior y el id de rutina lo
+## hace caducar solo.
+##
+## `with_meter` es el eje RT: elige si los bonos porcentuales del perfil entran o valen 1.0. No
+## cambia QUE hace el golpe salvo por `rt_only`, que es el unico caso donde el recorrido existe solo
+## con barra.
 ##
 ## `profile` en null es un caso valido y esperado: significa "este golpe no mueve a nadie".
-func run_attack_movement(profile: AttackMovementProfile, routine_id: int) -> void:
+##
+## Devuelve true solo si realmente arranco un recorrido del Player. El arma lo necesita para saber
+## si tiene que esperar un `mover_finished`: darlo por hecho mirando `player_travel != null` deja el
+## bookkeeping colgado cuando el recorrido no sale (perfil `rt_only` sin barra, facing degenerado, o
+## un recorrido diferido a WINDOW_END, que todavia no arranco).
+##
+## `start_player_now` en false arma el perfil sin tocar al Player. Lo usan las ventanas verticales,
+## que arrancan el recorrido ellas mismas tras su propio delay (ver run_vertical_window_from_profile).
+func run_attack_movement(profile: AttackMovementProfile, routine_id: int,
+		with_meter := false, start_player_now := true) -> bool:
 	_movement_profile = profile
 	_movement_profile_routine_id = routine_id
+	_movement_profile_with_meter = with_meter
 	_movement_profile_travel_done = false
-	if profile == null:
-		return
+	if profile == null or not start_player_now:
+		return false
+	_warn_if_hang_is_shadowed(profile)
+	if not _profile_is_payable(profile, with_meter):
+		return false
+	if profile.player_travel_at_window_end:
+		return false  # lo arranca _run_window_end_travel al cerrar la ventana de dano
+	return _start_player_travel(profile, with_meter)
+
+## `rt_only`: el movimiento se escribe en la base pero solo se cobra con RT. Un perfil que no se paga
+## no mueve a nadie, ni al Player ni al Enemy.
+func _profile_is_payable(profile: AttackMovementProfile, with_meter: bool) -> bool:
+	return not profile.rt_only or with_meter
+
+func _start_player_travel(profile: AttackMovementProfile, with_meter: bool) -> bool:
+	var started := false
 	if profile.player_travel != null:
-		var travel := _resolve_travel_direction(profile.player_travel, profile.player_direction)
+		var travel := _resolve_travel(profile, with_meter)
 		if travel != null:
 			_player.request_mover(travel)
-	if profile.player_hang_at == AttackMovementProfile.HangAt.START:
-		_request_player_hang(profile.player_hang)
+			started = true
+	_request_player_hang(profile, with_meter)
+	return started
 
-## Clona el perfil y le reescribe la direccion cuando el ataque la calcula en runtime: avances y
-## retrocesos se orientan contra el facing, que el gesto ya fijo al objetivo lockeado. PROFILE la
-## deja intacta (recorridos verticales). Devuelve null si el facing quedo degenerado.
-func _resolve_travel_direction(settings: MoverSettings, mode: int) -> MoverSettings:
-	if mode == AttackMovementProfile.Direction.PROFILE:
-		return settings
-	var direction := _player.forward()
-	if mode == AttackMovementProfile.Direction.PLAYER_BACK:
-		direction = -direction
-	direction.y = 0.0
-	if direction.length_squared() < 0.0001:
-		return null
+## Multiplicador de un bono porcentual del perfil: 1.0 sin RT, 1 + bono/100 con RT. Mismo modelo que
+## PlayerSprint.scale — el bono se aplica en el consumidor y nunca sobre el .tres, asi el valor base
+## sigue leyendose tal cual en el inspector. Se recorta en 0 para que un -100 apague el canal en vez
+## de invertirlo (una duracion o una distancia negativas no significan nada).
+func _rt_scale(bonus_percent: float, with_meter: bool) -> float:
+	if not with_meter:
+		return 1.0
+	return maxf(0.0, 1.0 + bonus_percent * 0.01)
+
+## Clona el recorrido y le aplica de una vez las dos cosas que se resuelven en runtime: la direccion
+## (avances y retrocesos se orientan contra el facing, que el gesto ya fijo al objetivo lockeado) y
+## los bonos de RT. Se clona SIEMPRE que haya algo que reescribir, para no mutar el recurso
+## compartido del .tres. Devuelve null si el facing quedo degenerado.
+func _resolve_travel(profile: AttackMovementProfile, with_meter: bool) -> MoverSettings:
+	var settings := profile.player_travel
+	var mode := profile.player_direction
+	var direction := Vector3.ZERO
+	if mode != AttackMovementProfile.Direction.PROFILE:
+		direction = _player.forward()
+		if mode == AttackMovementProfile.Direction.PLAYER_BACK:
+			direction = -direction
+		direction.y = 0.0
+		if direction.length_squared() < 0.0001:
+			return null
+		direction = direction.normalized()
+	if direction == Vector3.ZERO and not with_meter:
+		return settings  # nada que reescribir: se usa el recurso tal cual
 	var resolved := settings.duplicate() as MoverSettings
-	resolved.direction = direction.normalized()
+	if direction != Vector3.ZERO:
+		resolved.direction = direction
+	resolved.distance *= _rt_scale(profile.rt_player_travel_distance_bonus, with_meter)
+	resolved.speed *= _rt_scale(profile.rt_player_travel_speed_bonus, with_meter)
+	resolved.acceleration *= _rt_scale(profile.rt_player_travel_acceleration_bonus, with_meter)
+	# El hang que dispara el propio Mover al terminar es el MISMO canal que `player_hang`: un solo
+	# slider los cubre a los dos, asi el diseñador no tiene que acordarse de cual uso este golpe.
+	resolved.float_duration *= _rt_scale(profile.rt_player_hang_bonus, with_meter)
 	return resolved
 
-func _request_player_hang(settings: FloaterSettings) -> void:
-	if settings != null and settings.duration > 0.0:
-		_player.request_float(settings.duration, settings.fall_scale)
+func _request_player_hang(profile: AttackMovementProfile, with_meter: bool) -> void:
+	var settings := profile.player_hang
+	if settings == null:
+		return
+	var duration := settings.duration * _rt_scale(profile.rt_player_hang_bonus, with_meter)
+	if duration > 0.0:
+		_player.request_float(duration, settings.fall_scale)
+
+## Un `player_hang` junto a un `player_travel` no se aplica NUNCA: mientras corre el Mover, el Mover
+## es dueno de la vertical (en TOTAL el loop del Player hace return antes de leer el Floater; en
+## PARTIAL lo sobreescribe el mismo frame). El hang de despues de un recorrido va en
+## `player_travel.float_duration`. Se avisa en vez de fallar en silencio, que es como falla hoy.
+func _warn_if_hang_is_shadowed(profile: AttackMovementProfile) -> void:
+	if profile.player_travel == null or profile.player_hang == null:
+		return
+	if profile.player_hang.duration <= 0.0:
+		return
+	push_warning("%s: perfil con player_travel y player_hang a la vez. El hang no se aplica (el " % name
+			+ "Mover es dueno de la vertical mientras recorre). Usar player_travel.float_duration.")
+
+## Mover del Enemy que el perfil activo pide en ESTE momento, o null. Un perfil de otra rutina ya
+## caduco y no cobra nada, y uno `rt_only` sin barra tampoco.
+func _profile_enemy_travel(at: AttackMovementProfile.EnemyTravelAt) -> MoverSettings:
+	if not _movement_profile_is_current():
+		return null
+	if _movement_profile.enemy_travel_at != at:
+		return null
+	if not _profile_is_payable(_movement_profile, _movement_profile_with_meter):
+		return null
+	return _movement_profile.enemy_travel
+
+## Recorrido ON_HIT: el enemigo que acaba de conectar se mueve DESPUES del dano. Lo llama _on_hit
+## para cualquier golpe del arma, asi que un spike se prende y se apaga solo desde el inspector.
+## Devuelve true si hubo Mover que pedir.
+func request_profile_enemy_travel(hurtbox: Hurtbox) -> bool:
+	var settings := _profile_enemy_travel(AttackMovementProfile.EnemyTravelAt.ON_HIT)
+	if settings == null:
+		return false
+	_move_enemy(hurtbox.owner_node, settings)
+	return true
+
+## Cierre de la ventana de dano: arranca lo que el perfil dejo esperando a este momento — el
+## recorrido del Player si lo difirio, y el del Enemy sobre TODO lo golpeado en la ventana. Es el
+## plunge: arrancarlos durante el swing saca al objetivo del alcance del propio golpe.
+func _run_window_end_travel() -> void:
+	if not _movement_profile_is_current():
+		return
+	var profile := _movement_profile
+	var with_meter := _movement_profile_with_meter
+	if not _profile_is_payable(profile, with_meter):
+		return
+	if profile.player_travel_at_window_end:
+		# Se ignora el retorno: el gesto que difiere su recorrido ya no esta esperando el swing, y
+		# el cierre lo avisa igual _on_player_mover_finished.
+		_start_player_travel(profile, with_meter)
+	var settings := _profile_enemy_travel(AttackMovementProfile.EnemyTravelAt.WINDOW_END)
+	if settings == null:
+		return
+	for hurtbox in _window_hits.duplicate():
+		if is_instance_valid(hurtbox):
+			_move_enemy(hurtbox.owner_node, settings)
+
+## Le pide un Mover a un cuerpo golpeado, por duck typing (el dummy de pruebas no es EnemyBase).
+## Si el perfil pide alinear, el objetivo se sube/baja a la altura del Player ANTES de arrancar,
+## pero solo si el Mover realmente va a poder entrar: alinear a un enemigo entero seria
+## teletransportarlo y dejarlo ahi parado.
+func _move_enemy(target: Node, settings: MoverSettings) -> void:
+	if not is_instance_valid(target) or not target.has_method("request_mover"):
+		return
+	if _movement_profile.enemy_travel_aligns_y:
+		if not _enemy_can_take_travel(target):
+			return
+		if target is Node3D:
+			(target as Node3D).global_position.y = _player.global_position.y
+	if target is EnemyBase:
+		(target as EnemyBase).request_mover(settings)
+	else:
+		target.call("request_mover", settings)
+
+## Mismas condiciones que EnemyBase.can_accept_vertical_control, por duck typing.
+func _enemy_can_take_travel(target: Node) -> bool:
+	if target.has_method("is_airborne") and not target.call("is_airborne"):
+		return false
+	if target.has_method("is_stunned") and not target.call("is_stunned"):
+		return false
+	return true
 
 ## Hang del enemigo que acaba de conectar, si el perfil activo define uno propio. Devuelve false
 ## cuando no lo define, para que el arma caiga a su hold generico (air_hit_enemy_floater).
@@ -514,11 +660,16 @@ func request_profile_enemy_hang(hurtbox: Hurtbox) -> bool:
 	var settings := _movement_profile.enemy_on_hit
 	if settings == null or settings.duration <= 0.0:
 		return false
-	var target: Node = hurtbox.owner_node
-	if target is EnemyBase:
-		(target as EnemyBase).request_float(settings.duration, settings.fall_scale)
-	elif target.has_method("request_float"):
-		target.call("request_float", settings.duration, settings.fall_scale)
+	var duration := settings.duration \
+			* _rt_scale(_movement_profile.rt_enemy_hang_bonus, _movement_profile_with_meter)
+	# Un bono de -100 apaga el hang pero el perfil SIGUE siendo su dueno: se devuelve true para que
+	# el arma no caiga a su hold generico. "Con RT el enemigo no cuelga" es una decision del gesto.
+	if duration > 0.0:
+		var target: Node = hurtbox.owner_node
+		if target is EnemyBase:
+			(target as EnemyBase).request_float(duration, settings.fall_scale)
+		elif target.has_method("request_float"):
+			target.call("request_float", duration, settings.fall_scale)
 	return true
 
 ## True si el golpe en curso se hace cargo de la vertical del Player por su cuenta. Lo consultan el
@@ -536,10 +687,10 @@ func _on_player_mover_finished(_reason: int) -> void:
 	if not _movement_profile_is_current() or _movement_profile_travel_done:
 		return
 	_movement_profile_travel_done = true
-	if _movement_profile.player_hang_at == AttackMovementProfile.HangAt.TRAVEL_END:
-		_request_player_hang(_movement_profile.player_hang)
-	if _movement_profile.fires_projectile:
-		_fire_attack_projectile(_movement_profile.projectile_enemy_mover)
+	# El hang de salida ya lo detono el propio Mover desde su `float_duration` (ver combat/mover.gd):
+	# aca solo queda el proyectil, que es premio de RT y por eso pide las dos condiciones.
+	if _movement_profile.rt_fires_projectile and _movement_profile_with_meter:
+		_fire_attack_projectile(_movement_profile.rt_projectile_enemy_mover)
 
 ## Recorrido abortado (stun, muerte, Mover nuevo, regla del ataque): quema los slots diferidos sin
 ## cobrarlos. El hang del enemigo NO se toca: sigue vivo mientras dure la rutina del golpe.
@@ -582,6 +733,24 @@ func _on_vertical_about_to_hit(hurtbox: Hurtbox) -> void:
 				_vertical_starts_lying, true)
 	elif target.has_method("request_mover"):
 		target.call("request_mover", _vertical_enemy_mover)
+
+## Ventana vertical desde un AttackMovementProfile: es la forma que usan los ataques migrados, con
+## run_vertical_window abajo como mecanismo. Arma el perfil SIN arrancar el recorrido del Player —en
+## un launcher ese recorrido sale con el hitbox, tras el delay, no al empezar el golpe— y le entrega
+## los dos Movers ya resueltos. El del Enemy se pasa solo si el perfil pidio BEFORE_DAMAGE: es el
+## unico momento que esta ventana sabe cobrar (los otros dos los cobran _on_hit y el cierre de la
+## ventana de dano). Que el Player se mueva o no sale de que su slot este puesto, no de un bool.
+func run_vertical_window_from_profile(hitbox: Hitbox, profile: AttackMovementProfile,
+		routine_id: int, duration: float, delay := 0.05, with_meter := false) -> void:
+	run_attack_movement(profile, routine_id, with_meter, false)
+	var player_mover: MoverSettings = null
+	var enemy_mover: MoverSettings = null
+	if profile != null and _profile_is_payable(profile, with_meter):
+		if profile.player_travel != null:
+			player_mover = _resolve_travel(profile, with_meter)
+		if profile.enemy_travel_at == AttackMovementProfile.EnemyTravelAt.BEFORE_DAMAGE:
+			enemy_mover = profile.enemy_travel
+	run_vertical_window(hitbox, player_mover, enemy_mover, duration, delay, player_mover != null)
 
 ## Ventana de daño vertical con id-guard: espera `delay`, opcionalmente mueve al Player y
 ## prende el hitbox `duration` segundos. Una ventana nueva invalida la anterior.

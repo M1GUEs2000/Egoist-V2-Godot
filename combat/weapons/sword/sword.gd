@@ -66,9 +66,10 @@ func setup(player: Player) -> void:
 	(_charged_dash_shape.shape as SphereShape3D).radius = _t().charged_dash_hit_radius
 	_charged_dash_hitbox.landed.connect(_on_charged_dash_hit)
 
+	# El spike del Enemy en la Y cargada aerea ya no se engancha acá: es `enemy_travel` en ON_HIT
+	# dentro de su perfil, y lo cobra WeaponBase._on_hit para cualquier golpe del arma.
 	for hitbox: Hitbox in [_blade_hitbox, _air_disc_hitbox]:
 		if hitbox != null:
-			hitbox.landed.connect(_on_aerial_charged_y_hit)
 			hitbox.landed.connect(_on_aerial_normal_hit)
 
 	# Shapes propios para el estiramiento del finisher aéreo: la hoja duplica su BoxShape
@@ -124,6 +125,7 @@ func try_lock_back_y_launcher() -> bool:
 	if _t().tap_back_y_window <= 0.0:
 		return false
 	cancel_routines()
+	reset_hit_profile()
 	if _player.is_airborne():
 		_run_air_back_y_plunge()
 	else:
@@ -139,6 +141,7 @@ func try_lock_forward_y_push() -> bool:
 	if _t().tap_forward_y_window <= 0.0:
 		return false
 	cancel_routines()
+	reset_hit_profile()
 	_run_forward_y_push()
 	return true
 
@@ -151,6 +154,7 @@ func try_lock_forward_x_static_spin() -> bool:
 	if _t().tap_forward_x_window <= 0.0:
 		return false
 	cancel_routines()
+	reset_hit_profile()
 	_begin_directional_x()
 	_run_forward_x_static_spin(_try_spend_tap_x_meter())
 	return true
@@ -164,6 +168,7 @@ func try_lock_back_x_retreat() -> bool:
 	if _t().tap_back_x_window <= 0.0:
 		return false
 	cancel_routines()
+	reset_hit_profile()
 	_begin_directional_x()
 	_run_back_x_retreat(_try_spend_tap_x_meter())
 	return true
@@ -185,6 +190,9 @@ func _begin_directional_x() -> void:
 ## Combo terrestre (bóveda Armas): tap tap tap tap → swing, swing, estocada, estocada.
 ## tap tap (espera) tap tap → los golpes 3-4 pasan a vueltas completas.
 func _tap_combo() -> void:
+	# Entrada de ataque: devuelve el hitbox a su daño base. Sin esto, el bono de daño de un tap
+	# direccional RT previo (ver _apply_tap_x_meter_damage) seguiría vivo en el combo siguiente.
+	reset_hit_profile()
 	# En el aire: combo aéreo (motor genérico en WeaponBase), no el terrestre.
 	if _player.is_airborne():
 		play_aerial_combo()
@@ -209,6 +217,7 @@ func _begin_ground_step(step: int, finisher: bool, wait_branch: bool) -> void:
 func _hold_x() -> void:
 	# Move de compromiso: interrumpe el combo en curso y dashea.
 	cancel_routines()
+	reset_hit_profile()
 
 	# Soltar dentro de la ventana de sweet spot abarata el dash y encadena un launcher al conectar.
 	_sweet_spot_dash = sweet_spot
@@ -233,6 +242,7 @@ func _hold_y() -> void:
 	# Entrada de ataque: invalida la rutina en curso y desarma su push. Sin esto, el push que
 	# arma el finisher de la rama espera sobrevive y el golpe vertical empuja en vez de mover.
 	cancel_routines()
+	reset_hit_profile()
 	# En el aire: Y cargada aérea (movimiento propio + spike/rebote), no el golpe terrestre.
 	if _player.is_airborne():
 		_aerial_charged_y()
@@ -246,21 +256,24 @@ func _hold_y() -> void:
 		return
 	_run_ground_launcher()
 
-## Launcher cargado: eleva al Player y al Enemy.
+## Launcher cargado: eleva al Player y al Enemy. Los dos Movers salen de su perfil; la ventana los
+## reparte en su momento (el del Enemy antes del dano, el del Player con el hitbox).
 func _run_ground_launcher() -> void:
 	_begin_launcher()
-	run_vertical_window(_vertical_hitbox, _t().ground_charged_y_player_mover,
-			_t().ground_charged_y_enemy_mover, _t().ground_charged_y_hitbox_duration)
+	run_vertical_window_from_profile(_vertical_hitbox, _t().ground_charged_y, _routine_id,
+			_t().ground_charged_y_hitbox_duration)
 
-## Tap atras + Y: comparte el golpe, pero solo el Enemy recibe el Mover vertical (por eso no hay
-## perfil de Player). Usa el suyo propio, separado del Y cargado terrestre, para tunearlo aparte.
+## Tap atras + Y: comparte el golpe con el launcher cargado, pero su perfil deja vacio el slot del
+## Player, asi que solo sube el Enemy. Es perfil aparte para poder tunearlo sin arrastrar al cargado.
 func _run_enemy_only_launcher() -> void:
 	_begin_launcher()
-	run_vertical_window(_vertical_hitbox, null,
-			_t().tap_back_y_enemy_mover, _t().ground_charged_y_hitbox_duration, 0.05, false)
+	run_vertical_window_from_profile(_vertical_hitbox, _t().tap_back_y_ground, _routine_id,
+			_t().ground_charged_y_hitbox_duration)
 
 ## En aire, tap atras + Y es un plunge: el hachazo conserva alcance y, al cerrarse, ambos cuerpos
-## usan los mismos Movers DOWN de X X espera X. En whiff el Player tambien cae (move de compromiso).
+## bajan. Los dos recorridos son WINDOW_END en el perfil, asi que los arranca el cierre de la ventana
+## de dano y no esta rutina. En whiff el Player cae igual (move de compromiso): su recorrido no
+## depende de haber conectado.
 func _run_air_back_y_plunge() -> void:
 	var id := begin_routine()
 	_face_locked_target()
@@ -271,15 +284,12 @@ func _run_air_back_y_plunge() -> void:
 	play_visual_clip(ANIM_HEAVY, HEAVY_AIR_Y_START, HEAVY_AIR_Y_END, tuning.swing_time)
 	var half := _t().air_finisher_angle
 	_play_swing(Quaternion(Vector3.RIGHT, deg_to_rad(-half)), Quaternion(Vector3.RIGHT, deg_to_rad(half)))
+	run_attack_movement(_t().tap_back_y_air, id)
 	begin_damage_window(tuning.swing_time)
 	ComboTracker.register_hit()
-	await wait_seconds(tuning.swing_time)
-	if not is_routine_current(id):
-		return
-	_start_air_plunge_from_hits(_t().tap_back_y_air_player_mover, _t().tap_back_y_air_enemy_mover)
 
 ## Tap adelante + Y: la misma vuelta final de la rama espera. En aire arma PushSettings; en suelo
-## solo avanza el Player. El Mover se clona porque direction es mundo y no debe mutar el .tres.
+## solo avanza el Player, con el Mover de su perfil orientado al objetivo (PLAYER_FORWARD).
 func _run_forward_y_push() -> void:
 	_face_locked_target()
 	_player.locomotion.lock_facing(tuning.swing_time)
@@ -289,21 +299,10 @@ func _run_forward_y_push() -> void:
 	_play_spin()
 	if _player.is_airborne():
 		arm_push(tuning.push, tuning.swing_time * tuning.push_at)
-	_request_tap_forward_y_mover()
+	# El facing ya quedo puesto arriba: PLAYER_FORWARD lo lee de ahi.
+	run_attack_movement(_t().tap_forward_y, _routine_id)
 	begin_damage_window(tuning.swing_time)
 	ComboTracker.register_hit()
-
-func _request_tap_forward_y_mover() -> void:
-	var profile := _t().tap_forward_y_player_mover
-	if profile == null:
-		return
-	var mover := profile.duplicate() as MoverSettings
-	var direction := _player.forward()
-	direction.y = 0.0
-	if direction.length_squared() < 0.0001:
-		return
-	mover.direction = direction.normalized()
-	_player.request_mover(mover)
 
 ## Tap adelante + X: vueltas puras, sin Mover ni proyectil. En aire sostiene a ambos cuerpos
 ## con el Floater propio. RT solo usa la cantidad mejorada.
@@ -315,7 +314,9 @@ func _run_forward_x_static_spin(with_meter := false) -> void:
 	_player.locomotion.lock_movement(tuning.swing_time)
 	_player.bump_velocity = Vector3.ZERO
 	_player.mover.cancel_mover(Mover.CancelReason.ATTACK_RULE)
-	_run_directional_x_movement(_forward_x_profile(airborne, with_meter), id)
+	_run_directional_x_movement(_forward_x_profile(airborne), with_meter, id)
+	if with_meter:
+		_apply_tap_x_meter_damage(_forward_x_meter_damage_bonus(airborne))
 	var spins: int = _t().tap_forward_x_meter_spins if with_meter \
 			else _t().tap_forward_x_spins
 	spins = maxi(spins, 1)
@@ -332,8 +333,9 @@ func _run_forward_x_static_spin(with_meter := false) -> void:
 	if is_routine_current(id):
 		_finish_directional_x(id)
 
-## Tap atras + X: en suelo conserva el clip del launcher y retrocede. En aire hace vueltas y
-## retrocede horizontalmente: el normal usa un Mover corto; RT usa uno mas largo y dispara.
+## Tap atras + X: en suelo conserva el clip del launcher y retrocede siempre, mas lejos y mas rapido
+## con RT. En aire son vueltas en el sitio y el retroceso es `rt_only`: solo aparece pagando barra,
+## y ahi ademas cuelga al cerrarlo y dispara.
 func _run_back_x_retreat(with_meter := false) -> void:
 	if _player.is_airborne():
 		_run_air_back_x_retreat(with_meter)
@@ -344,7 +346,9 @@ func _run_back_x_retreat(with_meter := false) -> void:
 	_player.bump_velocity = Vector3.ZERO
 	play_visual_clip(ANIM_LAUNCHER, 0.2, 0.8, tuning.swing_time)
 	swing_up(_t().strike_angle)
-	_run_directional_x_movement(_back_x_profile(false, with_meter), _routine_id)
+	_run_directional_x_movement(_back_x_profile(false), with_meter, _routine_id)
+	if with_meter:
+		_apply_tap_x_meter_damage(_back_x_meter_damage_bonus(false))
 	begin_damage_window(tuning.swing_time)
 	ComboTracker.register_hit()
 	_finish_directional_x_after(tuning.swing_time, _routine_id)
@@ -358,7 +362,9 @@ func _run_air_back_x_retreat(with_meter: bool) -> void:
 	var spins: int = _t().tap_back_x_meter_air_spins if with_meter \
 			else _t().tap_back_x_air_spins
 	spins = maxi(spins, 1)
-	_run_directional_x_movement(_back_x_profile(true, with_meter), id)
+	_run_directional_x_movement(_back_x_profile(true), with_meter, id)
+	if with_meter:
+		_apply_tap_x_meter_damage(_back_x_meter_damage_bonus(true))
 	play_visual_clip(ANIM_REGULAR_C, 0.0, -1.0, tuning.swing_time * float(spins))
 	_play_spin()
 	begin_damage_window(tuning.swing_time * float(spins))
@@ -372,21 +378,40 @@ func _run_air_back_x_retreat(with_meter: bool) -> void:
 	if is_routine_current(id):
 		_finish_directional_x(id)
 
-func _forward_x_profile(airborne: bool, with_meter: bool) -> AttackMovementProfile:
-	if airborne:
-		return _t().tap_forward_x_air_meter if with_meter else _t().tap_forward_x_air
-	return _t().tap_forward_x_ground_meter if with_meter else _t().tap_forward_x_ground
+## Un perfil por gesto: RT ya no elige otro recurso, entra como porcentajes dentro del mismo.
+func _forward_x_profile(airborne: bool) -> AttackMovementProfile:
+	return _t().tap_forward_x_air if airborne else _t().tap_forward_x_ground
 
-func _back_x_profile(airborne: bool, with_meter: bool) -> AttackMovementProfile:
-	if airborne:
-		return _t().tap_back_x_air_meter if with_meter else _t().tap_back_x_air
-	return _t().tap_back_x_ground_meter if with_meter else _t().tap_back_x_ground
+func _back_x_profile(airborne: bool) -> AttackMovementProfile:
+	return _t().tap_back_x_air if airborne else _t().tap_back_x_ground
 
-## run_attack_movement mas el bookkeeping del gesto direccional: si el perfil desplaza al Player,
-## el gesto sigue contando como activo (retiene el hold de carga) hasta que ese recorrido cierre.
-func _run_directional_x_movement(profile: AttackMovementProfile, routine_id: int) -> void:
-	run_attack_movement(profile, routine_id)
-	if profile == null or profile.player_travel == null:
+func _forward_x_meter_damage_bonus(airborne: bool) -> float:
+	return _t().tap_forward_x_air_meter_damage_bonus if airborne \
+			else _t().tap_forward_x_ground_meter_damage_bonus
+
+func _back_x_meter_damage_bonus(airborne: bool) -> float:
+	return _t().tap_back_x_air_meter_damage_bonus if airborne \
+			else _t().tap_back_x_ground_meter_damage_bonus
+
+## Bono de dano de la variante RT, sobre el 1.0 base que `reset_hit_profile()` deja en el hitbox.
+## Escala hoja y disco aereo porque en aire cobran los dos. Quien lo limpia es la entrada del ataque
+## SIGUIENTE, que llama `reset_hit_profile()`: por eso el bono no se puede filtrar aunque la rutina
+## se cancele a mitad. Mismo recorte en 0 que los bonos del perfil (ver WeaponBase._rt_scale).
+func _apply_tap_x_meter_damage(bonus_percent: float) -> void:
+	var damage_scale := maxf(0.0, 1.0 + bonus_percent * 0.01)
+	if is_equal_approx(damage_scale, 1.0):
+		return
+	_blade_hitbox.damage *= damage_scale
+	if _air_disc_hitbox != null:
+		_air_disc_hitbox.damage *= damage_scale
+
+## run_attack_movement mas el bookkeeping del gesto direccional: si el golpe desplaza al Player, el
+## gesto sigue contando como activo (retiene el hold de carga) hasta que ese recorrido cierre. Se
+## confia en el retorno y no en `player_travel != null`: un perfil `rt_only` sin barra, o un facing
+## degenerado, dejan el recorrido sin arrancar y esperarlo colgaria el gesto para siempre.
+func _run_directional_x_movement(profile: AttackMovementProfile, with_meter: bool,
+		routine_id: int) -> void:
+	if not run_attack_movement(profile, routine_id, with_meter):
 		return
 	if _directional_x_routine_id == routine_id:
 		_directional_x_mover_pending = true
@@ -513,28 +538,18 @@ func _aerial_charged_y() -> void:
 		return
 	_run_aerial_charged_y()
 
+## El auto-launch del Player sale del perfil al arrancar; el spike del Enemy lo cobra WeaponBase al
+## conectar, porque el perfil lo declara en ON_HIT.
 func _run_aerial_charged_y() -> void:
 	var t := _t()
 	_aerial_charged_y_active = true
-	_player.request_mover(t.aerial_charged_y_player_mover)
+	run_attack_movement(t.aerial_charged_y, _routine_id)
 	play_visual_clip(ANIM_HEAVY, HEAVY_AIR_Y_START, HEAVY_AIR_Y_END, tuning.swing_time)
 	swing_up(t.strike_angle)
 	begin_damage_window(tuning.swing_time)
 	ComboTracker.register_hit()
 	await wait_seconds(tuning.swing_time)
 	_aerial_charged_y_active = false
-
-func _on_aerial_charged_y_hit(hurtbox: Hurtbox, _died: bool) -> void:
-	if not _aerial_charged_y_active:
-		return
-	var target: Node = hurtbox.owner_node
-	var spike := _t().aerial_charged_y_enemy_spike_mover
-	if spike == null:
-		return
-	if target is EnemyBase:
-		(target as EnemyBase).request_mover(spike)
-	elif target.has_method("request_mover"):
-		target.call("request_mover", spike)
 
 ## Golpe aéreo NORMAL (no cargado) conectado: suspende al enemigo en el aire con un hold puro
 ## (Floater, sin recorrido) mientras dura el juggle — simétrico al air-hit-float del jugador. Sin
@@ -698,22 +713,20 @@ func _finish_air_combo(wait_branch: bool) -> void:
 		elif target.has_method("request_mover"):
 			target.call("request_mover", spike)
 
-## Recién después del swing inicia el plunge: el Player conserva el rango del hachazo y luego
-## cae incluso en whiff. Los enemigos conectados usan el mismo perfil descendente si pueden tomarlo.
-## Los perfiles son opcionales para que el finisher de la rama espera (X X espera X) y el tap
-## atras + Y aéreo puedan tunearse por separado; null cae a los de la rama espera.
-func _start_air_plunge_from_hits(player_mover: MoverSettings = null, enemy_mover: MoverSettings = null) -> void:
-	if player_mover == null:
-		player_mover = _t().air_plunge_player_mover
-	if enemy_mover == null:
-		enemy_mover = _t().air_plunge_enemy_mover
+## Plunge del COMBO aéreo (X X espera X). Recién después del swing inicia: el Player conserva el
+## rango del hachazo y luego cae incluso en whiff. Los enemigos conectados usan el mismo perfil
+## descendente si pueden tomarlo. El plunge del tap atras + Y aéreo no pasa por acá: es un especial
+## y sus dos recorridos viven en su AttackMovementProfile, en WINDOW_END.
+func _start_air_plunge_from_hits() -> void:
+	var player_mover := _t().air_plunge_player_mover
+	var enemy_mover := _t().air_plunge_enemy_mover
 	_player.request_mover(player_mover)
 	for hurtbox in _window_hits.duplicate():
 		var target: Node = hurtbox.owner_node
 		if enemy_mover == null or not target.has_method("request_mover"):
 			continue
 		# Un enemigo parado no se alinea: el perfil solo puede entrar sobre uno aéreo y stuneado.
-		if not _plunge_can_take(target):
+		if not _enemy_can_take_travel(target):
 			continue
 		if target is Node3D:
 			(target as Node3D).global_position.y = _player.global_position.y
@@ -743,14 +756,6 @@ func _restore_finisher_hitboxes() -> void:
 		_blade_shape.size = _blade_base_size
 	if _disc_shape_node != null and _disc_sphere != null:
 		_disc_shape_node.shape = _disc_sphere
-
-## Mismas condiciones del perfil descendente del Enemy, por duck typing (el dummy no tiene todas).
-func _plunge_can_take(target: Node) -> bool:
-	if target.has_method("is_airborne") and not target.call("is_airborne"):
-		return false
-	if target.has_method("is_stunned") and not target.call("is_stunned"):
-		return false
-	return true
 
 ## Diagonal descendente: la mano cruza al frente (giro en Y) mientras baja (inclinación en X).
 func _play_air_diagonal(side: float) -> void:
