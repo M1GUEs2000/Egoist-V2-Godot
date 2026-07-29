@@ -42,6 +42,18 @@ meter mas lento. Si tienen que empatar, se sube el hit del Mazo.
 | Dash / dodge | `meter_dash_cost` | fraccion de barra |
 | Ataque cargado | `meter_charged_cost` | 1 barra (× nivel en el Mazo, × descuento del sweet spot) |
 | Sprint activo | `sprint_meter_drain_per_second` | fraccion del meter COMPLETO por segundo (ver [[Sprint]]) |
+| Variante RT de un tap direccional | `SwordTuning.tap_x_sprint_meter_cost` | media barra, por arma (ver [[Taps Direccionales]]) |
+
+Los cargados usan `spend_charged` (pide barras enteras y abre la kill window); los gestos puntuales
+que cobran fracciones sin abrir esa ventana usan `spend_bars`.
+
+> [!warning] El boton `sprint` cobra dos veces
+> La variante RT de los taps direccionales se activa con `Input.is_action_pressed("sprint")` — el
+> mismo boton que carga el sprint. Sostenerlo con input de movimiento drena meter *y* le cobra media
+> barra al tap: dos gastos distintos por el mismo gesto de mano. Puede ser exactamente lo que se
+> quiere (RT = "gasto recurso para ir mas fuerte"), pero **no esta tuneado como un costo unico** y
+> es lo primero que se va a sentir raro al jugar. Si molesta, las salidas son separar el boton del
+> gesto RT o descontarle al tap lo que ya cobro el sprint. *(2026-07-28)*
 
 El sprint es el gasto nuevo y el unico **continuo**: los demas son pagos puntuales. Su costo se
 expresa como fraccion del total y no en barras, asi subir `meter_max_bars` no abarata la carrera.
@@ -97,6 +109,7 @@ nadie todavia. *(2026-07-28)*
 
 - [[Combate]]
 - [[Sprint]]
+- [[Taps Direccionales]]
 - [[Espada]]
 - [[Mazo]]
 - [[Brazo]]
