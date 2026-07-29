@@ -2,6 +2,11 @@ class_name SwordTuning extends WeaponTuning
 ## Tuning de la Espada (ex SwordWeapon.cs). Instancia editable: data/sword_tuning.tres.
 ## Los tamaños de los hitboxes (hoja, disco aéreo, vertical) viven como shapes en
 ## sword.tscn, igual que la cápsula del player.
+##
+## Organizacion del inspector: una CATEGORIA por tipo de ataque (normales, cargados, taps),
+## un GRUPO por golpe y un SUBGRUPO por tramo (suelo/aire) con los perfiles Mover/Floater de
+## cada cuerpo. Un perfil solo mueve/cuelga a su dueno: si un golpe toca a los dos, hay dos
+## campos (Player y Enemy); si solo toca a uno, hay uno solo. Ver obsidian/Mover y Floater.
 
 @export_group("Debug")
 ## Dibuja un wireframe rojo de cada hitbox (BladeHitbox, AirDiscHitbox, VerticalHitbox,
@@ -9,109 +14,168 @@ class_name SwordTuning extends WeaponTuning
 ## debug; en release no hace nada. Ver combat/hitbox.gd.
 @export var debug_show_hitboxes := true
 
-@export_group("Combo X")
+@export_group("Comun a varios golpes")
+## Medio arco del golpe Y basico, en grados. Lo comparten el launcher terrestre (Y cargado),
+## la Y cargada aerea y el tap atras + X, que reusan el mismo swing vertical.
+@export var strike_angle := 150.0
+
+# ============================================================================
+@export_category("Ataques normales (tap)")
+# ============================================================================
+
+@export_group("Combo terrestre (X X X X)")
+## Segundos para encadenar el siguiente golpe del combo terrestre.
 @export var combo_window := 0.6
 ## Rama "espera": tardar al menos esto (dentro de la ventana) en encadenar el 3er golpe
 ## convierte los golpes 3-4 de estocadas a vueltas completas.
 @export var ground_wait_branch_threshold := 0.3
-
-@export_group("Swings (ángulos)")
-## Barrido del golpe Y básico (tap, vertical y cargada aérea).
-@export var strike_angle := 150.0
-## Medio arco de los swings 1-2 del combo terrestre (de -esto a +esto).
+## Medio arco de los swings 1-2 del combo terrestre, en grados (de -esto a +esto).
 @export var combo_swing_angle := 70.0
-## Medio arco del hachazo vertical del finisher aéreo.
-@export var air_finisher_angle := 95.0
-## Diagonal aérea: medio arco horizontal, cuánto cruza la mano por delante del jugador.
-@export var air_diagonal_yaw := 55.0
-## Diagonal aérea: medio arco vertical, cuánto baja la mano mientras cruza. Igualarlo al
-## yaw da una diagonal a 45°; subirlo la pica más, bajarlo la aplana hacia horizontal.
-@export var air_diagonal_pitch := 45.0
-## Swing degradado del X cargado cuando no hay barra para el dash.
-@export var charged_fallback_angle := 130.0
-
-@export_group("Estocada")
-## Metros que el brazo extiende por encima de hand_radius en el pico de la estocada.
-## La mano sale hasta ahí y vuelve; la hoja no rota, avanza porque la mano se aleja.
+## Metros que el brazo extiende por encima de hand_radius en el pico de la estocada
+## (golpes 3-4 sin espera). La mano sale hasta ahi y vuelve; la hoja no rota, avanza
+## porque la mano se aleja.
 @export var thrust_reach := 1.0
 
-@export_group("X cargado (dash sweet spot)")
-@export var charged_dash_distance := 5.0
-@export var charged_dash_duration := 0.14
-## El dash cargado tiene su PROPIO hitbox (en la espada), separado del dash de movimiento
-## del dodge: su daño/stun/tamaño se tunean acá, no en PlayerTuning.
-@export var charged_dash_damage := 1.0
-@export var charged_dash_hit_radius := 1.1
-@export var charged_dash_stun: StunSettings
-## Separacion al salir por el lado opuesto de la trayectoria del dash tras el primer impacto.
-@export var charged_dash_behind_offset := 1.2
-
-## Estira VERTICALMENTE los hitboxes del finisher aéreo (hachazo X X X y plunge X X espera X)
-## mientras dura ese golpe: multiplica el alto de la caja de la hoja y convierte el disco
-## aéreo en una cápsula vertical de esa altura. 1 = sin estirar. No afecta a los otros golpes.
+@export_group("Combo aereo (X X X)")
+## Diagonal aerea: medio arco horizontal en grados, cuanto cruza la mano por delante del jugador.
+@export var air_diagonal_yaw := 55.0
+## Diagonal aerea: medio arco vertical en grados, cuanto baja la mano mientras cruza. Igualarlo
+## al yaw da una diagonal a 45°; subirlo la pica mas, bajarlo la aplana hacia horizontal.
+@export var air_diagonal_pitch := 45.0
+## Medio arco del hachazo vertical del finisher aereo, en grados.
+@export var air_finisher_angle := 95.0
+## Estira VERTICALMENTE los hitboxes del hachazo aereo mientras dura ese golpe: multiplica el
+## alto de la caja de la hoja y convierte el disco aereo en una capsula vertical de esa altura.
+## 1 = sin estirar. Aplica al finisher (X X X), al plunge (X X espera X) y al tap atras + Y aereo,
+## que comparten coreografia; no afecta a los otros golpes.
 @export var air_finisher_hitbox_v_scale := 1.5
 
-@export_group("Plunge aéreo (X X espera X)")
-## El Player y el Enemy reciben perfiles Mover descendentes; el del Player no es exclusivo para
-## conservar los contactos de locomoción durante la caída.
+@export_subgroup("Finisher X X X — Mover")
+## Spike descendente del Enemy al cerrar el hachazo aereo. El Player no recibe perfil: sigue
+## su caida normal.
+@export var air_finisher_enemy_spike_mover: MoverSettings
 
-@export_group("Y cargado terrestre")
+@export_subgroup("Rama espera: hop — Mover")
+## Hop PARTIAL del Player en la primera vuelta de la rama aerea de espera (X espera X X).
+## Solo el Player: es juice de la vuelta, no toca al Enemy.
+@export var air_wait_spin_player_mover: MoverSettings
+
+@export_subgroup("Rama espera: plunge — Mover")
+## Perfil descendente del Player para el plunge de X X espera X. Es PARTIAL para controlar Y
+## sin apagar sus contactos de locomocion.
+@export var air_plunge_player_mover: MoverSettings
+## Perfil descendente del Enemy para el mismo plunge. Mantener el mismo speed que el del Player
+## es lo que los hace bajar a la par.
+@export var air_plunge_enemy_mover: MoverSettings
+
+@export_subgroup("Impacto aereo — Floater")
+## Hold del ENEMIGO al conectarle un golpe aereo NORMAL (no cargado): lo suspende en el aire
+## mientras dura el juggle, simetrico al air_hit_player_floater de WeaponTuning. Es un hold PURO
+## sin recorrido (request_float), no un Mover. Cada golpe renueva el tiempo (el Floater usa max),
+## asi el enemigo queda "pegado" durante el combo y cae al dejar de golpearlo. Sin esto, pegarle
+## en plena caida no lo frena (solo lo sostenia el launcher/hang, ya vencido). fall_scale 0 =
+## hold total (vertical en 0); subirlo lo deja hundirse. duration 0 = desactiva el hold.
+## Ver combat/floater.gd y obsidian/Plan Autoridad Vertical. Pendiente de tunear jugando.
+@export var air_hit_enemy_floater: FloaterSettings
+
+# ============================================================================
+@export_category("Cargados (hold)")
+# ============================================================================
+
+@export_group("X cargado — dash (suelo y aire)", "charged_")
+## Metros que recorre el dash ofensivo.
+@export var charged_dash_distance := 5.0
+## Segundos que dura el dash. Junto con la distancia define su velocidad.
+@export var charged_dash_duration := 0.14
+## El dash cargado tiene su PROPIO hitbox (en la espada), separado del dash de movimiento
+## del dodge: su daño/stun/tamaño se tunean aca, no en PlayerTuning.
+@export var charged_dash_damage := 1.0
+## Radio en metros de la esfera del hitbox propio del dash.
+@export var charged_dash_hit_radius := 1.1
+## Stun que aplica el dash al conectar.
+@export var charged_dash_stun: StunSettings
+## Separacion en metros al salir por el lado opuesto de la trayectoria del dash tras el
+## primer impacto (el Player atraviesa al enemigo y aparece detras).
+@export var charged_dash_behind_offset := 1.2
+## Medio arco del swing degradado, en grados, cuando no hay barra para el dash.
+@export var charged_fallback_angle := 130.0
+
+@export_group("Y cargado suelo — launcher", "ground_charged_y_")
+## Segundos que queda activo el hitbox vertical del launcher.
 @export var ground_charged_y_hitbox_duration := 0.18
+## Si el launcher cobra daño ademas de elevar. Apagarlo lo deja como puro abre-juggle.
 @export var ground_charged_y_deals_damage := true
 
-@export_group("Launcher tap atras + Y")
-## Segundos durante los cuales Y consume un toque que se alejo del objetivo lockeado. Cero lo
-## desactiva. El gesto se interpreta sobre el plano horizontal tambien cuando el Player esta en aire.
-@export var lock_back_y_launcher_window := 0.15
-
-@export_group("Push tap adelante + Y")
-## Segundos durante los cuales Y consume un toque que se acerca al objetivo lockeado. Cero lo
-## desactiva. El Player usa tap_forward_y_player_mover hacia el objetivo actual.
-@export var lock_forward_y_push_window := 0.15
-
-@export_group("Tap X con lock-on")
-## Segundos durante los cuales X consume un toque que se acerca al objetivo lockeado. Cero lo
-## desactiva. Ejecuta una vuelta estatica.
-@export var lock_forward_x_static_spin_window := 0.15
-## Segundos durante los cuales X consume un toque que se aleja del objetivo lockeado. Cero lo
-## desactiva. Ejecuta la animacion de launcher y retira al Player sin lanzar al Enemy.
-@export var lock_back_x_retreat_window := 0.15
-
-@export_group("Autoridad vertical")
-## Perfil del Y cargado terrestre para el Player. Incluye su Float final: no depende de PlayerTuning.
+@export_subgroup("Mover", "ground_charged_y_")
+## Ascenso del Player. Incluye su Float final: no depende de PlayerTuning.
 @export var ground_charged_y_player_mover: MoverSettings
-## Perfil del Y cargado terrestre para el Enemy. El arma lo envia junto al Stun que consulta poise.
+## Ascenso del Enemy. El arma lo envia junto al Stun que consulta poise.
 @export var ground_charged_y_enemy_mover: MoverSettings
-## Perfil de avance del Player para tap adelante + Y. La Espada clona el recurso y orienta su
-## direccion al target lockeado antes de solicitarlo, para no mutar el .tres compartido.
-@export var tap_forward_y_player_mover: MoverSettings
-## Perfil de retroceso del Player para tap atras + X. La Espada lo clona y lo orienta en sentido
-## opuesto al target lockeado antes de solicitarlo, para no mutar el .tres compartido.
-@export var tap_back_x_player_mover: MoverSettings
-## Perfil ascendente del Player para tap atras + X en aire. Al terminar sostiene 0.3 s con
-## gravedad cero; el recurso define distancia y velocidad del ascenso.
-@export var tap_back_x_air_player_mover: MoverSettings
-## Perfil ascendente del Enemy golpeado por tap atras + X en aire, con el mismo hang del Player.
-@export var tap_back_x_air_enemy_mover: MoverSettings
-## Hang de Player y Enemy para tap adelante + X en aire. Cero de fall_scale congela la gravedad.
-@export var tap_forward_x_air_floater: FloaterSettings
-## Perfil del auto-launch del Player al iniciar Y cargada aerea, incluido su Float final.
+
+@export_group("Y cargado aereo (DESACTIVADO)", "aerial_charged_y_")
+## El rebote de este move depende del "bouncer", que todavia no existe: hasta entonces sostener Y
+## en el aire cae al combo aereo normal y estos perfiles no se usan. Ver obsidian/Espada.
+
+@export_subgroup("Mover", "aerial_charged_y_")
+## Auto-launch del Player al iniciar el golpe, incluido su Float final.
 @export var aerial_charged_y_player_mover: MoverSettings
-## Perfil lineal descendente del Enemy para el spike de Y cargada aerea; corta al tocar piso.
+## Spike lineal descendente del Enemy; corta al tocar piso.
 @export var aerial_charged_y_enemy_spike_mover: MoverSettings
-## Perfil descendente del Enemy para el plunge de Espada; mantiene la misma velocidad que el Player.
-@export var air_plunge_enemy_mover: MoverSettings
-## Perfil parcial del Player para el plunge: controla Y sin apagar sus contactos.
-@export var air_plunge_player_mover: MoverSettings
-## Perfil parcial del hop de la primera vuelta de la rama aérea de espera.
-@export var air_wait_spin_player_mover: MoverSettings
-## Perfil descendente del Enemy para el hachazo aéreo normal de Espada.
-@export var air_finisher_enemy_spike_mover: MoverSettings
-## Hold del ENEMIGO al conectarle un golpe aéreo NORMAL (no cargado): lo suspende en el aire
-## mientras dura el juggle, simétrico al air-hit-float del jugador. Es un hold PURO sin recorrido
-## (request_float), no un Mover. Cada golpe renueva el tiempo (el Floater usa max), así el enemigo
-## queda "pegado" durante el combo y cae al dejar de golpearlo. Sin esto, pegarle en plena caída no
-## lo frena (solo lo sostenía el launcher/hang, ya vencido). fall_scale 0 = hold total (vertical en
-## 0); subirlo lo deja hundirse. duration 0 = desactiva el hold. Ver combat/floater.gd y
-## obsidian/Plan Autoridad Vertical. Pendiente de tunear jugando.
-@export var air_hit_enemy_floater: FloaterSettings
+
+# ============================================================================
+@export_category("Taps direccionales (lock-on)")
+# ============================================================================
+
+@export_group("Tap X adelante — vueltas estaticas", "tap_forward_x_")
+## Segundos para pulsar X despues de un tap que se acerca al objetivo lockeado. 0 desactiva
+## el gesto. Ejecuta dos vueltas: en suelo estaticas, en aire con hang.
+@export var tap_forward_x_window := 0.15
+
+@export_subgroup("Aire — Floater", "tap_forward_x_air_")
+## Hang de las dos vueltas aereas. Se pide con el mismo perfil para el Player y para cada
+## enemigo conectado, por eso hay un solo campo. fall_scale 0 congela la gravedad.
+@export var tap_forward_x_air_floater: FloaterSettings
+
+@export_group("Tap X atras — retroceso / elevacion", "tap_back_x_")
+## Segundos para pulsar X despues de un tap que se aleja del objetivo lockeado. 0 desactiva
+## el gesto. En suelo retrocede al Player; en aire sube a ambos cuerpos.
+@export var tap_back_x_window := 0.15
+
+@export_subgroup("Suelo — Mover", "tap_back_x_")
+## Retroceso del Player. La Espada lo clona y lo orienta en sentido opuesto al target lockeado
+## antes de solicitarlo, para no mutar el .tres compartido. El Enemy no se mueve en esta rama.
+@export var tap_back_x_player_mover: MoverSettings
+
+@export_subgroup("Aire — Mover", "tap_back_x_air_")
+## Ascenso del Player. Al terminar sostiene con gravedad cero segun su float_duration.
+@export var tap_back_x_air_player_mover: MoverSettings
+## Ascenso del Enemy golpeado, con el mismo hang del Player.
+@export var tap_back_x_air_enemy_mover: MoverSettings
+
+@export_group("Tap Y adelante — avance con vuelta", "tap_forward_y_")
+## Segundos para pulsar Y despues de un tap que se acerca al objetivo lockeado. 0 desactiva
+## el gesto. Reusa la vuelta final de la rama espera; en aire ademas arma el push del Enemy.
+@export var tap_forward_y_window := 0.15
+
+@export_subgroup("Suelo y aire — Mover", "tap_forward_y_")
+## Avance del Player hacia el objetivo. La Espada clona el recurso y orienta su direccion al
+## target lockeado antes de solicitarlo, para no mutar el .tres compartido. Al Enemy no lo
+## mueve un Mover: en aire lo desplaza el push (WeaponTuning).
+@export var tap_forward_y_player_mover: MoverSettings
+
+@export_group("Tap Y atras — launcher / plunge", "tap_back_y_")
+## Segundos para pulsar Y despues de un tap que se aleja del objetivo lockeado. 0 desactiva
+## el gesto. Es gratis (no gasta barra): en suelo eleva solo al Enemy, en aire hunde a los dos.
+@export var tap_back_y_window := 0.15
+
+@export_subgroup("Suelo — Mover", "tap_back_y_")
+## Ascenso del Enemy en el launcher sin barra. El Player no se mueve en esta rama, por eso no
+## tiene perfil propio. Separado del Y cargado terrestre para poder tunearlo aparte.
+@export var tap_back_y_enemy_mover: MoverSettings
+
+@export_subgroup("Aire — Mover (plunge)", "tap_back_y_air_")
+## Caida del Player en el plunge del hachazo. PARTIAL, para conservar sus contactos. Separado
+## del plunge de la rama espera para poder tunearlo aparte.
+@export var tap_back_y_air_player_mover: MoverSettings
+## Caida del Enemy golpeado. Mismo speed que el del Player = bajan a la par.
+@export var tap_back_y_air_enemy_mover: MoverSettings

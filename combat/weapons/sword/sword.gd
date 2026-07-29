@@ -120,7 +120,7 @@ func charged_meter_cost(slot: World.Slot, held_time: float) -> float:
 ## Tap atras relativo al target lockeado seguido de Y. No consume meter y puede salir tanto
 ## en suelo como en aire porque reutiliza el launcher terrestre y sus Movers.
 func try_lock_back_y_launcher() -> bool:
-	if _t().lock_back_y_launcher_window <= 0.0:
+	if _t().tap_back_y_window <= 0.0:
 		return false
 	cancel_routines()
 	if _player.is_airborne():
@@ -130,43 +130,43 @@ func try_lock_back_y_launcher() -> bool:
 	return true
 
 func lock_back_y_launcher_window() -> float:
-	return _t().lock_back_y_launcher_window
+	return _t().tap_back_y_window
 
 ## Tap adelante relativo al target lockeado seguido de Y. Reusa la vuelta final de la rama
 ## X X espera X X y solicita su propio Mover horizontal para el Player; el push solo sale en aire.
 func try_lock_forward_y_push() -> bool:
-	if _t().lock_forward_y_push_window <= 0.0:
+	if _t().tap_forward_y_window <= 0.0:
 		return false
 	cancel_routines()
 	_run_forward_y_push()
 	return true
 
 func lock_forward_y_push_window() -> float:
-	return _t().lock_forward_y_push_window
+	return _t().tap_forward_y_window
 
 ## Tap adelante relativo al target lockeado seguido de X. Hace la vuelta final sin avance,
 ## retroceso ni push.
 func try_lock_forward_x_static_spin() -> bool:
-	if _t().lock_forward_x_static_spin_window <= 0.0:
+	if _t().tap_forward_x_window <= 0.0:
 		return false
 	cancel_routines()
 	_run_forward_x_static_spin()
 	return true
 
 func lock_forward_x_static_spin_window() -> float:
-	return _t().lock_forward_x_static_spin_window
+	return _t().tap_forward_x_window
 
 ## Tap atras relativo al target lockeado seguido de X. Reusa la animacion del launcher, pero
 ## solo mueve al Player hacia atras: no activa hitbox vertical ni lanza al Enemy.
 func try_lock_back_x_retreat() -> bool:
-	if _t().lock_back_x_retreat_window <= 0.0:
+	if _t().tap_back_x_window <= 0.0:
 		return false
 	cancel_routines()
 	_run_back_x_retreat()
 	return true
 
 func lock_back_x_retreat_window() -> float:
-	return _t().lock_back_x_retreat_window
+	return _t().tap_back_x_window
 
 # ---- Tap: combo de 4 compartido por X/Y ----
 
@@ -240,11 +240,12 @@ func _run_ground_launcher() -> void:
 	run_vertical_window(_vertical_hitbox, _t().ground_charged_y_player_mover,
 			_t().ground_charged_y_enemy_mover, _t().ground_charged_y_hitbox_duration)
 
-## Tap atras + Y: comparte el golpe, pero solo el Enemy recibe el Mover vertical.
+## Tap atras + Y: comparte el golpe, pero solo el Enemy recibe el Mover vertical (por eso no hay
+## perfil de Player). Usa el suyo propio, separado del Y cargado terrestre, para tunearlo aparte.
 func _run_enemy_only_launcher() -> void:
 	_begin_launcher()
-	run_vertical_window(_vertical_hitbox, _t().ground_charged_y_player_mover,
-			_t().ground_charged_y_enemy_mover, _t().ground_charged_y_hitbox_duration, 0.05, false)
+	run_vertical_window(_vertical_hitbox, null,
+			_t().tap_back_y_enemy_mover, _t().ground_charged_y_hitbox_duration, 0.05, false)
 
 ## En aire, tap atras + Y es un plunge: el hachazo conserva alcance y, al cerrarse, ambos cuerpos
 ## usan los mismos Movers DOWN de X X espera X. En whiff el Player tambien cae (move de compromiso).
@@ -263,7 +264,7 @@ func _run_air_back_y_plunge() -> void:
 	await wait_seconds(tuning.swing_time)
 	if not is_routine_current(id):
 		return
-	_start_air_plunge_from_hits()
+	_start_air_plunge_from_hits(_t().tap_back_y_air_player_mover, _t().tap_back_y_air_enemy_mover)
 
 ## Tap adelante + Y: la misma vuelta final de la rama espera. En aire arma PushSettings; en suelo
 ## solo avanza el Player. El Mover se clona porque direction es mundo y no debe mutar el .tres.
@@ -608,9 +609,14 @@ func _finish_air_combo(wait_branch: bool) -> void:
 
 ## Recién después del swing inicia el plunge: el Player conserva el rango del hachazo y luego
 ## cae incluso en whiff. Los enemigos conectados usan el mismo perfil descendente si pueden tomarlo.
-func _start_air_plunge_from_hits() -> void:
-	_player.request_mover(_t().air_plunge_player_mover)
-	var enemy_mover := _t().air_plunge_enemy_mover
+## Los perfiles son opcionales para que el finisher de la rama espera (X X espera X) y el tap
+## atras + Y aéreo puedan tunearse por separado; null cae a los de la rama espera.
+func _start_air_plunge_from_hits(player_mover: MoverSettings = null, enemy_mover: MoverSettings = null) -> void:
+	if player_mover == null:
+		player_mover = _t().air_plunge_player_mover
+	if enemy_mover == null:
+		enemy_mover = _t().air_plunge_enemy_mover
+	_player.request_mover(player_mover)
 	for hurtbox in _window_hits.duplicate():
 		var target: Node = hurtbox.owner_node
 		if enemy_mover == null or not target.has_method("request_mover"):

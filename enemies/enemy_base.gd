@@ -90,6 +90,9 @@ static func can_damage_enemy(attacker: EnemyBase, target: EnemyBase) -> bool:
 @export var stun_tilt_time := 0.15
 ## Escala a la que se encoge el enemigo en el golpe (1.0 = sin squash).
 @export var stun_squash_scale := 0.8
+## Segundos de parálisis tras salir del stun, antes de poder atacar de nuevo. Evita que se
+## levante y ataque de inmediato; solo bloquea el ataque, no el movimiento/persecución.
+@export var post_stun_recovery_time := 0.5
 
 # El rebote ocupa solo el arranque del stun; el resto el enemigo se queda grande. Los tiempos
 # son absolutos, no fracciones: retunear la duracion del stun no deforma el gesto del impacto.
@@ -164,6 +167,7 @@ var _dead := false
 var _is_active := true
 var _last_hit_direction := Vector3.FORWARD
 var _stunned_until := -999.0
+var _recovery_until := -999.0  # ventana post-stun sin poder atacar (post_stun_recovery_time)
 var _stun_feedback_color := Color(1.0, 0.9, 0.15, 1.0)
 var _parry_vulnerable_until := -999.0  # ventana cian de daño multiplicado tras un parry
 var _parry_damage_multiplier := 1.0
@@ -360,6 +364,11 @@ func is_armored() -> bool:
 func is_ragdolling() -> bool:
 	return _ragdolling
 
+## Ventana post_stun_recovery_time tras salir del stun: el enemigo ya se mueve/persigue pero
+## todavia no puede atacar (ver can_attack).
+func is_recovering_from_stun() -> bool:
+	return World.now() < _recovery_until
+
 ## GATE UNIVERSAL DE DESPLAZAMIENTO: mientras al enemigo le quede poise NO se lo mueve de ninguna
 ## forma (launch, push, slam, bounce). Solo entra si la reserva ya esta quebrada (STUNNED) o si el
 ## golpe que trae el desplazamiento la va a quebrar ahora mismo.
@@ -388,7 +397,8 @@ func can_accept_vertical_control(stun: StunSettings = null) -> bool:
 	return can_receive_hit() and _breaks_poise(stun)
 
 func can_attack() -> bool:
-	return _is_active and not _dead and not is_stunned() and not is_airborne() and not _ragdolling
+	return (_is_active and not _dead and not is_stunned() and not is_airborne() and not _ragdolling
+			and not is_recovering_from_stun())
 
 func can_receive_hit() -> bool:
 	return _is_active and not _dead
@@ -853,6 +863,7 @@ func _update_combat_state() -> void:
 	# Generaliza lo que _do_bounce_arc ya hacia a mano para el pique del Mazo. *(2026-07-19)*
 	if combat_state == CombatState.STUNNED and World.now() >= _stunned_until and not is_airborne():
 		combat_state = CombatState.NORMAL
+		_recovery_until = World.now() + post_stun_recovery_time
 		_reset_stun_reaction()
 		_refresh_visual_state()
 	# En el aire, stuneado (stun normal o vulnerable por parry) o caido en ragdoll el reloj de
