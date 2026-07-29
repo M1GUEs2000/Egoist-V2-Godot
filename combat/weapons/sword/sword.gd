@@ -29,13 +29,18 @@ var _charged_dash_travel_direction := Vector3.FORWARD
 var _aerial_charged_y_active := false
 ## Rutinas aereas de tap X que reemplazan el float generico al conectar.
 var _air_forward_x_float_routine_id := -1
+var _air_forward_x_sprint_routine_id := -1
 var _air_back_x_routine_id := -1
+var _air_back_x_sprint_routine_id := -1
 ## Rutina X direccional cuyo movimiento/vueltas aun bloquean la ejecucion del hold.
 var _directional_x_routine_id := -1
 var _directional_x_animation_done := true
 var _directional_x_mover_pending := false
-## Si un tap X terrestre con RT termina su Mover correctamente, este id autoriza el proyectil.
+## Un tap X + RT que termina su Mover conserva el launcher propio del ataque para el proyectil.
 var _tap_x_sprint_projectile_routine_id := -1
+var _tap_x_sprint_projectile_enemy_mover: MoverSettings
+## El Floater de atras X + RT aereo empieza al terminar su retroceso, separado del Mover.
+var _tap_back_x_sprint_air_floater_routine_id := -1
 ## Rama plunge elegida para el finisher aéreo en curso (la lee _finish_air_combo).
 var _air_plunge_finisher := false
 # Estiramiento vertical de hitboxes del finisher aéreo (ver air_finisher_hitbox_v_scale):
@@ -324,7 +329,11 @@ func _run_forward_x_static_spin(with_sprint_meter := false) -> void:
 	_player.mover.cancel_mover(Mover.CancelReason.ATTACK_RULE)
 	if airborne:
 		_air_forward_x_float_routine_id = id
-		_request_player_float(_t().tap_forward_x_air_floater)
+		if with_sprint_meter:
+			_air_forward_x_sprint_routine_id = id
+			_request_player_float(_t().tap_forward_x_sprint_air_player_floater)
+		else:
+			_request_player_float(_t().tap_forward_x_air_floater)
 	var spins: int = _t().tap_forward_x_sprint_spins if with_sprint_meter \
 			else _t().tap_forward_x_spins
 	spins = maxi(spins, 1)
@@ -340,6 +349,7 @@ func _run_forward_x_static_spin(with_sprint_meter := false) -> void:
 	await wait_seconds(tuning.swing_time)
 	if is_routine_current(id):
 		_air_forward_x_float_routine_id = -1
+		_air_forward_x_sprint_routine_id = -1
 		_finish_directional_x(id)
 
 ## Tap atras + X: en suelo conserva el clip del launcher y retrocede. En aire hace vueltas y
@@ -356,7 +366,9 @@ func _run_back_x_retreat(with_sprint_meter := false) -> void:
 	swing_up(_t().strike_angle)
 	var profile := _t().tap_back_x_sprint_player_mover if with_sprint_meter \
 			else _t().tap_back_x_player_mover
-	_request_tap_x_mover(profile, -1.0, _routine_id, with_sprint_meter)
+	var projectile_launcher: MoverSettings = _t().tap_back_x_sprint_projectile_enemy_mover \
+			if with_sprint_meter else null
+	_request_tap_x_mover(profile, -1.0, _routine_id, with_sprint_meter, projectile_launcher)
 	begin_damage_window(tuning.swing_time)
 	ComboTracker.register_hit()
 	_finish_directional_x_after(tuning.swing_time, _routine_id)
@@ -373,7 +385,12 @@ func _run_air_back_x_retreat(with_sprint_meter: bool) -> void:
 	spins = maxi(spins, 1)
 	var profile: MoverSettings = _t().tap_back_x_sprint_air_player_mover if with_sprint_meter \
 			else _t().tap_back_x_air_player_mover
-	_request_tap_x_mover(profile, -1.0, id, with_sprint_meter)
+	var projectile_launcher: MoverSettings
+	if with_sprint_meter:
+		_air_back_x_sprint_routine_id = id
+		_tap_back_x_sprint_air_floater_routine_id = id
+		projectile_launcher = _t().tap_back_x_sprint_air_projectile_enemy_mover
+	_request_tap_x_mover(profile, -1.0, id, with_sprint_meter, projectile_launcher)
 	play_visual_clip(ANIM_REGULAR_C, 0.0, -1.0, tuning.swing_time * float(spins))
 	_play_spin()
 	begin_damage_window(tuning.swing_time * float(spins))
@@ -386,10 +403,11 @@ func _run_air_back_x_retreat(with_sprint_meter: bool) -> void:
 	await wait_seconds(tuning.swing_time)
 	if is_routine_current(id):
 		_air_back_x_routine_id = -1
+		_air_back_x_sprint_routine_id = -1
 		_finish_directional_x(id)
 
 func _request_tap_x_mover(profile: MoverSettings, direction_sign: float, routine_id: int,
-		fires_projectile: bool) -> void:
+		fires_projectile := false, projectile_enemy_mover: MoverSettings = null) -> void:
 	if profile == null:
 		return
 	var mover := profile.duplicate() as MoverSettings
@@ -399,6 +417,7 @@ func _request_tap_x_mover(profile: MoverSettings, direction_sign: float, routine
 		return
 	mover.direction = direction.normalized()
 	_tap_x_sprint_projectile_routine_id = routine_id if fires_projectile else -1
+	_tap_x_sprint_projectile_enemy_mover = projectile_enemy_mover
 	if _directional_x_routine_id == routine_id:
 		_directional_x_mover_pending = true
 	_player.request_mover(mover)
@@ -420,13 +439,21 @@ func _try_spend_tap_x_sprint() -> bool:
 ## Mover nuevo limpian el id y nunca dejan un disparo tardio de una rutina vieja.
 func _on_player_mover_finished(_reason: int) -> void:
 	var fires_projectile := _tap_x_sprint_projectile_routine_id == _routine_id
+	var projectile_enemy_mover := _tap_x_sprint_projectile_enemy_mover
+	var starts_air_rt_float := _tap_back_x_sprint_air_floater_routine_id == _routine_id
 	_tap_x_sprint_projectile_routine_id = -1
+	_tap_x_sprint_projectile_enemy_mover = null
+	_tap_back_x_sprint_air_floater_routine_id = -1
 	_complete_directional_x_mover(_routine_id)
+	if starts_air_rt_float:
+		_request_player_float(_t().tap_back_x_sprint_air_player_floater)
 	if fires_projectile:
-		_fire_tap_x_sprint_projectile()
+		_fire_tap_x_sprint_projectile(projectile_enemy_mover)
 
 func _on_player_mover_cancelled(_reason: int) -> void:
 	_tap_x_sprint_projectile_routine_id = -1
+	_tap_x_sprint_projectile_enemy_mover = null
+	_tap_back_x_sprint_air_floater_routine_id = -1
 	_complete_directional_x_mover(_routine_id)
 
 func _finish_directional_x_after(duration: float, routine_id: int) -> void:
@@ -447,14 +474,14 @@ func _complete_directional_x_mover(routine_id: int) -> void:
 	if _directional_x_animation_done:
 		_directional_x_routine_id = -1
 
-func _fire_tap_x_sprint_projectile() -> void:
+func _fire_tap_x_sprint_projectile(enemy_mover: MoverSettings) -> void:
 	var radius := _t().tap_x_sprint_projectile_radius
 	if radius <= 0.0 or _t().tap_x_sprint_projectile_lifetime <= 0.0:
 		return
 	var projectile := Projectile.new()
 	projectile.name = "SwordSprintProjectile"
 	projectile.parryable = false
-	projectile.enemy_mover = _t().tap_x_sprint_projectile_enemy_mover
+	projectile.enemy_mover = enemy_mover
 	var shape := CollisionShape3D.new()
 	var sphere := SphereShape3D.new()
 	sphere.radius = radius
@@ -557,7 +584,13 @@ func _on_aerial_charged_y_hit(hurtbox: Hurtbox, _died: bool) -> void:
 ## enemigo esté aéreo y quebrado, así que un golpe en tierra o a un objetivo entero no hace nada.
 func _on_aerial_normal_hit(hurtbox: Hurtbox, _died: bool) -> void:
 	if _air_forward_x_float_routine_id == _routine_id:
-		_request_enemy_float(hurtbox, _t().tap_forward_x_air_floater)
+		var forward_floater: FloaterSettings = _t().tap_forward_x_sprint_air_enemy_floater \
+				if _air_forward_x_sprint_routine_id == _routine_id \
+				else _t().tap_forward_x_air_floater
+		_request_enemy_float(hurtbox, forward_floater)
+		return
+	if _air_back_x_sprint_routine_id == _routine_id:
+		_request_enemy_float(hurtbox, _t().tap_back_x_sprint_air_enemy_floater)
 		return
 	# El hold depende de que el ENEMIGO esté en el aire (lo valida request_float), no de dónde esté
 	# el jugador: el juggle común es pegarle al enemigo cayendo desde el piso. Solo se excluye el

@@ -142,6 +142,12 @@ class_name SwordTuning extends WeaponTuning
 ## Cantidad de vueltas al pagar RT. No usa Mover ni proyectil en suelo o aire.
 @export_range(1, 8, 1) var tap_forward_x_sprint_spins := 3
 
+@export_subgroup("RT aire — Floater", "tap_forward_x_sprint_air_")
+## Hang del Player durante adelante X + RT aereo, separado de la variante normal.
+@export var tap_forward_x_sprint_air_player_floater: FloaterSettings
+## Hang de cada Enemy conectado por adelante X + RT aereo.
+@export var tap_forward_x_sprint_air_enemy_floater: FloaterSettings
+
 @export_group("Tap X atras — retroceso", "tap_back_x_")
 ## Segundos para pulsar X despues de un tap que se aleja del objetivo lockeado. 0 desactiva
 ## el gesto. En suelo y aire retrocede horizontalmente al Player.
@@ -157,13 +163,23 @@ class_name SwordTuning extends WeaponTuning
 ## Cantidad de vueltas de la variante normal aerea.
 @export_range(1, 8, 1) var tap_back_x_air_spins := 1
 
-@export_subgroup("RT + meter", "tap_back_x_sprint_")
+@export_subgroup("RT suelo — Mover y launcher", "tap_back_x_sprint_")
 ## Retroceso terrestre mas rapido. Al terminar dispara el proyectil.
 @export var tap_back_x_sprint_player_mover: MoverSettings
+## Launcher aplicado por el proyectil de atras X + RT terrestre.
+@export var tap_back_x_sprint_projectile_enemy_mover: MoverSettings
+
+@export_subgroup("RT aire — Mover, vueltas y launcher", "tap_back_x_sprint_air_")
 ## Retroceso aereo extendido. Al terminar dispara el proyectil.
 @export var tap_back_x_sprint_air_player_mover: MoverSettings
 ## Cantidad de vueltas de la variante aerea con RT.
 @export_range(1, 8, 1) var tap_back_x_sprint_air_spins := 2
+## Launcher aplicado por el proyectil de atras X + RT aereo.
+@export var tap_back_x_sprint_air_projectile_enemy_mover: MoverSettings
+## Floater del Player al terminar el retroceso aereo RT, separado del Mover.
+@export var tap_back_x_sprint_air_player_floater: FloaterSettings
+## Floater de cada Enemy conectado por atras X + RT aereo.
+@export var tap_back_x_sprint_air_enemy_floater: FloaterSettings
 
 @export_group("Tap X direccional + RT — meter y brillo", "tap_x_sprint_")
 ## Barras que cuesta combinar RT con tap adelante/atras + X. 0 desactiva el coste.
@@ -173,17 +189,15 @@ class_name SwordTuning extends WeaponTuning
 @export_range(0.0, 12.0, 0.1) var tap_x_sprint_flash_energy := 5.0
 @export_range(0.0, 2.0, 0.01) var tap_x_sprint_flash_duration := 0.45
 
-@export_group("Tap X direccional — proyectil launcher", "tap_x_sprint_projectile_")
-## Usado por atras X + RT en suelo y aire. Las variantes adelante X no lo disparan.
+@export_group("Tap X direccional — proyectil", "tap_x_sprint_projectile_")
+## Valores visuales y ofensivos compartidos. Cada ataque que dispara define su launcher junto a
+## sus propios perfiles; el proyectil no decide cuanto eleva al Enemy.
 ## Velocidad del proyectil, en m/s.
 @export var tap_x_sprint_projectile_speed := 22.0
 ## Grados por segundo de homing hacia el target bloqueado. 0 = recto.
 @export var tap_x_sprint_projectile_turn_rate := 180.0
 ## Daño del proyectil ofensivo. El stun reutiliza el `stun` de la Espada.
 @export var tap_x_sprint_projectile_damage := 3.0
-## Launcher vertical aplicado al Enemy impactado. Se prepara antes del daño para que el mismo golpe
-## preserve el Mover; null convierte el proyectil de nuevo en un impacto normal.
-@export var tap_x_sprint_projectile_enemy_mover: MoverSettings
 ## Segundos antes de destruir el proyectil si no impacta.
 @export var tap_x_sprint_projectile_lifetime := 1.5
 ## Radio de colision y del mesh esferico del proyectil, en metros.

@@ -40,8 +40,8 @@ Arma base / equilibrada. Velocidad media. Sirve para mantener el flujo del comba
 | X X espera X         | Diagonal, diagonal, plunge: tu y el enemigo golpeado caen juntos hasta el piso a velocidad constante. Cada cuerpo baja con su Mover DOWN del tuning (`plunge_player_mover` / `plunge_enemy_mover`, mismo speed). El enemigo se alinea a tu altura al conectar (si estaba arriba tuyo baja a tu Y) para dejar servido el rebote. El rebote en enemigo cancela el plunge; el doble salto no sale (ni se gasta) mientras dura. El plunge es reutilizable: `Player.plunge(MoverSettings)`. *(2026-07-21)* |
 | X cargado            | Con lock-on, dash 3D hacia el objetivo aunque este arriba o abajo; sin lock-on, dash recto. Al primer impacto lo atraviesas y apareces al otro lado de la trayectoria. |
 | X cargado sweet spot | Igual que el terrestre: tras atravesar al objetivo, activa el launcher sin gasto extra. |
-| Tap adelante + X (lock-on) | Vueltas con Floater que suspende al Player y a los enemigos conectados. No dispara proyectil; RT + medio meter solo usa su cantidad mejorada de vueltas. |
-| Tap atras + X (lock-on) | Una vuelta y Mover horizontal corto hacia atras, sin proyectil. Con RT + medio meter usa mas vueltas y un retroceso aereo mas largo; al terminar el Mover dispara un proyectil launcher. |
+| Tap adelante + X (lock-on) | Vueltas con Floater y sin proyectil. RT + medio meter usa mas vueltas y Floaters RT propios para Player y Enemy. |
+| Tap atras + X (lock-on) | Una vuelta y retroceso corto, sin proyectil. RT usa mas vueltas, retroceso largo y Floaters propios; al terminar dispara un proyectil con launcher aereo independiente. |
 | Y cargado            | **Desactivado por ahora** (ver Estado Godot): diseño es golpe hacia abajo que hace rebotar al enemigo (auto-lanza al jugador y spikea/rebota al enemigo hasta su altura), pero depende de `slam_bounce`, que espera el "bouncer" sin diseñar. Sostener Y en el aire cae al combo aereo normal. |
 | Tap atras + Y (lock-on) | Plunge sin barra: hachazo y, al cerrar el swing, Player y enemigo golpeado caen con `tap_back_y_air_player_mover` / `tap_back_y_air_enemy_mover`. En whiff el Player tambien cae. El tap se lee contra el eje jugador-objetivo y fija el facing al enemigo durante el hachazo. |
 | Tap adelante + Y (lock-on) | Vuelta final, Mover de avance hacia el objetivo y push al enemigo, a diferencia de la variante terrestre. |
@@ -56,7 +56,7 @@ Arma base / equilibrada. Velocidad media. Sirve para mantener el flujo del comba
 - El launcher comun de la Espada fija el facing al target bloqueado y corta input/momentum horizontal durante el swing. Y cargado terrestre y sweet spot del X elevan tambien al Player. *(2026-07-24)*
 - Los gestos `tap atras/adelante + Y` solo se arman desde input de movimiento neutral y consumen la primera direccion al salir de neutral. Girar el stick de forma continua no debe crear un especial al atravesar esas direcciones. *(2026-07-28)*
 - Los cuatro gestos direccionales de X/Y, sus ventanas y sus rutas de suelo/aire se documentan en [[Taps Direccionales]].
-- En Espada, RT combinado con `tap adelante/atras + X` dentro de la ventana cuesta `tap_x_sprint_meter_cost` (0.5 por defecto) y activa flash y valores mejorados. Adelante X nunca dispara: solo cambia su cantidad de vueltas. Atras X dispara con RT al terminar su Mover, tanto en suelo como en aire; ese proyectil funciona como launcher mediante `tap_x_sprint_projectile_enemy_mover`. *(2026-07-28)*
+- En Espada, RT combinado con `tap adelante/atras + X` cuesta `tap_x_sprint_meter_cost` y activa flash y valores mejorados. Los RT aereos tienen Floaters separados por ataque y cuerpo. Adelante X nunca dispara. Atras X dispara con RT; suelo y aire definen launchers independientes dentro de su ataque. *(2026-07-28)*
 - Mantener X despues de cualquier tap X direccional sigue cargando desde ese mismo press: la hoja muestra el progreso durante el tap, pero el cargado no se ejecuta hasta que hayan terminado tanto sus vueltas como su Mover. El float aereo de carga tambien espera ese cierre para no competir por la autoridad vertical. El flash RT usa un overlay HDR rojo-anaranjado sobre todas las mallas reales de `Visual`, igual que el brillo de [[Wall Slide y Wall Jump]]. *(2026-07-28)*
 - El Sweet Spot del X cargado reduce su coste y encadena launcher al conectar; el Y cargado aun no consume ese flag. Ver [[Sweet Spots]].
 - Habilidad especial de X cargado existe parcialmente por ventana de kill.
@@ -112,15 +112,16 @@ Ventanas en segundos; `0` desactiva el gesto. El contrato de input esta en [[Tap
 
 | Gesto | Ventana | Perfiles |
 |---|---|---|
-| Tap adelante + X | `tap_forward_x_window` | Vueltas: `tap_forward_x_spins` / `tap_forward_x_sprint_spins`. Aire: `tap_forward_x_air_floater`. En suelo y aire son vueltas puras, sin Mover ni proyectil. |
-| Tap atras + X | `tap_back_x_window` | Suelo: `tap_back_x_player_mover`; RT usa `tap_back_x_sprint_player_mover` y dispara al terminar. Aire normal: `tap_back_x_air_player_mover` + `tap_back_x_air_spins`, sin proyectil. Aire RT: `tap_back_x_sprint_air_player_mover` + `tap_back_x_sprint_air_spins`, con proyectil al terminar. |
+| Tap adelante + X | `tap_forward_x_window` | Aire normal: `tap_forward_x_air_floater`. Aire RT: `tap_forward_x_sprint_air_player_floater` / `tap_forward_x_sprint_air_enemy_floater`. Nunca dispara proyectil. |
+| Tap atras + X | `tap_back_x_window` | Suelo RT: Mover + `tap_back_x_sprint_projectile_enemy_mover`. Aire RT: Mover/vueltas, Floaters Player/Enemy y launcher propios bajo `tap_back_x_sprint_air_*`. |
 
-El proyectil compartido por las variantes que disparan usa `tap_x_sprint_projectile_enemy_mover`: distancia, velocidad, aceleracion y Floater del launcher quedan agrupados junto al resto de sus valores. Poner el perfil en `null` conserva dano/proyectil, pero desactiva el launcher.
+El vuelo, dano y visual del proyectil siguen compartidos bajo `tap_x_sprint_projectile_*`, pero cada ataque que dispara posee su propio Mover launcher. Un launcher en `null` conserva el proyectil y desactiva solo su elevacion.
 | Tap adelante + Y | `tap_forward_y_window` | `tap_forward_y_player_mover` en suelo y aire, clonado y orientado hacia el target. Al enemigo no lo mueve un Mover: en aire lo desplaza el `push`. |
 | Tap atras + Y | `tap_back_y_window` | Suelo: `tap_back_y_enemy_mover`; el Player no se mueve, por eso no tiene perfil. Aire: `tap_back_y_air_player_mover` / `tap_back_y_air_enemy_mover`. |
 
 ## Pendiente H1
 
+- Crear un `AttackMovementProfile` (o equivalente) que agrupe Movers, Floaters y launcher por ataque para reducir cableado manual; es una mejora de mantenibilidad, no de rendimiento.
 - Tunear taps RT.
 - Tunear `sword_tuning.tres`.
 - Validar que hold no dispare tap si se decide carga exclusiva.

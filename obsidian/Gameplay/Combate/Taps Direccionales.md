@@ -49,8 +49,8 @@ Cada hook tiene su getter de ventana. La implementacion generica vive en `player
 
 | Gesto | Suelo | Aire |
 |---|---|---|
-| Tap adelante + X | Vueltas puras: sin Mover, push ni proyectil. RT gasta medio meter y usa su cantidad mejorada de vueltas. | Vueltas con Floater, sin proyectil. RT solo usa su cantidad tuneable mejorada. |
-| Tap atras + X | Clip de launcher con Mover de retroceso solo para Player. RT usa un Mover mas rapido y dispara al terminar. | Normal: vueltas y retroceso horizontal corto, sin proyectil. RT: mas vueltas, retroceso mas largo y proyectil launcher al terminar. |
+| Tap adelante + X | Vueltas puras, sin proyectil. RT usa mas vueltas. | Vueltas sin proyectil. RT usa Floaters propios de Player/Enemy, separados de la variante normal. |
+| Tap atras + X | Retroceso; RT dispara y define su launcher terrestre. | Normal: retroceso corto sin proyectil. RT: retroceso largo, Floaters propios y proyectil con launcher aereo independiente. |
 | Tap adelante + Y | Vuelta final que avanza al Player con `tap_forward_y_player_mover`, sin push. | Misma vuelta y avance; arma `PushSettings` para el enemigo. |
 | Tap atras + Y | Launcher sin barra que mueve solo al Enemy con `tap_back_y_enemy_mover`. | Hachazo que inicia el plunge de Player y objetivos conectados. |
 
