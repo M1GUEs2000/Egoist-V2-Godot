@@ -44,11 +44,11 @@ Cada hook tiene su getter de ventana. La implementacion generica vive en `player
 
 ## Ejemplo: Espada
 
-`SwordTuning` define cuatro ventanas de `0.15 s` por defecto. La Espada las usa asi:
+`SwordTuning` define una ventana por gesto. La Espada las usa asi:
 
 | Gesto | Suelo | Aire |
 |---|---|---|
-| Tap adelante + X | Dos vueltas estaticas: sin Mover ni push. | Dos vueltas con Floater de gravedad `0` para Player y objetivos conectados. |
+| Tap adelante + X | Dos vueltas estaticas: sin Mover ni push. | Dos vueltas con Floater que suspende al Player y a los objetivos conectados. |
 | Tap atras + X | Clip de launcher con golpe normal y Mover de retroceso solo para Player. | Una vuelta; Player y objetivos conectados suben con sus Movers y terminan en hang. |
 | Tap adelante + Y | Vuelta final que avanza al Player con `tap_forward_y_player_mover`, sin push. | Misma vuelta y avance; arma `PushSettings` para el enemigo. |
 | Tap atras + Y | Launcher sin barra que mueve solo al Enemy con `tap_back_y_enemy_mover`. | Hachazo que inicia el plunge de Player y objetivos conectados. |

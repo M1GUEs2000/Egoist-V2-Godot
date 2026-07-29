@@ -52,7 +52,7 @@ if target is EnemyBase:
 ### Ejemplos vigentes
 
 - `WeaponBase._register_air_hit_float()` usa `WeaponTuning.air_hit_player_floater` al conectar un golpe aereo normal.
-- `Sword._run_forward_x_static_spin()` usa `tap_forward_x_air_floater`: dos vueltas y hang de `0.3 s` para Player y objetivos conectados.
+- `Sword._run_forward_x_static_spin()` usa `tap_forward_x_air_floater`: dos vueltas y hang para Player y objetivos conectados.
 - `PlayerDash._on_dash_hit()` usa `PlayerTuning.dash_air_hit_floater` cuando el dash ofensivo conecta en el aire.
 - `PlayerArm` aplica `ArmTuning.air_enemy_floater` al enemigo que conecta en aire.
 - Un `MoverSettings` tambien puede terminar en Floater con `float_duration` y `float_fall_scale`; es la forma correcta de encadenar viaje y hang.

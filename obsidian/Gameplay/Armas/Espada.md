@@ -40,8 +40,8 @@ Arma base / equilibrada. Velocidad media. Sirve para mantener el flujo del comba
 | X X espera X         | Diagonal, diagonal, plunge: tu y el enemigo golpeado caen juntos hasta el piso a velocidad constante. Cada cuerpo baja con su Mover DOWN del tuning (`plunge_player_mover` / `plunge_enemy_mover`, mismo speed). El enemigo se alinea a tu altura al conectar (si estaba arriba tuyo baja a tu Y) para dejar servido el rebote. El rebote en enemigo cancela el plunge; el doble salto no sale (ni se gasta) mientras dura. El plunge es reutilizable: `Player.plunge(MoverSettings)`. *(2026-07-21)* |
 | X cargado            | Con lock-on, dash 3D hacia el objetivo aunque este arriba o abajo; sin lock-on, dash recto. Al primer impacto lo atraviesas y apareces al otro lado de la trayectoria. |
 | X cargado sweet spot | Igual que el terrestre: tras atravesar al objetivo, activa el launcher sin gasto extra. |
-| Tap adelante + X (lock-on) | Dos vueltas estaticas con Floater de gravedad 0 para Player y enemigos conectados. |
-| Tap atras + X (lock-on) | Una vuelta y Movers UP para Player y enemigos conectados, cada uno con su distancia; ambos terminan en hang con gravedad 0. |
+| Tap adelante + X (lock-on) | Dos vueltas estaticas con Floater que suspende al Player y a los enemigos conectados. |
+| Tap atras + X (lock-on) | Una vuelta y Movers UP para Player y enemigos conectados, cada uno con su perfil; ambos terminan en hang. |
 | Y cargado            | **Desactivado por ahora** (ver Estado Godot): diseño es golpe hacia abajo que hace rebotar al enemigo (auto-lanza al jugador y spikea/rebota al enemigo hasta su altura), pero depende de `slam_bounce`, que espera el "bouncer" sin diseñar. Sostener Y en el aire cae al combo aereo normal. |
 | Tap atras + Y (lock-on) | Plunge sin barra: hachazo y, al cerrar el swing, Player y enemigo golpeado caen con `tap_back_y_air_player_mover` / `tap_back_y_air_enemy_mover`. En whiff el Player tambien cae. El tap se lee contra el eje jugador-objetivo y fija el facing al enemigo durante el hachazo. |
 | Tap adelante + Y (lock-on) | Vuelta final, Mover de avance hacia el objetivo y push al enemigo, a diferencia de la variante terrestre. |
@@ -82,9 +82,9 @@ Arma base / equilibrada. Velocidad media. Sirve para mantener el flujo del comba
 | `ground_wait_branch_threshold` | Espera minima que convierte los golpes 3-4 de estocadas a vueltas. |
 | `combo_swing_angle` | Arco de los swings 1-2 del combo terrestre. |
 | `thrust_reach` | Metros que el brazo extiende sobre `hand_radius` en el pico de la estocada. |
-| `air_diagonal_yaw` / `air_diagonal_pitch` | Diagonal aerea: cuanto cruza la mano por delante y cuanto baja al cruzar. Igualarlos da una diagonal a 45°. |
+| `air_diagonal_yaw` / `air_diagonal_pitch` | Diagonal aerea: cuanto cruza la mano por delante y cuanto baja al cruzar. Igualarlos deja la diagonal simetrica; subir el pitch la pica, bajarlo la aplana. |
 | `air_finisher_angle` | Arco del hachazo vertical del finisher aereo. |
-| `air_finisher_hitbox_v_scale` | Estira verticalmente los hitboxes del hachazo mientras dura el golpe: alto de la hoja y disco aereo como capsula. 1 = sin estirar. Aplica al finisher, al plunge y al tap atras + Y aereo, que comparten coreografia. |
+| `air_finisher_hitbox_v_scale` | Estira verticalmente los hitboxes del hachazo mientras dura el golpe: alto de la hoja y disco aereo como capsula. Aplica al finisher, al plunge y al tap atras + Y aereo, que comparten coreografia. |
 | `air_finisher_enemy_spike_mover` | Spike descendente del Enemy al cerrar el hachazo `X X X`. El Player sigue su caida normal. |
 | `air_wait_spin_player_mover` | Hop PARTIAL del Player en la primera vuelta de la rama espera. |
 | `air_plunge_player_mover` / `air_plunge_enemy_mover` | Plunge de `X X espera X`: mismo speed = bajan a la par; el del Player es PARTIAL para conservar contactos. |
