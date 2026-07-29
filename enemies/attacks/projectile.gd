@@ -12,6 +12,9 @@ class_name Projectile extends Area3D
 @export var parryable := true
 ## Que le pasa al proyectil al ser parriado. Si es null se carga el .tres compartido en _ready.
 @export var deflect_tuning: DeflectTuning
+## Launcher opcional del Enemy impactado. Null conserva el proyectil normal; si existe, se pide
+## antes del daño con preserve_next_hit para que ese mismo impacto no cancele el ascenso.
+@export var enemy_mover: MoverSettings
 
 var _speed := 0.0
 var _turn_rate := 0.0
@@ -124,6 +127,7 @@ func _on_body_entered(body: Node3D) -> void:
 	if _is_shooter(body):
 		return
 	if body.has_method("take_damage"):
+		_prepare_enemy_launcher(body)
 		body.call("take_damage", _damage)
 		if _stun != null and body.has_method("receive_stun"):
 			if body is Player:
@@ -143,6 +147,7 @@ func _on_body_entered(body: Node3D) -> void:
 	elif body is EnemyBase:
 		var enemy := body as EnemyBase
 		var enemy_shooter := _shooter as EnemyBase
+		_prepare_enemy_launcher(enemy)
 		enemy.take_hit_from_enemy(_enemy_hits, _velocity.normalized(), _stun, enemy_shooter)
 		queue_free()
 	else:
@@ -165,8 +170,14 @@ func _on_area_entered(area: Area3D) -> void:
 		queue_free()
 		return
 	var amount := _enemy_hits if hurtbox.owner_node is EnemyBase else _damage
+	_prepare_enemy_launcher(hurtbox.owner_node)
 	hurtbox.receive_hit(_shooter, amount, _velocity.normalized(), _stun)
 	queue_free()
+
+func _prepare_enemy_launcher(target: Node) -> void:
+	if enemy_mover == null or not (target is EnemyBase):
+		return
+	(target as EnemyBase).request_mover(enemy_mover, _stun, false, true)
 
 func _is_shooter(node: Node) -> bool:
 	if not is_instance_valid(_shooter) or node == null:

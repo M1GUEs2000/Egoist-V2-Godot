@@ -68,6 +68,9 @@ var _stun_material: StandardMaterial3D
 var _stun_feedback_color := Color.WHITE
 var _chip_material: StandardMaterial3D
 var _chip_tween: Tween
+var _combat_flash_meshes: Array[MeshInstance3D] = []
+var _combat_flash_material: StandardMaterial3D
+var _combat_flash_tween: Tween
 
 func _ready() -> void:
 	add_to_group("player")  # la cámara y los enemigos me encuentran por grupo
@@ -85,6 +88,9 @@ func _ready() -> void:
 	sprint.setup(self)
 	_setup_run_dust_material()
 	_setup_sprint_trail_material()
+	_collect_combat_flash_meshes(get_node_or_null("Visual"))
+	if _combat_flash_meshes.is_empty() and _mesh != null:
+		_combat_flash_meshes.append(_mesh)
 	wall_slide.setup(self)
 	floor_slide.setup(self)
 	enemy_bounce.setup(self)
@@ -827,9 +833,48 @@ func _clear_poise_chip_flash() -> void:
 	if _mesh != null and not is_stunned():
 		_mesh.set_surface_override_material(0, null)
 
+## Igual que el wall slide, el flash recorre las mallas reales bajo Visual. El nodo Mesh es solo
+## la capsula placeholder y queda invisible cuando el modelo esta activo.
+func _collect_combat_flash_meshes(root: Node) -> void:
+	if root == null:
+		return
+	var mesh := root as MeshInstance3D
+	if mesh != null:
+		_combat_flash_meshes.append(mesh)
+	for child in root.get_children():
+		_collect_combat_flash_meshes(child)
+
+## Fogonazo aditivo de un ataque que gasto meter. Usa el mismo material_overlay HDR del wall slide:
+## conserva el material original del personaje y multiplica el RGB para que el Environment haga bloom.
+func play_combat_flash(color: Color, energy: float, duration: float) -> void:
+	if _combat_flash_meshes.is_empty() or is_stunned() or duration <= 0.0:
+		return
+	if _combat_flash_tween != null and _combat_flash_tween.is_valid():
+		_combat_flash_tween.kill()
+	if _combat_flash_material == null:
+		_combat_flash_material = StandardMaterial3D.new()
+		_combat_flash_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		_combat_flash_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		_combat_flash_material.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+	_combat_flash_material.albedo_color = Color(color.r * energy, color.g * energy,
+			color.b * energy, color.a)
+	for mesh in _combat_flash_meshes:
+		mesh.material_overlay = _combat_flash_material
+	_combat_flash_tween = create_tween()
+	_combat_flash_tween.tween_property(_combat_flash_material, "albedo_color:a", 0.0, duration)
+	_combat_flash_tween.tween_callback(_clear_combat_flash)
+
+func _clear_combat_flash() -> void:
+	for mesh in _combat_flash_meshes:
+		if mesh.material_overlay == _combat_flash_material:
+			mesh.material_overlay = null
+
 func _on_stunned_started(_duration: float, _mode: PlayerStun.Mode) -> void:
 	if _mesh == null:
 		return
+	if _combat_flash_tween != null and _combat_flash_tween.is_valid():
+		_combat_flash_tween.kill()
+	_clear_combat_flash()
 	if _chip_tween != null and _chip_tween.is_valid():
 		_chip_tween.kill()  # manda el stun: el fogonazo blanco no le pelea la emisión al amarillo
 	if _stun_material == null:

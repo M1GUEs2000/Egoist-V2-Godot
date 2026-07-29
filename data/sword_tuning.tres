@@ -91,17 +91,12 @@ script = ExtResource("2_stun")
 poise_damage = 6.0
 grounded = 0.4
 
-[sub_resource type="Resource" id="Resource_tap_back_x_air_enemy_mover"]
-script = ExtResource("4_mover")
-distance = 3.0
-stop_on = 3
-float_duration = 0.4
-
 [sub_resource type="Resource" id="Resource_tap_back_x_air_player_mover"]
 script = ExtResource("4_mover")
-distance = 1.0
-stop_on = 3
-float_duration = 0.3
+distance = 2.0
+speed = 10.0
+acceleration = 10.0
+stop_on = 5
 
 [sub_resource type="Resource" id="Resource_tap_back_x_player_mover"]
 script = ExtResource("4_mover")
@@ -109,6 +104,28 @@ distance = 3.0
 speed = 10.0
 acceleration = 10.0
 stop_on = 13
+
+[sub_resource type="Resource" id="Resource_tap_back_x_sprint_player_mover"]
+script = ExtResource("4_mover")
+distance = 4.0
+speed = 18.0
+acceleration = 20.0
+stop_on = 5
+
+[sub_resource type="Resource" id="Resource_tap_back_x_sprint_air_player_mover"]
+script = ExtResource("4_mover")
+distance = 4.0
+speed = 18.0
+acceleration = 20.0
+stop_on = 5
+
+[sub_resource type="Resource" id="Resource_tap_x_sprint_projectile_enemy_mover"]
+script = ExtResource("4_mover")
+distance = 4.0
+speed = 24.0
+acceleration = 8.0
+stop_on = 1
+float_duration = 0.4
 
 [sub_resource type="Resource" id="Resource_tap_back_y_air_enemy_mover"]
 script = ExtResource("4_mover")
@@ -163,10 +180,29 @@ ground_charged_y_player_mover = SubResource("Resource_ground_y_player_mover")
 ground_charged_y_enemy_mover = SubResource("Resource_ground_y_enemy_mover")
 aerial_charged_y_player_mover = SubResource("Resource_aerial_y_player_mover")
 aerial_charged_y_enemy_spike_mover = SubResource("Resource_aerial_y_enemy_spike_mover")
+tap_forward_x_spins = 2
 tap_forward_x_air_floater = SubResource("Resource_tap_forward_x_air_floater")
+tap_forward_x_sprint_spins = 3
 tap_back_x_player_mover = SubResource("Resource_tap_back_x_player_mover")
 tap_back_x_air_player_mover = SubResource("Resource_tap_back_x_air_player_mover")
-tap_back_x_air_enemy_mover = SubResource("Resource_tap_back_x_air_enemy_mover")
+tap_back_x_air_spins = 1
+tap_back_x_sprint_player_mover = SubResource("Resource_tap_back_x_sprint_player_mover")
+tap_back_x_sprint_air_player_mover = SubResource("Resource_tap_back_x_sprint_air_player_mover")
+tap_back_x_sprint_air_spins = 2
+tap_x_sprint_meter_cost = 0.5
+tap_x_sprint_projectile_speed = 22.0
+tap_x_sprint_projectile_turn_rate = 180.0
+tap_x_sprint_projectile_damage = 3.0
+tap_x_sprint_projectile_enemy_mover = SubResource("Resource_tap_x_sprint_projectile_enemy_mover")
+tap_x_sprint_projectile_lifetime = 1.5
+tap_x_sprint_projectile_radius = 0.22
+tap_x_sprint_projectile_forward_offset = 1.1
+tap_x_sprint_projectile_height = 1.0
+tap_x_sprint_projectile_color = Color(0.2, 0.9, 1, 1)
+tap_x_sprint_projectile_energy = 3.0
+tap_x_sprint_flash_color = Color(1, 0.16, 0.015, 1)
+tap_x_sprint_flash_energy = 5.0
+tap_x_sprint_flash_duration = 0.45
 tap_forward_y_player_mover = SubResource("Resource_tap_forward_y_player_mover")
 tap_back_y_enemy_mover = SubResource("Resource_tap_back_y_enemy_mover")
 tap_back_y_air_player_mover = SubResource("Resource_tap_back_y_air_player_mover")

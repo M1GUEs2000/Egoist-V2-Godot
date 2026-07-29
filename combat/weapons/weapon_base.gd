@@ -597,6 +597,11 @@ func begin_routine() -> int:
 func is_routine_current(id: int) -> bool:
 	return id == _routine_id
 
+## Hook de los gestos direccionales que permiten cargar durante su animacion. El arma concreta
+## devuelve true hasta que su movimiento actual termina; PlayerCombat retiene el hold mientras tanto.
+func directional_special_is_active() -> bool:
+	return false
+
 ## Invalida las rutinas en curso (combos): cada una chequea su id tras cada await.
 func cancel_routines() -> void:
 	begin_routine()

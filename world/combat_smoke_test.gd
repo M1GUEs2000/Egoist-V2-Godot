@@ -309,6 +309,17 @@ func _test_charged_meter_cost(player: Player) -> void:
 		return
 	player.air_state = Player.AirState.GROUNDED
 
+	# Los gestos de arma pueden cobrar fracciones de barra sin heredar la ventana de kill de un
+	# cargado. El gasto nunca deja el meter negativo ni acepta un coste que no alcance.
+	player.meter.gain_bars(float(player.meter.bars()))
+	var half_bar := 0.5
+	var meter_before_gesture := player.meter.meter()
+	assert(player.meter.spend_bars(half_bar))
+	assert(is_equal_approx(player.meter.meter(), meter_before_gesture - half_bar))
+	player.meter.gain_bars(-player.meter.meter())
+	assert(not player.meter.spend_bars(half_bar))
+	assert(is_equal_approx(player.meter.meter(), 0.0))
+
 	var cost := sword.charged_meter_cost(World.Slot.Y, 999.0)
 	assert(cost > 0.0)  # el launcher terrestre ya no es gratis
 	player.meter.gain_bars(float(player.meter.bars()))  # meter lleno

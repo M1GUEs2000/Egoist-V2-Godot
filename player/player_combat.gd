@@ -33,6 +33,7 @@ var _charging_slot := World.Slot.X  # slot de ese press: decide cuánto meter co
 var _charge_preview := 0.0  # último valor emitido en charge_meter_preview_changed
 var _active_weapon: WeaponBase  # arma visible actualmente
 var _attack_kind := AttackKind.NORMAL  # tipo del ultimo ataque iniciado (lo lee el parry)
+var _press_id := 0
 var _rest_rotations := {}  # WeaponBase → Quaternion
 var _air_charge_fall_applied := false
 ## Fin de la ventana que deja un tap hacia atras relativo al lock-on antes de pulsar Y.
@@ -89,6 +90,7 @@ func weapon_label(weapon: WeaponBase) -> String:
 	return weapon.name.capitalize()
 
 func cancel_input() -> void:
+	_press_id += 1
 	buffer.release()
 
 ## Sosteniendo X o Y desde el press hasta que se suelta o dispara el golpe cargado. Mismo
@@ -160,7 +162,8 @@ func _try_lock_forward_y_push() -> bool:
 	if slot_y.lock_forward_y_push_window() <= 0.0:
 		return false
 	_lock_forward_tap_until = -999.0
-	return _start_lock_special(slot_y, Callable(slot_y, &"try_lock_forward_y_push"))
+	return _start_lock_special(slot_y, World.Slot.Y,
+			Callable(slot_y, &"try_lock_forward_y_push"))
 
 ## Y consume el gesto una vez y lo convierte en el launcher propio del arma equipada. Entra como
 ## ataque normal: no carga, no gasta meter y no espera a que se suelte Y.
@@ -170,7 +173,8 @@ func _try_lock_back_y_launcher() -> bool:
 	if slot_y.lock_back_y_launcher_window() <= 0.0:
 		return false
 	_lock_back_tap_until = -999.0
-	return _start_lock_special(slot_y, Callable(slot_y, &"try_lock_back_y_launcher"))
+	return _start_lock_special(slot_y, World.Slot.Y,
+			Callable(slot_y, &"try_lock_back_y_launcher"))
 
 ## X consume el tap adelante una vez para la vuelta estatica propia del arma equipada.
 func _try_lock_forward_x_static_spin() -> bool:
@@ -179,7 +183,8 @@ func _try_lock_forward_x_static_spin() -> bool:
 	if slot_x.lock_forward_x_static_spin_window() <= 0.0:
 		return false
 	_lock_forward_x_tap_until = -999.0
-	return _start_lock_special(slot_x, Callable(slot_x, &"try_lock_forward_x_static_spin"))
+	return _start_lock_special(slot_x, World.Slot.X,
+			Callable(slot_x, &"try_lock_forward_x_static_spin"))
 
 ## X consume el tap atras una vez para el retroceso propio del arma equipada.
 func _try_lock_back_x_retreat() -> bool:
@@ -188,15 +193,20 @@ func _try_lock_back_x_retreat() -> bool:
 	if slot_x.lock_back_x_retreat_window() <= 0.0:
 		return false
 	_lock_back_x_tap_until = -999.0
-	return _start_lock_special(slot_x, Callable(slot_x, &"try_lock_back_x_retreat"))
+	return _start_lock_special(slot_x, World.Slot.X,
+			Callable(slot_x, &"try_lock_back_x_retreat"))
 
-## Prepara un gesto direccional como ataque normal sin pasar por InputBuffer/hold.
-func _start_lock_special(weapon: WeaponBase, start_special: Callable) -> bool:
+## El tap direccional sale al press, pero ese mismo press tambien alimenta la carga. Si se suelta
+## cargado durante la rutina, el callback espera a que terminen sus vueltas/Mover antes de ejecutarse.
+func _start_lock_special(weapon: WeaponBase, slot: World.Slot, start_special: Callable) -> bool:
 	buffer.release()
 	if _charging_weapon != null:
 		_charging_weapon.set_charge_glow(0.0)
 		_charging_weapon.set_sweet_spot_window(false)
-	_charging_weapon = null
+	_press_id += 1
+	var press_id := _press_id
+	_charging_weapon = weapon
+	_charging_slot = slot
 	_attack_kind = AttackKind.NORMAL
 	_air_charge_fall_applied = false
 	if weapon.should_reset_pose_on_press():
@@ -205,12 +215,32 @@ func _start_lock_special(weapon: WeaponBase, start_special: Callable) -> bool:
 	attack_telegraphed.emit(_body.global_position, _body.forward())
 	_body.fire_action_world_switch()
 	_last_attack_time = World.now()
-	return start_special.call()
+	var started: bool = start_special.call()
+	if not started:
+		_charging_weapon = null
+		return false
+	# La continuidad tap -> carga pedida pertenece a los nuevos gestos X. Los especiales Y
+	# conservan su contrato actual de tap puro hasta que tengan una regla de final propia.
+	if slot != World.Slot.X:
+		_charging_weapon = null
+		return true
+	buffer.press_then_charge(Callable(),
+			_fire_hold_after_directional_special.bind(weapon, slot, press_id))
+	return true
+
+func _fire_hold_after_directional_special(weapon: WeaponBase, slot: World.Slot,
+		press_id: int) -> void:
+	while press_id == _press_id and weapon != null and weapon.directional_special_is_active():
+		await get_tree().process_frame
+	if press_id != _press_id or weapon == null:
+		return
+	_fire_hold(weapon, slot)
 
 ## Golpea en el press (tap) y carga mientras se mantiene; al soltar sale el cargado.
 func _on_press(weapon: WeaponBase, slot: World.Slot) -> void:
 	if weapon == null:
 		return
+	_press_id += 1
 	attack_telegraphed.emit(_body.global_position, _body.forward())
 	_body.fire_action_world_switch()
 	_last_attack_time = World.now()
@@ -265,7 +295,8 @@ func _process(delta: float) -> void:
 		# tambien la apaga cuando el press termina sin cargado.
 		_charging_weapon.set_sweet_spot_window(charge_progress >= 1.0
 				and _charging_weapon.tuning.in_sweet_spot(buffer.held_duration()))
-		if not _air_charge_fall_applied and charge_progress >= 1.0:
+		if not _air_charge_fall_applied and charge_progress >= 1.0 \
+				and not _charging_weapon.directional_special_is_active():
 			_air_charge_fall_applied = true
 			_body.apply_air_charge_float()
 	_update_charge_preview()

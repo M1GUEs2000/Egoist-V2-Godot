@@ -237,7 +237,13 @@ func _stop_stun_visual() -> void:
 func _update_locomotion_animation(horizontal_speed: float) -> void:
 	match _enemy.ai_state:
 		GroundedEnemy.AIState.EVADE:
-			_play_one_shot(evade_animation)
+			# AIState.EVADE es compartido: tambien lo usa el reposicionamiento de combate
+			# (strafe/backpedal), no solo el esquive reactivo del telegraph. El roll solo
+			# corresponde al esquive real, que es el unico que emite IntentKind.EVADE.
+			if _enemy.blackboard.navigation_intent_kind == EnemyAIBlackboard.IntentKind.EVADE:
+				_play_one_shot(evade_animation)
+			else:
+				_play_loop(chase_animation if horizontal_speed >= moving_speed_threshold else idle_animation)
 		GroundedEnemy.AIState.FLEE:
 			_play_loop(flee_animation)
 		GroundedEnemy.AIState.DEFEND:

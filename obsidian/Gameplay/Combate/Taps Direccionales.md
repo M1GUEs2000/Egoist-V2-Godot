@@ -21,7 +21,8 @@ Los taps direccionales son gestos de combate relativos al objetivo de lock-on. U
 - La direccion se mide en el plano horizontal contra el vector Player -> objetivo: adelante se acerca al objetivo y atras se aleja.
 - El gesto debe empezar desde input de movimiento neutral. Solo se registra la primera direccion al salir de neutral; mantener o girar el stick no abre otra ventana.
 - La ventana se mantiene por slot y direccion: adelante/atras para X y adelante/atras para Y son independientes.
-- Pulsar X o Y dentro de la ventana la consume una vez. El especial entra como ataque normal: no carga, no gasta meter por el gesto y no espera el release.
+- Pulsar X o Y dentro de la ventana la consume una vez. El especial entra como ataque normal y no espera el release. Por defecto no gasta meter; cada arma puede documentar una variante opcional de ese gesto que cobre meter, como la Espada con RT + X.
+- En los taps X de Espada, mantener el boton despues del press alimenta la carga normal. El tap sale de inmediato, pero el cargado queda retenido hasta que finalicen la coreografia y el Mover del gesto; no puede cancelar el movimiento a mitad.
 - Un valor de ventana `0` desactiva ese gesto para el arma.
 
 ## Flujo tecnico
@@ -48,8 +49,8 @@ Cada hook tiene su getter de ventana. La implementacion generica vive en `player
 
 | Gesto | Suelo | Aire |
 |---|---|---|
-| Tap adelante + X | Dos vueltas estaticas: sin Mover ni push. | Dos vueltas con Floater que suspende al Player y a los objetivos conectados. |
-| Tap atras + X | Clip de launcher con golpe normal y Mover de retroceso solo para Player. | Una vuelta; Player y objetivos conectados suben con sus Movers y terminan en hang. |
+| Tap adelante + X | Vueltas puras: sin Mover, push ni proyectil. RT gasta medio meter y usa su cantidad mejorada de vueltas. | Vueltas con Floater, sin proyectil. RT solo usa su cantidad tuneable mejorada. |
+| Tap atras + X | Clip de launcher con Mover de retroceso solo para Player. RT usa un Mover mas rapido y dispara al terminar. | Normal: vueltas y retroceso horizontal corto, sin proyectil. RT: mas vueltas, retroceso mas largo y proyectil launcher al terminar. |
 | Tap adelante + Y | Vuelta final que avanza al Player con `tap_forward_y_player_mover`, sin push. | Misma vuelta y avance; arma `PushSettings` para el enemigo. |
 | Tap atras + Y | Launcher sin barra que mueve solo al Enemy con `tap_back_y_enemy_mover`. | Hachazo que inicia el plunge de Player y objetivos conectados. |
 

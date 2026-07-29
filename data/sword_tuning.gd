@@ -128,30 +128,72 @@ class_name SwordTuning extends WeaponTuning
 
 @export_group("Tap X adelante — vueltas estaticas", "tap_forward_x_")
 ## Segundos para pulsar X despues de un tap que se acerca al objetivo lockeado. 0 desactiva
-## el gesto. Ejecuta dos vueltas: en suelo estaticas, en aire con hang.
+## el gesto. En suelo y aire solo hace vueltas; nunca dispara proyectil.
 @export var tap_forward_x_window := 0.15
+## Cantidad de vueltas de la variante normal, tanto en suelo como en aire.
+@export_range(1, 8, 1) var tap_forward_x_spins := 2
 
 @export_subgroup("Aire — Floater", "tap_forward_x_air_")
-## Hang de las dos vueltas aereas. Se pide con el mismo perfil para el Player y para cada
+## Hang de las vueltas aereas. Se pide con el mismo perfil para el Player y para cada
 ## enemigo conectado, por eso hay un solo campo. fall_scale 0 congela la gravedad.
 @export var tap_forward_x_air_floater: FloaterSettings
 
-@export_group("Tap X atras — retroceso / elevacion", "tap_back_x_")
+@export_subgroup("RT + meter", "tap_forward_x_sprint_")
+## Cantidad de vueltas al pagar RT. No usa Mover ni proyectil en suelo o aire.
+@export_range(1, 8, 1) var tap_forward_x_sprint_spins := 3
+
+@export_group("Tap X atras — retroceso", "tap_back_x_")
 ## Segundos para pulsar X despues de un tap que se aleja del objetivo lockeado. 0 desactiva
-## el gesto. En suelo retrocede al Player; en aire sube a ambos cuerpos.
+## el gesto. En suelo y aire retrocede horizontalmente al Player.
 @export var tap_back_x_window := 0.15
 
 @export_subgroup("Suelo — Mover", "tap_back_x_")
-## Retroceso del Player. La Espada lo clona y lo orienta en sentido opuesto al target lockeado
-## antes de solicitarlo, para no mutar el .tres compartido. El Enemy no se mueve en esta rama.
+## Retroceso terrestre normal del Player. La Espada lo clona y orienta en sentido opuesto al target.
 @export var tap_back_x_player_mover: MoverSettings
 
-@export_subgroup("Aire — Mover", "tap_back_x_air_")
-## Ascenso del Player. Al terminar sostiene con gravedad cero segun su float_duration.
+@export_subgroup("Aire — Mover y vueltas", "tap_back_x_air_")
+## Retroceso aereo corto de la variante normal. No dispara proyectil.
 @export var tap_back_x_air_player_mover: MoverSettings
-## Ascenso del Enemy golpeado. Lleva su propia distancia y su propio hang: separarlo del Player
-## es lo que deja abrir o cerrar la brecha vertical entre los dos cuerpos.
-@export var tap_back_x_air_enemy_mover: MoverSettings
+## Cantidad de vueltas de la variante normal aerea.
+@export_range(1, 8, 1) var tap_back_x_air_spins := 1
+
+@export_subgroup("RT + meter", "tap_back_x_sprint_")
+## Retroceso terrestre mas rapido. Al terminar dispara el proyectil.
+@export var tap_back_x_sprint_player_mover: MoverSettings
+## Retroceso aereo extendido. Al terminar dispara el proyectil.
+@export var tap_back_x_sprint_air_player_mover: MoverSettings
+## Cantidad de vueltas de la variante aerea con RT.
+@export_range(1, 8, 1) var tap_back_x_sprint_air_spins := 2
+
+@export_group("Tap X direccional + RT — meter y brillo", "tap_x_sprint_")
+## Barras que cuesta combinar RT con tap adelante/atras + X. 0 desactiva el coste.
+@export_range(0.0, 5.0, 0.05) var tap_x_sprint_meter_cost := 0.5
+## Fogonazo aditivo del Player al pagar el gesto. Duracion en segundos.
+@export var tap_x_sprint_flash_color := Color(1.0, 0.16, 0.015)
+@export_range(0.0, 12.0, 0.1) var tap_x_sprint_flash_energy := 5.0
+@export_range(0.0, 2.0, 0.01) var tap_x_sprint_flash_duration := 0.45
+
+@export_group("Tap X direccional — proyectil launcher", "tap_x_sprint_projectile_")
+## Usado por atras X + RT en suelo y aire. Las variantes adelante X no lo disparan.
+## Velocidad del proyectil, en m/s.
+@export var tap_x_sprint_projectile_speed := 22.0
+## Grados por segundo de homing hacia el target bloqueado. 0 = recto.
+@export var tap_x_sprint_projectile_turn_rate := 180.0
+## Daño del proyectil ofensivo. El stun reutiliza el `stun` de la Espada.
+@export var tap_x_sprint_projectile_damage := 3.0
+## Launcher vertical aplicado al Enemy impactado. Se prepara antes del daño para que el mismo golpe
+## preserve el Mover; null convierte el proyectil de nuevo en un impacto normal.
+@export var tap_x_sprint_projectile_enemy_mover: MoverSettings
+## Segundos antes de destruir el proyectil si no impacta.
+@export var tap_x_sprint_projectile_lifetime := 1.5
+## Radio de colision y del mesh esferico del proyectil, en metros.
+@export var tap_x_sprint_projectile_radius := 0.22
+## Avance y altura del origen respecto al Player, en metros.
+@export var tap_x_sprint_projectile_forward_offset := 1.1
+@export var tap_x_sprint_projectile_height := 1.0
+## Color HDR y energia del proyectil. El RGB se escala con la energia para producir bloom.
+@export var tap_x_sprint_projectile_color := Color(0.2, 0.9, 1.0)
+@export_range(0.0, 12.0, 0.1) var tap_x_sprint_projectile_energy := 3.0
 
 @export_group("Tap Y adelante — avance con vuelta", "tap_forward_y_")
 ## Segundos para pulsar Y despues de un tap que se acerca al objetivo lockeado. 0 desactiva

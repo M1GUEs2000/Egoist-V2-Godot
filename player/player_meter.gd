@@ -37,6 +37,14 @@ func gain_on_hit(bars_amount: float) -> void:
 func gain_bars(amount: float) -> void:
 	_add(amount)
 
+## Gasto puntual de una mecanica que no es dash ni cargado. Acepta fracciones de barra para que
+## cada arma pueda cobrar su propio gesto sin abrir la ventana de kill de los cargados.
+func spend_bars(amount: float) -> bool:
+	if amount <= 0.0 or _meter < amount:
+		return false
+	_add(-amount)
+	return true
+
 ## Al matar: si venimos de un cargado (ventana abierta), recuperás 1 barra completa
 ## (habilidad especial de la Espada) y la ganancia por arma no aplica. Si no, la que
 ## traiga la fuente.
