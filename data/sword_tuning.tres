@@ -5,6 +5,7 @@
 [ext_resource type="Script" uid="uid://cprdodv3kypq1" path="res://data/push_settings.gd" id="3_push"]
 [ext_resource type="Script" uid="uid://dsps3sxfd8wmx" path="res://data/mover_settings.gd" id="4_mover"]
 [ext_resource type="Script" uid="uid://br6k3bi45tkio" path="res://data/floater_settings.gd" id="5_floater"]
+[ext_resource type="Script" path="res://data/attack_movement_profile.gd" id="6_movement"]
 
 [sub_resource type="Resource" id="Resource_aerial_y_enemy_spike_mover"]
 script = ExtResource("4_mover")
@@ -157,6 +158,45 @@ speed = 10.0
 acceleration = 10.0
 stop_on = 13
 
+[sub_resource type="Resource" id="Resource_tap_forward_x_air_enemy_hang"]
+script = ExtResource("5_floater")
+duration = 0.3
+
+[sub_resource type="Resource" id="Resource_profile_tap_forward_x_air"]
+script = ExtResource("6_movement")
+player_hang = SubResource("Resource_tap_forward_x_air_floater")
+enemy_on_hit = SubResource("Resource_tap_forward_x_air_enemy_hang")
+overrides_air_hit = true
+
+[sub_resource type="Resource" id="Resource_profile_tap_forward_x_air_meter"]
+script = ExtResource("6_movement")
+overrides_air_hit = true
+
+[sub_resource type="Resource" id="Resource_profile_tap_back_x_ground"]
+script = ExtResource("6_movement")
+player_travel = SubResource("Resource_tap_back_x_player_mover")
+player_direction = 2
+
+[sub_resource type="Resource" id="Resource_profile_tap_back_x_ground_meter"]
+script = ExtResource("6_movement")
+player_travel = SubResource("Resource_tap_back_x_meter_player_mover")
+player_direction = 2
+fires_projectile = true
+projectile_enemy_mover = SubResource("Resource_16nml")
+
+[sub_resource type="Resource" id="Resource_profile_tap_back_x_air"]
+script = ExtResource("6_movement")
+overrides_air_hit = true
+
+[sub_resource type="Resource" id="Resource_profile_tap_back_x_air_meter"]
+script = ExtResource("6_movement")
+player_travel = SubResource("Resource_tap_back_x_meter_air_player_mover")
+player_direction = 2
+player_hang_at = 1
+fires_projectile = true
+projectile_enemy_mover = SubResource("Resource_m478f")
+overrides_air_hit = true
+
 [resource]
 script = ExtResource("1_tuning")
 combo_window = 0.8
@@ -174,13 +214,13 @@ ground_charged_y_player_mover = SubResource("Resource_ground_y_player_mover")
 ground_charged_y_enemy_mover = SubResource("Resource_ground_y_enemy_mover")
 aerial_charged_y_player_mover = SubResource("Resource_aerial_y_player_mover")
 aerial_charged_y_enemy_spike_mover = SubResource("Resource_aerial_y_enemy_spike_mover")
-tap_forward_x_air_floater = SubResource("Resource_tap_forward_x_air_floater")
-tap_back_x_player_mover = SubResource("Resource_tap_back_x_player_mover")
-tap_back_x_meter_player_mover = SubResource("Resource_tap_back_x_meter_player_mover")
-tap_back_x_meter_projectile_enemy_mover = SubResource("Resource_16nml")
-tap_back_x_meter_air_player_mover = SubResource("Resource_tap_back_x_meter_air_player_mover")
+tap_forward_x_air = SubResource("Resource_profile_tap_forward_x_air")
+tap_forward_x_air_meter = SubResource("Resource_profile_tap_forward_x_air_meter")
+tap_back_x_ground = SubResource("Resource_profile_tap_back_x_ground")
+tap_back_x_ground_meter = SubResource("Resource_profile_tap_back_x_ground_meter")
+tap_back_x_air = SubResource("Resource_profile_tap_back_x_air")
+tap_back_x_air_meter = SubResource("Resource_profile_tap_back_x_air_meter")
 tap_back_x_meter_air_spins = 1
-tap_back_x_meter_air_projectile_enemy_mover = SubResource("Resource_m478f")
 tap_x_meter_flash_energy = 2.7
 tap_x_meter_flash_duration = 0.3
 tap_forward_y_player_mover = SubResource("Resource_tap_forward_y_player_mover")

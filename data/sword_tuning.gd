@@ -7,6 +7,11 @@ class_name SwordTuning extends WeaponTuning
 ## un GRUPO por golpe y un SUBGRUPO por tramo (suelo/aire) con los perfiles Mover/Floater de
 ## cada cuerpo. Un perfil solo mueve/cuelga a su dueno: si un golpe toca a los dos, hay dos
 ## campos (Player y Enemy); si solo toca a uno, hay uno solo. Ver obsidian/Mover y Floater.
+##
+## Los taps de X ya no listan sus Movers y Floaters sueltos: cada variante (gesto x tramo x RT)
+## tiene UN AttackMovementProfile con todo lo que ese golpe le hace a la posicion de los cuerpos,
+## y debajo quedan los knobs de coreografia e input (ventana, vueltas). Ver
+## data/attack_movement_profile.gd. Los taps de Y siguen con campos sueltos hasta que migren.
 
 @export_group("Debug")
 ## Dibuja un wireframe rojo de cada hitbox (BladeHitbox, AirDiscHitbox, VerticalHitbox,
@@ -127,59 +132,40 @@ class_name SwordTuning extends WeaponTuning
 # ============================================================================
 
 @export_group("Tap X adelante — vueltas estaticas", "tap_forward_x_")
+## Que le hace cada variante a la posicion de los cuerpos (ver data/attack_movement_profile.gd).
+## Adelante X son vueltas puras: en suelo no mueve a nadie (perfil vacio o en null), en aire solo
+## cuelga. Ninguna variante dispara proyectil.
+@export var tap_forward_x_ground: AttackMovementProfile
+@export var tap_forward_x_ground_meter: AttackMovementProfile
+@export var tap_forward_x_air: AttackMovementProfile
+@export var tap_forward_x_air_meter: AttackMovementProfile
+
+@export_subgroup("Coreografia e input", "tap_forward_x_")
 ## Segundos para pulsar X despues de un tap que se acerca al objetivo lockeado. 0 desactiva
 ## el gesto. En suelo y aire solo hace vueltas; nunca dispara proyectil.
 @export var tap_forward_x_window := 0.15
 ## Cantidad de vueltas de la variante normal, tanto en suelo como en aire.
 @export_range(1, 8, 1) var tap_forward_x_spins := 2
-
-@export_subgroup("Aire — Floater", "tap_forward_x_air_")
-## Hang de las vueltas aereas. Se pide con el mismo perfil para el Player y para cada
-## enemigo conectado, por eso hay un solo campo. fall_scale 0 congela la gravedad.
-@export var tap_forward_x_air_floater: FloaterSettings
-
-@export_subgroup("RT + meter", "tap_forward_x_meter_")
-## Cantidad de vueltas al pagar RT. No usa Mover ni proyectil en suelo o aire.
+## Cantidad de vueltas al pagar RT.
 @export_range(1, 8, 1) var tap_forward_x_meter_spins := 3
 
-@export_subgroup("RT aire — Floater", "tap_forward_x_meter_air_")
-## Hang del Player durante adelante X + RT aereo, separado de la variante normal.
-@export var tap_forward_x_meter_air_player_floater: FloaterSettings
-## Hang de cada Enemy conectado por adelante X + RT aereo.
-@export var tap_forward_x_meter_air_enemy_floater: FloaterSettings
-
 @export_group("Tap X atras — retroceso", "tap_back_x_")
+## Que le hace cada variante a la posicion de los cuerpos (ver data/attack_movement_profile.gd).
+## Atras X retrocede al Player con `player_travel` orientado PLAYER_BACK; las variantes RT ademas
+## disparan proyectil al cerrar ese recorrido, cada una con su propio launcher.
+@export var tap_back_x_ground: AttackMovementProfile
+@export var tap_back_x_ground_meter: AttackMovementProfile
+@export var tap_back_x_air: AttackMovementProfile
+@export var tap_back_x_air_meter: AttackMovementProfile
+
+@export_subgroup("Coreografia e input", "tap_back_x_")
 ## Segundos para pulsar X despues de un tap que se aleja del objetivo lockeado. 0 desactiva
 ## el gesto. En suelo y aire retrocede horizontalmente al Player.
 @export var tap_back_x_window := 0.15
-
-@export_subgroup("Suelo — Mover", "tap_back_x_")
-## Retroceso terrestre normal del Player. La Espada lo clona y orienta en sentido opuesto al target.
-@export var tap_back_x_player_mover: MoverSettings
-
-@export_subgroup("Aire — Mover y vueltas", "tap_back_x_air_")
-## Retroceso aereo corto de la variante normal. No dispara proyectil.
-@export var tap_back_x_air_player_mover: MoverSettings
 ## Cantidad de vueltas de la variante normal aerea.
 @export_range(1, 8, 1) var tap_back_x_air_spins := 1
-
-@export_subgroup("RT suelo — Mover y launcher", "tap_back_x_meter_")
-## Retroceso terrestre mas rapido. Al terminar dispara el proyectil.
-@export var tap_back_x_meter_player_mover: MoverSettings
-## Launcher aplicado por el proyectil de atras X + RT terrestre.
-@export var tap_back_x_meter_projectile_enemy_mover: MoverSettings
-
-@export_subgroup("RT aire — Mover, vueltas y launcher", "tap_back_x_meter_air_")
-## Retroceso aereo extendido. Al terminar dispara el proyectil.
-@export var tap_back_x_meter_air_player_mover: MoverSettings
 ## Cantidad de vueltas de la variante aerea con RT.
 @export_range(1, 8, 1) var tap_back_x_meter_air_spins := 2
-## Launcher aplicado por el proyectil de atras X + RT aereo.
-@export var tap_back_x_meter_air_projectile_enemy_mover: MoverSettings
-## Floater del Player al terminar el retroceso aereo RT, separado del Mover.
-@export var tap_back_x_meter_air_player_floater: FloaterSettings
-## Floater de cada Enemy conectado por atras X + RT aereo.
-@export var tap_back_x_meter_air_enemy_floater: FloaterSettings
 
 @export_group("Tap X direccional + RT — meter y brillo", "tap_x_meter_")
 ## Barras que cuesta combinar RT con tap adelante/atras + X. 0 desactiva el coste.

@@ -74,6 +74,14 @@ var _active_vertical_hitbox: Hitbox
 ## Pose de mano desde la que arranca la estocada en curso (ver thrust).
 var _thrust_from := Quaternion.IDENTITY
 var _thrust_reach := 0.0
+## Perfil de movimiento del ataque en curso (ver data/attack_movement_profile.gd). Uno solo: la
+## rutina activa es su unica dueña, y el id de rutina define cuando caduca. Reemplaza los ids
+## sueltos que cada arma guardaba por gesto para reconectar sus Movers y Floaters.
+var _movement_profile: AttackMovementProfile
+var _movement_profile_routine_id := -1
+## Los slots que esperan el cierre del recorrido (hang TRAVEL_END, proyectil) se cobran una sola
+## vez; una cancelacion tambien los quema, para no dejar disparos tardios de un recorrido abortado.
+var _movement_profile_travel_done := false
 
 @onready var _hand: Node3D = $Hand
 @onready var _pivot: Node3D = $Hand/Pivot
@@ -103,6 +111,10 @@ func setup(player: Player) -> void:
 		hitbox.stun = tuning.stun
 		hitbox.share_already_hit(_shared_dedup)
 		hitbox.landed.connect(_on_hit)
+	# El cierre del recorrido del Player es lo que detona los slots diferidos del perfil de
+	# movimiento (hang TRAVEL_END y proyectil), asi que el enganche vive aca y no en cada arma.
+	player.mover.mover_finished.connect(_on_player_mover_finished)
+	player.mover.mover_cancelled.connect(_on_player_mover_cancelled)
 	# Hoja y disco aéreo se parrian (decisión de diseño: v1 solo parriaba la hoja; acá
 	# también el disco). El hitbox vertical no (ver Sword.setup).
 	# ponytail: v1 además solo dejaba parriar en la mitad del propio swing (CanParryAt →
@@ -453,6 +465,96 @@ func set_sweet_spot_window(open: bool) -> void:
 func arm_sweet_spot(held_time: float) -> void:
 	sweet_spot = tuning.in_sweet_spot(held_time)
 	set_sweet_spot_window(false)
+
+# ---- Movimiento por ataque (ver data/attack_movement_profile.gd) ----
+## Arma el movimiento de una variante de ataque desde su perfil. Lo que pasa en el acto (recorrido
+## del Player, hang START) sale aca; lo diferido (hang TRAVEL_END, proyectil, hang del enemigo por
+## golpe) lo cobra este mismo nodo cuando llega su momento, leyendo el perfil activo. Un perfil
+## nuevo reemplaza al anterior y el id de rutina lo hace caducar solo.
+##
+## `profile` en null es un caso valido y esperado: significa "este golpe no mueve a nadie".
+func run_attack_movement(profile: AttackMovementProfile, routine_id: int) -> void:
+	_movement_profile = profile
+	_movement_profile_routine_id = routine_id
+	_movement_profile_travel_done = false
+	if profile == null:
+		return
+	if profile.player_travel != null:
+		var travel := _resolve_travel_direction(profile.player_travel, profile.player_direction)
+		if travel != null:
+			_player.request_mover(travel)
+	if profile.player_hang_at == AttackMovementProfile.HangAt.START:
+		_request_player_hang(profile.player_hang)
+
+## Clona el perfil y le reescribe la direccion cuando el ataque la calcula en runtime: avances y
+## retrocesos se orientan contra el facing, que el gesto ya fijo al objetivo lockeado. PROFILE la
+## deja intacta (recorridos verticales). Devuelve null si el facing quedo degenerado.
+func _resolve_travel_direction(settings: MoverSettings, mode: int) -> MoverSettings:
+	if mode == AttackMovementProfile.Direction.PROFILE:
+		return settings
+	var direction := _player.forward()
+	if mode == AttackMovementProfile.Direction.PLAYER_BACK:
+		direction = -direction
+	direction.y = 0.0
+	if direction.length_squared() < 0.0001:
+		return null
+	var resolved := settings.duplicate() as MoverSettings
+	resolved.direction = direction.normalized()
+	return resolved
+
+func _request_player_hang(settings: FloaterSettings) -> void:
+	if settings != null and settings.duration > 0.0:
+		_player.request_float(settings.duration, settings.fall_scale)
+
+## Hang del enemigo que acaba de conectar, si el perfil activo define uno propio. Devuelve false
+## cuando no lo define, para que el arma caiga a su hold generico (air_hit_enemy_floater).
+func request_profile_enemy_hang(hurtbox: Hurtbox) -> bool:
+	if not _movement_profile_is_current():
+		return false
+	var settings := _movement_profile.enemy_on_hit
+	if settings == null or settings.duration <= 0.0:
+		return false
+	var target: Node = hurtbox.owner_node
+	if target is EnemyBase:
+		(target as EnemyBase).request_float(settings.duration, settings.fall_scale)
+	elif target.has_method("request_float"):
+		target.call("request_float", settings.duration, settings.fall_scale)
+	return true
+
+## True si el golpe en curso se hace cargo de la vertical del Player por su cuenta. Lo consultan el
+## corte de momentum aereo y el air-hit-stall generico para no pisarle el Mover/Floater propio.
+func attack_movement_overrides_air_hit() -> bool:
+	return _movement_profile_is_current() and _movement_profile.overrides_air_hit
+
+func _movement_profile_is_current() -> bool:
+	return _movement_profile != null and _movement_profile_routine_id == _routine_id
+
+## El recorrido del Player cerro bien: se cobran los slots que lo esperaban. El hook corre siempre,
+## haya perfil o no, porque las armas lo usan para su propio bookkeeping de combo.
+func _on_player_mover_finished(_reason: int) -> void:
+	_on_attack_movement_ended()
+	if not _movement_profile_is_current() or _movement_profile_travel_done:
+		return
+	_movement_profile_travel_done = true
+	if _movement_profile.player_hang_at == AttackMovementProfile.HangAt.TRAVEL_END:
+		_request_player_hang(_movement_profile.player_hang)
+	if _movement_profile.fires_projectile:
+		_fire_attack_projectile(_movement_profile.projectile_enemy_mover)
+
+## Recorrido abortado (stun, muerte, Mover nuevo, regla del ataque): quema los slots diferidos sin
+## cobrarlos. El hang del enemigo NO se toca: sigue vivo mientras dure la rutina del golpe.
+func _on_player_mover_cancelled(_reason: int) -> void:
+	_movement_profile_travel_done = true
+	_on_attack_movement_ended()
+
+## Hook para que el arma cierre su propio bookkeeping cuando el recorrido del Player termina, sin
+## importar si fue exito o cancelacion.
+func _on_attack_movement_ended() -> void:
+	pass
+
+## Dispara el proyectil del ataque. Solo lo implementan las armas que tienen uno.
+func _fire_attack_projectile(_enemy_mover: MoverSettings) -> void:
+	pass
 
 # ---- Ventana vertical genérica (cono/área que mueve antes de golpear) ----
 ## Cablea un Hitbox vertical: nunca se parria, mueve al objetivo ANTES del daño

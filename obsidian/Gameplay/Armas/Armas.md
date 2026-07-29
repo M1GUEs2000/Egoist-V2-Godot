@@ -56,6 +56,19 @@ Reglas:
 - Lo que comparten varios golpes va a un grupo `Comun a varios golpes`, no se duplica.
 - Todo `@export` de tuning lleva comentario `##` encima (que hace, unidades, efecto): es el tooltip del inspector.
 
+### Un perfil por variante, no un campo por primitiva
+
+Cuando un golpe acumula muchas primitivas, sus campos sueltos dejan de caber: la variante aerea RT de `tap atras + X` llego a ser **cinco campos repartidos en tres subgrupos** mas los ids de rutina que el arma guardaba para reconectarlos al vuelo. A partir de ahi la agrupacion correcta es un `AttackMovementProfile` por **variante** (gesto x tramo x RT), con los knobs de coreografia e input debajo. *(2026-07-29)*
+
+```
+@export_group("Tap X atras", "tap_back_x_")
+  tap_back_x_ground · tap_back_x_ground_meter · tap_back_x_air · tap_back_x_air_meter
+  @export_subgroup("Coreografia e input")
+    tap_back_x_window · tap_back_x_air_spins · tap_back_x_meter_air_spins
+```
+
+El perfil responde una sola pregunta: **que le hace este golpe a la posicion de los cuerpos.** Ventanas, vueltas y coste de meter NO entran — si entra todo, el Resource deja de tener un tema y vuelve a ser una bolsa. Los slots y su semantica estan en [[Mover y Floater]] > Perfil de movimiento por ataque; [[Espada]] lo usa en sus taps de X.
+
 [[Espada]] es la referencia implementada de esta organizacion.
 
 ## Notas

@@ -57,6 +57,7 @@ Arma base / equilibrada. Velocidad media. Sirve para mantener el flujo del comba
 - Los gestos `tap atras/adelante + Y` solo se arman desde input de movimiento neutral y consumen la primera direccion al salir de neutral. Girar el stick de forma continua no debe crear un especial al atravesar esas direcciones. *(2026-07-28)*
 - Los cuatro gestos direccionales de X/Y, sus ventanas y sus rutas de suelo/aire se documentan en [[Taps Direccionales]].
 - En Espada, el meter button (`meter_button`, RT — el mismo que carga el sprint, ver [[Meter]] > El meter button) combinado con `tap adelante/atras + X` cuesta `tap_x_meter_cost` y activa flash y valores mejorados. Los RT aereos tienen Floaters separados por ataque y cuerpo. Adelante X nunca dispara. Atras X dispara con RT; suelo y aire definen launchers independientes dentro de su ataque. *(2026-07-28)*
+- Los taps de X pasaron a `AttackMovementProfile`: uno por variante, en vez de once campos sueltos mas siete ids de rutina que la Espada guardaba para reconectarlos en runtime. Un efecto lateral **deliberado**: los RT aereos, que antes dejaban al enemigo sin ningun hang (su slot propio estaba vacio y el `return` temprano salteaba el fallback), ahora caen al hold generico `air_hit_enemy_floater` de 0.2 s como el resto de los golpes aereos. Todo lo demas es 1:1. *(2026-07-29)*
 - Mantener X despues de cualquier tap X direccional sigue cargando desde ese mismo press: la hoja muestra el progreso durante el tap, pero el cargado no se ejecuta hasta que hayan terminado tanto sus vueltas como su Mover. El float aereo de carga tambien espera ese cierre para no competir por la autoridad vertical. El flash RT usa un overlay HDR rojo-anaranjado sobre todas las mallas reales de `Visual`, igual que el brillo de [[Wall Slide y Wall Jump]]. *(2026-07-28)*
 - El Sweet Spot del X cargado reduce su coste y encadena launcher al conectar; el Y cargado aun no consume ese flag. Ver [[Sweet Spots]].
 - Habilidad especial de X cargado existe parcialmente por ventana de kill.
@@ -110,19 +111,26 @@ El hold simetrico del jugador, `air_hit_player_floater`, vive en `WeaponTuning`:
 
 Ventanas en segundos; `0` desactiva el gesto. El contrato de input esta en [[Taps Direccionales]].
 
-| Gesto | Ventana | Perfiles |
-|---|---|---|
-| Tap adelante + X | `tap_forward_x_window` | Aire normal: `tap_forward_x_air_floater`. Aire RT: `tap_forward_x_meter_air_player_floater` / `tap_forward_x_meter_air_enemy_floater`. Nunca dispara proyectil. |
-| Tap atras + X | `tap_back_x_window` | Suelo RT: Mover + `tap_back_x_meter_projectile_enemy_mover`. Aire RT: Mover/vueltas, Floaters Player/Enemy y launcher propios bajo `tap_back_x_meter_air_*`. |
+**Los taps de X ya no listan Movers y Floaters sueltos.** Cada variante (gesto x tramo x RT) tiene UN `AttackMovementProfile` con todo lo que ese golpe le hace a la posicion de los cuerpos; debajo quedan los knobs de coreografia e input. Ver [[Mover y Floater]] > Perfil de movimiento por ataque. *(2026-07-29)*
 
-El vuelo, dano y visual del proyectil siguen compartidos bajo `tap_x_meter_projectile_*`, pero cada ataque que dispara posee su propio Mover launcher. Un launcher en `null` conserva el proyectil y desactiva solo su elevacion.
-| Tap adelante + Y | `tap_forward_y_window` | `tap_forward_y_player_mover` en suelo y aire, clonado y orientado hacia el target. Al enemigo no lo mueve un Mover: en aire lo desplaza el `push`. |
-| Tap atras + Y | `tap_back_y_window` | Suelo: `tap_back_y_enemy_mover`; el Player no se mueve, por eso no tiene perfil. Aire: `tap_back_y_air_player_mover` / `tap_back_y_air_enemy_mover`. |
+| Gesto | Perfiles | Coreografia e input |
+|---|---|---|
+| Tap adelante + X | `tap_forward_x_ground` · `tap_forward_x_ground_meter` · `tap_forward_x_air` · `tap_forward_x_air_meter` | `tap_forward_x_window` · `tap_forward_x_spins` · `tap_forward_x_meter_spins` |
+| Tap atras + X | `tap_back_x_ground` · `tap_back_x_ground_meter` · `tap_back_x_air` · `tap_back_x_air_meter` | `tap_back_x_window` · `tap_back_x_air_spins` · `tap_back_x_meter_air_spins` |
+| Tap adelante + Y | `tap_forward_y_player_mover` en suelo y aire, clonado y orientado hacia el target. Al enemigo no lo mueve un Mover: en aire lo desplaza el `push`. | `tap_forward_y_window` |
+| Tap atras + Y | Suelo: `tap_back_y_enemy_mover`; el Player no se mueve, por eso no tiene perfil. Aire: `tap_back_y_air_player_mover` / `tap_back_y_air_enemy_mover`. | `tap_back_y_window` |
+
+Los dos perfiles de **adelante X en suelo estan en `null` a proposito**: ese golpe son vueltas puras y no mueve a nadie. Un perfil vacio es la forma de decirlo.
+
+El vuelo, dano y visual del proyectil siguen compartidos bajo `tap_x_meter_projectile_*`, pero cada perfil que dispara trae su propio launcher (`projectile_enemy_mover`). Un launcher en `null` conserva el proyectil y desactiva solo su elevacion.
+
+Los taps de **Y todavia no migraron**: siguen con campos sueltos. Cuando migren hace falta agregarle al perfil un slot `enemy_travel` (hoy `tap_back_y_enemy_mover` y `tap_back_y_air_enemy_mover`), que no se creo antes por no dejar un campo muerto en el inspector.
 
 ## Pendiente H1
 
-- Crear un `AttackMovementProfile` (o equivalente) que agrupe Movers, Floaters y launcher por ataque para reducir cableado manual; es una mejora de mantenibilidad, no de rendimiento.
-- Tunear taps RT.
+- Migrar los taps de **Y** a `AttackMovementProfile` (los de X ya estan). Requiere agregarle al Resource el slot `enemy_travel`.
+- **Correr la verificacion headless del refactor de perfiles** (`--import`, `--quit-after 2` y los dos smokes): quedo commiteado sin verificar. *(2026-07-29)*
+- Tunear taps RT. Cinco slots siguen vacios en `sword_tuning.tres`: los hangs de Player y Enemy de adelante X RT aereo, el recorrido de atras X aereo normal, y el hang de Player de atras X RT aereo.
 - Tunear `sword_tuning.tres`.
 - Validar que hold no dispare tap si se decide carga exclusiva.
 - Confirmar dano distinto por golpes finales/cargados.

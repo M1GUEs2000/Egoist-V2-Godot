@@ -102,6 +102,22 @@ if target is EnemyBase:
 - Espada: `tap_back_x_air_player_mover` y `tap_back_x_air_enemy_mover` suben ambos cuerpos dos unidades y terminan en hang.
 - Mazo: su launcher terrestre usa perfiles propios para Player y Enemy a traves de la misma ventana vertical.
 
+## Perfil de movimiento por ataque
+
+`AttackMovementProfile` (`data/attack_movement_profile.gd`) agrupa, para UNA variante de ataque (gesto x tramo x RT), todo lo que ese golpe le hace a la posicion de los cuerpos. No cambia las primitivas ni quien tiene autoridad: es un contenedor de datos que `WeaponBase.run_attack_movement` traduce a `request_mover` / `request_float`, con los mismos gates de siempre. *(2026-07-29)*
+
+| Slot | Que es |
+|---|---|
+| `player_travel` + `player_direction` | Recorrido del Player. `PROFILE` respeta la direccion del `MoverSettings` (verticales); `PLAYER_FORWARD` / `PLAYER_BACK` la recalculan contra el facing y clonan el perfil. |
+| `player_hang` + `player_hang_at` | Hang del Player, al iniciar el golpe (`START`) o al cerrar el recorrido (`TRAVEL_END`). |
+| `enemy_on_hit` | Hang de cada enemigo que conecta, renovado por golpe. `null` = cae al hold generico del arma. |
+| `fires_projectile` + `projectile_enemy_mover` | Disparo al cerrar el recorrido y el launcher que aplica. Un recorrido cancelado no dispara. |
+| `overrides_air_hit` | El golpe se hace cargo de la vertical del Player: el arma no le aplica encima su air-hit-stall generico. |
+
+Reglas que se mantienen: un slot por cuerpo, un perfil por variante (dos golpes que hoy se sienten igual llevan perfiles separados), y un slot en `null` significa "este golpe no hace eso". Un perfil entero en `null` significa que el golpe no mueve a nadie — es el caso real de tap adelante + X en suelo.
+
+Lo consume [[Espada]] en sus taps de X. Los taps de Y siguen con campos sueltos; cuando migren hace falta agregar el slot `enemy_travel`.
+
 ## Cancelacion y orden
 
 Un Mover nuevo reemplaza al anterior con `Mover.CancelReason.SUPERSEDED`; no inicia el Floater del perfil cancelado. El receptor tambien debe cancelar control previo cuando gana otra autoridad:
@@ -123,7 +139,8 @@ Antes de agregar una mecanica, elegir una sola fuente de autoridad por tramo: Mo
 | `data/mover_settings.gd` | Perfil de trayectoria por ataque. |
 | `player/player.gd` | API y ejecucion de Player. |
 | `enemies/enemy_base.gd` | API, gate de poise y ejecucion del Enemy. |
-| `combat/weapons/weapon_base.gd` | Ventana vertical que coordina Player, Enemy e hitbox. |
+| `combat/weapons/weapon_base.gd` | Ventana vertical que coordina Player, Enemy e hitbox; aplicador de `AttackMovementProfile`. |
+| `data/attack_movement_profile.gd` | Perfil de movimiento de una variante de ataque (agrupa los slots de arriba). |
 
 ## Relacionado
 
