@@ -108,6 +108,34 @@ func _tap_combo() -> void:
 
 `try_queue_combo` es lo que hace que un tap a mitad de cadena encole el golpe siguiente en vez de reiniciarla.
 
+#### Un especial tambien es una secuencia
+
+`AttackSequence` corre las dos formas de golpe, y la diferencia es un bool:
+
+| | Combo | Gesto (`auto_chain`) |
+|---|---|---|
+| Como avanza | un tap por golpe, dentro de `chain_window` | los pasos salen solos, uno tras otro |
+| Ramifica por espera | si | no: no hay espera que medir |
+| Encola taps | si | no, el tap arranca su propio combo |
+| Ejemplos | tap X terrestre, tap X aereo | cargados, secuencias de RT |
+
+O sea que **un cargado puede ser tres animaciones** con tres ventanas de dano, tres `damage_scale` y un Mover distinto en cada tramo, sin una linea de codigo nueva:
+
+```gdscript
+func _hold_x() -> void:
+    cancel_routines()
+    reset_hit_profile()
+    if _player.meter.spend_charged(1, true, tuning.meter_cost_scale(sweet_spot)):
+        run_attack_sequence(&"charged_x", _t().charged_x_sequence)
+```
+
+Lo que **no** es dato y se queda en el arma: si el gesto cuesta barra, si exige estar en el aire, hacia donde apunta, y el fallback cuando no hay barra. Eso se resuelve antes de llamar al runner.
+
+Dos detalles del gesto que no tiene el combo:
+
+- **No lo frena el recovery del combo.** Un move deliberado que ademas paga barra no se lo puede comer la cola de una cadena. El gesto si deja el suyo al terminar.
+- **`recovery` propio.** -1 usa el `combo_recovery` del arma; un tramo de RT que encadena con otra cosa suele querer 0.
+
 ### 5. Las animaciones
 
 Cada golpe se dibuja con un `AttackClip`: que clip, de que segundo a que segundo, cuanto dura de verdad, y **en que fraccion de ese tramo el hitbox esta abierto** (`hitbox_open` / `hitbox_close`, normalizados 0-1). Ese ultimo par es lo que hace que el golpe pegue en el impacto y no durante todo el swing.

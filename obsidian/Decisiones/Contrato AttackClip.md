@@ -86,6 +86,19 @@ Las dos ramas leen **el mismo Resource**: el clip dice que tramo se ve, y el mis
 
 Los dos relojes son el mismo reloj: los dos cuentan los segundos de `duration`. `begin_damage_window` espera `open_delay(duration)`, abre, espera `open_seconds(duration)`, cierra, y espera el sobrante hasta completar el golpe — el gesto siempre dura lo mismo aunque el hitbox cierre antes, porque el recorrido `WINDOW_END` del perfil marca el fin del GESTO, no el fin del daño.
 
+### Un especial tambien es una secuencia
+
+`AttackSequence.auto_chain` (2026-07-30): los pasos salen solos, sin pedir un tap entre golpe y golpe. Era la ultima suposicion de "esto es un combo" que quedaba adentro del runner — con la ventana de encadene siempre abierta, un cargado de tres tramos salia con el primero y cortaba, porque esperaba un input que en un cargado no llega nunca.
+
+Con eso un cargado o una secuencia de RT son N animaciones con N ventanas de dano y un `AttackMovementProfile` por tramo, en vez de un clip suelto con una ventana estirada encima. No sirve `chain_window = 0` para esto: eso ya significa "no se puede encadenar", que es distinto.
+
+Dos reglas que separan al gesto del combo, mas alla del avance:
+
+- **El recovery del combo no lo frena.** Un move deliberado que ademas paga barra no puede comerse la cola de una cadena; y hasta hoy no pasaba, porque los cargados no corrian por el runner. Su propio recovery lo sigue dejando (`AttackSequence.recovery`, -1 = el del arma).
+- **No encola taps.** `try_queue_combo` devuelve false durante un gesto: si devolviera true se tragaria el input, porque el runner del gesto nunca lo mira.
+
+En el mismo cambio, los hooks de cierre de ventana dejaron de ser exclusivos del ultimo paso: los cobra tambien cualquier paso con perfil propio. Sin eso, "el Mover sale en el tercer golpe" era mentira para los recorridos diferidos.
+
 ### Lo que se borro
 
 Las doce funciones del swing procedural (`swing`, `swing_up`, `_swing_axis`, `thrust`, `_set_thrust_progress`, `_play_swing`, `_play_spin`, `_set_spin_angle`, `_hand_rest`, `_set_hand_radius`, `_reset_hand`, `_kill_swing_tween`), su estado, y todo el tuning que solo existia para alimentarlas: el grupo **Mano** entero de `WeaponTuning` (`hand_height`, `hand_radius`, `hand_rest_yaw`), y de las armas `strike_angle`, `combo_swing_angle`, `thrust_reach`, `air_diagonal_yaw`, `air_diagonal_pitch`, `air_finisher_angle`, `charged_fallback_angle`, `smash_angle`, `air_handle_reach`.

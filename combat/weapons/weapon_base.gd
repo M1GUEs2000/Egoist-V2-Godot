@@ -68,6 +68,8 @@ var chain_wait_before_step := 0.0
 var _combo_queued := false
 var _combo_queued_time := 0.0
 var _combo_kind := &""
+## La cadena en curso es un GESTO (AttackSequence.auto_chain), no un combo: no acepta encolar.
+var _combo_auto := false
 var _vertical_window_id := 0
 var _vertical_player_mover: MoverSettings
 var _vertical_enemy_mover: MoverSettings
@@ -221,7 +223,10 @@ func charged_meter_cost(_slot: World.Slot, _held_time: float) -> float:
 ## ventana está abierta (si no, mid-swing, se ignora). Devuelve true si el tap fue
 ## consumido; false si no hay cadena de este tipo corriendo y hay que arrancar una.
 func try_queue_combo(kind: StringName) -> bool:
-	if not _combo_playing or _combo_kind != kind:
+	# Un gesto no encadena por input, así que encolarle un tap se lo TRAGA: devolvería true (input
+	# consumido) y después el runner nunca lo mira. Devolver false deja que el tap arranque su combo,
+	# que es lo que ya pasa hoy cuando un tap interrumpe un cargado.
+	if not _combo_playing or _combo_auto or _combo_kind != kind:
 		return false
 	if _combo_window_open:
 		_combo_queued = true
@@ -304,16 +309,31 @@ func run_combo_chain(kind: StringName, steps: int, step_time: float, chain_windo
 ## impactos, N register_hit y N aplicaciones de stun. El daño total se controla por paso con
 ## AttackStep.damage_scale, no bajando el daño base del arma (que también afecta a los especiales).
 ##
+## CORRE LAS DOS FORMAS DE GOLPE, y la diferencia es un bool del Resource:
+##
+##   - COMBO (`auto_chain` apagado): cada paso se gana con un tap dentro de `chain_window`, y puede
+##     ramificar por espera. Es lo que hacen tap X terrestre y aéreo.
+##   - GESTO (`auto_chain` prendido): los pasos salen solos, uno tras otro. Es lo que permite que un
+##     cargado o una secuencia de RT sean N animaciones con N ventanas de daño y un Mover en el paso
+##     que se quiera, en vez de un clip suelto con una ventana estirada encima.
+##
+## El arma sigue decidiendo lo que NO es dibujo ni daño: si el gesto cuesta barra, si requiere estar
+## en el aire, a dónde apunta. Eso se resuelve antes de llamar acá.
+##
 ## Arrancar una cadena invalida cualquier otra en curso (routine_id compartido).
 func run_attack_sequence(kind: StringName, sequence: AttackSequence) -> void:
 	if sequence == null or sequence.steps.is_empty() or _player == null:
 		return
 	# Recovery post-cadena: completarla deja esta ventana muerta. Cortarla a mitad no la cobra.
-	if World.now() < _combo_recovery_until:
+	# Solo frena COMBOS. Un gesto (auto_chain) es un move deliberado que además ya pagó su barra:
+	# que se lo coma la cola de un combo se siente roto, y hasta hoy no pasaba porque los cargados
+	# no corrían por acá. El gesto sigue dejando SU recovery al terminar, eso no cambia.
+	if not sequence.auto_chain and World.now() < _combo_recovery_until:
 		return
 	var id := begin_routine()
 	_combo_playing = true
 	_combo_kind = kind
+	_combo_auto = sequence.auto_chain
 	chain_wait_before_step = 0.0
 
 	var steps := sequence.steps
@@ -336,8 +356,16 @@ func run_attack_sequence(kind: StringName, sequence: AttackSequence) -> void:
 		var step_end := World.now()
 
 		if finisher:
-			_combo_recovery_until = World.now() + tuning.combo_recovery
+			_combo_recovery_until = World.now() + sequence.recovery_seconds(tuning.combo_recovery)
 			break
+
+		# Un GESTO de varios tramos (un cargado, una secuencia de RT) no pide input entre pasos: ya se
+		# decidió cuando se disparó. Sin esto se quedaba esperando un tap que nunca llega y el gesto
+		# salía con su primer paso nada más. Un gesto tampoco ramifica: no hay espera que medir.
+		if sequence.auto_chain:
+			index += 1
+			chain_step += 1
+			continue
 
 		# Ventana de encadene: esperar el siguiente tap o cortar la cadena.
 		_combo_window_open = true
@@ -363,6 +391,7 @@ func run_attack_sequence(kind: StringName, sequence: AttackSequence) -> void:
 
 	_combo_playing = false
 	_combo_window_open = false
+	_combo_auto = false
 
 ## Segundos de un paso: manda su propio clip, después el default de la cadena, y al final el
 ## swing_time del arma. Así un paso puede ser más lento que sus vecinos sin tocar a nadie más.
@@ -391,7 +420,12 @@ func _begin_sequence_step(step: AttackStep, chain_step: int, finisher: bool, dur
 	# siguiente. Sin esto un paso sin movimiento heredaría el perfil del previo —misma rutina, mismo
 	# id, o sea "vigente"— y el cierre de su ventana cobraría hooks que no le pertenecen.
 	run_attack_movement(step.movement, id)
-	begin_damage_window(duration, finisher, step.clip)
+	# Los hooks de cierre (EnemyTravelAt.WINDOW_END, player_travel_at_window_end) se cobran al cerrar
+	# el último paso Y al cerrar cualquier paso que traiga perfil propio. Lo segundo es lo que hace
+	# que "el Mover sale en el tercer golpe" funcione de verdad: si solo los cobrara el finisher, un
+	# paso intermedio con recorrido diferido lo declararía y no pasaría nada. Un paso sin perfil no
+	# cobra nada aunque se lo pidas — _run_window_end_travel no hace nada si no hay nada declarado.
+	begin_damage_window(duration, finisher or step.movement != null, step.clip)
 	ComboTracker.register_hit()
 	if step.fires_projectile:
 		var launcher: MoverSettings = null
@@ -961,6 +995,7 @@ func begin_routine() -> int:
 	_armed_push = null
 	_combo_playing = false
 	_combo_window_open = false
+	_combo_auto = false
 	_combo_kind = &""
 	return _routine_id
 
