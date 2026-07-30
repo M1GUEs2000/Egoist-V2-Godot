@@ -29,7 +29,7 @@ El objetivo es que el hitbox cuelgue del hueso y que su apertura sea un dato del
 
 | | Trabajo A — Animador | Trabajo B — Secuenciador |
 |---|---|---|
-| Dueño de | `player/player_animation_controller.gd`, `combat/hitbox.gd`, escenas `.tscn` de armas, `combat/attack_clip_player.gd` | `combat/weapons/`, `data/attack_step.gd`, `attack_branch.gd`, `attack_sequence.gd`, tunings de armas |
+| Dueño de | `player/player_animation_controller.gd`, `combat/hitbox.gd`, escenas `.tscn` de armas, `combat/attack_clip_player.gd` | `combat/weapons/`, `data/attack_step.gd`, `attack_sequence.gd`, tunings de armas |
 | Entrega | el hitbox colgado del hueso y un componente que reproduce un tramo de clip avisando cuando abre y cierra | los `AttackStep` / `AttackSequence`, el runner con **una ventana de daño por paso**, y los combos migrados a datos |
 | No toca | nada de `combat/weapons/` ni ningun tuning | nada de `player/` ni el hitbox ni las escenas de armas |
 

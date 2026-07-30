@@ -81,9 +81,12 @@ Una sola excepcion, porque ahi un slot mentiria: **X cargado**. No mueve al Play
 
 ### Los combos tambien son datos
 
-Un `AttackSequence` por cadena, con un `AttackStep` por golpe. Cada paso trae su clip, su duracion, su `damage_scale`, y **su propio `AttackMovementProfile`** — asi que "el Mover sale en el tercer golpe" se declara en el inspector. Las ramas por espera son `AttackBranch`: despues del golpe N, tardar mas de `threshold` reemplaza toda la cola de la cadena. *(2026-07-30)*
+Un `AttackSequence` por cadena, con un `AttackStep` por golpe. Cada paso trae su clip, su duracion, su `damage_scale`, y **su propio `AttackMovementProfile`** — asi que "el Mover sale en el tercer golpe" se declara en el inspector. Las ramas por espera cuelgan del propio paso (`wait_threshold` / `wait_steps`): tardar mas de ese umbral en encadenar reemplaza toda la cola de la cadena. *(2026-07-30)*
 
-Un combo puede tener **varias** ramas: el aereo de [[Espada]] ramifica tras el golpe 1 (vueltas) y tras el 2 (plunge). Solo entra una por corrida — metido en una rama, sus pasos mandan hasta el final.
+Una cadena es un **arbol**, no una linea con una desviacion. Como la rama cuelga del paso, los pasos de una rama pueden declarar la suya, y se puede ramificar tantas veces como golpes tenga el combo: `X X espera X espera X X X` es un paso con rama cuyo primer paso tiene otra. El aereo de [[Espada]] usa dos puntos de espera distintos (tras el golpe 1 a vueltas, tras el 2 al plunge).
+
+> [!info] Por que no vive en la secuencia
+> Las ramas nacieron como un `Array[AttackBranch]` de la secuencia, identificadas por un `after_step` absoluto. Eso obligaba a ramificar **una sola vez por corrida**: al reemplazar la cola el contador de pasos seguia corriendo, asi que la rama declarada mas adelante secuestraba a la que acababa de entrar. Colgando del paso no hay numeracion que colisione y `AttackBranch` dejo de existir. *(2026-07-30)*
 
 > [!warning] Un paso = un golpe
 > Cada `AttackStep` abre y cierra **su propia ventana de daño**. Antes una cadena de N golpes abria UNA ventana estirada sobre todos, asi que el enemigo cobraba una sola vez aunque vieras cuatro impactos — el tap adelante + X ya salia con dos vueltas y un golpe. Migrar multiplica el daño de toda cadena de mas de un paso; para eso esta `damage_scale` por paso, que es mas fino que bajar el daño base del arma (ese tambien afecta a los especiales).

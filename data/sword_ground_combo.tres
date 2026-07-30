@@ -3,13 +3,14 @@
 ; Combo terrestre de la Espada: X X X X.
 ;   sin espera  -> swing, swing, estocada, estocada
 ;   con espera tras el golpe 2 -> los golpes 3-4 pasan a vueltas y el ultimo empuja
-; Los valores vienen de lo que tenia SwordTuning antes de migrar: chain_window 0.8 (era
-; combo_window) y threshold 0.2 (era ground_wait_branch_threshold). step_time en 0 = swing_time.
+;
+; La rama cuelga del PASO 2 (wait_threshold / wait_steps), no de la secuencia: por eso cualquiera
+; de esos pasos podria a su vez abrir otra espera sin tocar codigo. chain_window 0.8 era
+; combo_window; el threshold 0.2 era ground_wait_branch_threshold. step_time en 0 = swing_time.
 
 [ext_resource type="Script" path="res://data/attack_clip.gd" id="1_clip"]
 [ext_resource type="Script" path="res://data/attack_step.gd" id="2_step"]
-[ext_resource type="Script" path="res://data/attack_branch.gd" id="3_branch"]
-[ext_resource type="Script" path="res://data/attack_sequence.gd" id="4_sequence"]
+[ext_resource type="Script" path="res://data/attack_sequence.gd" id="3_sequence"]
 
 [sub_resource type="Resource" id="Resource_clip_a"]
 script = ExtResource("1_clip")
@@ -23,26 +24,6 @@ clip = &"Sword_Regular_B"
 script = ExtResource("1_clip")
 clip = &"Sword_Regular_C"
 
-[sub_resource type="Resource" id="Resource_step_1"]
-script = ExtResource("2_step")
-clip = SubResource("Resource_clip_a")
-choreography = &"ground_swing_l"
-
-[sub_resource type="Resource" id="Resource_step_2"]
-script = ExtResource("2_step")
-clip = SubResource("Resource_clip_b")
-choreography = &"ground_swing_r"
-
-[sub_resource type="Resource" id="Resource_step_3"]
-script = ExtResource("2_step")
-clip = SubResource("Resource_clip_a")
-choreography = &"ground_thrust"
-
-[sub_resource type="Resource" id="Resource_step_4"]
-script = ExtResource("2_step")
-clip = SubResource("Resource_clip_b")
-choreography = &"ground_thrust"
-
 [sub_resource type="Resource" id="Resource_step_spin"]
 script = ExtResource("2_step")
 clip = SubResource("Resource_clip_c")
@@ -54,15 +35,30 @@ clip = SubResource("Resource_clip_c")
 pushes = true
 choreography = &"ground_spin"
 
-[sub_resource type="Resource" id="Resource_branch_wait"]
-script = ExtResource("3_branch")
-after_step = 2
-threshold = 0.2
-steps = Array[Resource]([SubResource("Resource_step_spin"), SubResource("Resource_step_spin_push")])
+[sub_resource type="Resource" id="Resource_step_1"]
+script = ExtResource("2_step")
+clip = SubResource("Resource_clip_a")
+choreography = &"ground_swing_l"
+
+[sub_resource type="Resource" id="Resource_step_2"]
+script = ExtResource("2_step")
+clip = SubResource("Resource_clip_b")
+choreography = &"ground_swing_r"
+wait_threshold = 0.2
+wait_steps = Array[ExtResource("2_step")]([SubResource("Resource_step_spin"), SubResource("Resource_step_spin_push")])
+
+[sub_resource type="Resource" id="Resource_step_3"]
+script = ExtResource("2_step")
+clip = SubResource("Resource_clip_a")
+choreography = &"ground_thrust"
+
+[sub_resource type="Resource" id="Resource_step_4"]
+script = ExtResource("2_step")
+clip = SubResource("Resource_clip_b")
+choreography = &"ground_thrust"
 
 [resource]
-script = ExtResource("4_sequence")
-steps = Array[Resource]([SubResource("Resource_step_1"), SubResource("Resource_step_2"), SubResource("Resource_step_3"), SubResource("Resource_step_4")])
+script = ExtResource("3_sequence")
+steps = Array[ExtResource("2_step")]([SubResource("Resource_step_1"), SubResource("Resource_step_2"), SubResource("Resource_step_3"), SubResource("Resource_step_4")])
 step_time = 0.0
 chain_window = 0.8
-branches = Array[Resource]([SubResource("Resource_branch_wait")])

@@ -5,6 +5,10 @@
 ;   X (espera) X X   -> diagonal, vuelta con hop, vuelta que empuja
 ;   X X (espera) X   -> diagonal, diagonal, PLUNGE: el Player y el golpeado bajan juntos
 ;
+; Cada espera cuelga de SU paso (wait_threshold / wait_steps): la de las vueltas del paso 1, la del
+; plunge del paso 2. Antes vivian en la secuencia con un `after_step` absoluto y solo podia entrar
+; una por corrida; ahora ramificar es local, asi que se pueden encadenar esperas.
+;
 ; Los tres Movers que antes vivian sueltos en SwordTuning (air_wait_spin_player_mover,
 ; air_finisher_enemy_spike_mover, air_plunge_player/enemy_mover) estan ahora dentro del
 ; AttackMovementProfile del paso que los emite. El spike y el plunge salen en WINDOW_END (2):
@@ -17,8 +21,7 @@
 [ext_resource type="Script" path="res://data/attack_movement_profile.gd" id="2_movement"]
 [ext_resource type="Script" path="res://data/attack_clip.gd" id="3_clip"]
 [ext_resource type="Script" path="res://data/attack_step.gd" id="4_step"]
-[ext_resource type="Script" path="res://data/attack_branch.gd" id="5_branch"]
-[ext_resource type="Script" path="res://data/attack_sequence.gd" id="6_sequence"]
+[ext_resource type="Script" path="res://data/attack_sequence.gd" id="5_sequence"]
 
 [sub_resource type="Resource" id="Resource_hop_player_mover"]
 script = ExtResource("1_mover")
@@ -87,22 +90,6 @@ clip = &"Sword_Heavy_Combo"
 start_time = 2.4
 end_time = 2.7
 
-[sub_resource type="Resource" id="Resource_step_1"]
-script = ExtResource("4_step")
-clip = SubResource("Resource_clip_a")
-choreography = &"air_diagonal_l"
-
-[sub_resource type="Resource" id="Resource_step_2"]
-script = ExtResource("4_step")
-clip = SubResource("Resource_clip_b")
-choreography = &"air_diagonal_r"
-
-[sub_resource type="Resource" id="Resource_step_finisher"]
-script = ExtResource("4_step")
-clip = SubResource("Resource_clip_heavy")
-movement = SubResource("Resource_profile_spike")
-choreography = &"air_finisher"
-
 [sub_resource type="Resource" id="Resource_step_hop_spin"]
 script = ExtResource("4_step")
 clip = SubResource("Resource_clip_c")
@@ -121,21 +108,28 @@ clip = SubResource("Resource_clip_heavy")
 movement = SubResource("Resource_profile_plunge")
 choreography = &"air_finisher"
 
-[sub_resource type="Resource" id="Resource_branch_spins"]
-script = ExtResource("5_branch")
-after_step = 1
-threshold = 0.2
-steps = Array[Resource]([SubResource("Resource_step_hop_spin"), SubResource("Resource_step_spin_push")])
+[sub_resource type="Resource" id="Resource_step_finisher"]
+script = ExtResource("4_step")
+clip = SubResource("Resource_clip_heavy")
+movement = SubResource("Resource_profile_spike")
+choreography = &"air_finisher"
 
-[sub_resource type="Resource" id="Resource_branch_plunge"]
-script = ExtResource("5_branch")
-after_step = 2
-threshold = 0.2
-steps = Array[Resource]([SubResource("Resource_step_plunge")])
+[sub_resource type="Resource" id="Resource_step_1"]
+script = ExtResource("4_step")
+clip = SubResource("Resource_clip_a")
+choreography = &"air_diagonal_l"
+wait_threshold = 0.2
+wait_steps = Array[ExtResource("4_step")]([SubResource("Resource_step_hop_spin"), SubResource("Resource_step_spin_push")])
+
+[sub_resource type="Resource" id="Resource_step_2"]
+script = ExtResource("4_step")
+clip = SubResource("Resource_clip_b")
+choreography = &"air_diagonal_r"
+wait_threshold = 0.2
+wait_steps = Array[ExtResource("4_step")]([SubResource("Resource_step_plunge")])
 
 [resource]
-script = ExtResource("6_sequence")
-steps = Array[Resource]([SubResource("Resource_step_1"), SubResource("Resource_step_2"), SubResource("Resource_step_finisher")])
+script = ExtResource("5_sequence")
+steps = Array[ExtResource("4_step")]([SubResource("Resource_step_1"), SubResource("Resource_step_2"), SubResource("Resource_step_finisher")])
 step_time = 0.2
 chain_window = 0.45
-branches = Array[Resource]([SubResource("Resource_branch_spins"), SubResource("Resource_branch_plunge")])

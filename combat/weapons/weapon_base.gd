@@ -319,9 +319,9 @@ func run_attack_sequence(kind: StringName, sequence: AttackSequence) -> void:
 	var steps := sequence.steps
 	var index := 0
 	# Número de golpe dentro de la CADENA, no dentro del array: tras ramificar el índice vuelve a
-	# cero pero la numeración sigue, que es contra lo que se declaran las ramas.
+	# cero pero la numeración sigue. Es lo que ve la coreografía del arma (on_sequence_step), no
+	# lo que decide las ramas — esas cuelgan del paso.
 	var chain_step := 1
-	var branched := false
 
 	while index < steps.size():
 		var step := steps[index]
@@ -351,15 +351,13 @@ func run_attack_sequence(kind: StringName, sequence: AttackSequence) -> void:
 			break
 
 		chain_wait_before_step = maxf(0.0, _combo_queued_time - step_end)
-		# Solo se ramifica UNA vez por corrida: metido en una rama, sus pasos mandan hasta el final.
-		# Es lo que hace el juego hoy — si esperaste tras el primer golpe aéreo entrás a las vueltas
-		# y la espera del plunge ya no se mira.
-		if not branched:
-			var tail := sequence.steps_after(chain_step, chain_wait_before_step)
-			if not tail.is_empty():
-				steps = tail
-				index = -1
-				branched = true
+		# Ramificar es LOCAL al paso que acaba de salir: si declaró una espera y se cumplió, sus
+		# wait_steps reemplazan todo lo que venía después. Como cada paso lleva sus propias ramas,
+		# la cadena puede ramificar tantas veces como golpes tenga (X X espera X espera X X X).
+		if step.wait_threshold > 0.0 and not step.wait_steps.is_empty() \
+				and chain_wait_before_step >= step.wait_threshold:
+			steps = step.wait_steps
+			index = -1
 		index += 1
 		chain_step += 1
 

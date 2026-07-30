@@ -246,12 +246,20 @@ func _run_sword() -> void:
 	assert(ground.steps[1].clip.clip == Sword.ANIM_REGULAR_B)
 	assert(ground.steps[2].clip.clip == Sword.ANIM_REGULAR_A)
 	assert(ground.steps[3].clip.clip == Sword.ANIM_REGULAR_B)
-	assert(ground.branches.size() == 1)
-	var ground_wait: AttackBranch = ground.branches[0]
-	assert(ground_wait.after_step == 2)
-	assert(ground_wait.steps.size() == 2)
-	assert(ground_wait.steps[0].clip.clip == Sword.ANIM_REGULAR_C)
-	assert(ground_wait.steps[1].clip.clip == Sword.ANIM_REGULAR_C)
+	# La rama cuelga del paso que la dispara, no de la secuencia: la espera del terrestre sale del
+	# golpe 2 y solo de ese.
+	assert(is_zero_approx(ground.steps[0].wait_threshold))
+	var ground_wait: AttackStep = ground.steps[1]
+	assert(ground_wait.wait_threshold > 0.0)
+	assert(ground_wait.wait_steps.size() == 2)
+	assert(ground_wait.wait_steps[0].clip.clip == Sword.ANIM_REGULAR_C)
+	assert(ground_wait.wait_steps[1].clip.clip == Sword.ANIM_REGULAR_C)
+	assert(ground_wait.wait_steps[1].pushes)
+	# El aereo encadena DOS esperas en puntos distintos, que es lo que el modelo viejo (un
+	# `after_step` absoluto por secuencia, una rama por corrida) no podia expresar.
+	var air: AttackSequence = (_sword.tuning as SwordTuning).air_combo
+	assert(air.steps[0].wait_steps.size() == 2)  # X espera X X -> vueltas
+	assert(air.steps[1].wait_steps.size() == 1)  # X X espera X -> plunge
 	print("PROBE animaciones_player=espada_mapeo_combo")
 
 	# X cargado: Sword_Dash completo escalado a la duracion del dash.

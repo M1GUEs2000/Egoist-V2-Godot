@@ -48,3 +48,22 @@ class_name AttackStep extends Resource
 ## Nacio como nombre de un tween de mano en el swing procedural; al morir ese swing quedo solo la
 ## parte mecanica. Es un escape hatch: si algo se puede expresar como campo del paso, va como campo.
 @export var choreography: StringName = &""
+
+@export_group("Rama por espera")
+## Segundos que hay que tardar en encadenar DESPUES de este golpe para desviar la cadena. Se mide
+## entre el fin de este paso y el tap que pide el siguiente, siempre dentro de `chain_window`:
+## pasarse de la ventana no ramifica, corta la cadena. 0 = este golpe no ramifica.
+@export var wait_threshold := 0.0
+
+## Los pasos que reemplazan a TODO lo que venia despues de este golpe si se cumplio la espera. No se
+## agregan: sustituyen, asi que una rama puede alargar o acortar la cadena.
+##
+## La rama cuelga del PASO y no de la secuencia, y por eso cada uno de estos pasos puede a su vez
+## declarar la suya: `X X espera X espera X X X` es un paso con rama cuyo primer paso tiene otra
+## rama. Antes las ramas vivian en la secuencia con un `after_step` absoluto, y eso obligaba a
+## ramificar UNA sola vez por corrida — con dos puntos de espera los numeros colisionaban y la rama
+## tardia secuestraba a la temprana. Colgando del paso no hay numeracion que colisione.
+##
+## Es autorreferencia (un AttackStep que contiene AttackSteps), no un ciclo entre dos clases: el
+## grafo es un arbol y Godot lo serializa anidando sub-recursos.
+@export var wait_steps: Array[AttackStep] = []

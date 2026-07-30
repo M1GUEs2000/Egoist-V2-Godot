@@ -387,8 +387,9 @@ func _ready() -> void:
 	var sword_hurtbox := _make_hurtbox(sword_probe)
 	# El finisher de la rama espera aérea ahora es un AttackStep con pushes = true: quien arma el
 	# push es el runner de secuencias, no la coreografía del arma.
+	# La rama de vueltas cuelga del paso 1 (X espera X X); su segundo golpe es el que empuja.
 	var air_combo := (sword.tuning as SwordTuning).air_combo
-	var push_step: AttackStep = air_combo.branches[0].steps[1]
+	var push_step: AttackStep = air_combo.steps[0].wait_steps[1]
 	assert(push_step.pushes)
 	var sword_id := sword.begin_routine()
 	sword._begin_sequence_step(push_step, 3, true, sword.tuning.air_step_time, sword_id)
