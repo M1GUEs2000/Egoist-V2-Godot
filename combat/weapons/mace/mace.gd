@@ -102,15 +102,6 @@ func _tap_combo() -> void:
 
 func _begin_ground_step(step: int, finisher: bool, _wait_branch: bool) -> void:
 	_play_ground_step_visual(step, finisher)
-	match step:
-		1:
-			var half := _t().combo_swing_angle
-			_play_swing(Quaternion(Vector3.UP, deg_to_rad(-half)), Quaternion(Vector3.UP, deg_to_rad(half)))
-		2:
-			var half := _t().combo_swing_angle
-			_play_swing(Quaternion(Vector3.UP, deg_to_rad(half)), Quaternion(Vector3.UP, deg_to_rad(-half)))
-		_:
-			_play_smash()
 	_player.attack_step(tuning.swing_time)
 	_player.hold_airborne_for_attack()
 
@@ -125,14 +116,6 @@ func _play_ground_step_visual(step: int, finisher: bool) -> void:
 		_:
 			segment = HEAVY_SMASH_FINAL if finisher else HEAVY_SMASH_MID
 	play_visual_clip(ANIM_HEAVY, segment.x, segment.y, tuning.swing_time)
-
-func _play_smash() -> void:
-	# Martillazo DESCENDENTE: arranca arriba-atras (-smash_angle) y remata clavando en el punto
-	# bajo-al-frente (0). Antes era un pendulo simetrico (-x..+x): el punto mas bajo caia a MITAD
-	# del swing y el mazo volvia a subir proyectandose arriba-adelante, por eso no parecia un
-	# smash (verificado en world/mace_smash_trace: puntaY -0.14 -> -1.32 -> -0.57, puntaZ -2.28).
-	var up := _t().smash_angle
-	_play_swing(Quaternion(Vector3.RIGHT, deg_to_rad(-up)), Quaternion.IDENTITY)
 
 # ---- Personalidad X: cargado (vueltas, 3 niveles) ----
 
@@ -166,7 +149,6 @@ func _run_charged_spins(spin_count: int) -> void:
 		# Una vuelta de clip por vuelta mecánica (el tramo se repite según el nivel de carga).
 		play_visual_clip(ANIM_HEAVY, HEAVY_CHARGED_X_SPIN.x, HEAVY_CHARGED_X_SPIN.y,
 				t.charged_spin_time)
-		_play_spin(t.charged_spin_time)
 		var finisher := spin == spin_count
 		_set_hitbox_stun(t.charged_freeze_stun if (is_sweet_spot and not finisher) else t.charged_final_stun)
 		_blade_hitbox.damage = t.charged_hit_damage if finisher else (0.0 if is_sweet_spot else 1.0)
@@ -207,7 +189,6 @@ func _hold_y() -> void:
 	# el final sigue lanzando lo que quede en el area.
 	play_visual_clip(ANIM_HEAVY, HEAVY_CHARGED_Y_GROUND.x, HEAVY_CHARGED_Y_GROUND.y,
 			tuning.swing_time)
-	swing_up(t.strike_angle)
 	_player.force_dash(_player.forward(), t.ground_y_dash_distance, t.ground_y_dash_duration, false)
 	# moves_player = false: "eleva enemigos pero no al jugador" (bóveda Mazo). El enemigo golpeado
 	# pide su propio Mover UP + Floater (ground_y_launcher_enemy_mover); el jugador no recibe perfil.
@@ -227,11 +208,15 @@ func _aerial_tap() -> void:
 
 ## Golpe 1: jab con el mango, sin push (golpe de preparacion). Golpe 2 (finisher): cabezazo
 ## horizontal que arma el push a mitad del swing.
+##
+## Era el UNICO gesto del juego sin clip: su dibujo salia entero de los tweens procedurales, asi que
+## al morir esos tweens se quedaba sin animacion. Reusa los dos tramos del combo terrestre como
+## placeholder — el Mazo esta en E2 y su set aereo propio no existe todavia (ver boveda Animacion
+## Mazo). Se ve como un combo terrestre en el aire, que es feo pero honesto; antes no se veia nada.
 func _begin_air_step(step: int, _finisher: bool, _wait_branch: bool) -> void:
-	if step == 1:
-		thrust(_t().air_handle_reach)
-	else:
-		swing(_t().combo_swing_angle)
+	var segment := HEAVY_STEP_1 if step == 1 else HEAVY_STEP_2
+	play_visual_clip(ANIM_HEAVY, segment.x, segment.y, tuning.swing_time)
+	if step != 1:
 		arm_push(tuning.push, tuning.swing_time * tuning.push_at)
 	_player.attack_step(tuning.swing_time)
 	_player.notify_aerial_attack(tuning.swing_time)
@@ -256,7 +241,6 @@ func _aerial_charged_x(is_sweet_spot: bool) -> void:
 		# tramo propio; decidido al implementar, ver bóveda Animacion Mazo).
 		play_visual_clip(ANIM_HEAVY, HEAVY_CHARGED_X_SPIN.x, HEAVY_CHARGED_X_SPIN.y,
 				t.charged_spin_time)
-		_play_spin(t.charged_spin_time)
 		_set_hitbox_stun(t.air_freeze_stun)
 		begin_damage_window(t.charged_spin_time)
 		ComboTracker.register_hit()

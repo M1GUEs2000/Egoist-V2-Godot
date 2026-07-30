@@ -16,16 +16,10 @@ class_name MaceTuning extends WeaponTuning
 ## agrega los 2 smashes extra (bóveda: "tres smash verticales" en vez de uno solo).
 @export var ground_wait_branch_threshold := 0.35
 
-@export_group("Swings (ángulos)")
-## Medio arco de los swings 1-2 del combo terrestre.
-@export var combo_swing_angle := 65.0
-## Cuanto arranca el martillazo por ENCIMA del punto de impacto, en grados (finisher terrestre
-## y sus repeticiones en la rama espera). El smash baja desde -smash_angle (arriba-atras) y
-## remata clavando abajo-al-frente; mas alto = mas recorrido/telegraph, el impacto siempre
-## termina en el punto bajo.
-@export var smash_angle := 100.0
-## Barrido del golpe Y básico (tap y launcher).
-@export var strike_angle := 130.0
+# El grupo "Swings (ángulos)" (combo_swing_angle, smash_angle, strike_angle) se borró con el swing
+# procedural: el arco de cada golpe lo dibuja su tramo de Sword_Heavy_Combo, no un ángulo. Los
+# tramos siguen hardcodeados como constantes en mace.gd; el Mazo pasa a datos (AttackSequence)
+# cuando salga de E2.
 
 @export_group("X cargado (vueltas, 3 niveles)")
 ## Segundos sostenidos MÁS ALLÁ de hold_threshold que suman un nivel de carga.
@@ -64,9 +58,8 @@ class_name MaceTuning extends WeaponTuning
 # El golpe 2 del tap X aereo arma el `push` heredado de WeaponTuning (mismo campo que usa el
 # finisher aereo de la Espada), con mas alcance/altura aca: arma de mas knockback. El golpe 1
 # es un jab con el mango, sin push. El golpe final del X cargado usa su propio charged_final_push.
-## Alcance del jab con el mango (golpe 1 del combo aereo X), en metros: la mano extiende el
-## brazo esta distancia hacia adelante. Golpe corto de preparacion, sin push.
-@export var air_handle_reach := 1.2
+# air_handle_reach (el alcance del jab con el mango) murio con la estocada procedural: el golpe 1
+# del combo aereo reusa por ahora un tramo del combo terrestre (ver Mace._begin_air_step).
 ## Caída forzada del X cargado aéreo (ground pound). Escritura directa de vertical_velocity
 ## sancionada por el plan (obsidian/Plan Autoridad Vertical, fase F5): es una caida recta, no
 ## un arco balistico, y no depende del bouncer.

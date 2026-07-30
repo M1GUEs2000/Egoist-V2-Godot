@@ -14,10 +14,10 @@ hito: H1
 
 Superficie congelada entre los dos trabajos que corrieron en paralelo sobre el sistema de ataques. **Ninguno de los dos lados edita este contrato sin avisar al otro**: si cambia un campo se rompen los dos a la vez y en silencio, porque los `.tres` serializan por nombre. *(2026-07-30)*
 
-> [!success] Los dos trabajos aterrizaron
-> **A (animador)** en `feat/animador`, **B (secuenciador)** en `main`, integrados el 2026-07-30. Los dos escribieron `data/attack_clip.gd` por separado y las dos versiones declararon los mismos campos, tipos y defaults: el contrato aguanto. Se conservo la de B, que ademas trae `open_seconds()` / `open_delay()`.
+> [!success] Cerrado
+> **A (animador)** y **B (secuenciador)** aterrizaron y estan empalmados (2026-07-30). Los dos escribieron `data/attack_clip.gd` por separado y las dos versiones declararon los mismos campos, tipos y defaults: el contrato aguanto. Se conservo la de B, que ademas trae `open_seconds()` / `open_delay()`.
 >
-> Falta el **empalme**, que no era de ninguno de los dos: ver "Lo que falta" abajo.
+> El swing procedural **ya no existe**. Ver "Como quedo" abajo.
 
 ## Por que existe
 
@@ -61,20 +61,41 @@ Dos decisiones que no son arbitrarias:
 
 El componente **no** decide daño, no abre hitboxes por su cuenta y no sabe que arma lo usa: reproduce el tramo y avisa. Quien conecta esas señales a una ventana de daño es el secuenciador.
 
-## Lo que falta (el empalme)
+## Como quedo el empalme
 
-Cada mitad hace lo suyo pero todavia no se hablan. Hoy el camino es:
+El `AttackClip` viaja **entero**. `visual_clip_started` pasa a llevar el Resource en vez de cuatro floats sueltos, y `PlayerAnimationController` se lo entrega tal cual a `AttackClipPlayer` en vez de reconstruir uno (que era donde se perdian `hitbox_open` y `hitbox_close`).
 
-`run_attack_sequence` → `play_visual_clip(clip, start, end, duration)` → señal `visual_clip_started` → `PlayerAnimationController` **reconstruye** un `AttackClip` → `AttackClipPlayer`.
+Camino completo de un golpe de combo:
 
-Ese round-trip pierde `hitbox_open` y `hitbox_close`: el controller arma el clip con los defaults 0 y 1, asi que la ventana de daño **sigue durando todo el golpe** y sigue abriendola `begin_damage_window` por temporizador. Lo que queda:
+```
+run_attack_sequence
+  → _begin_sequence_step
+      → play_attack_clip(step.clip, duration)   ── dibujo ──→ AttackClipPlayer
+      → begin_damage_window(duration, ..., step.clip)  ── daño
+```
 
-1. Que el `AttackClip` viaje entero en vez de reconstruirse — señal que lleve el Resource, no cuatro floats.
-2. Conectar `hitbox_should_open` / `hitbox_should_close` a `Hitbox.begin_swing()` / `end_swing()` y sacarle a `begin_damage_window` la parte de abrir el hitbox (los ganchos de perfil de movimiento se quedan donde estan).
-3. Borrar el swing procedural de `WeaponBase`: `swing`, `swing_up`, `_swing_axis`, `thrust`, `_set_thrust_progress`, `_play_swing`, `_play_spin`, `_set_spin_angle`, `_hand_rest`, `_set_hand_radius`, `_reset_hand`, `_kill_swing_tween`, su llamada desde `_ready()` y el estado asociado. Con eso muere tambien `AttackStep.choreography` y el `match` de `Sword.on_sequence_step`.
-4. Recien ahi entra el **RT attack sequence**.
+Las dos ramas leen **el mismo Resource**: el clip dice que tramo se ve, y el mismo clip dice en que fraccion de ese tramo el hitbox esta abierto.
 
-Mientras tanto el swing procedural sigue vivo pero mueve un `Hand/Pivot` **vacio**: no mueve ni el arma visible ni su hitbox. Es inofensivo, no un bug.
+### La ventana de daño no viene por señal
+
+`AttackClipPlayer` nacio con `hitbox_should_open` / `hitbox_should_close` para que el arma colgara su ventana de la animacion. **Se quitaron.** Tres razones:
+
+1. La ventana la tiene que abrir el arma igual, porque los especiales todavia no tienen `AttackClip` y no pasan por el reproductor. Serian dos caminos para lo mismo.
+2. `play_attack_clip` emite la apertura **en el acto** cuando `hitbox_open` es 0, que es el caso normal. El arma no llega a conectarse: se perderia el golpe entero. Race real, no teorica.
+3. El reproductor es uno solo, colgado del Player, y no sabe que arma pidio el clip.
+
+Los dos relojes son el mismo reloj: los dos cuentan los segundos de `duration`. `begin_damage_window` espera `open_delay(duration)`, abre, espera `open_seconds(duration)`, cierra, y espera el sobrante hasta completar el golpe — el gesto siempre dura lo mismo aunque el hitbox cierre antes, porque el recorrido `WINDOW_END` del perfil marca el fin del GESTO, no el fin del daño.
+
+### Lo que se borro
+
+Las doce funciones del swing procedural (`swing`, `swing_up`, `_swing_axis`, `thrust`, `_set_thrust_progress`, `_play_swing`, `_play_spin`, `_set_spin_angle`, `_hand_rest`, `_set_hand_radius`, `_reset_hand`, `_kill_swing_tween`), su estado, y todo el tuning que solo existia para alimentarlas: el grupo **Mano** entero de `WeaponTuning` (`hand_height`, `hand_radius`, `hand_rest_yaw`), y de las armas `strike_angle`, `combo_swing_angle`, `thrust_reach`, `air_diagonal_yaw`, `air_diagonal_pitch`, `air_finisher_angle`, `charged_fallback_angle`, `smash_angle`, `air_handle_reach`.
+
+`AttackStep.choreography` **sobrevive** pero cambio de significado: ya no nombra un tween, nombra una FAMILIA de golpe para las mecanicas que no son dato (sostener al Player en el aire durante el combo terrestre, estirar los hitboxes en V del finisher aereo).
+
+> [!warning] El combo aereo del Mazo era el unico gesto sin clip
+> Su dibujo salia entero de los tweens, asi que al borrarlos se quedaba sin animacion. Reusa por ahora los dos tramos del combo terrestre como placeholder: se ve como un combo terrestre en el aire. El Mazo esta en E2 y su set aereo propio no existe. Ver `Mace._begin_air_step`.
+
+`Hand/Pivot` sigue en las escenas de armas: quedo como percha de lo que se crea en runtime (las motas de sweet spot), que el controller tambien reparenta al hueso.
 
 ## Lo que cuesta
 

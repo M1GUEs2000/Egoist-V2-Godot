@@ -1,19 +1,27 @@
 class_name AttackClipPlayer extends Node
-## Reproduce un tramo de animación y emite los límites temporales declarados por AttackClip.
-## No conoce armas, daño ni Hitbox: sus señales son la única salida de gameplay.
-
-signal hitbox_should_open
-signal hitbox_should_close
+## Reproduce el tramo de animación que declara un AttackClip: recorta de `start_time` a `end_time`
+## y estira o comprime el tramo con speed_scale para que entre en `duration`. No conoce armas, daño
+## ni Hitbox.
+##
+## POR QUE NO ABRE EL HITBOX. Nació con dos señales, `hitbox_should_open` y `hitbox_should_close`,
+## para que el arma colgara su ventana de daño de la animación. Se quitaron al integrarlo:
+##
+##   1. La ventana la tiene que abrir el arma igual, porque los gestos que todavía no tienen
+##      AttackClip (todos los especiales) no pasan por acá. Dos caminos para lo mismo.
+##   2. `play_attack_clip` emite la apertura EN EL ACTO cuando `hitbox_open` es 0, que es el caso
+##      normal. El arma nunca llegaría a tiempo a conectarse: se perdería el golpe entero.
+##   3. Este nodo es uno solo, colgado del Player, y no sabe qué arma pidió el clip. Habría que
+##      enrutar la señal de vuelta al arma correcta.
+##
+## Los dos relojes son el mismo reloj: este cuenta `_elapsed` en segundos y WeaponBase espera con
+## timers los mismos segundos, los dos derivados de `duration`. No hay de qué desincronizarse.
+## WeaponBase.begin_damage_window lee `hitbox_open`/`hitbox_close` del mismo AttackClip.
 signal clip_finished
 
 var _animation_player: AnimationPlayer
 var _playing := false
 var _elapsed := 0.0
 var _duration := 0.0
-var _hitbox_open_at := 0.0
-var _hitbox_close_at := 0.0
-var _hitbox_opened := false
-var _hitbox_closed := false
 var _playback_id := 0
 
 func _ready() -> void:
@@ -22,12 +30,9 @@ func _ready() -> void:
 func _process(delta: float) -> void:
 	if not _playing:
 		return
-	var id := _playback_id
 	_elapsed = minf(_elapsed + delta, _duration)
-	if not _emit_due_hitbox_signals(id):
-		return
 	if _elapsed >= _duration:
-		_finish(id)
+		_finish(_playback_id)
 
 func play_attack_clip(c: AttackClip) -> void:
 	cancel()
@@ -47,16 +52,10 @@ func play_attack_clip(c: AttackClip) -> void:
 			else clampf(c.end_time, start, animation.length)
 	var span := end - start
 	var real_duration := c.duration if c.duration > 0.0 else span
-	var open_normalized := clampf(c.hitbox_open, 0.0, 1.0)
-	var close_normalized := clampf(c.hitbox_close, open_normalized, 1.0)
 
 	_playback_id += 1
 	_elapsed = 0.0
 	_duration = maxf(0.0, real_duration)
-	_hitbox_open_at = _duration * open_normalized
-	_hitbox_close_at = _duration * close_normalized
-	_hitbox_opened = false
-	_hitbox_closed = false
 	_playing = true
 
 	_animation_player.speed_scale = span / _duration if _duration > 0.0 else 1.0
@@ -64,45 +63,24 @@ func play_attack_clip(c: AttackClip) -> void:
 	_animation_player.seek(start, true)
 	set_process(true)
 
-	var id := _playback_id
-	if not _emit_due_hitbox_signals(id):
-		return
 	if _duration <= 0.0:
-		_finish(id)
+		_finish(_playback_id)
 
 func cancel() -> void:
 	_playback_id += 1
-	var should_close := _playing and _hitbox_opened and not _hitbox_closed
 	_playing = false
 	_elapsed = 0.0
 	_duration = 0.0
-	_hitbox_closed = should_close or _hitbox_closed
 	set_process(false)
 	if _animation_player != null:
 		_animation_player.speed_scale = 1.0
 		_animation_player.stop()
-	if should_close:
-		hitbox_should_close.emit()
 
 ## Inyección interna usada por PlayerAnimationController. No forma parte del contrato
 ## que consumen las armas.
 func _bind_animation_player(animation_player: AnimationPlayer) -> void:
 	cancel()
 	_animation_player = animation_player
-
-## False indica que un receptor inició o canceló otra reproducción durante una señal.
-func _emit_due_hitbox_signals(id: int) -> bool:
-	if not _hitbox_opened and _elapsed >= _hitbox_open_at:
-		_hitbox_opened = true
-		hitbox_should_open.emit()
-		if id != _playback_id:
-			return false
-	if not _hitbox_closed and _elapsed >= _hitbox_close_at:
-		_hitbox_closed = true
-		hitbox_should_close.emit()
-		if id != _playback_id:
-			return false
-	return true
 
 func _finish(id: int) -> void:
 	if id != _playback_id or not _playing:

@@ -49,7 +49,8 @@ Arma base / equilibrada. Velocidad media. Sirve para mantener el flujo del comba
 
 ## Estado Godot
 
-- Implementada como arma procedural hasta H3.
+- El swing procedural murio el 2026-07-30: el hitbox cuelga del hueso de la mano y el arco de
+  cada golpe lo dibuja su `AttackClip`. Ver [[Contrato AttackClip]].
 - Los swings mueven la mano alrededor del jugador (ver Mano orbital en [[Combate]]); la hoja va rigida, apuntando hacia afuera. *(2026-07-09)*
 - Tap X/Y usa la misma cadena de combo terrestre/aérea; solo el cargado bifurca por slot. *(2026-07-09)*
 - `SwordTuning` controla ventanas, angulos, dash cargado, launcher y el `push` (arco del empuje armado por `arm_push`). *(2026-07-09)*
@@ -71,12 +72,6 @@ Arma base / equilibrada. Velocidad media. Sirve para mantener el flujo del comba
 
 `SwordTuning` (instancia `data/sword_tuning.tres`) sigue la organizacion por tipo de ataque de [[Armas]]: categoria por familia, grupo por golpe, subgrupo por tramo y un campo por cuerpo. La Espada no escribe velocidad vertical ni llama verbos especializados: pide perfiles `MoverSettings`/`FloaterSettings` a Player y EnemyBase, que son los duenos de su fisica (ver [[Mover y Floater]]).
 
-### Comun a varios golpes
-
-| Knob | Que mueve |
-|---|---|
-| `strike_angle` | Arco del golpe Y basico. Lo comparten el launcher terrestre, la Y cargada aerea y el tap atras + X. |
-
 ### Ataques normales (tap)
 
 Las dos cadenas son **datos**: `ground_combo` y `air_combo` apuntan a `data/sword_ground_combo.tres` y `data/sword_air_combo.tres`, un `AttackSequence` cada uno. Ahi viven los pasos, sus clips, su dano, sus ramas y los Movers de cada beat. Ver [[Armas]] > Los combos tambien son datos. *(2026-07-30)*
@@ -85,10 +80,6 @@ Las dos cadenas son **datos**: `ground_combo` y `air_combo` apuntan a `data/swor
 |---|---|
 | `ground_combo` | Cadena terrestre: 4 pasos (A, B, A, B), ventana de encadene `0.8`, rama tras el golpe 2 con umbral `0.2` que reemplaza los golpes 3-4 por dos vueltas, la ultima con `pushes`. |
 | `air_combo` | Cadena aerea: 3 pasos (A, B, tramo de Heavy), paso de `0.2` s, ventana `0.45`, y DOS ramas — tras el golpe 1 a vueltas (la primera con el hop del Player), tras el golpe 2 al plunge. |
-| `combo_swing_angle` | Arco de los swings 1-2 del combo terrestre. *Transitorio: muere con el swing procedural.* |
-| `thrust_reach` | Metros que el brazo extiende sobre `hand_radius` en el pico de la estocada. *Transitorio.* |
-| `air_diagonal_yaw` / `air_diagonal_pitch` | Diagonal aerea: cuanto cruza la mano por delante y cuanto baja al cruzar. Igualarlos deja la diagonal simetrica; subir el pitch la pica, bajarlo la aplana. *Transitorio.* |
-| `air_finisher_angle` | Arco del hachazo vertical del finisher aereo. *Transitorio.* |
 | `air_finisher_hitbox_v_scale` | Estira verticalmente los hitboxes del hachazo mientras dura el golpe: alto de la hoja y disco aereo como capsula. Aplica al finisher, al plunge y al tap atras + Y aereo, que comparten coreografia. |
 | `air_hit_enemy_floater` | Hold del Enemy al conectarle un golpe aereo normal (`request_float`). Se renueva por golpe (`max`), asi queda pegado durante el combo y cae al dejar de golpearlo. Gate: enemigo aereo y quebrado. Excluye el cargado Y, que ya le da su propio spike. |
 

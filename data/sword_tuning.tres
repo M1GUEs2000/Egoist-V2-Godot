@@ -205,7 +205,6 @@ tap_back_y_air = SubResource("Resource_profile_tap_back_y_air")
 swing_time = 0.4
 combo_recovery = 0.2
 stun = SubResource("Resource_swordstun")
-hand_radius = 1.0
 air_step_time = 0.2
 air_wait_branch_threshold = 0.2
 air_hit_player_floater = SubResource("Resource_air_hit_player_floater")

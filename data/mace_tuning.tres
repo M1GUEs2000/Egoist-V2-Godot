@@ -48,7 +48,6 @@ gravity = -40.0
 
 [resource]
 script = ExtResource("1_tuning")
-smash_angle = 50.0
 charged_spin_time = 0.4
 charged_freeze_stun = SubResource("Resource_macefreeze")
 charged_final_stun = SubResource("Resource_macestun")
@@ -57,7 +56,6 @@ ground_y_dash_distance = 4.0
 ground_y_dash_duration = 0.15
 ground_y_launcher_size = Vector3(5, 2, 5)
 ground_y_launcher_enemy_mover = SubResource("Resource_ground_y_launcher_enemy_mover")
-air_handle_reach = 1.0
 air_smash_fall_speed = 25.0
 air_freeze_stun = SubResource("Resource_maceairfreeze")
 swing_time = 0.5

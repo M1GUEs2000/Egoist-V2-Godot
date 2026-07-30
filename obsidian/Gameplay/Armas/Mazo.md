@@ -91,8 +91,12 @@ Arma de mas dano. Controla masas. Tiene bastante knockback. Tumba a los enemigos
   veces y cada golpe pesa mas. *(2026-07-21)*
 - "Congelar" no es un verbo nuevo: reusa el sistema de stun existente
   (`StunSettings` con power/duración altos, mode STILL) — ver [[Combate]].
-- Las primitivas de swing procedural (`swing`/`swing_up`/`_play_spin`/`thrust`) viven en
-  `weapon_base.gd`, compartidas con la Espada. Cada arma pone solo su coreografía.
+- Las primitivas de swing procedural se borraron el 2026-07-30 (ver [[Contrato AttackClip]]): el
+  arco de cada golpe lo dibuja su tramo de `Sword_Heavy_Combo`. Con ellas se fueron
+  `combo_swing_angle`, `smash_angle`, `strike_angle` y `air_handle_reach` del tuning.
+- **El combo aereo se quedo sin animacion propia**: era el unico gesto del juego cuyo dibujo salia
+  solo de los tweens. Reusa por ahora los dos tramos del combo terrestre, asi que se ve como un
+  combo terrestre en el aire. Set aereo propio pendiente.
 - `mace.tscn`: visual de palo con bola, sin `ChargedDashHitbox` (el Mazo no usa dash
   cargado ofensivo tipo Espada). `LauncherHitbox` es el area terrestre del Y cargado;
   `AirDiscHitbox` es el disco para golpes aereos normales. `AirSlamHitbox` (el AOE del Y aereo con

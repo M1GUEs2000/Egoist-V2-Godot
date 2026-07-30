@@ -30,11 +30,6 @@ class_name SwordTuning extends WeaponTuning
 ## debug; en release no hace nada. Ver combat/hitbox.gd.
 @export var debug_show_hitboxes := true
 
-@export_group("Comun a varios golpes")
-## Medio arco del golpe Y basico, en grados. Lo comparten el launcher terrestre (Y cargado),
-## la Y cargada aerea y el tap atras + X, que reusan el mismo swing vertical.
-@export var strike_angle := 150.0
-
 # ============================================================================
 @export_category("Ataques normales (tap)")
 # ============================================================================
@@ -46,16 +41,6 @@ class_name SwordTuning extends WeaponTuning
 ## son forma de la cadena, no personalidad del arma.
 @export var ground_combo: AttackSequence
 
-@export_subgroup("Coreografia procedural")
-# TRANSITORIO — estos angulos mueven la espada INVISIBLE que orbita al Player. Mueren cuando el
-# hitbox cuelgue del hueso de la mano y el arco pase a salir de la propia animacion.
-## Medio arco de los swings 1-2 del combo terrestre, en grados (de -esto a +esto).
-@export var combo_swing_angle := 70.0
-## Metros que el brazo extiende por encima de hand_radius en el pico de la estocada
-## (golpes 3-4 sin espera). La mano sale hasta ahi y vuelve; la hoja no rota, avanza
-## porque la mano se aleja.
-@export var thrust_reach := 1.0
-
 @export_group("Combo aereo (X X X)")
 ## La cadena aerea como datos, con sus DOS ramas de espera: tras el golpe 1 se va a vueltas
 ## (X espera X X) y tras el golpe 2 al plunge (X X espera X). Los Movers del spike, del hop y del
@@ -64,15 +49,7 @@ class_name SwordTuning extends WeaponTuning
 ## suelto no. Ver data/attack_sequence.gd.
 @export var air_combo: AttackSequence
 
-@export_subgroup("Coreografia procedural")
-# TRANSITORIO — igual que los del combo terrestre.
-## Diagonal aerea: medio arco horizontal en grados, cuanto cruza la mano por delante del jugador.
-@export var air_diagonal_yaw := 55.0
-## Diagonal aerea: medio arco vertical en grados, cuanto baja la mano mientras cruza. Igualarlo
-## al yaw da una diagonal a 45°; subirlo la pica mas, bajarlo la aplana hacia horizontal.
-@export var air_diagonal_pitch := 45.0
-## Medio arco del hachazo vertical del finisher aereo, en grados.
-@export var air_finisher_angle := 95.0
+@export_subgroup("Hitbox del finisher aereo")
 ## Estira VERTICALMENTE los hitboxes del hachazo aereo mientras dura ese golpe: multiplica el
 ## alto de la caja de la hoja y convierte el disco aereo en una capsula vertical de esa altura.
 ## 1 = sin estirar. Aplica al finisher (X X X), al plunge (X X espera X) y al tap atras + Y aereo,
@@ -108,8 +85,6 @@ class_name SwordTuning extends WeaponTuning
 ## Separacion en metros al salir por el lado opuesto de la trayectoria del dash tras el
 ## primer impacto (el Player atraviesa al enemigo y aparece detras).
 @export var charged_dash_behind_offset := 1.2
-## Medio arco del swing degradado, en grados, cuando no hay barra para el dash.
-@export var charged_fallback_angle := 130.0
 
 @export_group("Y cargado suelo — launcher", "ground_charged_y_")
 ## Que le hace el gesto a la posicion de los cuerpos (ver data/attack_movement_profile.gd). Sube a

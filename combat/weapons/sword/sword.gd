@@ -199,41 +199,18 @@ func _tap_combo() -> void:
 		return
 	run_attack_sequence(kind, _t().air_combo if airborne else _t().ground_combo)
 
-## Lo que no es tuning de cada paso: el arco de la mano y las mecánicas propias de la Espada.
-## `step.choreography` es el nombre que el paso declara en el .tres; el match muere entero cuando el
-## hitbox cuelgue del hueso y el arco salga de la animación.
+## Lo único que un paso NO puede declarar como dato: mecánicas propias de la Espada. El dibujo del
+## golpe salió entero de acá — lo pone el AttackClip del paso.
+##
+## `step.choreography` quedó como etiqueta de FAMILIA de golpe, no como nombre de un tween: dice si
+## el paso es terrestre (sostiene al Player en el aire mientras dura el combo, para que un combo
+## empezado en el borde no te tire) o si es el finisher aéreo (estira los hitboxes en V).
 func on_sequence_step(step: AttackStep, _chain_step: int, _finisher: bool) -> void:
 	match step.choreography:
-		&"ground_swing_l":  # izquierda → derecha
-			_play_combo_swing(1.0)
+		&"ground_swing_l", &"ground_swing_r", &"ground_thrust", &"ground_spin":
 			_player.hold_airborne_for_attack()
-		&"ground_swing_r":  # derecha → izquierda
-			_play_combo_swing(-1.0)
-			_player.hold_airborne_for_attack()
-		&"ground_thrust":
-			_play_thrust()
-			_player.hold_airborne_for_attack()
-		&"ground_spin":
-			_play_spin()
-			_player.hold_airborne_for_attack()
-		&"air_spin":
-			_play_spin()
-		&"air_diagonal_l":
-			_play_air_diagonal(-1.0)  # arriba-izq → abajo-der
-		&"air_diagonal_r":
-			_play_air_diagonal(1.0)  # arriba-der → abajo-izq
 		&"air_finisher":
-			# Estirar los hitboxes es mecánica, no dibujo: sobrevive al swing procedural.
 			_run_finisher_v_stretch()
-			var half := _t().air_finisher_angle
-			_play_swing(Quaternion(Vector3.RIGHT, deg_to_rad(-half)),
-					Quaternion(Vector3.RIGHT, deg_to_rad(half)))
-
-## side +1 = de izquierda a derecha (golpe 1), -1 = de derecha a izquierda (golpe 2). El arco es
-## simétrico, así que invertir el signo alcanza para espejarlo.
-func _play_combo_swing(side: float) -> void:
-	var half := _t().combo_swing_angle * side
-	_play_swing(Quaternion(Vector3.UP, deg_to_rad(-half)), Quaternion(Vector3.UP, deg_to_rad(half)))
 
 # ---- Personalidad X: cargado (dash sweet spot) ----
 
@@ -257,7 +234,8 @@ func _hold_x() -> void:
 	else:
 		# ponytail: sin barra no hay dash — cae a un swing cargado normal.
 		# "sweet spot degradado sin meter" es diseño futuro, ver bóveda Combate.
-		swing(_t().charged_fallback_angle)
+		# El clip lo pone acá y no antes del if: la rama con barra usa el del dash.
+		play_visual_clip(ANIM_REGULAR_C, 0.0, -1.0, tuning.swing_time)
 		_player.hold_airborne_for_attack()
 		begin_damage_window(tuning.swing_time)
 	ComboTracker.register_hit()
@@ -308,8 +286,6 @@ func _run_air_back_y_plunge() -> void:
 	_player.bump_velocity = Vector3.ZERO
 	_run_finisher_v_stretch()
 	play_visual_clip(ANIM_HEAVY, HEAVY_AIR_Y_START, HEAVY_AIR_Y_END, tuning.swing_time)
-	var half := _t().air_finisher_angle
-	_play_swing(Quaternion(Vector3.RIGHT, deg_to_rad(-half)), Quaternion(Vector3.RIGHT, deg_to_rad(half)))
 	run_attack_movement(_t().tap_back_y_air, id)
 	begin_damage_window(tuning.swing_time)
 	ComboTracker.register_hit()
@@ -322,7 +298,6 @@ func _run_forward_y_push() -> void:
 	_player.locomotion.lock_movement(tuning.swing_time)
 	_player.bump_velocity = Vector3.ZERO
 	play_visual_clip(ANIM_REGULAR_C, 0.0, -1.0, tuning.swing_time)
-	_play_spin()
 	if _player.is_airborne():
 		arm_push(tuning.push, tuning.swing_time * tuning.push_at)
 	# El facing ya quedo puesto arriba: PLAYER_FORWARD lo lee de ahi.
@@ -346,16 +321,12 @@ func _run_forward_x_static_spin(with_meter := false) -> void:
 	var spins: int = _t().tap_forward_x_meter_spins if with_meter \
 			else _t().tap_forward_x_spins
 	spins = maxi(spins, 1)
+	# El clip cubre las N vueltas de una: antes se relanzaba el tween de la mano vuelta por vuelta,
+	# ahora el AnimationPlayer estira el tramo a la duración total.
 	play_visual_clip(ANIM_REGULAR_C, 0.0, -1.0, tuning.swing_time * float(spins))
-	_play_spin()
 	begin_damage_window(tuning.swing_time * float(spins))
 	ComboTracker.register_hit()
-	for spin_index in range(1, spins):
-		await wait_seconds(tuning.swing_time)
-		if not is_routine_current(id):
-			return
-		_play_spin()
-	await wait_seconds(tuning.swing_time)
+	await wait_seconds(tuning.swing_time * float(spins))
 	if is_routine_current(id):
 		_finish_directional_x(id)
 
@@ -371,7 +342,6 @@ func _run_back_x_retreat(with_meter := false) -> void:
 	_player.locomotion.lock_movement(tuning.swing_time)
 	_player.bump_velocity = Vector3.ZERO
 	play_visual_clip(ANIM_LAUNCHER, 0.2, 0.8, tuning.swing_time)
-	swing_up(_t().strike_angle)
 	_run_directional_x_movement(_back_x_profile(false), with_meter, _routine_id)
 	if with_meter:
 		_apply_tap_x_meter_damage(_back_x_meter_damage_bonus(false))
@@ -392,15 +362,9 @@ func _run_air_back_x_retreat(with_meter: bool) -> void:
 	if with_meter:
 		_apply_tap_x_meter_damage(_back_x_meter_damage_bonus(true))
 	play_visual_clip(ANIM_REGULAR_C, 0.0, -1.0, tuning.swing_time * float(spins))
-	_play_spin()
 	begin_damage_window(tuning.swing_time * float(spins))
 	ComboTracker.register_hit()
-	for spin_index in range(1, spins):
-		await wait_seconds(tuning.swing_time)
-		if not is_routine_current(id):
-			return
-		_play_spin()
-	await wait_seconds(tuning.swing_time)
+	await wait_seconds(tuning.swing_time * float(spins))
 	if is_routine_current(id):
 		_finish_directional_x(id)
 
@@ -540,7 +504,6 @@ func _begin_launcher() -> void:
 	_player.bump_velocity = Vector3.ZERO
 	# Tramo 0.2-0.8 de Sword_Launcher (clip propio, WIP en animaciones/).
 	play_visual_clip(ANIM_LAUNCHER, 0.2, 0.8, tuning.swing_time)
-	swing_up(_t().strike_angle)
 
 ## El launcher no hereda el facing del tap atras: con lock-on siempre barre hacia el objetivo.
 ## Se proyecta al suelo porque look_at no debe inclinar al Player aunque el enemigo este arriba.
@@ -571,7 +534,6 @@ func _run_aerial_charged_y() -> void:
 	_aerial_charged_y_active = true
 	run_attack_movement(t.aerial_charged_y, _routine_id)
 	play_visual_clip(ANIM_HEAVY, HEAVY_AIR_Y_START, HEAVY_AIR_Y_END, tuning.swing_time)
-	swing_up(t.strike_angle)
 	begin_damage_window(tuning.swing_time)
 	ComboTracker.register_hit()
 	await wait_seconds(tuning.swing_time)
@@ -656,7 +618,7 @@ func _place_behind_target(target: Node3D) -> void:
 	if toward_target.length_squared() > 0.0001:
 		_player.look_at(_player.global_position + toward_target, Vector3.UP)
 
-# ---- Coreografía (swing/swing_up/_play_swing/_play_spin viven en WeaponBase) ----
+# ---- Coreografía (la pone la animación: cada paso trae su AttackClip) ----
 
 ## Los dos combos (bóveda Armas) ahora son datos; esto queda como mapa de lo que declara el .tres:
 ##
@@ -691,20 +653,6 @@ func _restore_finisher_hitboxes() -> void:
 		_blade_shape.size = _blade_base_size
 	if _disc_shape_node != null and _disc_sphere != null:
 		_disc_shape_node.shape = _disc_sphere
-
-## Diagonal descendente: la mano cruza al frente (giro en Y) mientras baja (inclinación en X).
-func _play_air_diagonal(side: float) -> void:
-	var yaw := _t().air_diagonal_yaw
-	var pitch := _t().air_diagonal_pitch
-	_play_swing(
-		Quaternion(Vector3.UP, deg_to_rad(-yaw * side)) * Quaternion(Vector3.RIGHT, deg_to_rad(-pitch)),
-		Quaternion(Vector3.UP, deg_to_rad(yaw * side)) * Quaternion(Vector3.RIGHT, deg_to_rad(pitch))
-	)
-
-## Estocada: la mano se lanza al frente extendiendo el brazo y vuelve. El avance real del
-## cuerpo lo da attack_step del jugador.
-func _play_thrust() -> void:
-	thrust(_t().thrust_reach)
 
 func _t() -> SwordTuning:
 	return tuning as SwordTuning

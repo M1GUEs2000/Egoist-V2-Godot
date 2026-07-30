@@ -40,8 +40,11 @@ class_name AttackStep extends Resource
 ## secuencia, que es lo que permite decir "sale en el segundo golpe de los tres que agrega RT".
 @export var fires_projectile := false
 
-## TRANSITORIO — muere con el swing procedural. Nombre que el arma traduce a su arco de mano
-## (WeaponBase._play_swing / _play_spin / thrust). Existe solo mientras el hitbox siga colgando del
-## pivot orbital en vez del hueso: cuando el hitbox siga a la animacion, el arco ES el clip y este
-## campo no tiene nada que decir. No agregarle casos nuevos.
+## FAMILIA del golpe: la etiqueta con la que el arma reconoce mecanicas suyas que no tienen sentido
+## como campo generico. No dibuja nada — el dibujo es `clip`. Hoy la Espada la usa para dos cosas:
+## los pasos terrestres sostienen al Player en el aire mientras dura el combo, y el finisher aereo
+## estira sus hitboxes en V (ver Sword.on_sequence_step).
+##
+## Nacio como nombre de un tween de mano en el swing procedural; al morir ese swing quedo solo la
+## parte mecanica. Es un escape hatch: si algo se puede expresar como campo del paso, va como campo.
 @export var choreography: StringName = &""

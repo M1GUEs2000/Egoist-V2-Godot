@@ -194,12 +194,14 @@ func _physics_process(_delta: float) -> void:
 
 # ---- Capa 1: golpes de arma ----
 
-## end_time < 0 = hasta el final del clip. duration <= 0 = el tramo dura su tiempo natural.
-## El tramo se escala a la duración mecánica del golpe (speed_scale): la animación acompaña
-## a la ventana de daño, nunca la manda.
-func _on_weapon_clip_started(clip: StringName, start_time: float, end_time: float,
-		duration: float) -> void:
-	if not _has_animation(clip):
+## El AttackClip llega ENTERO desde el arma y se le pasa entero a AttackClipPlayer: el recorte del
+## tramo y el escalado a la duración mecánica los hace él. Acá solo queda lo que es del Player y el
+## arma no puede saber — que esté stuneado, y el blend de tren superior en el aire.
+##
+## El Resource que llega es del arma (vive en un .tres), así que NO se escribe: cuando hay que
+## cambiarle el nombre del clip por su variante aérea se duplica primero.
+func _on_weapon_clip_started(attack_clip: AttackClip) -> void:
+	if attack_clip == null or not _has_animation(attack_clip.clip):
 		return
 	# El stun manda (capa de prioridad máxima). PlayerStun.apply NO cancela las rutinas de
 	# arma en vuelo: sin este guard, el golpe que despierta a mitad del stun pisa la pose
@@ -211,17 +213,10 @@ func _on_weapon_clip_started(clip: StringName, start_time: float, end_time: floa
 	# En el aire: versión compuesta del clip (piernas en pose de salto, torso atacando).
 	# Mismos tiempos/longitud que el original, así el tramo y el escalado no cambian.
 	if air_upper_body_blend and _player.is_airborne():
-		clip = _air_composite_for(clip)
-	var clip_length := _animation_player.get_animation(clip).length
-	var start := clampf(start_time, 0.0, clip_length)
-	var end := clip_length if end_time < 0.0 else clampf(end_time, start, clip_length)
-	var span := maxf(0.01, end - start)
-	var visual_duration := duration if duration > 0.0 else span
-	var attack_clip := AttackClip.new()
-	attack_clip.clip = clip
-	attack_clip.start_time = start
-	attack_clip.end_time = end
-	attack_clip.duration = visual_duration
+		var composite := _air_composite_for(attack_clip.clip)
+		if composite != attack_clip.clip:
+			attack_clip = attack_clip.duplicate() as AttackClip
+			attack_clip.clip = composite
 	_override_active = true
 	_attack_clip_player.play_attack_clip(attack_clip)
 

@@ -4,27 +4,32 @@ class_name WeaponBase extends Node3D
 ## comparten el mismo runner; cada arma pone solo su coreografía). Tap/hold por slot
 ## (World.Slot); el tuning numérico vive en un Resource en data/ (WeaponTuning).
 ##
-## La ventana de daño reemplaza los trace-hitboxes muestreados de v1: el Hitbox de la
-## hoja es un Area3D hijo del Pivot que barre físicamente con el swing (Jolt lo samplea
-## cada physics frame, mismo grano que el trace de v1). En el aire se suma el disco.
+## La ventana de daño reemplaza los trace-hitboxes muestreados de v1: el Hitbox de la hoja es un
+## Area3D que barre físicamente con el arma (Jolt lo samplea cada physics frame, mismo grano que el
+## trace de v1). En el aire se suma el disco.
 ##
-## Convención de escena de un arma (ver sword.tscn). El root del arma está en el origen
-## del player: es el EJE alrededor del cual orbita la mano.
+## HAY UNA SOLA ESPADA. Hasta el refactor de animación había dos: la que se veía colgaba del hueso
+## de la mano y seguía el clip, y la que golpeaba era invisible, orbitaba al player y la movían
+## tweens de quaternion sobre un nodo `Hand`. Nunca coincidieron. Hoy PlayerAnimationController saca
+## los meshes Y el BladeHitbox de la escena del arma y los cuelga del BoneAttachment3D del hueso:
+## el arma golpea donde la animación la pone.
+##
+## Convención de escena de un arma (ver sword.tscn). Los nodos que van a la mano se marcan con el
+## grupo `hand_attachment_payload`; lo que no, se queda en el arma y sigue centrado en el player.
 ##   Arma (WeaponBase)
-##   ├── Hand (Node3D)                 ← la mano: rota durante los swings y así orbita al player
-##   │   └── Pivot (Node3D)            ← muñeca RÍGIDA: solo aleja la hoja hand_radius de la mano
-##   │       └── BladeHitbox (Hitbox)  ← acompaña la hoja
-##   └── AirDiscHitbox (Hitbox)        ← opcional: disco alrededor del player en golpes aéreos
+##   ├── Hand/Pivot (Node3D)           ← percha vacía tras el reparent (ver _pivot)
+##   │   ├── BladeMesh                 ← grupo hand_attachment_payload → al hueso
+##   │   └── BladeHitbox (Hitbox)      ← grupo hand_attachment_payload → al hueso
+##   └── AirDiscHitbox (Hitbox)        ← NO va al hueso: es un disco alrededor del player
 ##
-## El golpe no nace de girar la hoja sobre un punto fijo al costado del jugador: nace de
-## MOVER la mano alrededor del jugador. La hoja cuelga rígida, apuntando siempre hacia
-## afuera, y describe el arco porque la mano la lleva. Rotar la mano en Y la pasea por un
-## semicírculo al frente; rotarla en X la sube/baja; alejar el radio la extiende (estocada).
+## Cuándo abre y cierra el hitbox lo declara el AttackClip del golpe (`hitbox_open`/`hitbox_close`),
+## no el arma. Los gestos que todavía no tienen AttackClip abren la ventana el golpe entero.
 
-## Un golpe arrancó y muestra este tramo de clip UAL sobre el maniquí del player. SOLO
-## visual (lo consume PlayerAnimationController): no toca hitboxes ni tiempos mecánicos.
-## end_time < 0 = hasta el final del clip; duration <= 0 = el tramo dura su tiempo natural.
-signal visual_clip_started(clip: StringName, start_time: float, end_time: float, duration: float)
+## Un golpe arrancó y muestra este tramo de clip UAL sobre el maniquí del player. Lo consume
+## PlayerAnimationController, que se lo pasa a AttackClipPlayer. Viaja el AttackClip ENTERO y no
+## cuatro floats sueltos: antes el controller reconstruía uno con `hitbox_open`/`hitbox_close` en
+## sus defaults, así que la ventana de daño declarada en el dato se perdía en el camino.
+signal visual_clip_started(clip: AttackClip)
 
 ## El golpe terminó antes de lo previsto (ej: la caída del Y aéreo del Mazo impacta antes
 ## del techo): la capa de animación suelta el clip y vuelve a locomoción/aire.
@@ -63,7 +68,6 @@ var chain_wait_before_step := 0.0
 var _combo_queued := false
 var _combo_queued_time := 0.0
 var _combo_kind := &""
-var _swing_tween: Tween
 var _vertical_window_id := 0
 var _vertical_player_mover: MoverSettings
 var _vertical_enemy_mover: MoverSettings
@@ -71,9 +75,6 @@ var _vertical_starts_lying := false
 # El Stun solo consulta el poise antes del dano. El perfil vertical es externo.
 var _vertical_stun: StunSettings
 var _active_vertical_hitbox: Hitbox
-## Pose de mano desde la que arranca la estocada en curso (ver thrust).
-var _thrust_from := Quaternion.IDENTITY
-var _thrust_reach := 0.0
 ## Perfil de movimiento del ataque en curso (ver data/attack_movement_profile.gd). Uno solo: la
 ## rutina activa es su unica dueña, y el id de rutina define cuando caduca. Reemplaza los ids
 ## sueltos que cada arma guardaba por gesto para reconectar sus Movers y Floaters.
@@ -87,7 +88,9 @@ var _movement_profile_with_meter := false
 ## no dejar disparos tardios de un recorrido abortado.
 var _movement_profile_travel_done := false
 
-@onready var _hand: Node3D = $Hand
+## Sigue existiendo en la escena, pero ya no orbita: PlayerAnimationController le saca los meshes y
+## el BladeHitbox al hueso de la mano en cuanto el arma entra al árbol. Queda como percha de lo que
+## se crea en runtime (las motas de sweet spot), que el controller también reparenta.
 @onready var _pivot: Node3D = $Hand/Pivot
 @onready var _blade_hitbox: Hitbox = $Hand/Pivot/BladeHitbox
 @onready var _air_disc_hitbox: Hitbox = get_node_or_null("AirDiscHitbox")
@@ -101,8 +104,6 @@ var _sweet_spot_motes: GPUParticles3D
 func _ready() -> void:
 	if tuning == null:
 		tuning = _default_tuning()
-	_hand.position = Vector3(0.0, tuning.hand_height, 0.0)
-	_reset_hand()
 	_setup_blade_glow()
 
 func setup(player: Player) -> void:
@@ -125,11 +126,31 @@ func setup(player: Player) -> void:
 	# "clash" mutuo). Acá es parriable todo el swing y la ventana estrecha del enemigo ya
 	# acota; afinar el clash mid-swing cuando haya Godot para tunear.
 
-## Atajo para la coreografía de cada arma: avisa a la capa de animación qué tramo de clip
-## acompaña este golpe (ver visual_clip_started).
+## Manda un AttackClip declarado en datos a la capa de animación (ver visual_clip_started).
+## `duration` pisa la del clip cuando quien llama ya sabe cuánto dura el paso; -1 respeta la del
+## Resource. No duplica el clip: el override se copia aparte para no escribir en el .tres.
+func play_attack_clip(clip: AttackClip, duration := -1.0) -> void:
+	if clip == null or clip.clip == &"":
+		return
+	if duration > 0.0 and not is_equal_approx(duration, clip.duration):
+		var stretched := clip.duplicate() as AttackClip
+		stretched.duration = duration
+		visual_clip_started.emit(stretched)
+		return
+	visual_clip_started.emit(clip)
+
+## Atajo para los gestos que todavía tienen su tramo hardcodeado en constantes del arma (los
+## especiales: cargados, launchers, direccionales). Arma un AttackClip al vuelo con la ventana de
+## daño completa —0 a 1, o sea el comportamiento de siempre— porque esos gestos aún abren su ventana
+## por temporizador. Cuando cada especial tenga su AttackClip en el tuning, esto se borra.
 func play_visual_clip(clip: StringName, start_time := 0.0, end_time := -1.0,
 		duration := -1.0) -> void:
-	visual_clip_started.emit(clip, start_time, end_time, duration)
+	var built := AttackClip.new()
+	built.clip = clip
+	built.start_time = start_time
+	built.end_time = end_time
+	built.duration = maxf(0.0, duration)
+	visual_clip_started.emit(built)
 
 func end_visual_clip() -> void:
 	visual_clip_ended.emit()
@@ -362,8 +383,7 @@ func _begin_sequence_step(step: AttackStep, chain_step: int, finisher: bool, dur
 	# una cadena de cuatro con damage_scale 0.6 terminaría en 0.13 del daño base por acumulación.
 	reset_hit_profile()
 	_apply_step_damage(step)
-	if step.clip != null and step.clip.clip != &"":
-		play_visual_clip(step.clip.clip, step.clip.start_time, step.clip.end_time, duration)
+	play_attack_clip(step.clip, duration)
 	on_sequence_step(step, chain_step, finisher)
 	if step.advances:
 		_player.attack_step(duration)
@@ -373,7 +393,7 @@ func _begin_sequence_step(step: AttackStep, chain_step: int, finisher: bool, dur
 	# siguiente. Sin esto un paso sin movimiento heredaría el perfil del previo —misma rutina, mismo
 	# id, o sea "vigente"— y el cierre de su ventana cobraría hooks que no le pertenecen.
 	run_attack_movement(step.movement, id)
-	begin_damage_window(duration, finisher)
+	begin_damage_window(duration, finisher, step.clip)
 	ComboTracker.register_hit()
 	if step.fires_projectile:
 		var launcher: MoverSettings = null
@@ -443,19 +463,41 @@ func _finish_air_combo(wait_branch: bool) -> void:
 ## `runs_profile_hooks` en false deja el cierre MUDO para el AttackMovementProfile. Lo usa el runner
 ## de secuencias en los pasos que no son el último: el perfil describe el gesto completo, así que un
 ## recorrido WINDOW_END tiene que salir una vez al terminar la cadena y no una vez por golpe.
-func begin_damage_window(duration: float, runs_profile_hooks := true) -> void:
+##
+## `clip` recorta la ventana al tramo que el dato declara: el hitbox abre en `hitbox_open` y cierra
+## en `hitbox_close`, los dos normalizados sobre `duration`. Sin clip la ventana dura el golpe
+## entero, que es lo que hacían TODOS los gestos antes de este refactor y lo que siguen haciendo los
+## especiales. El golpe siempre termina a los `duration` segundos aunque el hitbox cierre antes: el
+## recorrido WINDOW_END del perfil marca el fin del GESTO, no el fin del daño.
+func begin_damage_window(duration: float, runs_profile_hooks := true,
+		clip: AttackClip = null) -> void:
 	_window_id += 1
 	var id := _window_id
 	_window_hits.clear()
+	var open_delay := 0.0 if clip == null else clip.open_delay(duration)
+	var open_time := duration if clip == null else clip.open_seconds(duration)
+	# El umbral no es 0 sino un milisegundo: wait_seconds tiene piso de 0.01s, así que esperar un
+	# residuo de coma flotante retrasaría el golpe un frame entero por nada.
+	if open_delay > 0.001:
+		await wait_seconds(open_delay)
+		if id != _window_id:
+			return
 	_blade_hitbox.begin_swing()
 	if _air_disc_hitbox != null and _player != null and _player.is_airborne():
 		_air_disc_hitbox.begin_swing()
-	await wait_seconds(duration)
+	await wait_seconds(open_time)
 	if id != _window_id:
 		return  # otro swing ya arrancó: él es dueño de los hitboxes ahora
 	_blade_hitbox.end_swing()
 	if _air_disc_hitbox != null:
 		_air_disc_hitbox.end_swing()
+	# El sobrante entre el cierre del hitbox y el fin del golpe. Con la ventana completa es 0 y esto
+	# no espera nada, así que el timing de los especiales no se mueve.
+	var tail := duration - open_delay - open_time
+	if tail > 0.001:
+		await wait_seconds(tail)
+		if id != _window_id:
+			return
 	# Los recorridos WINDOW_END del perfil se cobran acá y no en cada arma: es el único punto que
 	# sabe que la ventana cerró bien. Si el perfil no pidió ese momento, no hace nada.
 	if runs_profile_hooks:
@@ -907,78 +949,6 @@ func run_vertical_window(hitbox: Hitbox, player_mover: MoverSettings, enemy_move
 	hitbox.end_swing()
 	if _active_vertical_hitbox == hitbox:
 		_active_vertical_hitbox = null
-
-# ---- Swings procedurales (tweens de quaternion sobre la Hand, sin AnimationPlayer) ----
-## Genérico para cualquier arma con Hand/Pivot; la coreografía (qué ángulo, qué step) la
-## define cada arma (ver Sword/Mace), esto solo mueve la mano alrededor del jugador.
-
-## Swing horizontal (eje Y): la mano recorre un semicírculo al frente, de un lado al otro.
-## Corte por defecto.
-func swing(angle: float) -> void:
-	_swing_axis(angle, Vector3.UP)
-
-## Swing vertical ascendente (eje X): la mano sube en arco frente al jugador (uppercut
-## del golpe vertical).
-func swing_up(angle: float) -> void:
-	_swing_axis(angle, Vector3.RIGHT)
-
-func _swing_axis(angle: float, axis: Vector3) -> void:
-	var half := deg_to_rad(angle * 0.5)
-	_play_swing(Quaternion(axis, -half), Quaternion(axis, half))
-
-## Estocada: la mano viaja desde su reposo hasta el frente del jugador extendiendo el brazo
-## `reach` metros, y vuelve. La hoja no rota (muñeca rígida): la punta avanza porque la mano
-## se aleja del eje. El avance del cuerpo lo pone attack_step del jugador, no esto.
-func thrust(reach: float) -> void:
-	_kill_swing_tween()
-	_thrust_from = _hand_rest()
-	_thrust_reach = reach
-	_swing_tween = create_tween()
-	_swing_tween.tween_method(_set_thrust_progress, 0.0, 1.0, tuning.swing_time)
-	_swing_tween.tween_callback(_reset_hand)
-
-## progress 0 = mano en reposo · 0.5 = brazo extendido al frente · 1 = de vuelta.
-## La mano llega al frente en la primera mitad; el radio sale y vuelve en todo el golpe.
-func _set_thrust_progress(progress: float) -> void:
-	_hand.quaternion = _thrust_from.slerp(Quaternion.IDENTITY, minf(1.0, progress * 2.0))
-	_set_hand_radius(tuning.hand_radius + _thrust_reach * sin(progress * PI))
-
-func _play_swing(from: Quaternion, to: Quaternion) -> void:
-	_kill_swing_tween()
-	_hand.quaternion = from
-	_swing_tween = create_tween()
-	_swing_tween.tween_property(_hand, "quaternion", to, tuning.swing_time)
-	_swing_tween.tween_callback(_reset_hand)
-
-## Vuelta completa: la mano da la vuelta entera alrededor del jugador. `duration` < 0 → dura
-## lo que un swing normal; las vueltas del X cargado del Mazo pasan su propio
-## charged_spin_time (si no, el tween queda a medio girar cuando arranca la vuelta siguiente).
-func _play_spin(duration := -1.0) -> void:
-	_kill_swing_tween()
-	var spin_time := duration if duration > 0.0 else tuning.swing_time
-	_swing_tween = create_tween()
-	_swing_tween.tween_method(_set_spin_angle, 0.0, TAU, spin_time)
-	_swing_tween.tween_callback(_reset_hand)
-
-func _set_spin_angle(angle: float) -> void:
-	_hand.quaternion = Quaternion(Vector3.UP, angle)
-
-## Pose de reposo de la mano: a un lado del jugador (hand_rest_yaw), brazo sin extender.
-func _hand_rest() -> Quaternion:
-	return Quaternion(Vector3.UP, deg_to_rad(tuning.hand_rest_yaw))
-
-## Aleja/acerca la hoja moviendo la mano sobre su radio. La muñeca no rota: la hoja apunta
-## siempre radialmente hacia afuera, así que cambiar el radio la extiende hacia adelante.
-func _set_hand_radius(radius: float) -> void:
-	_pivot.position = Vector3(0.0, 0.0, -radius)
-
-func _reset_hand() -> void:
-	_hand.quaternion = _hand_rest()
-	_set_hand_radius(tuning.hand_radius)
-
-func _kill_swing_tween() -> void:
-	if _swing_tween != null and _swing_tween.is_valid():
-		_swing_tween.kill()
 
 # ---- Helpers ----
 
