@@ -37,17 +37,17 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
 [node name="Pivot" type="Node3D" parent="Hand" unique_id=1634085958]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.71)
 
-[node name="HandleMesh" type="MeshInstance3D" parent="Hand/Pivot" unique_id=586591196]
+[node name="HandleMesh" type="MeshInstance3D" parent="Hand/Pivot" groups=["hand_attachment_payload"] unique_id=586591196]
 transform = Transform3D(1, 0, 0, 0, -4.37114e-08, -1, 0, 1, -4.37114e-08, 0, 0, -0.9583202)
 mesh = SubResource("CylinderMesh_handle")
 surface_material_override/0 = SubResource("Mat_handle")
 
-[node name="HeadMesh" type="MeshInstance3D" parent="Hand/Pivot" unique_id=749881759]
+[node name="HeadMesh" type="MeshInstance3D" parent="Hand/Pivot" groups=["hand_attachment_payload"] unique_id=749881759]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -2.169717)
 mesh = SubResource("SphereMesh_head")
 surface_material_override/0 = SubResource("Mat_head")
 
-[node name="BladeHitbox" type="Area3D" parent="Hand/Pivot" unique_id=269124499]
+[node name="BladeHitbox" type="Area3D" parent="Hand/Pivot" groups=["hand_attachment_payload"] unique_id=269124499]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.78)
 script = ExtResource("3_hitbox")
 

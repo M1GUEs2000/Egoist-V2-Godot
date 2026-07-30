@@ -1,8 +1,8 @@
 class_name PlayerAnimationController extends Node
 ## Capa VISUAL del player (mismo patrón que EnemyAnimationController): traduce estados ya
 ## resueltos (locomoción, salto, wall slide y golpes de arma) a clips del maniquí UAL.
-## No mueve el CharacterBody, no abre hitboxes ni decide impactos: el feel mecánico
-## (swings procedurales de Hand/Pivot, ventanas de daño) conserva la autoridad.
+## No mueve el CharacterBody, no abre hitboxes ni decide impactos. AttackClipPlayer reproduce
+## cada tramo y solo avisa los límites temporales de su ventana; el consumidor decide el daño.
 ##
 ## Capas por prioridad, cada physics frame:
 ##   1. Golpe de arma (WeaponBase.visual_clip_started): tramo de clip escalado a la
@@ -22,6 +22,7 @@ const UAL1_ANIMATIONS := [&"Idle", &"Walk", &"Sprint"]
 # Mismo mecanismo de copia a la libreria que _import_ual1_animations.
 const SWORD_LAUNCHER_SCENE := preload("res://animaciones/Sword_LauncherV1.glb")
 const CUSTOM_ANIMATIONS := [&"Sword_Launcher"]
+const HAND_ATTACHMENT_PAYLOAD_GROUP := &"hand_attachment_payload"
 
 # Nombres REALES de los .glb importados (verificados con Godot listando get_animation_list):
 # la bóveda planeaba sufijos _Loop (Walk_Loop, NinjaJump_Idle_Loop…) que no existen en el
@@ -35,16 +36,15 @@ const CUSTOM_ANIMATIONS := [&"Sword_Launcher"]
 @export var slide_start_animation: StringName = &"Slide_Start"
 @export var slide_loop_animation: StringName = &"Slide"
 @export var slide_exit_animation: StringName = &"Slide_Exit"
-# Arma en mano (opción A): una COPIA visual de los meshes del arma cuelga del hueso de la
-# mano vía BoneAttachment3D y acompaña la animación; los meshes orbitales quedan invisibles
-# pero sus hitboxes siguen barriendo — el daño no cambia. La copia comparte los materiales
-# (el glow de carga se ve en la mano). Offset/rotación para acomodar el grip, a tunear.
-## El arma orbital está autorizada en el espacio del Player (la hoja apunta a -Z, el forward
-## de Godot), pero la copia cuelga del hueso — o sea DENTRO del UAL2_Standard, que lleva el
-## 180° en Y que endereza al maniquí (ver bóveda Animacion/Player). La copia heredaba ese
-## giro y salía apuntando hacia atrás: estos 180° lo compensan.
+# Arma en mano: los nodos marcados hand_attachment_payload en la escena del arma (meshes y
+# BladeHitbox) se sacan juntos del Pivot orbital y cuelgan del hueso. Queda una sola arma:
+# lo que se ve es lo que golpea. Hand/Pivot permanece vacío como puente mientras otro trabajo
+# elimina los tweens procedurales de WeaponBase.
+## Hueso del esqueleto UAL del que cuelgan el arma visible y su hitbox.
 @export var hand_bone_name: StringName = &"hand_r"
+## Offset local en metros del arma completa respecto del hueso de la mano.
 @export var hand_attach_offset := Vector3.ZERO
+## Rotación local en grados que compensa el forward +Z del esqueleto UAL.
 @export var hand_attach_rotation_degrees := Vector3(0.0, 180.0, 0.0)
 # Stun: fuera del plan original de la bóveda — espeja al enemigo (EnemyAnimationController):
 # tramo del clip y pose final congelada mientras dure el stun.
@@ -118,13 +118,13 @@ var _slide_active := false
 var _slide_loop_starts_at := -INF
 var _slide_exit_until := -INF
 var _override_active := false
-var _override_ends_at := -INF
 var _stun_visual_active := false
 var _stun_animation_frozen := false
 var _stun_segment_end := 0.0
 var _stun_segment_ends_at := -INF
+var _attack_clip_player: AttackClipPlayer
 var _hand_attachment: BoneAttachment3D
-var _hand_copies := {}  # WeaponBase → Node3D (copia visual en la mano)
+var _hand_payloads: Dictionary[WeaponBase, Node3D] = {}
 
 func _ready() -> void:
 	_player = get_parent() as Player
@@ -138,6 +138,7 @@ func _ready() -> void:
 		push_warning("No se encontró AnimationPlayer bajo Visual; el player queda sin animación.")
 		set_physics_process(false)
 		return
+	_setup_attack_clip_player()
 	_import_ual1_animations()
 	_import_custom_animations()
 	_connect_weapons()
@@ -158,7 +159,7 @@ func _ready() -> void:
 
 func _on_slots_changed(_slot_x: WeaponBase, _slot_y: WeaponBase) -> void:
 	_connect_weapons()
-	_build_missing_hand_copies()
+	_attach_missing_weapons()
 
 ## Señal hacia arriba: cada arma avisa qué tramo de clip muestra su golpe.
 func _connect_weapons() -> void:
@@ -174,7 +175,7 @@ func _connect_weapons() -> void:
 func _physics_process(_delta: float) -> void:
 	if _player == null or _animation_player == null:
 		return
-	_sync_hand_copies_visibility()
+	_sync_attached_weapons_visibility()
 	# Stun o dash cancelan el golpe en curso: soltamos el override. El stun tiene capa
 	# propia (abajo); el dash no tiene clip en el plan y cae a aire/locomoción.
 	if _player.is_stunned() or _player.dash.is_dashing:
@@ -184,9 +185,7 @@ func _physics_process(_delta: float) -> void:
 		return
 	_stop_stun_visual()
 	if _override_active:
-		if World.now() < _override_ends_at:
-			return
-		_release_override()
+		return
 	if _update_slide_visual(_delta):
 		return
 	if _update_air_visual():
@@ -218,22 +217,38 @@ func _on_weapon_clip_started(clip: StringName, start_time: float, end_time: floa
 	var end := clip_length if end_time < 0.0 else clampf(end_time, start, clip_length)
 	var span := maxf(0.01, end - start)
 	var visual_duration := duration if duration > 0.0 else span
-	_animation_player.speed_scale = span / visual_duration
-	_animation_player.play(clip)
-	_animation_player.seek(start, true)
+	var attack_clip := AttackClip.new()
+	attack_clip.clip = clip
+	attack_clip.start_time = start
+	attack_clip.end_time = end
+	attack_clip.duration = visual_duration
 	_override_active = true
-	_override_ends_at = World.now() + visual_duration
+	_attack_clip_player.play_attack_clip(attack_clip)
 
 func _release_override() -> void:
 	if not _override_active:
 		return
 	_override_active = false
+	if _attack_clip_player != null:
+		_attack_clip_player.cancel()
 	_animation_player.speed_scale = 1.0
 
-# ---- Arma en mano (BoneAttachment3D sobre el hueso de la mano) ----
+func _on_attack_clip_finished() -> void:
+	_override_active = false
 
-## Construye el attachment y una copia visual por arma. Los meshes orbitales (los que
-## barren con la Hand procedural) quedan invisibles: sus Hitbox hermanos siguen intactos.
+# ---- Reproductor de AttackClip ----
+
+func _setup_attack_clip_player() -> void:
+	_attack_clip_player = AttackClipPlayer.new()
+	_attack_clip_player.name = "AttackClipPlayer"
+	add_child(_attack_clip_player)
+	_attack_clip_player._bind_animation_player(_animation_player)
+	_attack_clip_player.clip_finished.connect(_on_attack_clip_finished)
+
+# ---- Arma e hitbox en mano (BoneAttachment3D sobre el hueso de la mano) ----
+
+## Construye el attachment y mueve a él el payload real de cada arma. La llamada diferida
+## ocurre después de los @onready de WeaponBase, que conservan referencias válidas a esos nodos.
 func _setup_hand_attachment() -> void:
 	var skeleton := _find_skeleton(_visual)
 	if skeleton == null:
@@ -243,55 +258,74 @@ func _setup_hand_attachment() -> void:
 	_hand_attachment.name = "HandAttachment"
 	skeleton.add_child(_hand_attachment)
 	_hand_attachment.bone_name = hand_bone_name
-	_build_missing_hand_copies()
+	_attach_missing_weapons()
 
-## Un arma equipada después (menú de loadout) también gana su copia en mano.
-func _build_missing_hand_copies() -> void:
+## Un arma equipada después también mueve su payload real al hueso.
+func _attach_missing_weapons() -> void:
 	if _hand_attachment == null:
 		return
 	for child in _player.get_children():
 		var weapon := child as WeaponBase
-		if weapon == null or weapon in _hand_copies:
+		if weapon == null or weapon in _hand_payloads:
 			continue
-		var copy := _build_hand_copy(weapon)
-		if copy != null:
-			_hand_attachment.add_child(copy)
-			_hand_copies[weapon] = copy
-	_sync_hand_copies_visibility()
+		var payload := _attach_weapon_to_hand(weapon)
+		if payload != null:
+			_hand_payloads[weapon] = payload
+	_sync_attached_weapons_visibility()
 
-## Copia solo los MeshInstance3D del Pivot (BladeMesh / HandleMesh+HeadMesh), preservando
-## sus transforms locales — el grip queda en el origen del hueso. duplicate() comparte mesh
-## y materiales por referencia: el glow de carga del arma se ve en la copia.
-func _build_hand_copy(weapon: WeaponBase) -> Node3D:
-	var pivot := weapon.get_node_or_null("Hand/Pivot")
+func _attach_weapon_to_hand(weapon: WeaponBase) -> Node3D:
+	var pivot := weapon.get_node_or_null("Hand/Pivot") as Node3D
 	if pivot == null:
+		push_warning("%s no tiene Hand/Pivot; no se pudo adjuntar a la mano." % weapon.name)
 		return null
-	var copy_root := Node3D.new()
-	copy_root.name = weapon.name + "HandVisual"
+	var payload := Node3D.new()
+	payload.name = weapon.name + "HandPayload"
+	payload.position = hand_attach_offset
+	payload.rotation_degrees = hand_attach_rotation_degrees
+	_hand_attachment.add_child(payload)
 	var found := false
 	for child in pivot.get_children():
-		var mesh := child as MeshInstance3D
-		if mesh == null:
+		if not child.is_in_group(HAND_ATTACHMENT_PAYLOAD_GROUP):
 			continue
-		var mesh_copy := mesh.duplicate() as MeshInstance3D
-		mesh_copy.visible = true
-		copy_root.add_child(mesh_copy)
-		mesh.visible = false  # la hoja orbital ya no se ve; su hitbox sigue barriendo
+		child.reparent(payload, false)
 		found = true
 	if not found:
-		copy_root.free()
+		payload.queue_free()
+		push_warning("%s no tiene nodos hand_attachment_payload." % weapon.name)
 		return null
-	copy_root.position = hand_attach_offset
-	copy_root.rotation_degrees = hand_attach_rotation_degrees
-	return copy_root
+	var child_added := _on_orbital_child_added.bind(weapon)
+	if not pivot.child_entered_tree.is_connected(child_added):
+		pivot.child_entered_tree.connect(child_added)
+	weapon.tree_exiting.connect(_on_weapon_tree_exiting.bind(weapon), CONNECT_ONE_SHOT)
+	return payload
 
-## La copia en mano sigue la visibilidad del arma (PlayerCombat muestra solo la activa).
-func _sync_hand_copies_visibility() -> void:
-	for weapon: WeaponBase in _hand_copies:
-		var copy: Node3D = _hand_copies[weapon]
-		if is_instance_valid(weapon) and is_instance_valid(copy) \
-				and copy.visible != weapon.visible:
-			copy.visible = weapon.visible
+## WeaponBase crea las motas de sweet spot bajo Pivot al usarlas por primera vez. Se mueven
+## diferidas al mismo payload para que tampoco quede feedback visual orbitando al Player.
+func _on_orbital_child_added(child: Node, weapon: WeaponBase) -> void:
+	if child is GPUParticles3D:
+		_move_runtime_payload.call_deferred(child, weapon)
+
+func _move_runtime_payload(child: Node, weapon: WeaponBase) -> void:
+	if not is_instance_valid(child) or not is_instance_valid(weapon):
+		return
+	var payload := _hand_payloads.get(weapon) as Node3D
+	var pivot := weapon.get_node_or_null("Hand/Pivot")
+	if payload != null and child.get_parent() == pivot:
+		child.reparent(payload, false)
+
+func _on_weapon_tree_exiting(weapon: WeaponBase) -> void:
+	var payload := _hand_payloads.get(weapon) as Node3D
+	_hand_payloads.erase(weapon)
+	if is_instance_valid(payload):
+		payload.queue_free()
+
+## El payload sigue la visibilidad del arma (PlayerCombat muestra solo la activa).
+func _sync_attached_weapons_visibility() -> void:
+	for weapon: WeaponBase in _hand_payloads:
+		var payload: Node3D = _hand_payloads[weapon]
+		if is_instance_valid(weapon) and is_instance_valid(payload) \
+				and payload.visible != weapon.visible:
+			payload.visible = weapon.visible
 
 func _find_skeleton(root: Node) -> Skeleton3D:
 	if root == null:
