@@ -471,6 +471,11 @@ func _ready() -> void:
 	var stunned_enemy := (load("res://enemies/grounded_enemy.tscn") as PackedScene).instantiate() as EnemyBase
 	add_child(stunned_enemy)
 	await get_tree().process_frame
+	# El feedback rojo de impacto no depende de quebrar poise ni de entrar al estado STUNNED:
+	# cualquier golpe recibido reinicia el burst y este se disipa por su color_ramp.
+	stunned_enemy.on_hurtbox_hit(self, 1.0, Vector3.LEFT, null)
+	assert(not stunned_enemy.is_stunned())
+	assert(stunned_enemy.hit_sparks != null and stunned_enemy.hit_sparks.emitting)
 	stunned_enemy._last_hit_direction = Vector3.RIGHT
 	stunned_enemy.apply_stun(0.5)
 	assert(stunned_enemy.is_stunned())

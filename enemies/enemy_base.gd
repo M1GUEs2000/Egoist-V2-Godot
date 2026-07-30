@@ -109,9 +109,10 @@ static func can_damage_enemy(attacker: EnemyBase, target: EnemyBase) -> bool:
 @export var stun_light_range := 3.0
 ## Altura sobre los pies a la que nacen las chispas de impacto, en metros.
 @export var hit_sparks_height := 1.0
-## Cuanto se adelantan las chispas desde el eje del enemigo hacia su atacante, en metros:
-## nacen en la superficie golpeada, no en el centro del cuerpo.
-@export var hit_sparks_offset := 0.45
+## Cuanto se adelantan las chispas desde el eje del enemigo hacia su atacante, en metros.
+## El maniqui UAL sobresale de la capsula de colision: 0.70 las deja fuera del mesh visible,
+## en vez de enterrarlas en el torso al cambiar de modelo.
+@export var hit_sparks_offset := 0.7
 ## Velocidad horizontal minima (m/s) a partir de la cual el enemigo levanta polvo al moverse.
 ## Solo en el suelo, activo y sin stun. El look del polvo vive en el emisor RunDust de la escena.
 @export var run_dust_min_speed := 1.0
@@ -444,8 +445,8 @@ func take_hit_from_enemy(hits: float = 1.0, hit_direction: Vector3 = Vector3.ZER
 		_preserve_vertical_on_next_hit = false
 	else:
 		cancel_vertical_control()
-	if hit_direction.length_squared() > 0.0001:
-		_last_hit_direction = hit_direction.normalized()
+	_remember_hit_direction(attacker, hit_direction)
+	_play_hit_sparks()
 	var died := health.take_damage(hits)
 	if not died:
 		if is_armored():
@@ -766,6 +767,7 @@ func apply_spike_hit(damage: float, push_direction: Vector3, stun: StunSettings,
 	push_direction.y = 0.0
 	if push_direction.length_squared() > 0.0001:
 		_last_hit_direction = push_direction.normalized()
+	_play_hit_sparks()
 	var died := health.take_damage(damage)
 	if died:
 		return true
