@@ -72,7 +72,7 @@ func _assert_clips() -> void:
 	assert(_animation_player.has_animation(Mace.ANIM_HEAVY))
 	print("PROBE animaciones_player=clips_presentes")
 
-# ---- Arma en mano: copia visual en el hueso, orbitales invisibles con hitbox vivo ----
+# ---- Arma en mano: una sola arma, meshes E HITBOX colgando del hueso ----
 
 func _run_hand_attachment() -> void:
 	var skeleton: Skeleton3D = null
@@ -87,25 +87,28 @@ func _run_hand_attachment() -> void:
 	var attachment := skeleton.get_node_or_null("HandAttachment") as BoneAttachment3D
 	assert(attachment != null)
 	assert(attachment.bone_name == StringName(_controller.get(&"hand_bone_name")))
-	var sword_copy := attachment.get_node_or_null("SwordHandVisual") as Node3D
-	var mace_copy := attachment.get_node_or_null("MasoHandVisual") as Node3D
-	assert(sword_copy != null and sword_copy.get_child_count() == 1)  # BladeMesh
-	assert(mace_copy != null and mace_copy.get_child_count() == 2)  # HandleMesh + HeadMesh
-	# Los meshes orbitales quedaron invisibles pero sus hitboxes hermanos siguen ahi.
-	var blade := _sword.get_node("Hand/Pivot/BladeMesh") as MeshInstance3D
-	assert(blade != null and not blade.visible)
-	assert(_sword.get_node("Hand/Pivot/BladeHitbox") != null)
-	var head := _mace.get_node("Hand/Pivot/HeadMesh") as MeshInstance3D
-	assert(head != null and not head.visible)
-	# La copia sigue la visibilidad del arma activa (PlayerCombat muestra una a la vez).
+	var sword_payload := attachment.get_node_or_null("SwordHandPayload") as Node3D
+	var mace_payload := attachment.get_node_or_null("MasoHandPayload") as Node3D
+	assert(sword_payload != null and sword_payload.get_child_count() == 2)  # BladeMesh + BladeHitbox
+	assert(mace_payload != null and mace_payload.get_child_count() == 3)  # Handle + Head + BladeHitbox
+	# El invariante de todo el refactor: la que se ve y la que golpea son la MISMA arma.
+	# No hay copia: los nodos originales se reparentaron, asi que el Pivot orbital quedo vacio.
+	assert(sword_payload.get_node_or_null("BladeMesh") != null)
+	assert(_sword.get_node("Hand/Pivot").get_child_count() == 0)
+	assert(_mace.get_node("Hand/Pivot").get_child_count() == 0)
+	var sword_hitbox := _sword.get(&"_blade_hitbox") as Node
+	assert(sword_hitbox != null and sword_hitbox.get_parent() == sword_payload)
+	var mace_hitbox := _mace.get(&"_blade_hitbox") as Node
+	assert(mace_hitbox != null and mace_hitbox.get_parent() == mace_payload)
+	# El payload sigue la visibilidad del arma activa (PlayerCombat muestra una a la vez).
 	_sword.visible = true
 	_mace.visible = false
 	_tick_controller()
-	assert(sword_copy.visible and not mace_copy.visible)
+	assert(sword_payload.visible and not mace_payload.visible)
 	_mace.visible = true
 	_sword.visible = false
 	_tick_controller()
-	assert(mace_copy.visible and not sword_copy.visible)
+	assert(mace_payload.visible and not sword_payload.visible)
 	_sword.visible = true
 	_mace.visible = false
 	_tick_controller()

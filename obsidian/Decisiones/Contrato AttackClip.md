@@ -12,7 +12,12 @@ hito: H1
 
 # Contrato AttackClip
 
-Superficie congelada entre los dos trabajos que corren en paralelo sobre el sistema de ataques. **Ninguno de los dos lados edita este contrato sin avisar al otro**: si cambia un campo se rompen los dos a la vez y en silencio, porque los `.tres` serializan por nombre. *(2026-07-30)*
+Superficie congelada entre los dos trabajos que corrieron en paralelo sobre el sistema de ataques. **Ninguno de los dos lados edita este contrato sin avisar al otro**: si cambia un campo se rompen los dos a la vez y en silencio, porque los `.tres` serializan por nombre. *(2026-07-30)*
+
+> [!success] Los dos trabajos aterrizaron
+> **A (animador)** en `feat/animador`, **B (secuenciador)** en `main`, integrados el 2026-07-30. Los dos escribieron `data/attack_clip.gd` por separado y las dos versiones declararon los mismos campos, tipos y defaults: el contrato aguanto. Se conservo la de B, que ademas trae `open_seconds()` / `open_delay()`.
+>
+> Falta el **empalme**, que no era de ninguno de los dos: ver "Lo que falta" abajo.
 
 ## Por que existe
 
@@ -55,6 +60,21 @@ Dos decisiones que no son arbitrarias:
 - **`start_time` / `end_time` / `duration` van en SEGUNDOS, no en frames.** Es 3D con esqueleto UAL y el `AnimationPlayer` de Godot trabaja en segundos. Traducir a frames seria inventar una unidad que el motor no tiene.
 
 El componente **no** decide daño, no abre hitboxes por su cuenta y no sabe que arma lo usa: reproduce el tramo y avisa. Quien conecta esas señales a una ventana de daño es el secuenciador.
+
+## Lo que falta (el empalme)
+
+Cada mitad hace lo suyo pero todavia no se hablan. Hoy el camino es:
+
+`run_attack_sequence` → `play_visual_clip(clip, start, end, duration)` → señal `visual_clip_started` → `PlayerAnimationController` **reconstruye** un `AttackClip` → `AttackClipPlayer`.
+
+Ese round-trip pierde `hitbox_open` y `hitbox_close`: el controller arma el clip con los defaults 0 y 1, asi que la ventana de daño **sigue durando todo el golpe** y sigue abriendola `begin_damage_window` por temporizador. Lo que queda:
+
+1. Que el `AttackClip` viaje entero en vez de reconstruirse — señal que lleve el Resource, no cuatro floats.
+2. Conectar `hitbox_should_open` / `hitbox_should_close` a `Hitbox.begin_swing()` / `end_swing()` y sacarle a `begin_damage_window` la parte de abrir el hitbox (los ganchos de perfil de movimiento se quedan donde estan).
+3. Borrar el swing procedural de `WeaponBase`: `swing`, `swing_up`, `_swing_axis`, `thrust`, `_set_thrust_progress`, `_play_swing`, `_play_spin`, `_set_spin_angle`, `_hand_rest`, `_set_hand_radius`, `_reset_hand`, `_kill_swing_tween`, su llamada desde `_ready()` y el estado asociado. Con eso muere tambien `AttackStep.choreography` y el `match` de `Sword.on_sequence_step`.
+4. Recien ahi entra el **RT attack sequence**.
+
+Mientras tanto el swing procedural sigue vivo pero mueve un `Hand/Pivot` **vacio**: no mueve ni el arma visible ni su hitbox. Es inofensivo, no un bug.
 
 ## Lo que cuesta
 
