@@ -35,6 +35,114 @@ hito: H1
 | [[Dagas]] | Movilidad, persecucion, teletransporte. | H2 |
 | [[Punos]] | Agarre, mover enemigos o moverte tu, conecta con world switch. | H2 |
 
+## Como se hace un arma
+
+Esta seccion es el recorrido completo, en orden. Lo de abajo —"Organizacion del tuning" y lo que sigue— es el **por que** de cada decision; esto es el **como**.
+
+> [!important] Leer antes de empezar
+> - [[Mover y Floater]] — quien es dueño de la fisica de cada cuerpo. Un arma **nunca** escribe velocidad: pide perfiles.
+> - [[Animacion]] — como entra un clip a la libreria del maniqui. Sin eso, el arma no se ve.
+> - [[Contrato AttackClip]] — que declara un golpe animado y por que el hitbox cuelga del hueso.
+> - [[Espada]] — la referencia implementada. Cuando algo de aca no alcance, mirar como lo resolvio ella.
+
+### 1. La escena
+
+Un arma es una `.tscn` con un `Node3D` raiz que lleva el script del arma. **El raiz se instancia en el origen del Player**, no en la mano: lo que va a la mano se marca con un grupo.
+
+```
+Espada (Node3D + sword.gd)
+├── Hand (Node3D)                              ← OBLIGATORIO, aunque quede vacio
+│   └── Pivot (Node3D)                         ← OBLIGATORIO
+│       ├── BladeMesh                          ← grupo hand_attachment_payload
+│       └── BladeHitbox (Area3D + hitbox.gd)   ← grupo hand_attachment_payload
+│           └── CollisionShape3D
+├── AirDiscHitbox (Area3D)                     ← opcional: disco alrededor del Player en golpes aereos
+└── ...los hitboxes propios de los especiales del arma
+```
+
+Lo que hay que respetar, y por que:
+
+- **`Hand/Pivot` y `Hand/Pivot/BladeHitbox` son rutas fijas.** `WeaponBase` las toma con `@onready`; si no existen, el arma revienta al entrar al arbol. Sobrevivieron al swing procedural aunque ya no orbiten: `Pivot` quedo como percha de lo que se crea en runtime (las motas de sweet spot).
+- **Todo lo que tenga que verse en la mano va al grupo `hand_attachment_payload`** — los meshes **y** el hitbox de la hoja. `PlayerAnimationController` los reparenta al `BoneAttachment3D` del hueso `hand_r`. Si te olvidas del grupo en el hitbox, tenes de nuevo el bug de las dos espadas: una que se ve y otra que golpea.
+- **El mesh de la hoja se tiene que llamar `BladeMesh`, `HeadMesh` o `HandleMesh`.** `_find_charge_glow_mesh()` los busca por nombre en ese orden para colgarles el glow de carga. Con cualquier otro nombre el arma funciona pero no brilla al cargar, y no avisa.
+- **Los hitboxes que NO son la hoja se quedan afuera del payload**: el disco aereo es un area alrededor del Player, no del arma, asi que no debe seguir al hueso.
+
+### 2. El script
+
+```gdscript
+class_name MiArma extends WeaponBase
+
+func tap(slot: World.Slot) -> void: ...
+func hold(slot: World.Slot, level: int) -> void: ...
+func _default_tuning() -> WeaponTuning: return MiArmaTuning.new()
+```
+
+`WeaponBase` ya trae la ventana de daño, el runner de secuencias, el push, el parry, la progresion por kills, el glow de carga y el cobro de los `AttackMovementProfile`. El arma pone **solo su personalidad**: que hace X, que hace Y, tap contra hold, y los ganchos direccionales (`try_lock_back_y_launcher` y familia) si los usa.
+
+Dos ganchos opcionales que vas a querer:
+
+- `on_sequence_step(step, chain_step, finisher)` — mecanicas del arma que no son dato, reconocidas por `AttackStep.choreography`. **No dibuja nada**: el dibujo es el clip.
+- `is_charged_move_active()` — si el arma tiene cargados que mueven al Player a proposito, para que el corte de momentum aereo los deje pasar.
+
+### 3. El tuning
+
+Un `.gd` que extiende `WeaponTuning` mas un `.tres` en `data/`. Como se organiza el inspector esta abajo, en "Organizacion del tuning": leerlo no es opcional, es lo que hace que el recurso siga siendo navegable a los treinta campos.
+
+> [!warning] Renombrar un `@export` borra su valor
+> Los `.tres` serializan **por nombre**. Cambiarle el nombre a un campo, o sacarlo, resetea ese valor en toda instancia que lo tuviera, en silencio. Si vas a renombrar, actualiza el `.tres` en el mismo commit.
+
+### 4. Los combos
+
+Un `AttackSequence` por cadena, en su propio `.tres`, apuntado desde el tuning del arma. El detalle esta en "Los combos tambien son datos", abajo. En corto: un `AttackStep` por golpe, cada uno con su clip, su duracion, su `damage_scale`, su `AttackMovementProfile` y su rama por espera.
+
+El arma solo lo dispara:
+
+```gdscript
+func _tap_combo() -> void:
+    reset_hit_profile()
+    var kind: StringName = &"air" if _player.is_airborne() else &"ground"
+    if try_queue_combo(kind):
+        return
+    run_attack_sequence(kind, _t().ground_combo)
+```
+
+`try_queue_combo` es lo que hace que un tap a mitad de cadena encole el golpe siguiente en vez de reiniciarla.
+
+### 5. Las animaciones
+
+Cada golpe se dibuja con un `AttackClip`: que clip, de que segundo a que segundo, cuanto dura de verdad, y **en que fraccion de ese tramo el hitbox esta abierto** (`hitbox_open` / `hitbox_close`, normalizados 0-1). Ese ultimo par es lo que hace que el golpe pegue en el impacto y no durante todo el swing.
+
+El clip tiene que existir en la libreria del `AnimationPlayer` del maniqui. La libreria base es UAL2; lo que no esta ahi se copia en runtime:
+
+- clips de UAL1 → constante `UAL1_ANIMATIONS` en `PlayerAnimationController`
+- clips propios (`.glb` sueltos en `animaciones/`) → un `preload` mas la constante `CUSTOM_ANIMATIONS`
+
+O sea: **un clip nuevo no alcanza con dejarlo en la carpeta**, hay que darlo de alta ahi. Un nombre que no existe no es error de compilacion — sale un `push_warning` y el golpe se queda sin dibujo. Ver [[Animacion]].
+
+Los tiempos van en **segundos, no en frames**: es 3D con esqueleto UAL y el `AnimationPlayer` de Godot trabaja en segundos.
+
+### 6. El movimiento
+
+Un arma **nunca** escribe la velocidad de nadie. Declara `MoverSettings` / `FloaterSettings` dentro de un `AttackMovementProfile` y el dueño de cada cuerpo los aplica (ver [[Mover y Floater]]).
+
+- Golpes de una cadena → el perfil va en el `AttackStep`, o sea que el beat en el que sale el Mover es tuning.
+- Especiales (cargados, taps direccionales) → el perfil va suelto en el tuning del arma, uno por gesto. Van **todos**, aunque tengan slots vacios.
+
+`WeaponBase` los cobra solo, en el momento que el perfil declare (`BEFORE_DAMAGE`, `ON_HIT`, `WINDOW_END`). El arma no pide nada.
+
+### 7. Enchufarla
+
+1. Instanciar la escena del arma como **hija directa del Player** en `player.tscn`. `PlayerCombat` y `PlayerAnimationController` recorren los hijos del Player para encontrarlas: un arma que cuelgue de otro lado no existe para el juego.
+2. Asignarla a `slot_x` / `slot_y` en el `PlayerCombat` del Player, o dejarla suelta para que el overlay de loadout la ofrezca con `Tab`.
+
+`setup(player)` corre solo y cablea los hitboxes: fuente, daño base, stun, dedup compartido y la señal `landed`.
+
+### 8. Verificar
+
+Los pasos de `METODOLOGIA.md`: `--import`, los dos smokes, y **jugarla**. El feel no lo aprueba un smoke.
+
+---
+
 ## Organizacion del tuning
 
 Cada arma tiene su recurso propio (`SwordTuning`, `MaceTuning`) que extiende `WeaponTuning`, con la instancia editable en `data/`. Lo que es transversal al arma —swing time, push, parry, meter, sweet spot— vive en `WeaponTuning`; lo que es personalidad de un golpe vive en el recurso del arma.
@@ -91,7 +199,7 @@ Una cadena es un **arbol**, no una linea con una desviacion. Como la rama cuelga
 > [!warning] Un paso = un golpe
 > Cada `AttackStep` abre y cierra **su propia ventana de daño**. Antes una cadena de N golpes abria UNA ventana estirada sobre todos, asi que el enemigo cobraba una sola vez aunque vieras cuatro impactos — el tap adelante + X ya salia con dos vueltas y un golpe. Migrar multiplica el daño de toda cadena de mas de un paso; para eso esta `damage_scale` por paso, que es mas fino que bajar el daño base del arma (ese tambien afecta a los especiales).
 
-Lo que un paso **no** dueña es el arco de la mano. Mientras el hitbox siga colgando del pivot orbital, `AttackStep.choreography` es un nombre que el arma traduce a su tween. Ese campo es transitorio: cuando el hitbox cuelgue del hueso, el arco ES la animacion y no hay nada que declarar.
+Lo que un paso **no** duena es el dibujo del golpe: eso es su `AttackClip` y nada mas. `AttackStep.choreography` sobrevivio al swing procedural pero cambio de significado — ya no nombra un tween, nombra una **familia** de golpe para las mecanicas que no se pueden expresar como campo generico (sostener al Player en el aire durante el combo terrestre, estirar los hitboxes en V del finisher aereo). Es un escape hatch: si algo se puede expresar como campo del paso, va como campo. *(2026-07-30)*
 
 ### La variante RT es un porcentaje, no otro perfil
 
