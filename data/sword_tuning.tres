@@ -8,20 +8,7 @@
 [ext_resource type="Script" path="res://data/attack_movement_profile.gd" id="6_movement"]
 [ext_resource type="Resource" path="res://data/sword_ground_combo.tres" id="7_ground_combo"]
 [ext_resource type="Resource" path="res://data/sword_air_combo.tres" id="8_air_combo"]
-
-[sub_resource type="Resource" id="Resource_aerial_y_enemy_spike_mover"]
-script = ExtResource("4_mover")
-direction = Vector3(0, -1, 0)
-distance = 100.0
-speed = 40.0
-stop_on = 3
-
-[sub_resource type="Resource" id="Resource_aerial_y_player_mover"]
-script = ExtResource("4_mover")
-distance = 1.0
-speed = 3.125
-float_duration = 0.45
-float_fall_scale = 0.3
+[ext_resource type="Resource" path="res://data/sword_air_charged_y.tres" id="9_air_charged_y"]
 
 [sub_resource type="Resource" id="Resource_air_hit_enemy_floater"]
 script = ExtResource("5_floater")
@@ -159,11 +146,6 @@ player_travel = SubResource("Resource_ground_y_player_mover")
 enemy_travel = SubResource("Resource_ground_y_enemy_mover")
 enemy_travel_at = 0
 
-[sub_resource type="Resource" id="Resource_profile_aerial_charged_y"]
-script = ExtResource("6_movement")
-player_travel = SubResource("Resource_aerial_y_player_mover")
-enemy_travel = SubResource("Resource_aerial_y_enemy_spike_mover")
-
 [sub_resource type="Resource" id="Resource_profile_tap_forward_y"]
 script = ExtResource("6_movement")
 player_travel = SubResource("Resource_tap_forward_y_player_mover")
@@ -192,7 +174,7 @@ charged_dash_duration = 0.19
 charged_dash_damage = 5.0
 charged_dash_stun = SubResource("Resource_810ig")
 ground_charged_y = SubResource("Resource_profile_ground_charged_y")
-aerial_charged_y = SubResource("Resource_profile_aerial_charged_y")
+aerial_charged_y_sequence = ExtResource("9_air_charged_y")
 tap_forward_x_air = SubResource("Resource_profile_tap_forward_x_air")
 tap_back_x_ground = SubResource("Resource_profile_tap_back_x_ground")
 tap_back_x_air = SubResource("Resource_profile_tap_back_x_air")

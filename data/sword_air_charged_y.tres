@@ -1,0 +1,76 @@
+[gd_resource type="Resource" script_class="AttackSequence" format=3]
+
+; Y cargado AEREO de la Espada: tres golpes seguidos, y el ultimo saca al enemigo en diagonal.
+;
+; Es un GESTO, no un combo: auto_chain prendido, o sea que los tres pasos salen solos y no se
+; encadenan con taps. El gesto ya se decidio cuando se solto Y en el aire y pago su barra.
+;
+; Reusa a proposito las TRES animaciones del combo aereo normal (Regular_A, Regular_B y el tramo
+; 2.4-2.7 de Heavy_Combo). No es un placeholder por falta de arte: la idea es que se lea como el
+; combo aereo y sorprenda en el remate. Si algun dia tiene set propio, se cambian los tres clips
+; de aca y nada mas.
+;
+; El remate es un Mover SOLO de enemigo: el Player no se mueve en ningun paso. La direccion
+; (0, -0.5, 0.866) son 30 grados por debajo de la horizontal, y enemy_direction = PLAYER_FORWARD
+; gira esa horizontal contra el facing, asi que el empujon siempre sale alejandose del Player.
+; Sin eso la direccion seria rumbo fijo del mundo. Ver data/attack_movement_profile.gd.
+
+[ext_resource type="Script" path="res://data/mover_settings.gd" id="1_mover"]
+[ext_resource type="Script" path="res://data/attack_movement_profile.gd" id="2_movement"]
+[ext_resource type="Script" path="res://data/attack_clip.gd" id="3_clip"]
+[ext_resource type="Script" path="res://data/attack_step.gd" id="4_step"]
+[ext_resource type="Script" path="res://data/attack_sequence.gd" id="5_sequence"]
+
+[sub_resource type="Resource" id="Resource_knock_enemy_mover"]
+script = ExtResource("1_mover")
+direction = Vector3(0, -0.5, 0.866025)
+distance = 6.0
+speed = 18.0
+acceleration = 0.0
+stop_on = 7
+
+[sub_resource type="Resource" id="Resource_profile_knock"]
+script = ExtResource("2_movement")
+enemy_travel = SubResource("Resource_knock_enemy_mover")
+enemy_travel_at = 1
+enemy_direction = 1
+
+[sub_resource type="Resource" id="Resource_clip_a"]
+script = ExtResource("3_clip")
+clip = &"Sword_Regular_A"
+
+[sub_resource type="Resource" id="Resource_clip_b"]
+script = ExtResource("3_clip")
+clip = &"Sword_Regular_B"
+
+[sub_resource type="Resource" id="Resource_clip_heavy"]
+script = ExtResource("3_clip")
+clip = &"Sword_Heavy_Combo"
+start_time = 2.4
+end_time = 2.7
+
+[sub_resource type="Resource" id="Resource_step_1"]
+script = ExtResource("4_step")
+clip = SubResource("Resource_clip_a")
+damage_scale = 0.6
+choreography = &"air_diagonal_l"
+
+[sub_resource type="Resource" id="Resource_step_2"]
+script = ExtResource("4_step")
+clip = SubResource("Resource_clip_b")
+damage_scale = 0.6
+choreography = &"air_diagonal_r"
+
+[sub_resource type="Resource" id="Resource_step_3"]
+script = ExtResource("4_step")
+clip = SubResource("Resource_clip_heavy")
+damage_scale = 1.0
+movement = SubResource("Resource_profile_knock")
+choreography = &"air_finisher"
+
+[resource]
+script = ExtResource("5_sequence")
+steps = Array[ExtResource("4_step")]([SubResource("Resource_step_1"), SubResource("Resource_step_2"), SubResource("Resource_step_3")])
+step_time = 0.2
+auto_chain = true
+recovery = -1.0

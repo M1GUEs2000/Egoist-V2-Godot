@@ -801,7 +801,53 @@ func _profile_enemy_travel(at: AttackMovementProfile.EnemyTravelAt) -> MoverSett
 		return null
 	if not _profile_is_payable(_movement_profile, _movement_profile_with_meter):
 		return null
-	return _movement_profile.enemy_travel
+	return _resolve_enemy_travel(_movement_profile)
+
+## Orienta la parte HORIZONTAL del recorrido del Enemy contra el facing del Player, conservando la
+## inclinacion que declaro el .tres. Es lo que separa un empujon diagonal ("alejandose de mi, 30
+## grados hacia abajo") de un rumbo fijo del mundo. Clona antes de escribir, como _resolve_travel:
+## el MoverSettings es un recurso compartido. Devuelve el original si no hay nada que reescribir.
+func _resolve_enemy_travel(profile: AttackMovementProfile) -> MoverSettings:
+	var settings := profile.enemy_travel
+	var mode := profile.enemy_direction
+	if settings == null or mode == AttackMovementProfile.Direction.PROFILE:
+		return settings
+	var forward := _player.forward()
+	forward.y = 0.0
+	if forward.length_squared() < 0.0001:
+		return settings  # facing degenerado: mejor el rumbo del perfil que una direccion nula
+	forward = forward.normalized()
+	if mode == AttackMovementProfile.Direction.PLAYER_BACK:
+		forward = -forward
+	var source := settings.direction
+	# El largo horizontal del vector del .tres ES la inclinacion: (0, -0.5, 0.866) son 30 grados
+	# hacia abajo, y ese 0.866 se reparte sobre el forward en vez de sobre el eje Z del mundo.
+	var horizontal := Vector2(source.x, source.z).length()
+	var aimed := forward * horizontal + Vector3.UP * source.y
+	if aimed.length_squared() < 0.0001:
+		return settings
+	var resolved := settings.duplicate() as MoverSettings
+	resolved.direction = aimed.normalized()
+	return resolved
+
+## True si el paso vigente saca al Enemy AL CONECTAR. Es la pregunta que separa "este golpe lo
+## empuja" de "este golpe lo sostiene": un arma no puede aplicarle su hold aereo generico a un
+## enemigo que este mismo golpe ya esta moviendo, porque el Floater le pelea al Mover.
+##
+## Es ON_HIT y no "tiene enemy_travel a secas" a proposito. Un recorrido en WINDOW_END todavia no
+## salio, y el hold es justamente lo que mantiene al objetivo en su lugar hasta que salga — es el
+## caso del plunge y del spike del combo aereo, que dependen de eso.
+##
+## Se pregunta por PASO, no por gesto: dentro de una misma secuencia los golpes que sostienen y el
+## que remata son pasos distintos con perfiles distintos.
+func profile_moves_enemy_on_hit() -> bool:
+	if not _movement_profile_is_current():
+		return false
+	if _movement_profile.enemy_travel == null:
+		return false
+	if _movement_profile.enemy_travel_at != AttackMovementProfile.EnemyTravelAt.ON_HIT:
+		return false
+	return _profile_is_payable(_movement_profile, _movement_profile_with_meter)
 
 ## Recorrido ON_HIT: el enemigo que acaba de conectar se mueve DESPUES del dano. Lo llama _on_hit
 ## para cualquier golpe del arma, asi que un spike se prende y se apaga solo desde el inspector.

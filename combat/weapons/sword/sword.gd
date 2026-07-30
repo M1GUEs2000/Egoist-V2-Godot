@@ -527,16 +527,15 @@ func _aerial_charged_y() -> void:
 		return
 	_run_aerial_charged_y()
 
-## El auto-launch del Player sale del perfil al arrancar; el spike del Enemy lo cobra WeaponBase al
-## conectar, porque el perfil lo declara en ON_HIT.
+## TRES golpes seguidos con las animaciones del combo aéreo, y un remate que saca al enemigo en
+## diagonal hacia abajo. Todo eso es el .tres: acá no queda coreografía, solo la bandera que le dice
+## al arma que el hold genérico de enemigos aéreos no aplica (el gesto le da su propio Mover).
+##
+## `_aerial_charged_y_active` se apaga aunque la secuencia la corten a mitad: run_attack_sequence
+## retorna al invalidarse la rutina, y el await de acá resume igual.
 func _run_aerial_charged_y() -> void:
-	var t := _t()
 	_aerial_charged_y_active = true
-	run_attack_movement(t.aerial_charged_y, _routine_id)
-	play_visual_clip(ANIM_HEAVY, HEAVY_AIR_Y_START, HEAVY_AIR_Y_END, tuning.swing_time)
-	begin_damage_window(tuning.swing_time)
-	ComboTracker.register_hit()
-	await wait_seconds(tuning.swing_time)
+	await run_attack_sequence(&"charged_y_air", _t().aerial_charged_y_sequence)
 	_aerial_charged_y_active = false
 
 ## Golpe aéreo NORMAL (no cargado) conectado: suspende al enemigo en el aire con un hold puro
@@ -551,10 +550,13 @@ func _on_aerial_normal_hit(hurtbox: Hurtbox, _died: bool) -> void:
 	if request_profile_enemy_hang(hurtbox):
 		return
 	# El hold depende de que el ENEMIGO esté en el aire (lo valida request_float), no de dónde esté
-	# el jugador: el juggle común es pegarle al enemigo cayendo desde el piso. Solo se excluye el
-	# cargado Y, que ya le da su propio spike/Mover al enemigo. Un golpe a un enemigo en tierra no
-	# hace nada: request_float exige aéreo + quebrado.
-	if _aerial_charged_y_active:
+	# el jugador: el juggle común es pegarle al enemigo cayendo desde el piso. Un golpe a un enemigo
+	# en tierra no hace nada: request_float exige aéreo + quebrado.
+	#
+	# Se excluye el golpe que YA está sacando al enemigo, porque el Floater le pelearía al Mover. Se
+	# pregunta por PASO y no por gesto: la Y cargada aérea son tres golpes, y los dos primeros TIENEN
+	# que sostener al enemigo o el remate le pega al aire.
+	if profile_moves_enemy_on_hit():
 		return
 	var f := _t().air_hit_enemy_floater
 	if f == null or f.duration <= 0.0:

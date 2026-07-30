@@ -79,6 +79,16 @@ enum EnemyTravelAt {
 @export var enemy_travel: MoverSettings
 ## En que momento del golpe sale `enemy_travel`. Ver EnemyTravelAt.
 @export var enemy_travel_at := EnemyTravelAt.ON_HIT
+## De donde sale la direccion HORIZONTAL de `enemy_travel`. PROFILE la respeta tal cual, que es lo
+## correcto para recorridos verticales puros (un launcher sube y un spike baja, mires a donde mires).
+## PLAYER_FORWARD y PLAYER_BACK giran la parte horizontal contra el facing del Player y CONSERVAN la
+## inclinacion declarada en el MoverSettings, asi que un empujon en diagonal sale siempre alejandose
+## del Player en vez de apuntar a un rumbo fijo del mundo.
+##
+## Es el gemelo de `player_direction` y no existia porque hasta ahora todo `enemy_travel` era
+## vertical puro. Un empujon diagonal sin esto es un bug garantizado: la direccion del .tres es
+## mundo, asi que el mismo golpe tiraria al enemigo al norte estes donde estes.
+@export var enemy_direction := Direction.PROFILE
 ## Antes de arrancar `enemy_travel`, sube o baja al objetivo a la altura del Player. Es lo que hace
 ## que un plunge se sienta como "bajamos juntos" y no como dos caidas paralelas: si el golpe entro
 ## por encima tuyo, el enemigo se alinea primero. Solo alinea si el Mover realmente va a entrar

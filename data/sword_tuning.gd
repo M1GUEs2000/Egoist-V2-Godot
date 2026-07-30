@@ -100,14 +100,18 @@ class_name SwordTuning extends WeaponTuning
 ## Si el launcher cobra daño ademas de elevar. Apagarlo lo deja como puro abre-juggle.
 @export var ground_charged_y_deals_damage := true
 
-@export_group("Y cargado aereo (DESACTIVADO)", "aerial_charged_y_")
-## Que le hace el gesto a la posicion de los cuerpos: auto-launch del Player al iniciar el golpe
-## (con su Float final) y spike lineal descendente del Enemy en ON_HIT — aca el Stun no necesita
-## verlo en el aire, asi que el Mover puede salir despues del dano.
+@export_group("Y cargado aereo (X X X que remata en diagonal)")
+## El gesto entero como datos: TRES golpes seguidos que reusan las animaciones del combo aereo, y un
+## remate que saca al enemigo en diagonal hacia abajo. Es un AttackSequence con `auto_chain`, o sea
+## que los pasos salen solos y no se ganan con taps: el gesto ya se decidio al soltar Y en el aire.
 ##
-## El rebote de este move depende del "bouncer", que todavia no existe: hasta entonces sostener Y
-## en el aire cae al combo aereo normal y este perfil no se usa. Ver obsidian/Espada.
-@export var aerial_charged_y: AttackMovementProfile
+## El Player no se mueve en ningun paso; el unico recorrido es el del Enemy en el ultimo, y va en el
+## AttackMovementProfile de ESE paso, no suelto aca. Ver data/sword_air_charged_y.tres.
+##
+## Reemplazo al perfil suelto `aerial_charged_y` (auto-launch del Player + spike descendente), que
+## era un solo golpe y dependia del "bouncer" que nunca existio. Sus valores viven en el historial de
+## git si algun dia se quiere el auto-launch de vuelta.
+@export var aerial_charged_y_sequence: AttackSequence
 
 # ============================================================================
 @export_category("Taps direccionales (lock-on)")

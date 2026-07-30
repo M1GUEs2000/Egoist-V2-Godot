@@ -42,7 +42,7 @@ Arma base / equilibrada. Velocidad media. Sirve para mantener el flujo del comba
 | X cargado sweet spot | Igual que el terrestre: tras atravesar al objetivo, activa el launcher sin gasto extra. |
 | Tap adelante + X (lock-on) | Vueltas con Floater y sin proyectil. RT + medio meter usa mas vueltas y Floaters RT propios para Player y Enemy. |
 | Tap atras + X (lock-on) | Una vuelta y retroceso corto, sin proyectil. RT usa mas vueltas, retroceso largo y Floaters propios; al terminar dispara un proyectil con launcher aereo independiente. |
-| Y cargado            | **Desactivado por ahora** (ver Estado Godot): diseño es golpe hacia abajo que hace rebotar al enemigo (auto-lanza al jugador y spikea/rebota al enemigo hasta su altura), pero depende de `slam_bounce`, que espera el "bouncer" sin diseñar. Sostener Y en el aire cae al combo aereo normal. |
+| Y cargado            | Tres golpes seguidos con las animaciones del combo aereo, y un remate que saca al enemigo en diagonal hacia abajo (30 grados, alejandose del jugador). Gasta 1 barra; sin barra cae al combo aereo normal. *(2026-07-30: antes era el rebote bloqueado por el "bouncer")* |
 | Tap atras + Y (lock-on) | Plunge sin barra: hachazo y, al cerrar el swing, Player y enemigo golpeado caen con `tap_back_y_air_player_mover` / `tap_back_y_air_enemy_mover`. En whiff el Player tambien cae. El tap se lee contra el eje jugador-objetivo y fija el facing al enemigo durante el hachazo. |
 | Tap adelante + Y (lock-on) | Vuelta final, Mover de avance hacia el objetivo y push al enemigo, a diferencia de la variante terrestre. |
 | Y cargado sweet spot | Diseño pendiente (doble rebote, el segundo sube mas a jugador y enemigos): no implementado, bloqueado por lo mismo que el Y cargado.                               |
@@ -63,10 +63,16 @@ Arma base / equilibrada. Velocidad media. Sirve para mantener el flujo del comba
 - El Sweet Spot del X cargado reduce su coste y encadena launcher al conectar; el Y cargado aun no consume ese flag. Ver [[Sweet Spots]].
 - Habilidad especial de X cargado existe parcialmente por ventana de kill.
 - La hoja brilla al cargar un ataque (glow de carga, ver [[Combate]]). *(2026-07-06)*
-- **Y cargado aereo DESACTIVADO temporalmente** *(2026-07-20)*: usa `slam_bounce` (rebote balistico
-  del enemigo), un move del "bouncer" que todavia no existe. Hasta que se implemente el bouncer, el
-  Y cargado en el aire cae al combo aereo normal (sin gastar barra). El codigo del move queda intacto.
-  Ver [[Plan Autoridad Vertical]] F5.
+- **Y cargado aereo: tres golpes que rematan en diagonal** *(2026-07-30)*. Es una `AttackSequence` con
+  `auto_chain` (`sword_air_charged_y.tres`): los tres pasos salen solos, reusan las animaciones del
+  combo aereo (Regular_A, Regular_B, el tramo 2.4-2.7 de Heavy_Combo) y el ultimo saca al enemigo con
+  un Mover propio, 30 grados por debajo de la horizontal y alejandose del Player. El Player no se
+  mueve en ningun paso. Es el primer gesto del juego que corre por el runner de secuencias en vez de
+  ser coreografia codificada.
+  Reemplaza al diseno anterior (auto-launch del Player + spike descendente que rebotaba al enemigo),
+  que estaba escrito como **desactivado** desde el 2026-07-20 porque dependia de `slam_bounce` y del
+  "bouncer" que nunca se diseno. Esa nota estaba vencida: `_hold_y` en el aire ya ejecutaba el move y
+  cobraba la barra. Ver [[Plan Autoridad Vertical]] F5.
 
 ## Tuning
 
@@ -81,7 +87,7 @@ Las dos cadenas son **datos**: `ground_combo` y `air_combo` apuntan a `data/swor
 | `ground_combo` | Cadena terrestre: 4 pasos (A, B, A, B), ventana de encadene `0.8`, rama tras el golpe 2 con umbral `0.2` que reemplaza los golpes 3-4 por dos vueltas, la ultima con `pushes`. |
 | `air_combo` | Cadena aerea: 3 pasos (A, B, tramo de Heavy), paso de `0.2` s, ventana `0.45`, y DOS ramas — tras el golpe 1 a vueltas (la primera con el hop del Player), tras el golpe 2 al plunge. |
 | `air_finisher_hitbox_v_scale` | Estira verticalmente los hitboxes del hachazo mientras dura el golpe: alto de la hoja y disco aereo como capsula. Aplica al finisher, al plunge y al tap atras + Y aereo, que comparten coreografia. |
-| `air_hit_enemy_floater` | Hold del Enemy al conectarle un golpe aereo normal (`request_float`). Se renueva por golpe (`max`), asi queda pegado durante el combo y cae al dejar de golpearlo. Gate: enemigo aereo y quebrado. Excluye el cargado Y, que ya le da su propio spike. |
+| `air_hit_enemy_floater` | Hold del Enemy al conectarle un golpe aereo normal (`request_float`). Se renueva por golpe (`max`), asi queda pegado durante el combo y cae al dejar de golpearlo. Gate: enemigo aereo y quebrado. No se aplica al golpe que ya esta sacando al enemigo (perfil con `enemy_travel` en `ON_HIT`), porque el Floater le pelearia al Mover; un recorrido en `WINDOW_END` si lo recibe, y de hecho lo necesita. |
 
 Los tres Movers del aereo que antes estaban sueltos aca —el hop de la primera vuelta, el spike del finisher y el plunge de los dos cuerpos— ahora viven dentro del `AttackMovementProfile` del paso que los emite, en `sword_air_combo.tres`. El spike y el plunge salen en `WINDOW_END`: arrancarlos durante el swing saca al objetivo del alcance del propio golpe.
 
@@ -100,7 +106,7 @@ El hold simetrico del jugador, `air_hit_player_floater`, vive en `WeaponTuning`:
 | `charged_fallback_angle` | Swing degradado del X cargado sin barra. |
 | `ground_charged_y_hitbox_duration` / `ground_charged_y_deals_damage` | Ventana activa y dano del launcher terrestre. |
 | `ground_charged_y` | Perfil del launcher Y terrestre: Mover UP de cada cuerpo, cada uno con su Floater de hang en el tope. El del Enemy en `BEFORE_DAMAGE`, para que el Stun del mismo golpe ya lo vea en el aire. |
-| `aerial_charged_y` | Perfil de la Y cargada aerea: auto-launch del Player y spike lineal descendente del Enemy en `ON_HIT`. Sin uso mientras el move este desactivado. |
+| `aerial_charged_y_sequence` | La Y cargada aerea entera como datos: tres pasos con `auto_chain`, y el Mover diagonal del Enemy dentro del perfil del ultimo. Reemplazo del perfil suelto `aerial_charged_y`. |
 
 ### Taps direccionales
 
