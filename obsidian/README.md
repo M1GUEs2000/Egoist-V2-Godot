@@ -36,6 +36,7 @@ La boveda se navega por nodos. Primero se lee este README, despues [[Arquitectur
 | Nodo | Que contiene |
 |---|---|
 | [[Arquitectura Godot]] | Estructura real del repo, mapa Unity V1 a Godot V2 y contratos tecnicos. |
+| [[Diccionario]] | Glosario: que significa cada termino del proyecto y como se llama en el codigo. |
 | [[Integraciones]] | Dependencias externas: Godot, Blender, LimboAI, Claude, Codex. |
 | [[Metodologia V2]] | Flujo para crear, modificar, borrar y clasificar sistemas E0-E4. |
 | [[Smoke Test]] | Qué verifica el smoke test y qué no: lógica invariante sí, valores de tuning no. |
