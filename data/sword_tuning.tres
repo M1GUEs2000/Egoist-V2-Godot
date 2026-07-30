@@ -6,6 +6,8 @@
 [ext_resource type="Script" uid="uid://dsps3sxfd8wmx" path="res://data/mover_settings.gd" id="4_mover"]
 [ext_resource type="Script" uid="uid://br6k3bi45tkio" path="res://data/floater_settings.gd" id="5_floater"]
 [ext_resource type="Script" path="res://data/attack_movement_profile.gd" id="6_movement"]
+[ext_resource type="Resource" path="res://data/sword_ground_combo.tres" id="7_ground_combo"]
+[ext_resource type="Resource" path="res://data/sword_air_combo.tres" id="8_air_combo"]
 
 [sub_resource type="Resource" id="Resource_aerial_y_enemy_spike_mover"]
 script = ExtResource("4_mover")
@@ -21,13 +23,6 @@ speed = 3.125
 float_duration = 0.45
 float_fall_scale = 0.3
 
-[sub_resource type="Resource" id="Resource_air_finisher_enemy_spike_mover"]
-script = ExtResource("4_mover")
-direction = Vector3(0, -1, 0)
-distance = 100.0
-speed = 40.0
-stop_on = 3
-
 [sub_resource type="Resource" id="Resource_air_hit_enemy_floater"]
 script = ExtResource("5_floater")
 duration = 0.2
@@ -36,31 +31,6 @@ duration = 0.2
 script = ExtResource("5_floater")
 duration = 0.2
 fall_scale = 0.1
-
-[sub_resource type="Resource" id="Resource_air_plunge_enemy_mover"]
-script = ExtResource("4_mover")
-direction = Vector3(0, -1, 0)
-distance = 100.0
-speed = 20.0
-acceleration = 10.0
-stop_on = 3
-
-[sub_resource type="Resource" id="Resource_air_plunge_player_mover"]
-script = ExtResource("4_mover")
-direction = Vector3(0, -1, 0)
-distance = 100.0
-speed = 20.0
-acceleration = 10.0
-stop_on = 3
-mode = 1
-
-[sub_resource type="Resource" id="Resource_air_wait_spin_player_mover"]
-script = ExtResource("4_mover")
-distance = 1.0
-speed = 7.0
-mode = 1
-float_duration = 0.1
-float_fall_scale = 0.3
 
 [sub_resource type="Resource" id="Resource_810ig"]
 script = ExtResource("2_stun")
@@ -214,12 +184,8 @@ enemy_travel_aligns_y = true
 
 [resource]
 script = ExtResource("1_tuning")
-combo_window = 0.8
-ground_wait_branch_threshold = 0.2
-air_finisher_enemy_spike_mover = SubResource("Resource_air_finisher_enemy_spike_mover")
-air_wait_spin_player_mover = SubResource("Resource_air_wait_spin_player_mover")
-air_plunge_player_mover = SubResource("Resource_air_plunge_player_mover")
-air_plunge_enemy_mover = SubResource("Resource_air_plunge_enemy_mover")
+ground_combo = ExtResource("7_ground_combo")
+air_combo = ExtResource("8_air_combo")
 air_hit_enemy_floater = SubResource("Resource_air_hit_enemy_floater")
 charged_dash_distance = 11.0
 charged_dash_duration = 0.19

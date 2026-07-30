@@ -17,8 +17,12 @@ class_name SwordTuning extends WeaponTuning
 ##
 ## Un slot vacio dentro de un perfil es una decision legitima y visible ("este golpe no mueve a
 ## nadie"), asi que agregar o sacar movimiento de un especial se hace en el inspector, sin tocar
-## codigo. Los que NO llevan perfil son el X cargado (mueve con force_dash, no con un Mover) y los
-## combos normales, cuyo Mover sale en un beat concreto de la cadena: eso es coreografia, no tuning.
+## codigo. El unico que NO lleva perfil es el X cargado, que mueve con force_dash y no con un Mover.
+##
+## Los COMBOS tambien son datos: un AttackSequence por cadena, con un AttackStep por golpe. Cada
+## paso lleva su propio perfil de movimiento, asi que "el Mover sale en el tercer golpe" se declara
+## en el inspector — era lo unico que faltaba para que la coreografia de una cadena dejara de ser
+## codigo. Ver data/attack_sequence.gd.
 
 @export_group("Debug")
 ## Dibuja un wireframe rojo de cada hitbox (BladeHitbox, AirDiscHitbox, VerticalHitbox,
@@ -36,11 +40,15 @@ class_name SwordTuning extends WeaponTuning
 # ============================================================================
 
 @export_group("Combo terrestre (X X X X)")
-## Segundos para encadenar el siguiente golpe del combo terrestre.
-@export var combo_window := 0.6
-## Rama "espera": tardar al menos esto (dentro de la ventana) en encadenar el 3er golpe
-## convierte los golpes 3-4 de estocadas a vueltas completas.
-@export var ground_wait_branch_threshold := 0.3
+## La cadena entera declarada como datos: los cuatro golpes con su clip, su duracion, su dano y su
+## movimiento, mas la rama de espera que convierte los golpes 3-4 en vueltas. Ver
+## data/attack_sequence.gd. La ventana de encadene y el umbral de la rama viven adentro, no aca:
+## son forma de la cadena, no personalidad del arma.
+@export var ground_combo: AttackSequence
+
+@export_subgroup("Coreografia procedural")
+# TRANSITORIO — estos angulos mueven la espada INVISIBLE que orbita al Player. Mueren cuando el
+# hitbox cuelgue del hueso de la mano y el arco pase a salir de la propia animacion.
 ## Medio arco de los swings 1-2 del combo terrestre, en grados (de -esto a +esto).
 @export var combo_swing_angle := 70.0
 ## Metros que el brazo extiende por encima de hand_radius en el pico de la estocada
@@ -49,6 +57,15 @@ class_name SwordTuning extends WeaponTuning
 @export var thrust_reach := 1.0
 
 @export_group("Combo aereo (X X X)")
+## La cadena aerea como datos, con sus DOS ramas de espera: tras el golpe 1 se va a vueltas
+## (X espera X X) y tras el golpe 2 al plunge (X X espera X). Los Movers del spike, del hop y del
+## plunge viven dentro del AttackMovementProfile del paso que los emite, no sueltos aca: el beat de
+## la cadena en el que sale un recorrido es justamente lo que un paso puede expresar y un campo
+## suelto no. Ver data/attack_sequence.gd.
+@export var air_combo: AttackSequence
+
+@export_subgroup("Coreografia procedural")
+# TRANSITORIO — igual que los del combo terrestre.
 ## Diagonal aerea: medio arco horizontal en grados, cuanto cruza la mano por delante del jugador.
 @export var air_diagonal_yaw := 55.0
 ## Diagonal aerea: medio arco vertical en grados, cuanto baja la mano mientras cruza. Igualarlo
@@ -61,24 +78,6 @@ class_name SwordTuning extends WeaponTuning
 ## 1 = sin estirar. Aplica al finisher (X X X), al plunge (X X espera X) y al tap atras + Y aereo,
 ## que comparten coreografia; no afecta a los otros golpes.
 @export var air_finisher_hitbox_v_scale := 1.5
-
-@export_subgroup("Finisher X X X — Mover")
-## Spike descendente del Enemy al cerrar el hachazo aereo. El Player no recibe perfil: sigue
-## su caida normal.
-@export var air_finisher_enemy_spike_mover: MoverSettings
-
-@export_subgroup("Rama espera: hop — Mover")
-## Hop PARTIAL del Player en la primera vuelta de la rama aerea de espera (X espera X X).
-## Solo el Player: es juice de la vuelta, no toca al Enemy.
-@export var air_wait_spin_player_mover: MoverSettings
-
-@export_subgroup("Rama espera: plunge — Mover")
-## Perfil descendente del Player para el plunge de X X espera X. Es PARTIAL para controlar Y
-## sin apagar sus contactos de locomocion.
-@export var air_plunge_player_mover: MoverSettings
-## Perfil descendente del Enemy para el mismo plunge. Mantener el mismo speed que el del Player
-## es lo que los hace bajar a la par.
-@export var air_plunge_enemy_mover: MoverSettings
 
 @export_subgroup("Impacto aereo — Floater")
 ## Hold del ENEMIGO al conectarle un golpe aereo NORMAL (no cargado): lo suspende en el aire

@@ -385,8 +385,13 @@ func _ready() -> void:
 	player.air_state = Player.AirState.AIRBORNE
 	var sword_probe := _make_push_probe()
 	var sword_hurtbox := _make_hurtbox(sword_probe)
-	sword.begin_routine()
-	sword._begin_air_step(sword.air_steps(), true, true)
+	# El finisher de la rama espera aérea ahora es un AttackStep con pushes = true: quien arma el
+	# push es el runner de secuencias, no la coreografía del arma.
+	var air_combo := (sword.tuning as SwordTuning).air_combo
+	var push_step: AttackStep = air_combo.branches[0].steps[1]
+	assert(push_step.pushes)
+	var sword_id := sword.begin_routine()
+	sword._begin_sequence_step(push_step, 3, true, sword.tuning.air_step_time, sword_id)
 	sword._on_hit(sword_hurtbox, false)
 	await get_tree().create_timer(sword.tuning.air_step_time + 0.03).timeout
 	assert(sword_probe.pushes == 1)

@@ -270,6 +270,134 @@ func run_combo_chain(kind: StringName, steps: int, step_time: float, chain_windo
 	_combo_playing = false
 	_combo_window_open = false
 
+# ---- Motor de secuencias declaradas en datos (reemplaza a run_combo_chain) ----
+
+## Corre una cadena de golpes descrita por un AttackSequence. Es el sucesor de run_combo_chain: en
+## vez de recibir la forma de la cadena como seis parámetros y delegar la coreografía en Callables,
+## recorre los AttackStep del Resource, que traen su clip, su duración, su daño y su movimiento.
+##
+## LA DIFERENCIA DE FONDO ES UNA VENTANA DE DAÑO POR PASO. run_combo_chain abría UNA ventana estirada
+## sobre toda la cadena, así que N golpes cobraban una sola vez — el tap adelante + X ya salía con
+## dos vueltas y un solo impacto. Acá cada paso abre y cierra la suya, y como Hitbox.begin_swing()
+## limpia el dedup, el mismo enemigo vuelve a ser golpeable en el paso siguiente: N golpes son N
+## impactos, N register_hit y N aplicaciones de stun. El daño total se controla por paso con
+## AttackStep.damage_scale, no bajando el daño base del arma (que también afecta a los especiales).
+##
+## Arrancar una cadena invalida cualquier otra en curso (routine_id compartido).
+func run_attack_sequence(kind: StringName, sequence: AttackSequence) -> void:
+	if sequence == null or sequence.steps.is_empty() or _player == null:
+		return
+	# Recovery post-cadena: completarla deja esta ventana muerta. Cortarla a mitad no la cobra.
+	if World.now() < _combo_recovery_until:
+		return
+	var id := begin_routine()
+	_combo_playing = true
+	_combo_kind = kind
+	chain_wait_before_step = 0.0
+
+	var steps := sequence.steps
+	var index := 0
+	# Número de golpe dentro de la CADENA, no dentro del array: tras ramificar el índice vuelve a
+	# cero pero la numeración sigue, que es contra lo que se declaran las ramas.
+	var chain_step := 1
+	var branched := false
+
+	while index < steps.size():
+		var step := steps[index]
+		var finisher := index == steps.size() - 1
+		_combo_queued = false
+		_combo_window_open = false
+		var duration := _step_duration(step, sequence)
+		_begin_sequence_step(step, chain_step, finisher, duration, id)
+		await wait_seconds(duration)
+		if id != _routine_id:
+			return
+		var step_end := World.now()
+
+		if finisher:
+			_combo_recovery_until = World.now() + tuning.combo_recovery
+			break
+
+		# Ventana de encadene: esperar el siguiente tap o cortar la cadena.
+		_combo_window_open = true
+		var expiry := World.now() + sequence.chain_window
+		while World.now() < expiry and not _combo_queued:
+			await get_tree().process_frame
+			if id != _routine_id:
+				return
+		_combo_window_open = false
+		if not _combo_queued:
+			break
+
+		chain_wait_before_step = maxf(0.0, _combo_queued_time - step_end)
+		# Solo se ramifica UNA vez por corrida: metido en una rama, sus pasos mandan hasta el final.
+		# Es lo que hace el juego hoy — si esperaste tras el primer golpe aéreo entrás a las vueltas
+		# y la espera del plunge ya no se mira.
+		if not branched:
+			var tail := sequence.steps_after(chain_step, chain_wait_before_step)
+			if not tail.is_empty():
+				steps = tail
+				index = -1
+				branched = true
+		index += 1
+		chain_step += 1
+
+	_combo_playing = false
+	_combo_window_open = false
+
+## Segundos de un paso: manda su propio clip, después el default de la cadena, y al final el
+## swing_time del arma. Así un paso puede ser más lento que sus vecinos sin tocar a nadie más.
+func _step_duration(step: AttackStep, sequence: AttackSequence) -> float:
+	if step.clip != null and step.clip.duration > 0.0:
+		return step.clip.duration
+	if sequence.step_time > 0.0:
+		return sequence.step_time
+	return tuning.swing_time
+
+## Arranca un paso: daño, clip, coreografía del arma, avance, empuje, movimiento y ventana. Es
+## fire-and-forget igual que el resto de la coreografía; quien mide el tiempo es el runner.
+func _begin_sequence_step(step: AttackStep, chain_step: int, finisher: bool, duration: float,
+		id: int) -> void:
+	# El perfil de daño se rearma en CADA paso en vez de multiplicarse encima del anterior: si no,
+	# una cadena de cuatro con damage_scale 0.6 terminaría en 0.13 del daño base por acumulación.
+	reset_hit_profile()
+	_apply_step_damage(step)
+	if step.clip != null and step.clip.clip != &"":
+		play_visual_clip(step.clip.clip, step.clip.start_time, step.clip.end_time, duration)
+	on_sequence_step(step, chain_step, finisher)
+	if step.advances:
+		_player.attack_step(duration)
+	if step.pushes:
+		arm_push(tuning.push, duration * tuning.push_at)
+	# Se llama SIEMPRE, también con movement en null: así el perfil del paso anterior no sobrevive al
+	# siguiente. Sin esto un paso sin movimiento heredaría el perfil del previo —misma rutina, mismo
+	# id, o sea "vigente"— y el cierre de su ventana cobraría hooks que no le pertenecen.
+	run_attack_movement(step.movement, id)
+	begin_damage_window(duration, finisher)
+	ComboTracker.register_hit()
+	if step.fires_projectile:
+		var launcher: MoverSettings = null
+		if step.movement != null:
+			launcher = step.movement.rt_projectile_enemy_mover
+		_fire_attack_projectile(launcher)
+
+## Mismo recorte en 0 que los bonos del perfil (ver _rt_scale): un daño negativo no significa nada.
+## La local NO se llama `scale`: eso sombrearía la propiedad de Node3D.
+func _apply_step_damage(step: AttackStep) -> void:
+	if is_equal_approx(step.damage_scale, 1.0):
+		return
+	var factor := maxf(0.0, step.damage_scale)
+	_blade_hitbox.damage *= factor
+	if _air_disc_hitbox != null:
+		_air_disc_hitbox.damage *= factor
+
+## Gancho por paso para lo que NO es tuning: el arco procedural de la mano mientras siga existiendo
+## (cada arma traduce AttackStep.choreography a su tween) y las mecánicas propias del arma que no
+## tienen sentido como campo genérico — estirar los hitboxes de un finisher, sostener al Player en
+## el aire durante el combo terrestre. Default no-op.
+func on_sequence_step(_step: AttackStep, _chain_step: int, _finisher: bool) -> void:
+	pass
+
 # ---- Combo aéreo (la coreografía la define cada arma) ----
 
 ## Cuántos golpes tiene el combo aéreo de esta arma (0 = no tiene). El último es el finisher.
@@ -311,7 +439,11 @@ func _finish_air_combo(wait_branch: bool) -> void:
 
 ## Prende el Hitbox de la hoja durante el swing (+ disco aéreo si el player está en el
 ## aire, como v1). Los golpeados quedan en _window_hits. Fire-and-forget: se llama sin await.
-func begin_damage_window(duration: float) -> void:
+##
+## `runs_profile_hooks` en false deja el cierre MUDO para el AttackMovementProfile. Lo usa el runner
+## de secuencias en los pasos que no son el último: el perfil describe el gesto completo, así que un
+## recorrido WINDOW_END tiene que salir una vez al terminar la cadena y no una vez por golpe.
+func begin_damage_window(duration: float, runs_profile_hooks := true) -> void:
 	_window_id += 1
 	var id := _window_id
 	_window_hits.clear()
@@ -326,7 +458,8 @@ func begin_damage_window(duration: float) -> void:
 		_air_disc_hitbox.end_swing()
 	# Los recorridos WINDOW_END del perfil se cobran acá y no en cada arma: es el único punto que
 	# sabe que la ventana cerró bien. Si el perfil no pidió ese momento, no hace nada.
-	_run_window_end_travel()
+	if runs_profile_hooks:
+		_run_window_end_travel()
 
 func end_damage_window() -> void:
 	_window_id += 1

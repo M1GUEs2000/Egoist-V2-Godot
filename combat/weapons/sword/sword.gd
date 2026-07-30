@@ -2,11 +2,9 @@ class_name Sword extends WeaponBase
 ## Espada (bóveda: Armas/Espada): tap = combo de 4 + rama espera + sweet spot;
 ## Y cargado = golpe vertical / Y cargada aérea. X cargado = dash ofensivo (gasta 1 barra).
 ## Swings 100% procedurales (tweens de quaternion sobre la Hand), SIN AnimationPlayer.
-## Los combos corren sobre el motor genérico de WeaponBase (run_combo_chain);
-## acá vive solo la coreografía. Ángulos y ventanas se tunean en SwordTuning.
+## Los combos son DATOS: SwordTuning.ground_combo / air_combo los declaran paso por paso y el motor
+## de WeaponBase (run_attack_sequence) los recorre. Acá quedan los especiales y los arcos de mano.
 # ponytail: personalidades X/Y como funcs aquí; extraer strategy cuando exista la 2ª arma.
-
-const STEP_COUNT := 4
 
 # Clips UAL2 del plan de la bóveda (Animacion Espada) — nombres verificados contra el .glb.
 const ANIM_REGULAR_A := &"Sword_Regular_A"
@@ -31,8 +29,6 @@ var _aerial_charged_y_active := false
 var _directional_x_routine_id := -1
 var _directional_x_animation_done := true
 var _directional_x_mover_pending := false
-## Rama plunge elegida para el finisher aéreo en curso (la lee _finish_air_combo).
-var _air_plunge_finisher := false
 # Estiramiento vertical de hitboxes del finisher aéreo (ver air_finisher_hitbox_v_scale):
 # la hoja agranda su caja y el disco esférico se cambia por una cápsula vertical mientras
 # dura el golpe. Shapes propios capturados/creados en setup().
@@ -189,25 +185,55 @@ func _begin_directional_x() -> void:
 
 ## Combo terrestre (bóveda Armas): tap tap tap tap → swing, swing, estocada, estocada.
 ## tap tap (espera) tap tap → los golpes 3-4 pasan a vueltas completas.
+##
+## La forma de las dos cadenas —cuántos golpes, con qué clip, cuánto pega cada uno, dónde ramifican
+## y qué Mover sale en qué beat— vive en SwordTuning.ground_combo / air_combo. Acá quedan solo los
+## arcos procedurales de la mano, que son lo único que todavía no es dato.
 func _tap_combo() -> void:
 	# Entrada de ataque: devuelve el hitbox a su daño base. Sin esto, el bono de daño de un tap
 	# direccional RT previo (ver _apply_tap_x_meter_damage) seguiría vivo en el combo siguiente.
 	reset_hit_profile()
-	# En el aire: combo aéreo (motor genérico en WeaponBase), no el terrestre.
-	if _player.is_airborne():
-		play_aerial_combo()
+	var airborne := _player.is_airborne()
+	var kind: StringName = &"air" if airborne else &"ground"
+	if try_queue_combo(kind):
 		return
-	if try_queue_combo(&"ground"):
-		return
-	run_combo_chain(&"ground", STEP_COUNT, tuning.swing_time, _t().combo_window,
-			2, _t().ground_wait_branch_threshold, _begin_ground_step)
+	run_attack_sequence(kind, _t().air_combo if airborne else _t().ground_combo)
 
-func _begin_ground_step(step: int, finisher: bool, wait_branch: bool) -> void:
-	_play_combo_step(step, wait_branch)
-	if finisher and wait_branch:
-		arm_push(tuning.push, tuning.swing_time * tuning.push_at)
-	_player.attack_step(tuning.swing_time)  # avanza hacia el lockeado / al frente
-	_player.hold_airborne_for_attack()
+## Lo que no es tuning de cada paso: el arco de la mano y las mecánicas propias de la Espada.
+## `step.choreography` es el nombre que el paso declara en el .tres; el match muere entero cuando el
+## hitbox cuelgue del hueso y el arco salga de la animación.
+func on_sequence_step(step: AttackStep, _chain_step: int, _finisher: bool) -> void:
+	match step.choreography:
+		&"ground_swing_l":  # izquierda → derecha
+			_play_combo_swing(1.0)
+			_player.hold_airborne_for_attack()
+		&"ground_swing_r":  # derecha → izquierda
+			_play_combo_swing(-1.0)
+			_player.hold_airborne_for_attack()
+		&"ground_thrust":
+			_play_thrust()
+			_player.hold_airborne_for_attack()
+		&"ground_spin":
+			_play_spin()
+			_player.hold_airborne_for_attack()
+		&"air_spin":
+			_play_spin()
+		&"air_diagonal_l":
+			_play_air_diagonal(-1.0)  # arriba-izq → abajo-der
+		&"air_diagonal_r":
+			_play_air_diagonal(1.0)  # arriba-der → abajo-izq
+		&"air_finisher":
+			# Estirar los hitboxes es mecánica, no dibujo: sobrevive al swing procedural.
+			_run_finisher_v_stretch()
+			var half := _t().air_finisher_angle
+			_play_swing(Quaternion(Vector3.RIGHT, deg_to_rad(-half)),
+					Quaternion(Vector3.RIGHT, deg_to_rad(half)))
+
+## side +1 = de izquierda a derecha (golpe 1), -1 = de derecha a izquierda (golpe 2). El arco es
+## simétrico, así que invertir el signo alcanza para espejarlo.
+func _play_combo_swing(side: float) -> void:
+	var half := _t().combo_swing_angle * side
+	_play_swing(Quaternion(Vector3.UP, deg_to_rad(-half)), Quaternion(Vector3.UP, deg_to_rad(half)))
 
 # ---- Personalidad X: cargado (dash sweet spot) ----
 
@@ -632,108 +658,17 @@ func _place_behind_target(target: Node3D) -> void:
 
 # ---- Coreografía (swing/swing_up/_play_swing/_play_spin viven en WeaponBase) ----
 
-## Combo terrestre: swing, swing, estocada, estocada (o vueltas en la rama espera).
-## Maniquí (bóveda Animacion Espada): A, B, A, B sin espera · A, B, C, C con espera.
-func _play_combo_step(step: int, spin: bool) -> void:
-	play_visual_clip(_ground_step_clip(step, spin), 0.0, -1.0, tuning.swing_time)
-	var half := _t().combo_swing_angle
-	match step:
-		1:  # izquierda → derecha
-			_play_swing(Quaternion(Vector3.UP, deg_to_rad(-half)), Quaternion(Vector3.UP, deg_to_rad(half)))
-		2:  # derecha → izquierda
-			_play_swing(Quaternion(Vector3.UP, deg_to_rad(half)), Quaternion(Vector3.UP, deg_to_rad(-half)))
-		3, 4:
-			if spin:
-				_play_spin()  # vuelta completa
-			else:
-				_play_thrust()  # estocada
-
-func _ground_step_clip(step: int, spin: bool) -> StringName:
-	match step:
-		1:
-			return ANIM_REGULAR_A
-		2:
-			return ANIM_REGULAR_B
-		_:
-			if spin:
-				return ANIM_REGULAR_C
-			return ANIM_REGULAR_A if step == 3 else ANIM_REGULAR_B
-
-## Combo AÉREO (bóveda Armas): golpe 1 siempre diagonal; según las esperas:
-##   X X X            → diagonal, diagonal, hachazo vertical (spikea al suelo)
-##   X (espera) X X   → diagonal, vuelta, vuelta (empuja hacia adelante)
-##   X X (espera) X   → diagonal, diagonal, PLUNGE: vos y el enemigo golpeado bajan
-##                      juntos al piso; un rebote en enemigo
-##                      lo cancela. Misma coreografía/clip que el hachazo.
-func air_steps() -> int:
-	return 3
-
-## Maniquí: espejo del terrestre — A, B y tramo aéreo de Heavy para el hachazo;
-## las vueltas de la rama espera usan C (el mismo clip que las vueltas terrestres).
-func play_air_step(step: int, finisher: bool, wait_branch: bool) -> void:
-	if step == 1:
-		_air_plunge_finisher = false
-		play_visual_clip(ANIM_REGULAR_A, 0.0, -1.0, tuning.swing_time)
-		_play_air_diagonal(-1.0)  # arriba-izq → abajo-der
-		return
-	if wait_branch:
-		play_visual_clip(ANIM_REGULAR_C, 0.0, -1.0, tuning.swing_time)
-		if step == 2:  # primera vuelta: eleva un poco al jugador (juice)
-			_player.request_mover(_t().air_wait_spin_player_mover)
-		_play_spin()  # vuelta completa (golpe 2 y finisher)
-		return
-	if finisher:  # hachazo vertical — con espera previa (X X espera X) es plunge
-		# El plunge del jugador NO arranca acá: caer durante el swing te saca de rango y el
-		# hitbox no llega al enemigo. Arranca en _finish_air_combo, al cerrar el golpe.
-		_air_plunge_finisher = chain_wait_before_step >= tuning.air_wait_branch_threshold
-		_run_finisher_v_stretch()
-		play_visual_clip(ANIM_HEAVY, HEAVY_AIR_Y_START, HEAVY_AIR_Y_END, tuning.swing_time)
-		var half := _t().air_finisher_angle
-		_play_swing(Quaternion(Vector3.RIGHT, deg_to_rad(-half)), Quaternion(Vector3.RIGHT, deg_to_rad(half)))
-	else:
-		play_visual_clip(ANIM_REGULAR_B, 0.0, -1.0, tuning.swing_time)
-		_play_air_diagonal(1.0)  # arriba-der → abajo-izq
-
-## Rama plunge: los golpeados se ALINEAN a la altura del jugador (si el golpe entró
-## arriba tuyo, el enemigo baja a tu Y) y caen a la misma velocidad hasta el piso. Ambos usan
-## perfiles Mover; el del Player es parcial para conservar sus contactos.
-func _finish_air_combo(wait_branch: bool) -> void:
-	if _air_plunge_finisher and not wait_branch:
-		_start_air_plunge_from_hits()
-		return
-	if wait_branch:
-		return
-	var spike := _t().air_finisher_enemy_spike_mover
-	if spike == null:
-		return
-	for hurtbox in _window_hits.duplicate():
-		var target: Node = hurtbox.owner_node
-		if target is EnemyBase:
-			(target as EnemyBase).request_mover(spike)
-		elif target.has_method("request_mover"):
-			target.call("request_mover", spike)
-
-## Plunge del COMBO aéreo (X X espera X). Recién después del swing inicia: el Player conserva el
-## rango del hachazo y luego cae incluso en whiff. Los enemigos conectados usan el mismo perfil
-## descendente si pueden tomarlo. El plunge del tap atras + Y aéreo no pasa por acá: es un especial
-## y sus dos recorridos viven en su AttackMovementProfile, en WINDOW_END.
-func _start_air_plunge_from_hits() -> void:
-	var player_mover := _t().air_plunge_player_mover
-	var enemy_mover := _t().air_plunge_enemy_mover
-	_player.request_mover(player_mover)
-	for hurtbox in _window_hits.duplicate():
-		var target: Node = hurtbox.owner_node
-		if enemy_mover == null or not target.has_method("request_mover"):
-			continue
-		# Un enemigo parado no se alinea: el perfil solo puede entrar sobre uno aéreo y stuneado.
-		if not _enemy_can_take_travel(target):
-			continue
-		if target is Node3D:
-			(target as Node3D).global_position.y = _player.global_position.y
-		if target is EnemyBase:
-			(target as EnemyBase).request_mover(enemy_mover)
-		else:
-			target.call("request_mover", enemy_mover)
+## Los dos combos (bóveda Armas) ahora son datos; esto queda como mapa de lo que declara el .tres:
+##
+##   Terrestre  X X X X            → swing, swing, estocada, estocada
+##              X X (espera) X X   → los golpes 3-4 pasan a vueltas + empuje en el último
+##   Aéreo      X X X              → diagonal, diagonal, hachazo (spikea al suelo)
+##              X (espera) X X     → diagonal, vuelta, vuelta (empuja hacia adelante)
+##              X X (espera) X     → diagonal, diagonal, PLUNGE: vos y el golpeado bajan juntos
+##
+## Los tres recorridos del aéreo —el hop de la primera vuelta, el spike del finisher y el plunge—
+## viven en el AttackMovementProfile del paso que los emite. El spike y el plunge salen en
+## WINDOW_END porque arrancarlos durante el swing saca al objetivo del alcance del propio golpe.
 
 ## Estira los hitboxes del finisher aéreo mientras dura el golpe y los restaura al cerrar.
 ## La restauración es incondicional e idempotente: aunque un cargado cancele el combo a

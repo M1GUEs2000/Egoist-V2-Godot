@@ -79,19 +79,23 @@ Arma base / equilibrada. Velocidad media. Sirve para mantener el flujo del comba
 
 ### Ataques normales (tap)
 
+Las dos cadenas son **datos**: `ground_combo` y `air_combo` apuntan a `data/sword_ground_combo.tres` y `data/sword_air_combo.tres`, un `AttackSequence` cada uno. Ahi viven los pasos, sus clips, su dano, sus ramas y los Movers de cada beat. Ver [[Armas]] > Los combos tambien son datos. *(2026-07-30)*
+
 | Knob / perfil | Que mueve |
 |---|---|
-| `combo_window` | Segundos para encadenar el siguiente golpe del combo terrestre. |
-| `ground_wait_branch_threshold` | Espera minima que convierte los golpes 3-4 de estocadas a vueltas. |
-| `combo_swing_angle` | Arco de los swings 1-2 del combo terrestre. |
-| `thrust_reach` | Metros que el brazo extiende sobre `hand_radius` en el pico de la estocada. |
-| `air_diagonal_yaw` / `air_diagonal_pitch` | Diagonal aerea: cuanto cruza la mano por delante y cuanto baja al cruzar. Igualarlos deja la diagonal simetrica; subir el pitch la pica, bajarlo la aplana. |
-| `air_finisher_angle` | Arco del hachazo vertical del finisher aereo. |
+| `ground_combo` | Cadena terrestre: 4 pasos (A, B, A, B), ventana de encadene `0.8`, rama tras el golpe 2 con umbral `0.2` que reemplaza los golpes 3-4 por dos vueltas, la ultima con `pushes`. |
+| `air_combo` | Cadena aerea: 3 pasos (A, B, tramo de Heavy), paso de `0.2` s, ventana `0.45`, y DOS ramas — tras el golpe 1 a vueltas (la primera con el hop del Player), tras el golpe 2 al plunge. |
+| `combo_swing_angle` | Arco de los swings 1-2 del combo terrestre. *Transitorio: muere con el swing procedural.* |
+| `thrust_reach` | Metros que el brazo extiende sobre `hand_radius` en el pico de la estocada. *Transitorio.* |
+| `air_diagonal_yaw` / `air_diagonal_pitch` | Diagonal aerea: cuanto cruza la mano por delante y cuanto baja al cruzar. Igualarlos deja la diagonal simetrica; subir el pitch la pica, bajarlo la aplana. *Transitorio.* |
+| `air_finisher_angle` | Arco del hachazo vertical del finisher aereo. *Transitorio.* |
 | `air_finisher_hitbox_v_scale` | Estira verticalmente los hitboxes del hachazo mientras dura el golpe: alto de la hoja y disco aereo como capsula. Aplica al finisher, al plunge y al tap atras + Y aereo, que comparten coreografia. |
-| `air_finisher_enemy_spike_mover` | Spike descendente del Enemy al cerrar el hachazo `X X X`. El Player sigue su caida normal. |
-| `air_wait_spin_player_mover` | Hop PARTIAL del Player en la primera vuelta de la rama espera. |
-| `air_plunge_player_mover` / `air_plunge_enemy_mover` | Plunge de `X X espera X`: mismo speed = bajan a la par; el del Player es PARTIAL para conservar contactos. |
 | `air_hit_enemy_floater` | Hold del Enemy al conectarle un golpe aereo normal (`request_float`). Se renueva por golpe (`max`), asi queda pegado durante el combo y cae al dejar de golpearlo. Gate: enemigo aereo y quebrado. Excluye el cargado Y, que ya le da su propio spike. |
+
+Los tres Movers del aereo que antes estaban sueltos aca —el hop de la primera vuelta, el spike del finisher y el plunge de los dos cuerpos— ahora viven dentro del `AttackMovementProfile` del paso que los emite, en `sword_air_combo.tres`. El spike y el plunge salen en `WINDOW_END`: arrancarlos durante el swing saca al objetivo del alcance del propio golpe.
+
+> [!warning] Un paso = un golpe
+> Cada paso abre su propia ventana de dano. Antes la cadena entera compartia una, asi que el combo de 4 cobraba **una vez**. Ahora cobra cuatro: el dano total de los dos combos se multiplico sin que se toque un solo numero. Se ajusta con `damage_scale` por paso. Pendiente de tunear jugando. *(2026-07-30)*
 
 El hold simetrico del jugador, `air_hit_player_floater`, vive en `WeaponTuning`: es comun a todas las armas.
 
@@ -133,7 +137,9 @@ Ademas, cada tramo tiene su **bono % de dano con RT**, hoy en `0` (RT pega igual
 
 El vuelo, dano y visual del proyectil siguen compartidos bajo `tap_x_meter_projectile_*`, pero cada perfil que dispara trae su propio launcher (`rt_projectile_enemy_mover`), a mano y sin porcentajes: es el unico Mover del perfil que no le pertenece al Player. Un launcher en `null` conserva el proyectil y desactiva solo su elevacion.
 
-Los taps de Y y los cargados de Y tambien migraron: el Resource sumo `enemy_travel` con su eje `enemy_travel_at` (tres momentos) y `enemy_travel_aligns_y`. Los unicos especiales sin perfil son el **X cargado** (mueve con `force_dash`) y los **combos normales** (su Mover sale en un beat de la cadena); el porque esta en [[Armas]] > Todos los especiales llevan perfil. *(2026-07-29)*
+Los taps de Y y los cargados de Y tambien migraron: el Resource sumo `enemy_travel` con su eje `enemy_travel_at` (tres momentos) y `enemy_travel_aligns_y`. El unico especial sin perfil es el **X cargado**, que mueve con `force_dash`; el porque esta en [[Armas]] > Todos los especiales llevan perfil. *(2026-07-29)*
+
+Los combos tambien tienen perfil, uno por paso: un `AttackStep` lleva su propio `AttackMovementProfile`, asi que el beat de la cadena en el que sale un Mover dejo de ser codigo. *(2026-07-30)*
 
 ## Pendiente H1
 

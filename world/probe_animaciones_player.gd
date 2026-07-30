@@ -226,7 +226,7 @@ func _run_wall_slide() -> void:
 # ---- Espada: combo tap por la ruta real + tramos cargados ----
 
 func _run_sword() -> void:
-	# Ruta real completa: tap() -> run_combo_chain -> _begin_ground_step -> visual_clip_started.
+	# Ruta real completa: tap() -> run_attack_sequence -> _begin_sequence_step -> visual_clip_started.
 	_sword.tap(World.Slot.X)
 	_tick_controller()
 	assert(_animation_player.current_animation == Sword.ANIM_REGULAR_A)
@@ -235,13 +235,20 @@ func _run_sword() -> void:
 	_sword.cancel_routines()
 	await _wait_override_release()
 
-	# Mapeo paso->clip del combo terrestre (funcion pura): A,B,A,B sin espera / A,B,C,C con espera.
-	assert(_sword._ground_step_clip(1, false) == Sword.ANIM_REGULAR_A)
-	assert(_sword._ground_step_clip(2, false) == Sword.ANIM_REGULAR_B)
-	assert(_sword._ground_step_clip(3, false) == Sword.ANIM_REGULAR_A)
-	assert(_sword._ground_step_clip(4, false) == Sword.ANIM_REGULAR_B)
-	assert(_sword._ground_step_clip(3, true) == Sword.ANIM_REGULAR_C)
-	assert(_sword._ground_step_clip(4, true) == Sword.ANIM_REGULAR_C)
+	# Mapeo paso->clip del combo terrestre, ahora declarado en data/sword_ground_combo.tres:
+	# A,B,A,B sin espera / A,B,C,C con espera (la rama reemplaza los golpes 3-4).
+	var ground: AttackSequence = (_sword.tuning as SwordTuning).ground_combo
+	assert(ground.steps.size() == 4)
+	assert(ground.steps[0].clip.clip == Sword.ANIM_REGULAR_A)
+	assert(ground.steps[1].clip.clip == Sword.ANIM_REGULAR_B)
+	assert(ground.steps[2].clip.clip == Sword.ANIM_REGULAR_A)
+	assert(ground.steps[3].clip.clip == Sword.ANIM_REGULAR_B)
+	assert(ground.branches.size() == 1)
+	var ground_wait: AttackBranch = ground.branches[0]
+	assert(ground_wait.after_step == 2)
+	assert(ground_wait.steps.size() == 2)
+	assert(ground_wait.steps[0].clip.clip == Sword.ANIM_REGULAR_C)
+	assert(ground_wait.steps[1].clip.clip == Sword.ANIM_REGULAR_C)
 	print("PROBE animaciones_player=espada_mapeo_combo")
 
 	# X cargado: Sword_Dash completo escalado a la duracion del dash.

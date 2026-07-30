@@ -48,6 +48,8 @@ El inspector se agrupa por **tipo de ataque, nunca por tipo de dato**. No existe
 | `@export_subgroup` | Tramo y primitiva | `Suelo — Mover`, `Aire — Mover`, `Aire — Floater` |
 | Campo | Cuerpo receptor | `tap_back_y_air_player_mover` / `tap_back_y_air_enemy_mover` |
 
+Los ataques que ya migraron no llegan al ultimo nivel: en vez de campos por cuerpo llevan **un Resource por gesto** (`AttackMovementProfile`) o **por cadena** (`AttackSequence`), y los campos sueltos que quedan debajo son los que no son posicion. Ver las dos secciones de abajo.
+
 Reglas:
 
 - **Un campo por cuerpo que el golpe realmente mueve.** Un Mover o un Floater solo controla a su dueno (ver [[Mover y Floater]]), asi que mover a los dos son dos perfiles. Para campos SUELTOS del tuning sigue valiendo que no se crean vacios por simetria; dentro de un `AttackMovementProfile` la regla se invierte (ver mas abajo).
@@ -75,10 +77,18 @@ Un `AttackMovementProfile` va en **todos** los ataques especiales del arma —ta
 
 Esto invierte a proposito la regla de arriba para el caso de los perfiles. La regla original ("no se crean campos vacios por simetria") se escribio porque un campo vacio y un campo olvidado se ven igual en el inspector — el problema real que dejaron los cinco huecos de RT. Dentro de un perfil por gesto ese costo desaparece: el hueco tiene vecinos que le dan contexto y una semantica documentada. La regla sigue viva para los campos **sueltos** del tuning.
 
-Dos excepciones, y las dos por la misma razon —un slot ahi mentiria—:
+Una sola excepcion, porque ahi un slot mentiria: **X cargado**. No mueve al Player con un Mover sino con `force_dash`, que trae i-frames, hitbox propio y reposicionamiento al atravesar al objetivo. Cambiarlo a Mover no seria prender un slot, seria rediseñar el move y perder esas tres cosas.
 
-- **X cargado:** no mueve al Player con un Mover sino con `force_dash`, que trae i-frames, hitbox propio y reposicionamiento al atravesar al objetivo. Cambiarlo a Mover no seria prender un slot, seria rediseñar el move y perder esas tres cosas.
-- **Combos normales:** su Mover sale en un beat concreto de una cadena de varias fases (el plunge de `X X espera X` arranca en el tercer golpe, no "al empezar"). El perfil puede dueñar *que, cuanto, hacia donde y —para el enemigo— en que momento del golpe*; no *en que compas de la cadena*. Eso es coreografia y vive en codigo, igual que la secuencia de `swing_time`.
+### Los combos tambien son datos
+
+Un `AttackSequence` por cadena, con un `AttackStep` por golpe. Cada paso trae su clip, su duracion, su `damage_scale`, y **su propio `AttackMovementProfile`** — asi que "el Mover sale en el tercer golpe" se declara en el inspector. Las ramas por espera son `AttackBranch`: despues del golpe N, tardar mas de `threshold` reemplaza toda la cola de la cadena. *(2026-07-30)*
+
+Un combo puede tener **varias** ramas: el aereo de [[Espada]] ramifica tras el golpe 1 (vueltas) y tras el 2 (plunge). Solo entra una por corrida — metido en una rama, sus pasos mandan hasta el final.
+
+> [!warning] Un paso = un golpe
+> Cada `AttackStep` abre y cierra **su propia ventana de daño**. Antes una cadena de N golpes abria UNA ventana estirada sobre todos, asi que el enemigo cobraba una sola vez aunque vieras cuatro impactos — el tap adelante + X ya salia con dos vueltas y un golpe. Migrar multiplica el daño de toda cadena de mas de un paso; para eso esta `damage_scale` por paso, que es mas fino que bajar el daño base del arma (ese tambien afecta a los especiales).
+
+Lo que un paso **no** dueña es el arco de la mano. Mientras el hitbox siga colgando del pivot orbital, `AttackStep.choreography` es un nombre que el arma traduce a su tween. Ese campo es transitorio: cuando el hitbox cuelgue del hueso, el arco ES la animacion y no hay nada que declarar.
 
 ### La variante RT es un porcentaje, no otro perfil
 
