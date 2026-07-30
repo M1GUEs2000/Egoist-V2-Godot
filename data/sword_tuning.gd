@@ -113,6 +113,17 @@ class_name SwordTuning extends WeaponTuning
 ## git si algun dia se quiere el auto-launch de vuelta.
 @export var aerial_charged_y_sequence: AttackSequence
 
+## La misma Y cargada aerea soltada dentro de la ventana de sweet spot: los dos primeros golpes van
+## repetidos (A B A B) y despues entra el MISMO remate, o sea cinco golpes en vez de tres. El premio
+## del sweet spot es el largo del gesto, no un final distinto: el perfil del empujon es un recurso
+## compartido por las dos secuencias (sword_air_charged_y_knock.tres), asi que se tunea una vez.
+##
+## Cuesta lo mismo que la version normal. Si algun dia el sweet spot tiene que abaratar la barra, el
+## lugar es Sword._aerial_charged_y con meter_cost_scale, igual que el X cargado.
+##
+## null = el sweet spot no hace nada distinto y sale la version normal.
+@export var aerial_charged_y_sweet_sequence: AttackSequence
+
 # ============================================================================
 @export_category("Taps direccionales (lock-on)")
 # ============================================================================

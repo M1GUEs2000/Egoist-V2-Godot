@@ -518,24 +518,30 @@ func _face_locked_target() -> void:
 	if toward_target.length_squared() > 0.0001:
 		_player.locomotion.set_facing(toward_target)
 
-## Y cargada en el aire: gasta 1 barra (como la X cargada). El Player sube con su perfil y los
-## enemigos golpeados reciben un spike lineal al suelo. El rebote sigue fuera de esta ruta.
+## Y cargada en el aire: gasta 1 barra (como la X cargada). Golpes seguidos con las animaciones del
+## combo aéreo y un remate que saca al enemigo en diagonal hacia abajo — tres golpes normalmente,
+## cinco si se soltó dentro del sweet spot. El precio en barra es el mismo en las dos.
 func _aerial_charged_y() -> void:
 	if not _player.meter.spend_charged():
 		# ponytail: sin barra no hay move de compromiso — cae al tap aéreo normal.
 		_tap_combo()
 		return
-	_run_aerial_charged_y()
+	_run_aerial_charged_y(sweet_spot)
 
-## TRES golpes seguidos con las animaciones del combo aéreo, y un remate que saca al enemigo en
-## diagonal hacia abajo. Todo eso es el .tres: acá no queda coreografía, solo la bandera que le dice
-## al arma que el hold genérico de enemigos aéreos no aplica (el gesto le da su propio Mover).
+## Toda la coreografía es el .tres; acá solo queda ELEGIR cuál y sostener la bandera que le dice al
+## resto del arma que este gesto está corriendo (la lee is_charged_move_active para no cortarle el
+## momentum aéreo). El sweet spot cae a la secuencia normal si no declaró la suya, en vez de no
+## sacar nada: un slot vacío apaga el premio, no el golpe.
 ##
 ## `_aerial_charged_y_active` se apaga aunque la secuencia la corten a mitad: run_attack_sequence
 ## retorna al invalidarse la rutina, y el await de acá resume igual.
-func _run_aerial_charged_y() -> void:
+func _run_aerial_charged_y(is_sweet_spot: bool) -> void:
+	var t := _t()
+	var sequence := t.aerial_charged_y_sequence
+	if is_sweet_spot and t.aerial_charged_y_sweet_sequence != null:
+		sequence = t.aerial_charged_y_sweet_sequence
 	_aerial_charged_y_active = true
-	await run_attack_sequence(&"charged_y_air", _t().aerial_charged_y_sequence)
+	await run_attack_sequence(&"charged_y_air", sequence)
 	_aerial_charged_y_active = false
 
 ## Golpe aéreo NORMAL (no cargado) conectado: suspende al enemigo en el aire con un hold puro

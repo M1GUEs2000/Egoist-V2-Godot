@@ -1,0 +1,32 @@
+[gd_resource type="Resource" script_class="AttackMovementProfile" format=3]
+
+; El remate de la Y cargada aerea: saca al enemigo en diagonal hacia abajo, alejandose del Player.
+;
+; Vive en su propio archivo porque lo comparten las DOS versiones del gesto — la normal
+; (sword_air_charged_y.tres, tres golpes) y la de sweet spot (sword_air_charged_y_sweet.tres,
+; cinco). Es el mismo remate: tunearlo en un solo lugar es justamente el punto.
+;
+; La direccion (0, -0.5, 0.866) son 30 grados por debajo de la horizontal, y enemy_direction =
+; PLAYER_FORWARD gira esa horizontal contra el facing, asi que el empujon sale siempre alejandose
+; del Player en vez de apuntar a un rumbo fijo del mundo. Ver data/attack_movement_profile.gd.
+;
+; enemy_travel_at = ON_HIT: sale al conectar. Ademas de ser lo que se siente bien en un remate, es
+; lo que le dice al arma que este golpe NO aplica el hold aereo generico (WeaponBase.
+; profile_moves_enemy_on_hit): el Floater le pelearia al Mover.
+
+[ext_resource type="Script" path="res://data/mover_settings.gd" id="1_mover"]
+[ext_resource type="Script" path="res://data/attack_movement_profile.gd" id="2_movement"]
+
+[sub_resource type="Resource" id="Resource_knock_enemy_mover"]
+script = ExtResource("1_mover")
+direction = Vector3(0, -0.5, 0.866025)
+distance = 6.0
+speed = 18.0
+acceleration = 0.0
+stop_on = 7
+
+[resource]
+script = ExtResource("2_movement")
+enemy_travel = SubResource("Resource_knock_enemy_mover")
+enemy_travel_at = 1
+enemy_direction = 1

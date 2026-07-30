@@ -9,6 +9,7 @@
 [ext_resource type="Resource" path="res://data/sword_ground_combo.tres" id="7_ground_combo"]
 [ext_resource type="Resource" path="res://data/sword_air_combo.tres" id="8_air_combo"]
 [ext_resource type="Resource" path="res://data/sword_air_charged_y.tres" id="9_air_charged_y"]
+[ext_resource type="Resource" path="res://data/sword_air_charged_y_sweet.tres" id="10_air_charged_y_sweet"]
 
 [sub_resource type="Resource" id="Resource_air_hit_enemy_floater"]
 script = ExtResource("5_floater")
@@ -175,6 +176,7 @@ charged_dash_damage = 5.0
 charged_dash_stun = SubResource("Resource_810ig")
 ground_charged_y = SubResource("Resource_profile_ground_charged_y")
 aerial_charged_y_sequence = ExtResource("9_air_charged_y")
+aerial_charged_y_sweet_sequence = ExtResource("10_air_charged_y_sweet")
 tap_forward_x_air = SubResource("Resource_profile_tap_forward_x_air")
 tap_back_x_ground = SubResource("Resource_profile_tap_back_x_ground")
 tap_back_x_air = SubResource("Resource_profile_tap_back_x_air")

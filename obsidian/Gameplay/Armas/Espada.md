@@ -45,7 +45,7 @@ Arma base / equilibrada. Velocidad media. Sirve para mantener el flujo del comba
 | Y cargado            | Tres golpes seguidos con las animaciones del combo aereo, y un remate que saca al enemigo en diagonal hacia abajo (30 grados, alejandose del jugador). Gasta 1 barra; sin barra cae al combo aereo normal. *(2026-07-30: antes era el rebote bloqueado por el "bouncer")* |
 | Tap atras + Y (lock-on) | Plunge sin barra: hachazo y, al cerrar el swing, Player y enemigo golpeado caen con `tap_back_y_air_player_mover` / `tap_back_y_air_enemy_mover`. En whiff el Player tambien cae. El tap se lee contra el eje jugador-objetivo y fija el facing al enemigo durante el hachazo. |
 | Tap adelante + Y (lock-on) | Vuelta final, Mover de avance hacia el objetivo y push al enemigo, a diferencia de la variante terrestre. |
-| Y cargado sweet spot | Diseño pendiente (doble rebote, el segundo sube mas a jugador y enemigos): no implementado, bloqueado por lo mismo que el Y cargado.                               |
+| Y cargado sweet spot | Los dos primeros golpes van repetidos (A B A B) y despues entra el MISMO remate en diagonal: cinco golpes en vez de tres. Cuesta lo mismo que la version normal — el premio es el largo del gesto, no un final distinto. *(2026-07-30: antes era el doble rebote bloqueado por el "bouncer")* |
 
 ## Estado Godot
 
@@ -68,7 +68,9 @@ Arma base / equilibrada. Velocidad media. Sirve para mantener el flujo del comba
   combo aereo (Regular_A, Regular_B, el tramo 2.4-2.7 de Heavy_Combo) y el ultimo saca al enemigo con
   un Mover propio, 30 grados por debajo de la horizontal y alejandose del Player. El Player no se
   mueve en ningun paso. Es el primer gesto del juego que corre por el runner de secuencias en vez de
-  ser coreografia codificada.
+  ser coreografia codificada. Soltada dentro del sweet spot repite los dos primeros golpes antes del
+  remate (`sword_air_charged_y_sweet.tres`, cinco golpes) y no cambia de precio: el remate es
+  literalmente el mismo recurso (`sword_air_charged_y_knock.tres`), compartido por las dos.
   Reemplaza al diseno anterior (auto-launch del Player + spike descendente que rebotaba al enemigo),
   que estaba escrito como **desactivado** desde el 2026-07-20 porque dependia de `slam_bounce` y del
   "bouncer" que nunca se diseno. Esa nota estaba vencida: `_hold_y` en el aire ya ejecutaba el move y
@@ -107,6 +109,7 @@ El hold simetrico del jugador, `air_hit_player_floater`, vive en `WeaponTuning`:
 | `ground_charged_y_hitbox_duration` / `ground_charged_y_deals_damage` | Ventana activa y dano del launcher terrestre. |
 | `ground_charged_y` | Perfil del launcher Y terrestre: Mover UP de cada cuerpo, cada uno con su Floater de hang en el tope. El del Enemy en `BEFORE_DAMAGE`, para que el Stun del mismo golpe ya lo vea en el aire. |
 | `aerial_charged_y_sequence` | La Y cargada aerea entera como datos: tres pasos con `auto_chain`, y el Mover diagonal del Enemy dentro del perfil del ultimo. Reemplazo del perfil suelto `aerial_charged_y`. |
+| `aerial_charged_y_sweet_sequence` | La misma Y cargada aerea soltada en la ventana de sweet spot: cinco pasos (A B A B + remate). null = el sweet spot no cambia nada y sale la version normal. |
 
 ### Taps direccionales
 
