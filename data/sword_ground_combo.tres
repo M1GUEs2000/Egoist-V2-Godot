@@ -1,20 +1,26 @@
-[gd_resource type="Resource" script_class="AttackSequence" format=3]
+[gd_resource type="Resource" script_class="AttackSequence" format=3 uid="uid://bnvtkfyxgglnp"]
 
-; Combo terrestre de la Espada: X X X X.
-;   sin espera  -> swing, swing, estocada, estocada
-;   con espera tras el golpe 2 -> los golpes 3-4 pasan a vueltas y el ultimo empuja
-;
-; La rama cuelga del PASO 2 (wait_threshold / wait_steps), no de la secuencia: por eso cualquiera
-; de esos pasos podria a su vez abrir otra espera sin tocar codigo. chain_window 0.8 era
-; combo_window; el threshold 0.2 era ground_wait_branch_threshold. step_time en 0 = swing_time.
-
-[ext_resource type="Script" path="res://data/attack_clip.gd" id="1_clip"]
-[ext_resource type="Script" path="res://data/attack_step.gd" id="2_step"]
-[ext_resource type="Script" path="res://data/attack_sequence.gd" id="3_sequence"]
+[ext_resource type="Script" uid="uid://b0xd72invappo" path="res://data/attack_clip.gd" id="1_clip"]
+[ext_resource type="Script" uid="uid://b1755lpansqbo" path="res://data/attack_step.gd" id="2_step"]
+[ext_resource type="Script" uid="uid://b1oxel8llcohe" path="res://data/attack_sequence.gd" id="3_sequence"]
+[ext_resource type="Script" uid="uid://df6a6rp7vamdn" path="res://data/attack_movement_profile.gd" id="4_movement"]
+[ext_resource type="Script" uid="uid://w0b3i18w442a" path="res://data/stun_settings.gd" id="4_whdhe"]
+[ext_resource type="Script" uid="uid://cprdodv3kypq1" path="res://data/push_settings.gd" id="5_push"]
 
 [sub_resource type="Resource" id="Resource_clip_a"]
 script = ExtResource("1_clip")
 clip = &"Sword_Regular_A"
+
+[sub_resource type="Resource" id="Resource_m478f"]
+script = ExtResource("4_whdhe")
+grounded = 10.0
+metadata/_custom_type_script = "uid://w0b3i18w442a"
+
+[sub_resource type="Resource" id="Resource_step_1"]
+script = ExtResource("2_step")
+clip = SubResource("Resource_clip_a")
+stun = SubResource("Resource_m478f")
+choreography = &"ground_swing_l"
 
 [sub_resource type="Resource" id="Resource_clip_b"]
 script = ExtResource("1_clip")
@@ -29,16 +35,19 @@ script = ExtResource("2_step")
 clip = SubResource("Resource_clip_c")
 choreography = &"ground_spin"
 
+[sub_resource type="Resource" id="Resource_spin_push"]
+script = ExtResource("5_push")
+
+[sub_resource type="Resource" id="Resource_profile_spin_push"]
+script = ExtResource("4_movement")
+enemy_push = SubResource("Resource_spin_push")
+enemy_push_at = 0.65
+
 [sub_resource type="Resource" id="Resource_step_spin_push"]
 script = ExtResource("2_step")
 clip = SubResource("Resource_clip_c")
-pushes = true
+movement = SubResource("Resource_profile_spin_push")
 choreography = &"ground_spin"
-
-[sub_resource type="Resource" id="Resource_step_1"]
-script = ExtResource("2_step")
-clip = SubResource("Resource_clip_a")
-choreography = &"ground_swing_l"
 
 [sub_resource type="Resource" id="Resource_step_2"]
 script = ExtResource("2_step")
@@ -60,5 +69,4 @@ choreography = &"ground_thrust"
 [resource]
 script = ExtResource("3_sequence")
 steps = Array[ExtResource("2_step")]([SubResource("Resource_step_1"), SubResource("Resource_step_2"), SubResource("Resource_step_3"), SubResource("Resource_step_4")])
-step_time = 0.0
 chain_window = 0.8

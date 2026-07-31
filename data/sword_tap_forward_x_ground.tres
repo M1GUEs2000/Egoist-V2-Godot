@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="AttackSequence" format=3 uid="uid://d0mt6oeaedokk"]
+
+[ext_resource type="Script" uid="uid://b0xd72invappo" path="res://data/attack_clip.gd" id="1_clip"]
+[ext_resource type="Script" uid="uid://b1755lpansqbo" path="res://data/attack_step.gd" id="2_step"]
+[ext_resource type="Script" uid="uid://b1oxel8llcohe" path="res://data/attack_sequence.gd" id="3_sequence"]
+
+[sub_resource type="Resource" id="Resource_clip_spin"]
+script = ExtResource("1_clip")
+clip = &"Sword_Regular_C"
+
+[sub_resource type="Resource" id="Resource_step_spin"]
+script = ExtResource("2_step")
+clip = SubResource("Resource_clip_spin")
+repeat = 2
+repeat_with_meter = 3
+advances = false
+
+[resource]
+script = ExtResource("3_sequence")
+steps = Array[ExtResource("2_step")]([SubResource("Resource_step_spin")])
+auto_chain = true
+recovery = 0.0

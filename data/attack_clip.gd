@@ -1,3 +1,4 @@
+@tool
 class_name AttackClip extends Resource
 ## CONTRATO CONGELADO. Un tramo de animacion que hace de golpe: que clip, desde donde hasta donde,
 ## cuanto dura de verdad, y en que parte de ese tramo el hitbox esta abierto.
@@ -35,10 +36,34 @@ class_name AttackClip extends Resource
 ## Segundo del clip donde termina el tramo. -1 = hasta el final del clip.
 @export var end_time := -1.0
 
-## Segundos REALES que dura el golpe, estirando o comprimiendo el tramo para que entre. 0 = el tramo
-## corre a su velocidad natural. Este es el numero que sincroniza animacion y mecanica: es tambien
-## lo que dura el paso dentro de la secuencia.
-@export var duration := 0.0
+## Cuanto MAS RAPIDO sale este golpe que sus vecinos, en porcentaje. 0 = la duracion que le toca por
+## defecto (el `step_time` de la cadena, o el `swing_time` del arma); 20 = un 20% mas rapido; -50 =
+## la mitad de velocidad, o sea el doble de largo.
+##
+## Reemplaza al viejo `duration` en segundos absolutos (2026-07-30). El motivo es que ese numero
+## obligaba a saber de antemano cuanto dura el golpe para poder decir "este sale un toque mas
+## rapido", y encima el valor quedaba desconectado del resto de la cadena: cambiar el `step_time`
+## dejaba el override viejo pisando igual. Un porcentaje se lee solo y sigue a su base.
+##
+## Es el numero que sincroniza animacion y mecanica: el paso dura esto Y el tramo de clip se estira
+## o comprime para entrar justo.
+@export_range(-90.0, 300.0, 1.0, "or_greater", "suffix:%") var speed_bonus := 0.0
+
+## Segundos reales del golpe, ya resueltos por quien lo dispara (WeaponBase calcula la base de la
+## cadena y le aplica `speed_bonus`). NO es @export a proposito: no es tuning, es el resultado del
+## tuning viajando hasta el animador, y exportarlo lo volveria un segundo lugar donde tocar la
+## duracion. `WeaponBase.play_attack_clip` duplica el clip antes de escribirlo, asi que nunca se
+## escribe el .tres.
+var duration := 0.0
+
+## Aplica `speed_bonus` sobre la duracion que le tocaria al golpe. Vive aca y no en cada consumidor
+## para que el arma y el animador no puedan calcularla distinto.
+##
+## El factor se recorta en 0.1: un `speed_bonus` de -100 seria una division por cero y un golpe
+## eterno. El @export ya limita a -90, pero un .tres viejo o un `or_greater` pueden traer cualquier
+## cosa.
+func scaled_duration(base: float) -> float:
+	return base / maxf(0.1, 1.0 + speed_bonus / 100.0)
 
 ## Fraccion del golpe en la que el hitbox ABRE, normalizada 0-1 sobre `duration`. Va normalizado a
 ## proposito: cambiar la duracion del golpe no tiene que invalidar la ventana de dano. 0 = abre con
@@ -57,3 +82,54 @@ func open_seconds(total: float) -> float:
 ## Segundos desde el inicio del golpe hasta que el hitbox abre.
 func open_delay(total: float) -> float:
 	return maxf(0.0, hitbox_open * total)
+
+# ---- Desplegable de `clip` en el inspector (solo editor) ----
+#
+# `clip` es un StringName escrito a mano y un nombre inexistente NO es error de compilacion: sale un
+# push_warning y el golpe se queda sin dibujo. Esto convierte el campo en un desplegable con los
+# clips que de verdad van a estar en la libreria del maniqui en runtime.
+#
+# Es HINT_ENUM_SUGGESTION y no HINT_ENUM a proposito: sugiere pero deja escribir a mano, porque el
+# proyecto tiene clips WIP que se dan de alta despues (para eso existe CUSTOM_ANIMATIONS).
+#
+# No toca ningun @export: no agrega, quita ni renombra campos, asi que los .tres existentes valen
+# tal cual y el CONTRATO CONGELADO de arriba sigue intacto. Solo cambia como lo dibuja el inspector.
+
+## Lista de clips, una por linea, generada por `tools/generate_clip_names.gd`.
+##
+## POR QUE UN ARCHIVO Y NO LEER LOS .glb ACA: el primer intento instanciaba el glb de UAL2 dentro de
+## `_validate_property` para sacarle `get_animation_list()`. El inspector llama a esa funcion tambien
+## MIENTRAS corre el escaneo del EditorFileSystem, asi que instanciar una escena ahi reentra al
+## escaneo en curso y **cuelga el editor**. Leer un txt es barato y no toca el filesystem del editor.
+##
+## El costo es que la lista se regenera a mano al agregar animaciones. Es el intercambio correcto:
+## una lista vencida solo pierde una sugerencia (el campo sigue aceptando texto libre), mientras que
+## la version cara se llevaba puesto el editor.
+const CLIP_NAMES_PATH := "res://data/clip_names.txt"
+
+## Cache por sesion de editor: el inspector redibuja seguido y esto no cambia entre redibujos.
+static var _clip_names := PackedStringArray()
+
+func _validate_property(property: Dictionary) -> void:
+	if property.name != "clip" or not Engine.is_editor_hint():
+		return
+	var names := _available_clips()
+	if names.is_empty():
+		return
+	property.hint = PROPERTY_HINT_ENUM_SUGGESTION
+	property.hint_string = ",".join(names)
+
+## Sin archivo no hay sugerencia y el campo se comporta como antes: texto libre. Que falte no es un
+## error, es una lista sin generar.
+static func _available_clips() -> PackedStringArray:
+	if not _clip_names.is_empty():
+		return _clip_names
+	if not FileAccess.file_exists(CLIP_NAMES_PATH):
+		return PackedStringArray()
+	var text := FileAccess.get_file_as_string(CLIP_NAMES_PATH)
+	for line in text.split("\n", false):
+		var clip_name := line.strip_edges()
+		# `,` es el separador del hint_string: un nombre con coma partiria la lista en dos entradas.
+		if clip_name != "" and not clip_name.begins_with("#") and not clip_name.contains(","):
+			_clip_names.append(clip_name)
+	return _clip_names

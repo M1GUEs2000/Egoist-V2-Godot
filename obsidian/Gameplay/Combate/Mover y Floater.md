@@ -153,11 +153,11 @@ La variante RT de un gesto no es otro perfil: son **bonos en % sobre la misma ba
 
 | Bono | Sobre que |
 |---|---|
-| `rt_player_travel_distance_bonus` | Metros del recorrido del Player. |
-| `rt_player_travel_speed_bonus` | Velocidad inicial del recorrido. |
-| `rt_player_travel_acceleration_bonus` | Aceleracion. Va aparte de la velocidad: subir solo el arranque deja un recorrido que se siente lavado al final. |
-| `rt_player_hang_bonus` | Segundos de hang del Player. Escala **el que ese golpe use** —`player_hang.duration` o `player_travel.float_duration`— asi el slider vale igual en los dos casos. |
-| `rt_enemy_hang_bonus` | Segundos de `enemy_on_hit`. `-100` lo apaga sin devolver al enemigo al hold generico: el perfil sigue siendo el dueno del hang, solo que pidiendo cero. |
+| `rt_travel_distance_bonus` | Metros del recorrido de Player y Enemy. |
+| `rt_travel_speed_bonus` | Velocidad inicial de ambos Movers. |
+| `rt_travel_acceleration_bonus` | Aceleracion de ambos Movers. Va aparte de la velocidad: subir solo el arranque deja un recorrido que se siente lavado al final. |
+| `rt_player_hang_bonus` | Segundos de hang del Player (`player_travel.float_duration`). |
+| `rt_enemy_hang_bonus` | Segundos de hang del Enemy (`enemy_travel.float_duration`). `-100` lo apaga. |
 
 Dos cosas quedan afuera del modelo a proposito:
 

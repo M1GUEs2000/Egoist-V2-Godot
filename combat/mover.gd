@@ -53,7 +53,13 @@ func start_mover(settings: MoverSettings) -> void:
 		_active = false
 		mover_cancelled.emit(CancelReason.SUPERSEDED)
 	_settings = settings
-	_dir = settings.direction.normalized() if settings.direction.length_squared() > 0.0001 else Vector3.UP
+	# `aimed_direction` la escribe quien dispara el ataque, que es el único que conoce el facing del
+	# Player (ver MoverSettings.direction_vector). Sin resolver —un launcher que EnemyBase arma solo—
+	# se calcula acá, que alcanza porque UP y DOWN no necesitan facing.
+	if settings.aimed_direction.length_squared() > 0.0001:
+		_dir = settings.aimed_direction.normalized()
+	else:
+		_dir = settings.direction_vector(Vector3.ZERO)
 	_speed = settings.speed
 	_traveled = 0.0
 	_active = true

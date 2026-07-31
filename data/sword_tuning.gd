@@ -71,10 +71,11 @@ class_name SwordTuning extends WeaponTuning
 # ============================================================================
 
 @export_group("X cargado — dash (suelo y aire)", "charged_")
+## El gesto completo como AttackSequence de un paso. Ese paso usa `ChargedDashHitbox` en vez de la
+## hoja: el clip declara la animacion y su ventana de dano; Sword conserva force_dash, primer
+## impacto y follow-up exclusivo del sweet spot.
+@export var charged_x_dash_sequence: AttackSequence
 ## Metros que recorre el dash ofensivo.
-@export var charged_dash_distance := 5.0
-## Segundos que dura el dash. Junto con la distancia define su velocidad.
-@export var charged_dash_duration := 0.14
 ## El dash cargado tiene su PROPIO hitbox (en la espada), separado del dash de movimiento
 ## del dodge: su daño/stun/tamaño se tunean aca, no en PlayerTuning.
 @export var charged_dash_damage := 1.0
@@ -129,20 +130,20 @@ class_name SwordTuning extends WeaponTuning
 # ============================================================================
 
 @export_group("Tap X adelante — vueltas estaticas", "tap_forward_x_")
-## Que le hace el gesto a la posicion de los cuerpos, con su variante RT adentro como porcentajes
-## (ver data/attack_movement_profile.gd). Adelante X son vueltas puras: en suelo no mueve a nadie
-## (perfil en null), en aire solo cuelga. No dispara proyectil ni con RT.
-@export var tap_forward_x_ground: AttackMovementProfile
-@export var tap_forward_x_air: AttackMovementProfile
+## El gesto entero como datos: un AttackSequence por tramo. El paso trae el clip de la vuelta, su
+## `movement` (en suelo no mueve a nadie, en aire cuelga a los dos cuerpos) y —lo que antes eran los
+## `spins`— su `repeat` / `repeat_with_meter`.
+##
+## Las vueltas eran un int del tuning traducido a UN clip estirado con UNA sola ventana de dano: se
+## veian tres vueltas y el enemigo cobraba una vez, con un solo register_hit. Ahora cada vuelta es
+## una repeticion del paso, o sea su propia ventana y su propio hit. *(2026-07-30)*
+@export var tap_forward_x_ground_sequence: AttackSequence
+@export var tap_forward_x_air_sequence: AttackSequence
 
 @export_subgroup("Coreografia, input y dano RT", "tap_forward_x_")
 ## Segundos para pulsar X despues de un tap que se acerca al objetivo lockeado. 0 desactiva
 ## el gesto. En suelo y aire solo hace vueltas; nunca dispara proyectil.
 @export var tap_forward_x_window := 0.15
-## Cantidad de vueltas de la variante normal, tanto en suelo como en aire.
-@export_range(1, 8, 1) var tap_forward_x_spins := 2
-## Cantidad de vueltas al pagar RT.
-@export_range(1, 8, 1) var tap_forward_x_meter_spins := 3
 ## Bono % al dano del golpe al pagar RT, por tramo. 0 = RT no pega mas fuerte, solo mas veces.
 ## El dano NO va en el AttackMovementProfile: ese Resource responde solo que le hace el golpe a la
 ## POSICION de los cuerpos, y meter dano ahi obligaria a que adelante X en suelo —que no mueve a
@@ -151,21 +152,23 @@ class_name SwordTuning extends WeaponTuning
 @export_range(-100.0, 300.0, 1.0) var tap_forward_x_air_meter_damage_bonus := 0.0
 
 @export_group("Tap X atras — retroceso", "tap_back_x_")
-## Que le hace el gesto a la posicion de los cuerpos, con su variante RT adentro como porcentajes
-## (ver data/attack_movement_profile.gd). Atras X retrocede al Player con `player_travel` orientado
-## PLAYER_BACK y con RT ademas dispara proyectil al cerrar ese recorrido. En aire el recorrido es
-## `rt_only`: sin barra son vueltas en el sitio.
-@export var tap_back_x_ground: AttackMovementProfile
-@export var tap_back_x_air: AttackMovementProfile
+## El gesto entero como datos: un AttackSequence por tramo. El paso trae el clip, su `movement` —el
+## retroceso del Player con `direction` en BACK, y con RT ademas el proyectil al cerrar ese
+## recorrido— y las vueltas en `repeat` / `repeat_with_meter`.
+##
+## El tramo aereo lleva el perfil en `rt_only`: sin barra son vueltas en el sitio y solo pagando
+## retrocede y dispara. Eso ya vivia en el perfil; lo que se mudo es el resto del gesto. *(2026-07-30)*
+##
+## OJO al subir `repeat_with_meter`: la repeticion es una copia literal, asi que cada vuelta vuelve a
+## pedir el retroceso entero. Una sola salida con vueltas extra encima son DOS pasos —uno con
+## `movement` y otro con el mismo clip sin el—, como dice AttackStep.repeat.
+@export var tap_back_x_ground_sequence: AttackSequence
+@export var tap_back_x_air_sequence: AttackSequence
 
 @export_subgroup("Coreografia, input y dano RT", "tap_back_x_")
 ## Segundos para pulsar X despues de un tap que se aleja del objetivo lockeado. 0 desactiva
 ## el gesto. En suelo y aire retrocede horizontalmente al Player.
 @export var tap_back_x_window := 0.15
-## Cantidad de vueltas de la variante normal aerea.
-@export_range(1, 8, 1) var tap_back_x_air_spins := 1
-## Cantidad de vueltas de la variante aerea con RT.
-@export_range(1, 8, 1) var tap_back_x_meter_air_spins := 2
 ## Bono % al dano del golpe al pagar RT, por tramo. 0 = RT no pega mas fuerte, solo retrocede mas
 ## y dispara. Mismo criterio que en adelante X: el dano no es posicion, asi que no va en el perfil.
 @export_range(-100.0, 300.0, 1.0) var tap_back_x_ground_meter_damage_bonus := 0.0
@@ -201,9 +204,9 @@ class_name SwordTuning extends WeaponTuning
 
 @export_group("Tap Y adelante — avance con vuelta", "tap_forward_y_")
 ## Que le hace el gesto a la posicion de los cuerpos (ver data/attack_movement_profile.gd). Avance
-## del Player hacia el objetivo, con `player_direction` en PLAYER_FORWARD: el gesto ya fijo el facing
-## al lockeado, asi que el perfil se clona y se orienta en runtime sin mutar el .tres. Al Enemy no lo
-## mueve un Mover: en aire lo desplaza el push (WeaponTuning), por eso `enemy_travel` esta vacio.
+## del Player hacia el objetivo, con el Mover en FORWARD: el gesto ya fijo el facing al lockeado, asi
+## que el perfil se clona y se orienta en runtime sin mutar el .tres. Al Enemy no lo mueve un Mover:
+## en aire lo desplaza el push (WeaponTuning), por eso `enemy_travel` esta vacio.
 @export var tap_forward_y: AttackMovementProfile
 
 @export_subgroup("Coreografia e input", "tap_forward_y_")

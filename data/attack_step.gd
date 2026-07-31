@@ -20,20 +20,65 @@ class_name AttackStep extends Resource
 ## 1.0 / 0.6 / 0.6 y no 3x plano. 1.0 = el dano de lista del arma.
 @export_range(0.0, 4.0, 0.05) var damage_scale := 1.0
 
+## El stun de ESTE golpe: cuanto poise come y cuanto congela si quiebra. null = usa el del arma
+## (WeaponTuning.stun), que es lo que hacian todos los golpes hasta ahora.
+##
+## Existe porque "un paso = un golpe" tambien multiplico el stun: los cuatro golpes del combo
+## terrestre de la Espada comen 6 de poise CADA UNO, asi que la cadena mete 24 y no hay progresion
+## posible — el primer swing quiebra igual que el finisher.
+##
+## NO va en `movement`: ese Resource es lo que el golpe le hace a la POSICION, y un stun no mueve a
+## nadie. Mismo criterio por el que el bono de dano de RT vive en el tuning del arma.
+##
+## Es un StunSettings entero y no un multiplicador porque el control que hace falta no es solo
+## "cuanto": un golpe aereo suele querer `airborne` en 0 para que al enemigo lo sostenga el Floater
+## en vez de congelarlo, y eso no se expresa escalando un numero.
+##
+## OJO CON APAGARLO EN GOLPES AEREOS: el Floater del Enemy tiene un gate de poise QUEBRADO (ver
+## EnemyBase.request_float). `airborne` en 0 esta bien —el golpe sigue quebrando y el hang entra
+## igual, solo que sin congelar—, pero `poise_damage` en 0 deja al enemigo sin quiebre, y entonces
+## el Floater no lo sostiene y el juggle aereo se cae. Si un golpe aereo no tiene que stunear, se
+## baja `airborne`, nunca `poise_damage`.
+@export var stun: StunSettings
+
 ## Que le hace este paso a la posicion de los cuerpos. Ver data/attack_movement_profile.gd. Es lo
 ## que permite decir "el Mover sale en el tercer golpe" desde el inspector: antes el beat de la
 ## cadena en el que salia un recorrido era codigo, porque un perfil por gesto no podia expresarlo.
 ## null = este paso no mueve a nadie.
 @export var movement: AttackMovementProfile
 
+## Cuantas veces sale este paso, una detras de otra. Es una COPIA LITERAL: cada repeticion vuelve a
+## reproducir el clip, abre su propia ventana de dano, cuenta su register_hit y vuelve a pedir su
+## `movement` entero. No hay reglas especiales para la primera ni para la ultima.
+##
+## Existe para las vueltas de los taps direccionales, que hasta ahora eran un `int` del tuning
+## (`tap_forward_x_spins`) traducido a UN clip estirado con UNA sola ventana de dano: tres vueltas se
+## veian, pero el enemigo cobraba una vez y el combo sumaba uno.
+##
+## Que se repita todo, mover incluido, es a proposito: si la vuelta 1 tiene que desplazarte y las
+## otras no, eso son DOS pasos —uno con `movement` y otro con la misma animacion sin el— y no un
+## campo que diga "el mover solo la primera vez". Lo que se ve en el inspector es lo que pasa.
+##
+## 0 = este paso no sale. Combinado con `repeat_with_meter` es como se declara un golpe que SOLO
+## existe pagando barra, sin necesidad de un flag aparte.
+@export_range(0, 8, 1) var repeat := 1
+
+## `repeat` cuando el gesto pago meter (RT). -1 = usa el mismo `repeat`, o sea que el RT no cambia
+## cuantas veces sale.
+##
+## Es un numero absoluto y no un bono en % como los del AttackMovementProfile: las vueltas son una
+## cuenta discreta, y "2" se lee sin hacer la cuenta que hay que hacer con "+100%". Son ademas los
+## dos knobs que ya existian (`tap_forward_x_spins` / `tap_forward_x_meter_spins`).
+@export_range(-1, 8, 1) var repeat_with_meter := -1
+
 ## El Player avanza hacia el objetivo lockeado mientras dura el paso (Player.attack_step). Es el
 ## paso corto que acompana a casi todos los golpes de combo; los especiales que traen su propio
 ## Mover lo dejan apagado para no pelear con el.
 @export var advances := true
 
-## Este paso arma el empuje del arma (WeaponTuning.push, con su push_at). Es lo que hoy hace el
-## finisher de la rama de espera en los dos combos de la Espada.
-@export var pushes := false
+## El empujon se declara en `movement.enemy_push` desde el 2026-07-30. Antes era un bool aca que
+## apuntaba al PushSettings unico del arma, asi que todos los golpes que empujaban empujaban igual y
+## no se veia el arco sin abrir el tuning. Ver AttackMovementProfile.enemy_push.
 
 ## Este paso dispara el proyectil del arma. Se mudo aca desde AttackMovementProfile.rt_fires_
 ## projectile: el disparo dejo de estar atado a que cierre un recorrido y pasa a ser un beat de la

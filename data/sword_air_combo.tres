@@ -1,27 +1,20 @@
-[gd_resource type="Resource" script_class="AttackSequence" format=3]
+[gd_resource type="Resource" script_class="AttackSequence" format=3 uid="uid://dvbrlkg0ej7eb"]
 
-; Combo aereo de la Espada: X X X, con DOS puntos de espera distintos.
-;   X X X            -> diagonal, diagonal, hachazo (spikea al golpeado contra el suelo)
-;   X (espera) X X   -> diagonal, vuelta con hop, vuelta que empuja
-;   X X (espera) X   -> diagonal, diagonal, PLUNGE: el Player y el golpeado bajan juntos
-;
-; Cada espera cuelga de SU paso (wait_threshold / wait_steps): la de las vueltas del paso 1, la del
-; plunge del paso 2. Antes vivian en la secuencia con un `after_step` absoluto y solo podia entrar
-; una por corrida; ahora ramificar es local, asi que se pueden encadenar esperas.
-;
-; Los tres Movers que antes vivian sueltos en SwordTuning (air_wait_spin_player_mover,
-; air_finisher_enemy_spike_mover, air_plunge_player/enemy_mover) estan ahora dentro del
-; AttackMovementProfile del paso que los emite. El spike y el plunge salen en WINDOW_END (2):
-; arrancarlos durante el swing saca al objetivo del alcance del propio golpe.
-;
-; step_time 0.2 era air_step_time; chain_window 0.45 era air_combo_window; los threshold 0.2
-; eran air_wait_branch_threshold.
+[ext_resource type="Script" uid="uid://dsps3sxfd8wmx" path="res://data/mover_settings.gd" id="1_mover"]
+[ext_resource type="Script" uid="uid://df6a6rp7vamdn" path="res://data/attack_movement_profile.gd" id="2_movement"]
+[ext_resource type="Script" uid="uid://b0xd72invappo" path="res://data/attack_clip.gd" id="3_clip"]
+[ext_resource type="Script" uid="uid://b1755lpansqbo" path="res://data/attack_step.gd" id="4_step"]
+[ext_resource type="Script" uid="uid://b1oxel8llcohe" path="res://data/attack_sequence.gd" id="5_sequence"]
+[ext_resource type="Script" uid="uid://cprdodv3kypq1" path="res://data/push_settings.gd" id="6_push"]
 
-[ext_resource type="Script" path="res://data/mover_settings.gd" id="1_mover"]
-[ext_resource type="Script" path="res://data/attack_movement_profile.gd" id="2_movement"]
-[ext_resource type="Script" path="res://data/attack_clip.gd" id="3_clip"]
-[ext_resource type="Script" path="res://data/attack_step.gd" id="4_step"]
-[ext_resource type="Script" path="res://data/attack_sequence.gd" id="5_sequence"]
+[sub_resource type="Resource" id="Resource_clip_a"]
+script = ExtResource("3_clip")
+clip = &"Sword_Regular_A"
+
+[sub_resource type="Resource" id="Resource_clip_c"]
+script = ExtResource("3_clip")
+clip = &"Sword_Regular_C"
+speed_bonus = 125.0
 
 [sub_resource type="Resource" id="Resource_hop_player_mover"]
 script = ExtResource("1_mover")
@@ -31,38 +24,66 @@ mode = 1
 float_duration = 0.1
 float_fall_scale = 0.3
 
-[sub_resource type="Resource" id="Resource_spike_enemy_mover"]
+[sub_resource type="Resource" id="Resource_profile_hop"]
+script = ExtResource("2_movement")
+player_travel = SubResource("Resource_hop_player_mover")
+
+[sub_resource type="Resource" id="Resource_step_hop_spin"]
+script = ExtResource("4_step")
+clip = SubResource("Resource_clip_c")
+movement = SubResource("Resource_profile_hop")
+choreography = &"air_spin"
+
+[sub_resource type="Resource" id="Resource_spin_push"]
+script = ExtResource("6_push")
+
+[sub_resource type="Resource" id="Resource_profile_spin_push"]
+script = ExtResource("2_movement")
+enemy_push = SubResource("Resource_spin_push")
+enemy_push_at = 0.65
+
+[sub_resource type="Resource" id="Resource_step_spin_push"]
+script = ExtResource("4_step")
+clip = SubResource("Resource_clip_c")
+movement = SubResource("Resource_profile_spin_push")
+choreography = &"air_spin"
+
+[sub_resource type="Resource" id="Resource_step_1"]
+script = ExtResource("4_step")
+clip = SubResource("Resource_clip_a")
+fires_projectile = true
+choreography = &"air_diagonal_l"
+wait_threshold = 0.2
+wait_steps = Array[ExtResource("4_step")]([SubResource("Resource_step_hop_spin"), SubResource("Resource_step_spin_push")])
+
+[sub_resource type="Resource" id="Resource_clip_b"]
+script = ExtResource("3_clip")
+clip = &"Sword_Regular_B"
+speed_bonus = 50.0
+
+[sub_resource type="Resource" id="Resource_clip_heavy"]
+script = ExtResource("3_clip")
+clip = &"Sword_Heavy_Combo"
+start_time = 2.4
+end_time = 2.7
+speed_bonus = 50.0
+
+[sub_resource type="Resource" id="Resource_plunge_enemy_mover"]
 script = ExtResource("1_mover")
-direction = Vector3(0, -1, 0)
+direction = 1
 distance = 100.0
-speed = 40.0
+speed = 20.0
+acceleration = 10.0
 stop_on = 3
 
 [sub_resource type="Resource" id="Resource_plunge_player_mover"]
 script = ExtResource("1_mover")
-direction = Vector3(0, -1, 0)
+direction = 1
 distance = 100.0
 speed = 20.0
 acceleration = 10.0
 stop_on = 3
 mode = 1
-
-[sub_resource type="Resource" id="Resource_plunge_enemy_mover"]
-script = ExtResource("1_mover")
-direction = Vector3(0, -1, 0)
-distance = 100.0
-speed = 20.0
-acceleration = 10.0
-stop_on = 3
-
-[sub_resource type="Resource" id="Resource_profile_hop"]
-script = ExtResource("2_movement")
-player_travel = SubResource("Resource_hop_player_mover")
-
-[sub_resource type="Resource" id="Resource_profile_spike"]
-script = ExtResource("2_movement")
-enemy_travel = SubResource("Resource_spike_enemy_mover")
-enemy_travel_at = 2
 
 [sub_resource type="Resource" id="Resource_profile_plunge"]
 script = ExtResource("2_movement")
@@ -72,54 +93,11 @@ enemy_travel = SubResource("Resource_plunge_enemy_mover")
 enemy_travel_at = 2
 enemy_travel_aligns_y = true
 
-[sub_resource type="Resource" id="Resource_clip_a"]
-script = ExtResource("3_clip")
-clip = &"Sword_Regular_A"
-
-[sub_resource type="Resource" id="Resource_clip_b"]
-script = ExtResource("3_clip")
-clip = &"Sword_Regular_B"
-
-[sub_resource type="Resource" id="Resource_clip_c"]
-script = ExtResource("3_clip")
-clip = &"Sword_Regular_C"
-
-[sub_resource type="Resource" id="Resource_clip_heavy"]
-script = ExtResource("3_clip")
-clip = &"Sword_Heavy_Combo"
-start_time = 2.4
-end_time = 2.7
-
-[sub_resource type="Resource" id="Resource_step_hop_spin"]
-script = ExtResource("4_step")
-clip = SubResource("Resource_clip_c")
-movement = SubResource("Resource_profile_hop")
-choreography = &"air_spin"
-
-[sub_resource type="Resource" id="Resource_step_spin_push"]
-script = ExtResource("4_step")
-clip = SubResource("Resource_clip_c")
-pushes = true
-choreography = &"air_spin"
-
 [sub_resource type="Resource" id="Resource_step_plunge"]
 script = ExtResource("4_step")
 clip = SubResource("Resource_clip_heavy")
 movement = SubResource("Resource_profile_plunge")
 choreography = &"air_finisher"
-
-[sub_resource type="Resource" id="Resource_step_finisher"]
-script = ExtResource("4_step")
-clip = SubResource("Resource_clip_heavy")
-movement = SubResource("Resource_profile_spike")
-choreography = &"air_finisher"
-
-[sub_resource type="Resource" id="Resource_step_1"]
-script = ExtResource("4_step")
-clip = SubResource("Resource_clip_a")
-choreography = &"air_diagonal_l"
-wait_threshold = 0.2
-wait_steps = Array[ExtResource("4_step")]([SubResource("Resource_step_hop_spin"), SubResource("Resource_step_spin_push")])
 
 [sub_resource type="Resource" id="Resource_step_2"]
 script = ExtResource("4_step")
@@ -127,6 +105,23 @@ clip = SubResource("Resource_clip_b")
 choreography = &"air_diagonal_r"
 wait_threshold = 0.2
 wait_steps = Array[ExtResource("4_step")]([SubResource("Resource_step_plunge")])
+
+[sub_resource type="Resource" id="Resource_spike_enemy_mover"]
+script = ExtResource("1_mover")
+direction = 1
+distance = 100.0
+speed = 40.0
+stop_on = 7
+
+[sub_resource type="Resource" id="Resource_profile_spike"]
+script = ExtResource("2_movement")
+enemy_travel = SubResource("Resource_spike_enemy_mover")
+
+[sub_resource type="Resource" id="Resource_step_finisher"]
+script = ExtResource("4_step")
+clip = SubResource("Resource_clip_heavy")
+movement = SubResource("Resource_profile_spike")
+choreography = &"air_finisher"
 
 [resource]
 script = ExtResource("5_sequence")

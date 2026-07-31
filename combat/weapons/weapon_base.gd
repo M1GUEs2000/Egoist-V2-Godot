@@ -129,8 +129,10 @@ func setup(player: Player) -> void:
 	# acota; afinar el clash mid-swing cuando haya Godot para tunear.
 
 ## Manda un AttackClip declarado en datos a la capa de animación (ver visual_clip_started).
-## `duration` pisa la del clip cuando quien llama ya sabe cuánto dura el paso; -1 respeta la del
-## Resource. No duplica el clip: el override se copia aparte para no escribir en el .tres.
+## `duration` son los segundos que ya resolvió quien llama (`_step_duration`, o sea la base de la
+## cadena con el `speed_bonus` del clip aplicado); -1 deja que el animador use el largo natural del
+## tramo con ese mismo `speed_bonus`. El clip se duplica antes de escribirle la duración: el Resource
+## vive en un .tres y no se toca.
 func play_attack_clip(clip: AttackClip, duration := -1.0) -> void:
 	if clip == null or clip.clip == &"":
 		return
@@ -321,9 +323,17 @@ func run_combo_chain(kind: StringName, steps: int, step_time: float, chain_windo
 ## en el aire, a dónde apunta. Eso se resuelve antes de llamar acá.
 ##
 ## Arrancar una cadena invalida cualquier otra en curso (routine_id compartido).
-func run_attack_sequence(kind: StringName, sequence: AttackSequence) -> void:
+func run_attack_sequence(kind: StringName, sequence: AttackSequence,
+		with_meter := false) -> void:
 	if sequence == null or sequence.steps.is_empty() or _player == null:
 		return
+	# Un gesto automatico ya tiene todos sus pasos decididos: si uno esta marcado `rt_only`, el
+	# gesto entero solo existe pagando RT. Antes el flag se miraba recien al resolver su Mover; el
+	# runner ya habia reproducido clip, dano y las vueltas del auto-chain sin barra.
+	if sequence.auto_chain and not with_meter:
+		for step in sequence.steps:
+			if step.movement != null and step.movement.rt_only:
+				return
 	# Recovery post-cadena: completarla deja esta ventana muerta. Cortarla a mitad no la cobra.
 	# Solo frena COMBOS. Un gesto (auto_chain) es un move deliberado que además ya pagó su barra:
 	# que se lo coma la cola de un combo se siente roto, y hasta hoy no pasaba porque los cargados
@@ -346,13 +356,27 @@ func run_attack_sequence(kind: StringName, sequence: AttackSequence) -> void:
 	while index < steps.size():
 		var step := steps[index]
 		var finisher := index == steps.size() - 1
+		# Un paso con `repeat` en 0 no existe: se saltea entero, y si era el último la cadena termina
+		# sin recovery propio. Es lo que hace que un paso solo-con-RT desaparezca sin dejar hueco.
+		var times := step.repeat_with_meter if with_meter and step.repeat_with_meter >= 0 \
+				else step.repeat
+		if times <= 0:
+			index += 1
+			continue
 		_combo_queued = false
 		_combo_window_open = false
-		var duration := _step_duration(step, sequence)
-		_begin_sequence_step(step, chain_step, finisher, duration, id)
-		await wait_seconds(duration)
-		if id != _routine_id:
-			return
+		var duration := _step_duration(step, sequence, with_meter)
+		# Copia literal: cada vuelta reproduce el clip, abre SU ventana y vuelve a pedir su
+		# movimiento. Solo la última cuenta como finisher — el recovery y los hooks de cierre de la
+		# cadena son del gesto, no de cada vuelta.
+		for pass_index in times:
+			var last_pass := pass_index == times - 1
+			_begin_sequence_step(step, chain_step, finisher and last_pass, duration, id, with_meter)
+			await wait_seconds(duration)
+			if id != _routine_id:
+				return
+			if not last_pass:
+				chain_step += 1
 		var step_end := World.now()
 
 		if finisher:
@@ -393,39 +417,49 @@ func run_attack_sequence(kind: StringName, sequence: AttackSequence) -> void:
 	_combo_window_open = false
 	_combo_auto = false
 
-## Segundos de un paso: manda su propio clip, después el default de la cadena, y al final el
-## swing_time del arma. Así un paso puede ser más lento que sus vecinos sin tocar a nadie más.
-func _step_duration(step: AttackStep, sequence: AttackSequence) -> float:
-	if step.clip != null and step.clip.duration > 0.0:
-		return step.clip.duration
-	if sequence.step_time > 0.0:
-		return sequence.step_time
-	return tuning.swing_time
+## Segundos de un paso: la base la pone la cadena (`step_time`) o, si no la declara, el `swing_time`
+## del arma; encima el clip aplica su `speed_bonus` y, solo con RT, el adicional del paso. La misma
+## duracion resuelta viaja al animador y a la ventana de dano.
+func _step_duration(step: AttackStep, sequence: AttackSequence, with_meter: bool) -> float:
+	var base := sequence.step_time if sequence.step_time > 0.0 else tuning.swing_time
+	if step.clip != null:
+		var bonus := step.clip.speed_bonus
+		if with_meter and step.movement != null:
+			bonus += step.movement.rt_animation_speed_bonus
+		return base / maxf(0.1, 1.0 + bonus / 100.0)
+	return base
 
 ## Arranca un paso: daño, clip, coreografía del arma, avance, empuje, movimiento y ventana. Es
 ## fire-and-forget igual que el resto de la coreografía; quien mide el tiempo es el runner.
 func _begin_sequence_step(step: AttackStep, chain_step: int, finisher: bool, duration: float,
-		id: int) -> void:
+		id: int, with_meter := false) -> void:
 	# El perfil de daño se rearma en CADA paso en vez de multiplicarse encima del anterior: si no,
 	# una cadena de cuatro con damage_scale 0.6 terminaría en 0.13 del daño base por acumulación.
 	reset_hit_profile()
 	_apply_step_damage(step)
+	_apply_step_stun(step)
 	play_attack_clip(step.clip, duration)
-	on_sequence_step(step, chain_step, finisher)
+	on_sequence_step(step, chain_step, finisher, duration)
 	if step.advances:
 		_player.attack_step(duration)
-	if step.pushes:
-		arm_push(tuning.push, duration * tuning.push_at)
 	# Se llama SIEMPRE, también con movement en null: así el perfil del paso anterior no sobrevive al
 	# siguiente. Sin esto un paso sin movimiento heredaría el perfil del previo —misma rutina, mismo
 	# id, o sea "vigente"— y el cierre de su ventana cobraría hooks que no le pertenecen.
-	run_attack_movement(step.movement, id)
+	#
+	# Le pasa la duración del paso porque el empujón del perfil se arma a una fracción de ella
+	# (`enemy_push_at`), igual que antes lo hacía `tuning.push_at` sobre el bool `step.pushes`.
+	var movement := sequence_step_movement_profile(step)
+	# `with_meter` viaja hasta acá porque los bonos RT del perfil (distancia, velocidad, hang del
+	# Player y del Enemy) se aplican en el consumidor: sin esto un gesto pagado hace las vueltas de
+	# RT pero cobra el movimiento como si fuera gratis, y un perfil `rt_only` no sale nunca.
+	if run_attack_movement(movement, id, with_meter, true, duration):
+		on_attack_movement_started(id)
 	# Los hooks de cierre (EnemyTravelAt.WINDOW_END, player_travel_at_window_end) se cobran al cerrar
 	# el último paso Y al cerrar cualquier paso que traiga perfil propio. Lo segundo es lo que hace
 	# que "el Mover sale en el tercer golpe" funcione de verdad: si solo los cobrara el finisher, un
 	# paso intermedio con recorrido diferido lo declararía y no pasaría nada. Un paso sin perfil no
 	# cobra nada aunque se lo pidas — _run_window_end_travel no hace nada si no hay nada declarado.
-	begin_damage_window(duration, finisher or step.movement != null, step.clip)
+	begin_sequence_step_damage_window(step, duration, finisher or movement != null, step.clip)
 	ComboTracker.register_hit()
 	if step.fires_projectile:
 		var launcher: MoverSettings = null
@@ -443,12 +477,35 @@ func _apply_step_damage(step: AttackStep) -> void:
 	if _air_disc_hitbox != null:
 		_air_disc_hitbox.damage *= factor
 
+## Stun propio del paso, si lo declara. No se clona ni se escala nada: es un reemplazo, así que el
+## recurso del .tres se pasa tal cual y nadie lo muta. Un paso sin stun propio no hace nada acá
+## porque `reset_hit_profile()` —que corre al empezar CADA paso— ya dejó puesto el del arma.
+func _apply_step_stun(step: AttackStep) -> void:
+	if step.stun == null:
+		return
+	_blade_hitbox.stun = step.stun
+	if _air_disc_hitbox != null:
+		_air_disc_hitbox.stun = step.stun
+
 ## Gancho por paso para lo que NO es tuning: el arco procedural de la mano mientras siga existiendo
 ## (cada arma traduce AttackStep.choreography a su tween) y las mecánicas propias del arma que no
 ## tienen sentido como campo genérico — estirar los hitboxes de un finisher, sostener al Player en
 ## el aire durante el combo terrestre. Default no-op.
-func on_sequence_step(_step: AttackStep, _chain_step: int, _finisher: bool) -> void:
+func on_sequence_step(_step: AttackStep, _chain_step: int, _finisher: bool,
+		_duration: float) -> void:
 	pass
+
+## Abre la fuente de dano del paso. La ruta normal usa hoja/disco; un arma con una fuente propia
+## puede sobrescribirlo sin duplicar el runner de secuencias.
+func begin_sequence_step_damage_window(_step: AttackStep, duration: float,
+		runs_profile_hooks: bool, clip: AttackClip) -> void:
+	begin_damage_window(duration, runs_profile_hooks, clip)
+
+## Permite ajustar el perfil de movimiento de un paso con contexto de runtime sin mutar el .tres.
+## El caso actual es el sweet spot aereo de Espada: el Mover conserva sus numeros, pero apunta en
+## 3D al target lockeado en vez de usar el forward plano del Player.
+func sequence_step_movement_profile(step: AttackStep) -> AttackMovementProfile:
+	return step.movement
 
 # ---- Combo aéreo (la coreografía la define cada arma) ----
 
@@ -705,15 +762,22 @@ func arm_sweet_spot(held_time: float) -> void:
 ## `start_player_now` en false arma el perfil sin tocar al Player. Lo usan las ventanas verticales,
 ## que arrancan el recorrido ellas mismas tras su propio delay (ver run_vertical_window_from_profile).
 func run_attack_movement(profile: AttackMovementProfile, routine_id: int,
-		with_meter := false, start_player_now := true) -> bool:
+		with_meter := false, start_player_now := true, duration := 0.0) -> bool:
 	_movement_profile = profile
 	_movement_profile_routine_id = routine_id
 	_movement_profile_with_meter = with_meter
 	_movement_profile_travel_done = false
-	if profile == null or not start_player_now:
+	if profile == null:
 		return false
-	_warn_if_hang_is_shadowed(profile)
 	if not _profile_is_payable(profile, with_meter):
+		return false
+	# El empujon se arma aunque `start_player_now` sea false: eso solo difiere el recorrido del
+	# PLAYER (lo usa la ventana vertical, que lo arranca ella misma tras su delay), y el push es del
+	# enemigo. Sin duracion la base es el swing del arma, que es lo que usaban los gestos sueltos.
+	if profile.enemy_push != null:
+		var base := duration if duration > 0.0 else tuning.swing_time
+		arm_push(profile.enemy_push, base * profile.enemy_push_at)
+	if not start_player_now:
 		return false
 	if profile.player_travel_at_window_end:
 		return false  # lo arranca _run_window_end_travel al cerrar la ventana de dano
@@ -731,7 +795,13 @@ func _start_player_travel(profile: AttackMovementProfile, with_meter: bool) -> b
 		if travel != null:
 			_player.request_mover(travel)
 			started = true
-	_request_player_hang(profile, with_meter)
+	# Solo si el recorrido NO arrancó. El Mover es dueño de la vertical, pero solo MIENTRAS recorre:
+	# un Mover de 0.08 s con un hang de 0.3 s dejaba 0.22 s de Floater aplicándose igual, y con
+	# `repeat` cada vuelta corría el vencimiento otro paso más adelante. El aviso de
+	# _warn_if_hang_is_shadowed describía una garantía que el código no daba.
+	#
+	# Se mira `started` y no `player_travel != null` a propósito: un perfil cuyo recorrido no salió
+	# —`rt_only` sin barra, facing degenerado— es un golpe que no viaja, y ahí el hang sí corresponde.
 	return started
 
 ## Multiplicador de un bono porcentual del perfil: 1.0 sin RT, 1 + bono/100 con RT. Mismo modelo que
@@ -743,54 +813,37 @@ func _rt_scale(bonus_percent: float, with_meter: bool) -> float:
 		return 1.0
 	return maxf(0.0, 1.0 + bonus_percent * 0.01)
 
-## Clona el recorrido y le aplica de una vez las dos cosas que se resuelven en runtime: la direccion
-## (avances y retrocesos se orientan contra el facing, que el gesto ya fijo al objetivo lockeado) y
-## los bonos de RT. Se clona SIEMPRE que haya algo que reescribir, para no mutar el recurso
-## compartido del .tres. Devuelve null si el facing quedo degenerado.
+## Clona el recorrido y resuelve lo que solo existe en runtime: la direccion contra el facing (que
+## el gesto ya fijo al objetivo lockeado) y los bonos de RT. Se clona SIEMPRE, para no mutar el
+## recurso compartido del .tres. Devuelve null si el facing quedo degenerado en un recorrido
+## horizontal, porque ahi la direccion seria una mentira.
 func _resolve_travel(profile: AttackMovementProfile, with_meter: bool) -> MoverSettings:
-	var settings := profile.player_travel
-	var mode := profile.player_direction
-	var direction := Vector3.ZERO
-	if mode != AttackMovementProfile.Direction.PROFILE:
-		direction = _player.forward()
-		if mode == AttackMovementProfile.Direction.PLAYER_BACK:
-			direction = -direction
-		direction.y = 0.0
-		if direction.length_squared() < 0.0001:
-			return null
-		direction = direction.normalized()
-	if direction == Vector3.ZERO and not with_meter:
-		return settings  # nada que reescribir: se usa el recurso tal cual
-	var resolved := settings.duplicate() as MoverSettings
-	if direction != Vector3.ZERO:
-		resolved.direction = direction
-	resolved.distance *= _rt_scale(profile.rt_player_travel_distance_bonus, with_meter)
-	resolved.speed *= _rt_scale(profile.rt_player_travel_speed_bonus, with_meter)
-	resolved.acceleration *= _rt_scale(profile.rt_player_travel_acceleration_bonus, with_meter)
-	# El hang que dispara el propio Mover al terminar es el MISMO canal que `player_hang`: un solo
-	# slider los cubre a los dos, asi el diseñador no tiene que acordarse de cual uso este golpe.
-	resolved.float_duration *= _rt_scale(profile.rt_player_hang_bonus, with_meter)
-	return resolved
+	return _resolve_mover(profile.player_travel, with_meter,
+			profile.rt_travel_distance_bonus, profile.rt_travel_speed_bonus,
+			profile.rt_travel_acceleration_bonus, profile.rt_player_hang_bonus)
 
-func _request_player_hang(profile: AttackMovementProfile, with_meter: bool) -> void:
-	var settings := profile.player_hang
+## Resolucion comun a los dos cuerpos: el enum de direccion se traduce con el facing del Player
+## (tambien para el Enemy — "su atras" es "tu adelante", ver MoverSettings.Direction) y los bonos de
+## RT se aplican sobre la copia. El hang viaja en `float_duration`, asi que su bono entra acá y no en
+## una rama aparte: no hay dos lugares donde un golpe pueda colgar.
+func _resolve_mover(settings: MoverSettings, with_meter: bool, distance_bonus: float,
+		speed_bonus: float, acceleration_bonus: float, hang_bonus: float) -> MoverSettings:
 	if settings == null:
-		return
-	var duration := settings.duration * _rt_scale(profile.rt_player_hang_bonus, with_meter)
-	if duration > 0.0:
-		_player.request_float(duration, settings.fall_scale)
-
-## Un `player_hang` junto a un `player_travel` no se aplica NUNCA: mientras corre el Mover, el Mover
-## es dueno de la vertical (en TOTAL el loop del Player hace return antes de leer el Floater; en
-## PARTIAL lo sobreescribe el mismo frame). El hang de despues de un recorrido va en
-## `player_travel.float_duration`. Se avisa en vez de fallar en silencio, que es como falla hoy.
-func _warn_if_hang_is_shadowed(profile: AttackMovementProfile) -> void:
-	if profile.player_travel == null or profile.player_hang == null:
-		return
-	if profile.player_hang.duration <= 0.0:
-		return
-	push_warning("%s: perfil con player_travel y player_hang a la vez. El hang no se aplica (el " % name
-			+ "Mover es dueno de la vertical mientras recorre). Usar player_travel.float_duration.")
+		return null
+	# Si el ataque ya escribió una dirección (un dash que apunta a un objetivo concreto, que no es
+	# ninguna de las cuatro nombradas), se respeta. Si no, se traduce el enum contra el facing.
+	var aimed := settings.aimed_direction
+	if aimed.length_squared() < 0.0001:
+		aimed = settings.direction_vector(_player.forward())
+	if aimed.length_squared() < 0.0001:
+		return null
+	var resolved := settings.duplicate() as MoverSettings
+	resolved.aimed_direction = aimed
+	resolved.distance *= _rt_scale(distance_bonus, with_meter)
+	resolved.speed *= _rt_scale(speed_bonus, with_meter)
+	resolved.acceleration *= _rt_scale(acceleration_bonus, with_meter)
+	resolved.float_duration *= _rt_scale(hang_bonus, with_meter)
+	return resolved
 
 ## Mover del Enemy que el perfil activo pide en ESTE momento, o null. Un perfil de otra rutina ya
 ## caduco y no cobra nada, y uno `rt_only` sin barra tampoco.
@@ -803,32 +856,13 @@ func _profile_enemy_travel(at: AttackMovementProfile.EnemyTravelAt) -> MoverSett
 		return null
 	return _resolve_enemy_travel(_movement_profile)
 
-## Orienta la parte HORIZONTAL del recorrido del Enemy contra el facing del Player, conservando la
-## inclinacion que declaro el .tres. Es lo que separa un empujon diagonal ("alejandose de mi, 30
-## grados hacia abajo") de un rumbo fijo del mundo. Clona antes de escribir, como _resolve_travel:
-## el MoverSettings es un recurso compartido. Devuelve el original si no hay nada que reescribir.
+## Recorrido del Enemy resuelto contra el facing del PLAYER: FORWARD lo aleja de vos y BACK lo trae,
+## mires a donde mires. Los tres bonos de recorrido RT son compartidos con el Player; el hang sigue
+## separado porque los dos cuerpos pueden sostenerse tiempos distintos.
 func _resolve_enemy_travel(profile: AttackMovementProfile) -> MoverSettings:
-	var settings := profile.enemy_travel
-	var mode := profile.enemy_direction
-	if settings == null or mode == AttackMovementProfile.Direction.PROFILE:
-		return settings
-	var forward := _player.forward()
-	forward.y = 0.0
-	if forward.length_squared() < 0.0001:
-		return settings  # facing degenerado: mejor el rumbo del perfil que una direccion nula
-	forward = forward.normalized()
-	if mode == AttackMovementProfile.Direction.PLAYER_BACK:
-		forward = -forward
-	var source := settings.direction
-	# El largo horizontal del vector del .tres ES la inclinacion: (0, -0.5, 0.866) son 30 grados
-	# hacia abajo, y ese 0.866 se reparte sobre el forward en vez de sobre el eje Z del mundo.
-	var horizontal := Vector2(source.x, source.z).length()
-	var aimed := forward * horizontal + Vector3.UP * source.y
-	if aimed.length_squared() < 0.0001:
-		return settings
-	var resolved := settings.duplicate() as MoverSettings
-	resolved.direction = aimed.normalized()
-	return resolved
+	return _resolve_mover(profile.enemy_travel, _movement_profile_with_meter,
+			profile.rt_travel_distance_bonus, profile.rt_travel_speed_bonus,
+			profile.rt_travel_acceleration_bonus, profile.rt_enemy_hang_bonus)
 
 ## True si el paso vigente saca al Enemy AL CONECTAR. Es la pregunta que separa "este golpe lo
 ## empuja" de "este golpe lo sostiene": un arma no puede aplicarle su hold aereo generico a un
@@ -905,26 +939,6 @@ func _enemy_can_take_travel(target: Node) -> bool:
 		return false
 	return true
 
-## Hang del enemigo que acaba de conectar, si el perfil activo define uno propio. Devuelve false
-## cuando no lo define, para que el arma caiga a su hold generico (air_hit_enemy_floater).
-func request_profile_enemy_hang(hurtbox: Hurtbox) -> bool:
-	if not _movement_profile_is_current():
-		return false
-	var settings := _movement_profile.enemy_on_hit
-	if settings == null or settings.duration <= 0.0:
-		return false
-	var duration := settings.duration \
-			* _rt_scale(_movement_profile.rt_enemy_hang_bonus, _movement_profile_with_meter)
-	# Un bono de -100 apaga el hang pero el perfil SIGUE siendo su dueno: se devuelve true para que
-	# el arma no caiga a su hold generico. "Con RT el enemigo no cuelga" es una decision del gesto.
-	if duration > 0.0:
-		var target: Node = hurtbox.owner_node
-		if target is EnemyBase:
-			(target as EnemyBase).request_float(duration, settings.fall_scale)
-		elif target.has_method("request_float"):
-			target.call("request_float", duration, settings.fall_scale)
-	return true
-
 ## True si el golpe en curso se hace cargo de la vertical del Player por su cuenta. Lo consultan el
 ## corte de momentum aereo y el air-hit-stall generico para no pisarle el Mover/Floater propio.
 func attack_movement_overrides_air_hit() -> bool:
@@ -954,6 +968,13 @@ func _on_player_mover_cancelled(_reason: int) -> void:
 ## Hook para que el arma cierre su propio bookkeeping cuando el recorrido del Player termina, sin
 ## importar si fue exito o cancelacion.
 func _on_attack_movement_ended() -> void:
+	pass
+
+## Gemelo del anterior en la apertura: un paso de la secuencia ARRANCO el recorrido del Player. Solo
+## se llama si de verdad salio —un perfil `rt_only` sin barra devuelve false—, para que el arma no
+## quede esperando un cierre que nunca va a llegar. Lo usa la Espada para saber que un gesto
+## direccional sigue activo mientras dura su desplazamiento.
+func on_attack_movement_started(_routine_id: int) -> void:
 	pass
 
 ## Dispara el proyectil del ataque. Solo lo implementan las armas que tienen uno.

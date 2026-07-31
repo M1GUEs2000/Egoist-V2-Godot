@@ -19,9 +19,52 @@ enum Mode {
 	PARTIAL,
 }
 
-## Direccion del recorrido (se normaliza al usarse). UP es el caso tipico del launcher; un dash
-## cargado usa el forward del atacante; un spike usa DOWN.
-@export var direction := Vector3.UP
+## Las cuatro direcciones que un recorrido puede tomar. Reemplazan al Vector3 crudo (2026-07-30):
+## un vector obliga a pensar en ejes del mundo para decir algo tan simple como "hacia atras", y
+## acepta valores que no significan nada — `(0,0,0)` mandaba el recorrido hacia arriba por el
+## fallback del Mover, que fue exactamente el bug del empujon que no empujaba.
+##
+## FORWARD y BACK se resuelven SIEMPRE contra el facing del Player, tambien cuando el que se mueve
+## es el enemigo. O sea que empujar a un enemigo lejos tuyo es FORWARD: "su atras" es "tu adelante",
+## y asi el mismo perfil vale mires a donde mires.
+enum Direction {
+	UP,       ## Vertical del mundo, hacia arriba. Es el launcher.
+	DOWN,     ## Vertical del mundo, hacia abajo. Es el spike y el plunge.
+	FORWARD,  ## Horizontal, hacia donde mira el Player. Avances y empujones.
+	BACK,     ## Horizontal, opuesto al facing del Player. Retrocesos.
+}
+
+## Hacia donde va el recorrido. La inclinacion sale aparte, en `pitch_degrees`.
+@export var direction := Direction.UP
+## Inclinacion del recorrido en grados sobre la horizontal: positivo sube, negativo baja. SOLO
+## aplica a FORWARD y BACK — UP y DOWN ya son verticales puras y lo ignoran.
+##
+## Es lo que permite un remate en diagonal sin volver a los vectores: el knock de la Y cargada aerea
+## era `(0, -0.5, 0.866)`, que hay que resolver con trigonometria para saber que son 30 grados hacia
+## abajo. Aca es `-30`.
+@export_range(-89.0, 89.0, 1.0) var pitch_degrees := 0.0
+
+## Vector ya resuelto contra el facing, escrito en runtime por quien dispara el ataque
+## (WeaponBase clona el perfil antes de escribirlo, nunca toca el .tres). NO es @export: no es
+## tuning, es el resultado de resolver `direction` cuando existe un Player al que mirar.
+var aimed_direction := Vector3.ZERO
+
+## Traduce `direction` + `pitch_degrees` a un vector unitario. `player_forward` solo se usa para
+## FORWARD y BACK; UP y DOWN no lo miran, asi que un cuerpo sin facing puede pasar Vector3.ZERO.
+## Un facing degenerado cae a UP, que es el mismo fallback historico del Mover.
+func direction_vector(player_forward: Vector3) -> Vector3:
+	if direction == Direction.UP:
+		return Vector3.UP
+	if direction == Direction.DOWN:
+		return Vector3.DOWN
+	var flat := Vector3(player_forward.x, 0.0, player_forward.z)
+	if flat.length_squared() < 0.0001:
+		return Vector3.UP
+	flat = flat.normalized()
+	if direction == Direction.BACK:
+		flat = -flat
+	var pitch := deg_to_rad(pitch_degrees)
+	return (flat * cos(pitch) + Vector3.UP * sin(pitch)).normalized()
 ## Metros maximos del recorrido. Tope duro: aunque no se cumpla ninguna condicion de contacto, el
 ## Mover termina al recorrer esta distancia (razon DISTANCE).
 @export var distance := 4.0

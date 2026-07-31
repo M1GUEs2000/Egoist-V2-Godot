@@ -51,7 +51,10 @@ func play_attack_clip(c: AttackClip) -> void:
 	var end := animation.length if c.end_time < 0.0 \
 			else clampf(c.end_time, start, animation.length)
 	var span := end - start
-	var real_duration := c.duration if c.duration > 0.0 else span
+	# Con `duration` ya resuelta manda esa (el arma calculó la del paso y la escribió acá). Sin ella
+	# —un AttackClip disparado fuera de una secuencia— la base es el largo natural del tramo, y el
+	# `speed_bonus` del clip sigue valiendo igual.
+	var real_duration := c.duration if c.duration > 0.0 else c.scaled_duration(span)
 
 	_playback_id += 1
 	_elapsed = 0.0

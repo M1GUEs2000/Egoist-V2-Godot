@@ -557,7 +557,7 @@ func request_float(duration: float, fall_scale: float) -> bool:
 func launch(height: float, hang_time: float, stun: StunSettings = null,
 		starts_lying := false) -> bool:
 	var settings := MoverSettings.new()
-	settings.direction = Vector3.UP
+	settings.direction = MoverSettings.Direction.UP
 	settings.distance = height
 	settings.speed = height / maxf(0.01, World.LAUNCH_RISE_TIME)
 	settings.acceleration = 0.0
@@ -589,7 +589,7 @@ func slam(down_speed: float) -> void:
 	_airborne_until = World.now()
 	_cancel_air_hold()
 	var s := MoverSettings.new()
-	s.direction = Vector3.DOWN
+	s.direction = MoverSettings.Direction.DOWN
 	s.distance = airborne_max_fall_distance
 	s.speed = absf(down_speed)
 	s.acceleration = 0.0

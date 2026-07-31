@@ -205,12 +205,43 @@ func _tap_combo() -> void:
 ## `step.choreography` quedó como etiqueta de FAMILIA de golpe, no como nombre de un tween: dice si
 ## el paso es terrestre (sostiene al Player en el aire mientras dura el combo, para que un combo
 ## empezado en el borde no te tire) o si es el finisher aéreo (estira los hitboxes en V).
-func on_sequence_step(step: AttackStep, _chain_step: int, _finisher: bool) -> void:
+func on_sequence_step(step: AttackStep, _chain_step: int, _finisher: bool,
+		_duration: float) -> void:
 	match step.choreography:
 		&"ground_swing_l", &"ground_swing_r", &"ground_thrust", &"ground_spin":
 			_player.hold_airborne_for_attack()
 		&"air_finisher":
 			_run_finisher_v_stretch()
+
+## El dash cargado es un paso de AttackSequence, pero no usa hoja/disco: su dano viene del
+## ChargedDashHitbox. El clip sigue declarando exactamente cuando abre y cierra esa hitbox.
+func begin_sequence_step_damage_window(step: AttackStep, duration: float,
+		runs_profile_hooks: bool, clip: AttackClip) -> void:
+	if step.choreography != &"charged_dash":
+		super.begin_sequence_step_damage_window(step, duration, runs_profile_hooks, clip)
+		return
+	_begin_charged_dash_window(duration, clip)
+
+## El X cargado viaja con Mover. Normalmente usa el forward del Player; el sweet spot aereo con
+## lock-on clona el perfil y reemplaza solo la direccion por el vector 3D hacia ese target.
+func sequence_step_movement_profile(step: AttackStep) -> AttackMovementProfile:
+	if step.choreography != &"charged_dash" or step.movement == null:
+		return super.sequence_step_movement_profile(step)
+	if not _sweet_spot_dash or not _player.is_airborne() or not _player.lock_on.is_locked:
+		return step.movement
+	var target := _player.lock_on.current_target
+	if target == null or not is_instance_valid(target):
+		return step.movement
+	var direction := target.global_position - _player.global_position
+	if direction.length_squared() < 0.0001:
+		return step.movement
+	# Apuntar a un objetivo concreto no es ninguna de las cuatro direcciones nombradas —puede estar
+	# arriba o abajo—, así que se escribe el vector ya resuelto y `_resolve_mover` lo respeta.
+	var resolved := step.movement.duplicate(true) as AttackMovementProfile
+	var travel := resolved.player_travel.duplicate() as MoverSettings
+	travel.aimed_direction = direction.normalized()
+	resolved.player_travel = travel
+	return resolved
 
 # ---- Personalidad X: cargado (dash sweet spot) ----
 
@@ -227,10 +258,7 @@ func _hold_x() -> void:
 	_charged_dash_connected = false
 	if _player.meter.spend_charged(1, true, tuning.meter_cost_scale(_sweet_spot_dash)):
 		_charged_dash_travel_direction = _charged_dash_direction(_sweet_spot_dash).normalized()
-		play_visual_clip(ANIM_DASH, 0.0, -1.0, _t().charged_dash_duration)
-		_player.force_dash(_charged_dash_travel_direction, _t().charged_dash_distance,
-				_t().charged_dash_duration, true)
-		_run_charged_dash_window()
+		run_attack_sequence(&"charged_x_dash", _t().charged_x_dash_sequence)
 	else:
 		# ponytail: sin barra no hay dash — cae a un swing cargado normal.
 		# "sweet spot degradado sin meter" es diseño futuro, ver bóveda Combate.
@@ -238,7 +266,7 @@ func _hold_x() -> void:
 		play_visual_clip(ANIM_REGULAR_C, 0.0, -1.0, tuning.swing_time)
 		_player.hold_airborne_for_attack()
 		begin_damage_window(tuning.swing_time)
-	ComboTracker.register_hit()
+		ComboTracker.register_hit()
 
 # ---- Personalidad Y: golpe vertical / cargada aérea ----
 
@@ -298,6 +326,10 @@ func _run_forward_y_push() -> void:
 	_player.locomotion.lock_movement(tuning.swing_time)
 	_player.bump_velocity = Vector3.ZERO
 	play_visual_clip(ANIM_REGULAR_C, 0.0, -1.0, tuning.swing_time)
+	# ULTIMO arm_push a mano de la Espada. No migro a `AttackMovementProfile.enemy_push` porque el
+	# empujon depende del TRAMO (solo en aire) y `tap_forward_y` es un unico perfil para suelo y
+	# aire: un slot ahi empujaria tambien en piso. Sale solo cuando el gesto se parta en
+	# `tap_forward_y_ground` / `tap_forward_y_air`, como ya estan los taps de X.
 	if _player.is_airborne():
 		arm_push(tuning.push, tuning.swing_time * tuning.push_at)
 	# El facing ya quedo puesto arriba: PLAYER_FORWARD lo lee de ahi.
@@ -315,65 +347,39 @@ func _run_forward_x_static_spin(with_meter := false) -> void:
 	_player.locomotion.lock_movement(tuning.swing_time)
 	_player.bump_velocity = Vector3.ZERO
 	_player.mover.cancel_mover(Mover.CancelReason.ATTACK_RULE)
-	_run_directional_x_movement(_forward_x_profile(airborne), with_meter, id)
 	if with_meter:
 		_apply_tap_x_meter_damage(_forward_x_meter_damage_bonus(airborne))
-	var spins: int = _t().tap_forward_x_meter_spins if with_meter \
-			else _t().tap_forward_x_spins
-	spins = maxi(spins, 1)
-	# El clip cubre las N vueltas de una: antes se relanzaba el tween de la mano vuelta por vuelta,
-	# ahora el AnimationPlayer estira el tramo a la duración total.
-	play_visual_clip(ANIM_REGULAR_C, 0.0, -1.0, tuning.swing_time * float(spins))
-	begin_damage_window(tuning.swing_time * float(spins))
-	ComboTracker.register_hit()
-	await wait_seconds(tuning.swing_time * float(spins))
+	# El gesto entero es datos: clip, vueltas (`repeat`) y el perfil de movimiento viven en la
+	# secuencia del tramo. Acá queda lo que no es dato — encarar al objetivo, los locks y el meter.
+	#
+	# Cada vuelta abre su propia ventana de daño y cuenta su register_hit. Antes era UN clip estirado
+	# a `swing_time * spins` con UNA ventana: se veían las vueltas pero el enemigo cobraba una vez.
+	var sequence: AttackSequence = _t().tap_forward_x_air_sequence if airborne \
+			else _t().tap_forward_x_ground_sequence
+	await run_attack_sequence(&"tap_forward_x", sequence, with_meter)
 	if is_routine_current(id):
 		_finish_directional_x(id)
 
 ## Tap atras + X: en suelo conserva el clip del launcher y retrocede siempre, mas lejos y mas rapido
 ## con RT. En aire son vueltas en el sitio y el retroceso es `rt_only`: solo aparece pagando barra,
 ## y ahi ademas cuelga al cerrarlo y dispara.
+##
+## Todo eso es dato desde el 2026-07-30 (clip, retroceso, vueltas, proyectil): vive en la secuencia
+## del tramo. Aca queda lo que no es dato — encarar al objetivo, los locks y el meter.
 func _run_back_x_retreat(with_meter := false) -> void:
-	if _player.is_airborne():
-		_run_air_back_x_retreat(with_meter)
-		return
-	_face_locked_target()
-	_player.locomotion.lock_facing(tuning.swing_time)
-	_player.locomotion.lock_movement(tuning.swing_time)
-	_player.bump_velocity = Vector3.ZERO
-	play_visual_clip(ANIM_LAUNCHER, 0.2, 0.8, tuning.swing_time)
-	_run_directional_x_movement(_back_x_profile(false), with_meter, _routine_id)
-	if with_meter:
-		_apply_tap_x_meter_damage(_back_x_meter_damage_bonus(false))
-	begin_damage_window(tuning.swing_time)
-	ComboTracker.register_hit()
-	_finish_directional_x_after(tuning.swing_time, _routine_id)
-
-func _run_air_back_x_retreat(with_meter: bool) -> void:
 	var id := _routine_id
+	var airborne := _player.is_airborne()
 	_face_locked_target()
 	_player.locomotion.lock_facing(tuning.swing_time)
 	_player.locomotion.lock_movement(tuning.swing_time)
 	_player.bump_velocity = Vector3.ZERO
-	var spins: int = _t().tap_back_x_meter_air_spins if with_meter \
-			else _t().tap_back_x_air_spins
-	spins = maxi(spins, 1)
-	_run_directional_x_movement(_back_x_profile(true), with_meter, id)
 	if with_meter:
-		_apply_tap_x_meter_damage(_back_x_meter_damage_bonus(true))
-	play_visual_clip(ANIM_REGULAR_C, 0.0, -1.0, tuning.swing_time * float(spins))
-	begin_damage_window(tuning.swing_time * float(spins))
-	ComboTracker.register_hit()
-	await wait_seconds(tuning.swing_time * float(spins))
+		_apply_tap_x_meter_damage(_back_x_meter_damage_bonus(airborne))
+	var sequence: AttackSequence = _t().tap_back_x_air_sequence if airborne \
+			else _t().tap_back_x_ground_sequence
+	await run_attack_sequence(&"tap_back_x", sequence, with_meter)
 	if is_routine_current(id):
 		_finish_directional_x(id)
-
-## Un perfil por gesto: RT ya no elige otro recurso, entra como porcentajes dentro del mismo.
-func _forward_x_profile(airborne: bool) -> AttackMovementProfile:
-	return _t().tap_forward_x_air if airborne else _t().tap_forward_x_ground
-
-func _back_x_profile(airborne: bool) -> AttackMovementProfile:
-	return _t().tap_back_x_air if airborne else _t().tap_back_x_ground
 
 func _forward_x_meter_damage_bonus(airborne: bool) -> float:
 	return _t().tap_forward_x_air_meter_damage_bonus if airborne \
@@ -395,14 +401,14 @@ func _apply_tap_x_meter_damage(bonus_percent: float) -> void:
 	if _air_disc_hitbox != null:
 		_air_disc_hitbox.damage *= damage_scale
 
-## run_attack_movement mas el bookkeeping del gesto direccional: si el golpe desplaza al Player, el
-## gesto sigue contando como activo (retiene el hold de carga) hasta que ese recorrido cierre. Se
-## confia en el retorno y no en `player_travel != null`: un perfil `rt_only` sin barra, o un facing
-## degenerado, dejan el recorrido sin arrancar y esperarlo colgaria el gesto para siempre.
-func _run_directional_x_movement(profile: AttackMovementProfile, with_meter: bool,
-		routine_id: int) -> void:
-	if not run_attack_movement(profile, routine_id, with_meter):
-		return
+## Bookkeeping del gesto direccional: si el golpe desplaza al Player, el gesto sigue contando como
+## activo (retiene el hold de carga) hasta que ese recorrido cierre. Ahora que el movimiento lo pide
+## el runner de la secuencia y no el gesto, el aviso llega por este hook.
+##
+## Se confia en que WeaponBase solo lo llama cuando el recorrido ARRANCO, y no en
+## `player_travel != null`: un perfil `rt_only` sin barra —el caso exacto de atras X aereo— o un
+## facing degenerado dejan el recorrido sin salir, y esperarlo colgaria el gesto para siempre.
+func on_attack_movement_started(routine_id: int) -> void:
 	if _directional_x_routine_id == routine_id:
 		_directional_x_mover_pending = true
 
@@ -430,10 +436,6 @@ func _on_attack_movement_ended() -> void:
 
 func _fire_attack_projectile(enemy_mover: MoverSettings) -> void:
 	_fire_tap_x_meter_projectile(enemy_mover)
-
-func _finish_directional_x_after(duration: float, routine_id: int) -> void:
-	await wait_seconds(duration)
-	_finish_directional_x(routine_id)
 
 func _finish_directional_x(routine_id: int) -> void:
 	if _directional_x_routine_id != routine_id or not is_routine_current(routine_id):
@@ -551,10 +553,6 @@ func _run_aerial_charged_y(is_sweet_spot: bool) -> void:
 ## enemigo queda "pegado" durante el combo y cae al dejar de golpearlo. request_float ya exige que el
 ## enemigo esté aéreo y quebrado, así que un golpe en tierra o a un objetivo entero no hace nada.
 func _on_aerial_normal_hit(hurtbox: Hurtbox, _died: bool) -> void:
-	# Un gesto direccional con hang propio lo aplica y corta acá; si no define uno, cae al hold
-	# genérico de abajo igual que cualquier golpe aéreo normal.
-	if request_profile_enemy_hang(hurtbox):
-		return
 	# El hold depende de que el ENEMIGO esté en el aire (lo valida request_float), no de dónde esté
 	# el jugador: el juggle común es pegarle al enemigo cayendo desde el piso. Un golpe a un enemigo
 	# en tierra no hace nada: request_float exige aéreo + quebrado.
@@ -577,13 +575,21 @@ func _on_aerial_normal_hit(hurtbox: Hurtbox, _died: bool) -> void:
 
 ## Prende el hitbox del dash cargado mientras dura el dash (la espada mueve al player vía
 ## PlayerDash.force_dash, pero el daño lo pone ESTE hitbox, no el del dodge).
-func _run_charged_dash_window() -> void:
+## Abre el ChargedDashHitbox en la fraccion del AttackClip declarada por el paso. Es el equivalente
+## especializado de WeaponBase.begin_damage_window: no toca hoja/disco ni hooks de perfiles.
+func _begin_charged_dash_window(duration: float, clip: AttackClip) -> void:
 	_charged_dash_id += 1
 	var id := _charged_dash_id
+	var open_delay := 0.0 if clip == null else clip.open_delay(duration)
+	var open_time := duration if clip == null else clip.open_seconds(duration)
+	if open_delay > 0.001:
+		await wait_seconds(open_delay)
+		if id != _charged_dash_id:
+			return
 	_charged_dash_hitbox.begin_swing()
-	await wait_seconds(_t().charged_dash_duration)
+	await wait_seconds(open_time)
 	if id != _charged_dash_id:
-		return  # otro dash cargado ya arrancó: él es dueño del hitbox
+		return  # otro dash cargado ya arranco: el es dueño del hitbox
 	_charged_dash_hitbox.end_swing()
 
 ## Solo alimenta el meter (sin _window_hits: no es parte de un combo aéreo). Un kill en la
@@ -595,7 +601,7 @@ func _on_charged_dash_hit(hurtbox: Hurtbox, died: bool) -> void:
 		return
 	_charged_dash_connected = true
 	_charged_dash_hitbox.end_swing()
-	_player.dash.cancel()
+	_player.mover.cancel_mover(Mover.CancelReason.ATTACK_RULE)
 	var target := hurtbox.owner_node as Node3D
 	if target != null and is_instance_valid(target):
 		_place_behind_target(target)

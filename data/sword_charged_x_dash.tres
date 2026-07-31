@@ -1,0 +1,35 @@
+[gd_resource type="Resource" script_class="AttackSequence" format=3 uid="uid://cp27vr6bihppl"]
+
+[ext_resource type="Script" uid="uid://b0xd72invappo" path="res://data/attack_clip.gd" id="1_clip"]
+[ext_resource type="Script" uid="uid://b1755lpansqbo" path="res://data/attack_step.gd" id="2_step"]
+[ext_resource type="Script" uid="uid://b1oxel8llcohe" path="res://data/attack_sequence.gd" id="3_sequence"]
+[ext_resource type="Script" uid="uid://dsps3sxfd8wmx" path="res://data/mover_settings.gd" id="4_mover"]
+[ext_resource type="Script" uid="uid://df6a6rp7vamdn" path="res://data/attack_movement_profile.gd" id="5_movement"]
+
+[sub_resource type="Resource" id="Resource_dash_clip"]
+script = ExtResource("1_clip")
+clip = &"Sword_Dash"
+
+[sub_resource type="Resource" id="Resource_dash_mover"]
+script = ExtResource("4_mover")
+direction = 2
+distance = 11.0
+speed = 57.894737
+stop_on = 5
+
+[sub_resource type="Resource" id="Resource_dash_movement"]
+script = ExtResource("5_movement")
+player_travel = SubResource("Resource_dash_mover")
+
+[sub_resource type="Resource" id="Resource_dash_step"]
+script = ExtResource("2_step")
+clip = SubResource("Resource_dash_clip")
+movement = SubResource("Resource_dash_movement")
+advances = false
+choreography = &"charged_dash"
+
+[resource]
+script = ExtResource("3_sequence")
+steps = Array[ExtResource("2_step")]([SubResource("Resource_dash_step")])
+step_time = 0.19
+auto_chain = true

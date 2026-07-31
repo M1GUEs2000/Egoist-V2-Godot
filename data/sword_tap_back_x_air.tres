@@ -1,0 +1,43 @@
+[gd_resource type="Resource" script_class="AttackSequence" format=3 uid="uid://dw2ci4u2u3411"]
+
+[ext_resource type="Script" uid="uid://b0xd72invappo" path="res://data/attack_clip.gd" id="1_clip"]
+[ext_resource type="Script" uid="uid://b1755lpansqbo" path="res://data/attack_step.gd" id="2_step"]
+[ext_resource type="Script" uid="uid://b1oxel8llcohe" path="res://data/attack_sequence.gd" id="3_sequence"]
+[ext_resource type="Script" uid="uid://df6a6rp7vamdn" path="res://data/attack_movement_profile.gd" id="4_movement"]
+[ext_resource type="Script" uid="uid://dsps3sxfd8wmx" path="res://data/mover_settings.gd" id="5_mover"]
+
+[sub_resource type="Resource" id="Resource_clip_spin"]
+script = ExtResource("1_clip")
+clip = &"Sword_Regular_C"
+
+[sub_resource type="Resource" id="Resource_player_retreat"]
+script = ExtResource("5_mover")
+direction = 3
+distance = 2.0
+stop_on = 3
+float_duration = 0.3
+
+[sub_resource type="Resource" id="Resource_projectile_launcher"]
+script = ExtResource("5_mover")
+mode = 1
+float_duration = 0.3
+
+[sub_resource type="Resource" id="Resource_profile_retreat"]
+script = ExtResource("4_movement")
+player_travel = SubResource("Resource_player_retreat")
+rt_only = true
+rt_fires_projectile = true
+rt_projectile_enemy_mover = SubResource("Resource_projectile_launcher")
+overrides_air_hit = true
+
+[sub_resource type="Resource" id="Resource_step_retreat"]
+script = ExtResource("2_step")
+clip = SubResource("Resource_clip_spin")
+movement = SubResource("Resource_profile_retreat")
+advances = false
+
+[resource]
+script = ExtResource("3_sequence")
+steps = Array[ExtResource("2_step")]([SubResource("Resource_step_retreat")])
+auto_chain = true
+recovery = 0.0

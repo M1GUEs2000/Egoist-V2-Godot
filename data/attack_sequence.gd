@@ -22,8 +22,10 @@ class_name AttackSequence extends Resource
 ## dispara los hooks de cierre del perfil.
 @export var steps: Array[AttackStep] = []
 
-## Segundos que dura un paso que no declara duracion propia (AttackClip.duration en 0). 0 = usa
-## WeaponTuning.swing_time. Es el default de la cadena, no un techo: un paso con clip propio manda.
+## Segundos que dura CADA paso de la cadena. 0 = usa WeaponTuning.swing_time. Es la base de todos:
+## un paso que quiera salir mas rapido o mas lento no la reemplaza, la escala con el `speed_bonus`
+## de su AttackClip. Subir este numero alarga la cadena entera y conserva las diferencias entre
+## golpes, que es justo lo que el viejo override en segundos absolutos no hacia.
 @export var step_time := 0.0
 
 ## Segundos para encadenar el golpe siguiente una vez terminado el actual. Dejar pasar la ventana
