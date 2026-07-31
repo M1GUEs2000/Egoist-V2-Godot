@@ -123,9 +123,9 @@ enum EnemyTravelAt {
 @export_range(-100.0, 300.0, 1.0) var rt_player_hang_bonus := 0.0
 ## Bono % a los segundos de hang del Enemy: `enemy_travel.float_duration`. -100 lo apaga del todo.
 @export_range(-100.0, 300.0, 1.0) var rt_enemy_hang_bonus := 0.0
-## En una secuencia automatica, este gesto existe SOLO con RT: sin barra WeaponBase no abre clip,
-## dano ni auto-chain. En una cadena manual sigue bloqueando solo el perfil de movimiento, para que
-## sus pasos puedan decidir el ritmo con input. Sin esto habria que duplicar la secuencia RT.
+## Este perfil existe SOLO con RT. Dentro de una AttackSequence se omite el paso entero sin barra
+## (clip, dano, movimiento y proyectil), lo que permite declarar [ataque normal, remate RT] en el
+## mismo auto-chain. Si un ataque legacy consume el perfil directamente, se bloquea su movimiento.
 @export var rt_only := false
 
 @export_group("Proyectil (solo con RT)")

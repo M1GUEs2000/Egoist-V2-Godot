@@ -16,6 +16,9 @@
 [ext_resource type="Script" uid="uid://b1755lpansqbo" path="res://data/attack_step.gd" id="13_c06jm"]
 [ext_resource type="Resource" uid="uid://cp27vr6bihppl" path="res://data/sword_charged_x_dash.tres" id="13_charged_x_dash"]
 [ext_resource type="Script" uid="uid://b0xd72invappo" path="res://data/attack_clip.gd" id="14_c06jm"]
+[ext_resource type="Resource" path="res://data/sword_tap_forward_y_ground.tres" id="15_tap_fwd_y_ground"]
+[ext_resource type="Resource" path="res://data/sword_tap_forward_y_air.tres" id="16_tap_fwd_y_air"]
+[ext_resource type="Resource" path="res://data/sword_tap_back_y_air.tres" id="17_tap_back_y_air"]
 
 [sub_resource type="Resource" id="Resource_air_hit_enemy_floater"]
 script = ExtResource("5_floater")
@@ -195,31 +198,6 @@ steps = Array[ExtResource("13_c06jm")]([SubResource("Resource_mcyvl"), SubResour
 auto_chain = true
 metadata/_custom_type_script = "uid://b1oxel8llcohe"
 
-[sub_resource type="Resource" id="Resource_tap_back_y_air_enemy_mover"]
-script = ExtResource("4_mover")
-direction = 1
-distance = 100.0
-speed = 30.0
-acceleration = 20.0
-stop_on = 3
-
-[sub_resource type="Resource" id="Resource_tap_back_y_air_player_mover"]
-script = ExtResource("4_mover")
-direction = 1
-distance = 100.0
-speed = 30.0
-acceleration = 20.0
-stop_on = 3
-mode = 1
-
-[sub_resource type="Resource" id="Resource_profile_tap_back_y_air"]
-script = ExtResource("6_movement")
-player_travel = SubResource("Resource_tap_back_y_air_player_mover")
-player_travel_at_window_end = true
-enemy_travel = SubResource("Resource_tap_back_y_air_enemy_mover")
-enemy_travel_at = 2
-enemy_travel_aligns_y = true
-
 [sub_resource type="Resource" id="Resource_tap_back_y_enemy_mover"]
 script = ExtResource("4_mover")
 distance = 5.0
@@ -232,18 +210,6 @@ float_duration = 0.5
 script = ExtResource("6_movement")
 enemy_travel = SubResource("Resource_tap_back_y_enemy_mover")
 enemy_travel_at = 0
-
-[sub_resource type="Resource" id="Resource_tap_forward_y_player_mover"]
-script = ExtResource("4_mover")
-direction = 2
-distance = 2.0
-speed = 10.0
-acceleration = 10.0
-stop_on = 13
-
-[sub_resource type="Resource" id="Resource_profile_tap_forward_y"]
-script = ExtResource("6_movement")
-player_travel = SubResource("Resource_tap_forward_y_player_mover")
 
 [resource]
 script = ExtResource("1_tuning")
@@ -261,11 +227,12 @@ tap_forward_x_air_sequence = ExtResource("12_tap_fwd_x_air")
 tap_back_x_ground_sequence = SubResource("Resource_6vrif")
 tap_back_x_air_sequence = SubResource("Resource_73axi")
 tap_x_meter_flash_energy = 2.7
-tap_x_meter_flash_duration = 0.4
+tap_x_meter_projectile_radius = 0.3
 tap_x_meter_projectile_energy = 5.0
-tap_forward_y = SubResource("Resource_profile_tap_forward_y")
+tap_forward_y_ground_sequence = ExtResource("15_tap_fwd_y_ground")
+tap_forward_y_air_sequence = ExtResource("16_tap_fwd_y_air")
 tap_back_y_ground = SubResource("Resource_profile_tap_back_y_ground")
-tap_back_y_air = SubResource("Resource_profile_tap_back_y_air")
+tap_back_y_air_sequence = ExtResource("17_tap_back_y_air")
 swing_time = 0.4
 combo_recovery = 0.2
 stun = SubResource("Resource_swordstun")

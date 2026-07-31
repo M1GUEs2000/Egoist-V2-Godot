@@ -14,9 +14,8 @@ const ANIM_DASH := &"Sword_Dash"
 const ANIM_HEAVY := &"Sword_Heavy_Combo"
 # Clip propio (WIP, animaciones/) para el golpe vertical terrestre (launcher).
 const ANIM_LAUNCHER := &"Sword_Launcher"
-# Tramo de Sword_Heavy_Combo para la cargada Y aerea (segundos dentro del clip).
-const HEAVY_AIR_Y_START := 2.40
-const HEAVY_AIR_Y_END := 2.70
+# El recorte 2.40-2.70 de Sword_Heavy_Combo para el plunge dejo de ser constante: es el
+# start_time/end_time del AttackClip de su paso (data/sword_tap_back_y_air.tres).
 
 var _charged_dash_id := 0
 var _sweet_spot_dash := false
@@ -303,39 +302,31 @@ func _run_enemy_only_launcher() -> void:
 			_t().ground_charged_y_hitbox_duration)
 
 ## En aire, tap atras + Y es un plunge: el hachazo conserva alcance y, al cerrarse, ambos cuerpos
-## bajan. Los dos recorridos son WINDOW_END en el perfil, asi que los arranca el cierre de la ventana
-## de dano y no esta rutina. En whiff el Player cae igual (move de compromiso): su recorrido no
-## depende de haber conectado.
+## bajan. Los dos recorridos son WINDOW_END en el perfil del paso, asi que los arranca el cierre de
+## la ventana de dano y no esta rutina. En whiff el Player cae igual (move de compromiso): su
+## recorrido no depende de haber conectado.
+##
+## El recorte del hachazo y el estiramiento en V de los hitboxes tambien son dato: el clip del paso y
+## su `choreography`. Aca queda encarar al objetivo y los locks.
 func _run_air_back_y_plunge() -> void:
-	var id := begin_routine()
 	_face_locked_target()
 	_player.locomotion.lock_facing(tuning.swing_time)
 	_player.locomotion.lock_movement(tuning.swing_time)
 	_player.bump_velocity = Vector3.ZERO
-	_run_finisher_v_stretch()
-	play_visual_clip(ANIM_HEAVY, HEAVY_AIR_Y_START, HEAVY_AIR_Y_END, tuning.swing_time)
-	run_attack_movement(_t().tap_back_y_air, id)
-	begin_damage_window(tuning.swing_time)
-	ComboTracker.register_hit()
+	run_attack_sequence(&"tap_back_y", _t().tap_back_y_air_sequence)
 
-## Tap adelante + Y: la misma vuelta final de la rama espera. En aire arma PushSettings; en suelo
-## solo avanza el Player, con el Mover de su perfil orientado al objetivo (PLAYER_FORWARD).
+## Tap adelante + Y: la misma vuelta final de la rama espera. En suelo solo avanza el Player; en aire
+## ademas empuja al Enemy. Las dos cosas viven en el `movement` del paso de cada tramo, que es por lo
+## que el gesto esta partido en dos secuencias: con una sola, el empujon del aire salia tambien en
+## piso. El Mover se orienta en FORWARD contra el facing que estos locks acaban de fijar.
 func _run_forward_y_push() -> void:
 	_face_locked_target()
 	_player.locomotion.lock_facing(tuning.swing_time)
 	_player.locomotion.lock_movement(tuning.swing_time)
 	_player.bump_velocity = Vector3.ZERO
-	play_visual_clip(ANIM_REGULAR_C, 0.0, -1.0, tuning.swing_time)
-	# ULTIMO arm_push a mano de la Espada. No migro a `AttackMovementProfile.enemy_push` porque el
-	# empujon depende del TRAMO (solo en aire) y `tap_forward_y` es un unico perfil para suelo y
-	# aire: un slot ahi empujaria tambien en piso. Sale solo cuando el gesto se parta en
-	# `tap_forward_y_ground` / `tap_forward_y_air`, como ya estan los taps de X.
-	if _player.is_airborne():
-		arm_push(tuning.push, tuning.swing_time * tuning.push_at)
-	# El facing ya quedo puesto arriba: PLAYER_FORWARD lo lee de ahi.
-	run_attack_movement(_t().tap_forward_y, _routine_id)
-	begin_damage_window(tuning.swing_time)
-	ComboTracker.register_hit()
+	var sequence: AttackSequence = _t().tap_forward_y_air_sequence if _player.is_airborne() \
+			else _t().tap_forward_y_ground_sequence
+	run_attack_sequence(&"tap_forward_y", sequence)
 
 ## Tap adelante + X: vueltas puras, sin Mover ni proyectil. En aire sostiene a ambos cuerpos
 ## con el Floater propio. RT solo usa la cantidad mejorada.
@@ -356,6 +347,8 @@ func _run_forward_x_static_spin(with_meter := false) -> void:
 	# a `swing_time * spins` con UNA ventana: se veían las vueltas pero el enemigo cobraba una vez.
 	var sequence: AttackSequence = _t().tap_forward_x_air_sequence if airborne \
 			else _t().tap_forward_x_ground_sequence
+	if with_meter:
+		_play_tap_x_meter_flash(sequence)
 	await run_attack_sequence(&"tap_forward_x", sequence, with_meter)
 	if is_routine_current(id):
 		_finish_directional_x(id)
@@ -377,6 +370,8 @@ func _run_back_x_retreat(with_meter := false) -> void:
 		_apply_tap_x_meter_damage(_back_x_meter_damage_bonus(airborne))
 	var sequence: AttackSequence = _t().tap_back_x_air_sequence if airborne \
 			else _t().tap_back_x_ground_sequence
+	if with_meter:
+		_play_tap_x_meter_flash(sequence)
 	await run_attack_sequence(&"tap_back_x", sequence, with_meter)
 	if is_routine_current(id):
 		_finish_directional_x(id)
@@ -425,9 +420,13 @@ func _try_spend_tap_x_meter() -> bool:
 	var cost := _t().tap_x_meter_cost
 	if not _player.meter.spend_bars(cost):
 		return false
-	_player.play_combat_flash(_t().tap_x_meter_flash_color,
-			_t().tap_x_meter_flash_energy, _t().tap_x_meter_flash_duration)
 	return true
+
+## El brillo usa el mismo reloj que el runner: cambiar pasos, repeticiones o RT Animation Speed
+## Bonus cambia automaticamente su duracion, sin otro slider que pueda quedar desincronizado.
+func _play_tap_x_meter_flash(sequence: AttackSequence) -> void:
+	_player.play_combat_flash(_t().tap_x_meter_flash_color, _t().tap_x_meter_flash_energy,
+			automatic_sequence_duration(sequence, true))
 
 ## El recorrido del Player cerro (bien o cancelado): el gesto direccional deja de retenerlo. El
 ## hang diferido y el disparo del proyectil los cobra WeaponBase desde el perfil activo.

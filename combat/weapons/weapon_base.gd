@@ -327,13 +327,6 @@ func run_attack_sequence(kind: StringName, sequence: AttackSequence,
 		with_meter := false) -> void:
 	if sequence == null or sequence.steps.is_empty() or _player == null:
 		return
-	# Un gesto automatico ya tiene todos sus pasos decididos: si uno esta marcado `rt_only`, el
-	# gesto entero solo existe pagando RT. Antes el flag se miraba recien al resolver su Mover; el
-	# runner ya habia reproducido clip, dano y las vueltas del auto-chain sin barra.
-	if sequence.auto_chain and not with_meter:
-		for step in sequence.steps:
-			if step.movement != null and step.movement.rt_only:
-				return
 	# Recovery post-cadena: completarla deja esta ventana muerta. Cortarla a mitad no la cobra.
 	# Solo frena COMBOS. Un gesto (auto_chain) es un move deliberado que además ya pagó su barra:
 	# que se lo coma la cola de un combo se siente roto, y hasta hoy no pasaba porque los cargados
@@ -355,14 +348,14 @@ func run_attack_sequence(kind: StringName, sequence: AttackSequence,
 
 	while index < steps.size():
 		var step := steps[index]
-		var finisher := index == steps.size() - 1
-		# Un paso con `repeat` en 0 no existe: se saltea entero, y si era el último la cadena termina
-		# sin recovery propio. Es lo que hace que un paso solo-con-RT desaparezca sin dejar hueco.
-		var times := step.repeat_with_meter if with_meter and step.repeat_with_meter >= 0 \
-				else step.repeat
+		# `rt_only` pertenece al perfil del paso, pero en una AttackSequence apaga el PASO entero:
+		# clip, dano, movimiento y proyectil. Asi un auto-chain puede declarar [ataque normal, premio
+		# RT] y sin barra conserva el primero sin filtrar el segundo.
+		var times := _sequence_step_repeat_count(step, with_meter)
 		if times <= 0:
 			index += 1
 			continue
+		var finisher := _is_last_sequence_step(steps, index, with_meter)
 		_combo_queued = false
 		_combo_window_open = false
 		var duration := _step_duration(step, sequence, with_meter)
@@ -416,6 +409,35 @@ func run_attack_sequence(kind: StringName, sequence: AttackSequence,
 	_combo_playing = false
 	_combo_window_open = false
 	_combo_auto = false
+
+## Repeticiones efectivas del paso. Cero significa que el paso completo no existe en esta variante;
+## no solo que su Mover este apagado. Fuera del secuenciador, `run_attack_movement` conserva el gate
+## propio porque los ataques legacy pueden consumir el perfil directamente.
+func _sequence_step_repeat_count(step: AttackStep, with_meter: bool) -> int:
+	if step.movement != null and step.movement.rt_only and not with_meter:
+		return 0
+	return step.repeat_with_meter if with_meter and step.repeat_with_meter >= 0 else step.repeat
+
+## El finisher es el ultimo paso que realmente saldra en esta variante. Un paso posterior con
+## `repeat = 0` o `rt_only` sin RT no puede quitarle recovery ni hooks de cierre al anterior.
+func _is_last_sequence_step(steps: Array[AttackStep], index: int, with_meter: bool) -> bool:
+	for next_index in range(index + 1, steps.size()):
+		if _sequence_step_repeat_count(steps[next_index], with_meter) > 0:
+			return false
+	return true
+
+## Duracion real de un gesto automatico lineal: respeta pasos rt_only, repeticiones y los bonus de
+## velocidad del clip/RT exactamente igual que el runner. No suma recovery porque el ataque visual
+## ya termino cuando empieza esa espera.
+func automatic_sequence_duration(sequence: AttackSequence, with_meter: bool) -> float:
+	if sequence == null:
+		return 0.0
+	var total := 0.0
+	for step in sequence.steps:
+		var times := _sequence_step_repeat_count(step, with_meter)
+		if times > 0:
+			total += _step_duration(step, sequence, with_meter) * times
+	return total
 
 ## Segundos de un paso: la base la pone la cadena (`step_time`) o, si no la declara, el `swing_time`
 ## del arma; encima el clip aplica su `speed_bonus` y, solo con RT, el adicional del paso. La misma

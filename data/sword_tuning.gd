@@ -177,10 +177,9 @@ class_name SwordTuning extends WeaponTuning
 @export_group("Tap X direccional + RT — meter y brillo", "tap_x_meter_")
 ## Barras que cuesta combinar RT con tap adelante/atras + X. 0 desactiva el coste.
 @export_range(0.0, 5.0, 0.05) var tap_x_meter_cost := 0.5
-## Fogonazo aditivo del Player al pagar el gesto. Duracion en segundos.
+## Fogonazo aditivo del Player al pagar el gesto. Su duracion sale de la AttackSequence RT.
 @export var tap_x_meter_flash_color := Color(1.0, 0.16, 0.015)
 @export_range(0.0, 12.0, 0.1) var tap_x_meter_flash_energy := 5.0
-@export_range(0.0, 2.0, 0.01) var tap_x_meter_flash_duration := 0.45
 
 @export_group("Tap X direccional — proyectil", "tap_x_meter_projectile_")
 ## Valores visuales y ofensivos compartidos. Cada ataque que dispara define su launcher junto a
@@ -203,11 +202,15 @@ class_name SwordTuning extends WeaponTuning
 @export_range(0.0, 12.0, 0.1) var tap_x_meter_projectile_energy := 3.0
 
 @export_group("Tap Y adelante — avance con vuelta", "tap_forward_y_")
-## Que le hace el gesto a la posicion de los cuerpos (ver data/attack_movement_profile.gd). Avance
-## del Player hacia el objetivo, con el Mover en FORWARD: el gesto ya fijo el facing al lockeado, asi
-## que el perfil se clona y se orienta en runtime sin mutar el .tres. Al Enemy no lo mueve un Mover:
-## en aire lo desplaza el push (WeaponTuning), por eso `enemy_travel` esta vacio.
-@export var tap_forward_y: AttackMovementProfile
+## El gesto entero como datos, UNO POR TRAMO. El paso trae el clip y su `movement`: el avance del
+## Player hacia el objetivo con el Mover en FORWARD (el gesto ya fijo el facing al lockeado, asi que
+## el perfil se clona y se orienta en runtime sin mutar el .tres).
+##
+## Partirlo en suelo y aire es lo que permitio matar el ULTIMO `arm_push` a mano de la Espada: el
+## empujon solo sale en aire, y con un perfil unico para los dos tramos un `enemy_push` habria
+## empujado tambien en piso. Ahora el del aire lo declara su propio paso. *(2026-07-30)*
+@export var tap_forward_y_ground_sequence: AttackSequence
+@export var tap_forward_y_air_sequence: AttackSequence
 
 @export_subgroup("Coreografia e input", "tap_forward_y_")
 ## Segundos para pulsar Y despues de un tap que se acerca al objetivo lockeado. 0 desactiva
@@ -215,13 +218,19 @@ class_name SwordTuning extends WeaponTuning
 @export var tap_forward_y_window := 0.15
 
 @export_group("Tap Y atras — launcher / plunge", "tap_back_y_")
-## Que le hace el gesto a la posicion de los cuerpos, por tramo (ver
-## data/attack_movement_profile.gd). En suelo solo sube al Enemy (BEFORE_DAMAGE, como el cargado):
-## el Player se queda, por eso su slot esta vacio. En aire hunde a los dos en WINDOW_END —arrancar
-## la caida durante el swing sacaria al objetivo del alcance del propio hachazo— y alinea al enemigo
-## a tu altura antes de bajar, que es lo que hace que se sienta "bajamos juntos".
+## SUELO: sigue siendo un perfil suelto y no una secuencia. Es el unico gesto de la Espada que sale
+## por una VENTANA VERTICAL (run_vertical_window_from_profile) y no por la ventana de dano normal:
+## sube al Enemy en BEFORE_DAMAGE, o sea antes del dano, que es lo que hace que el Stun del mismo
+## golpe ya lo vea en el aire y el launcher abra juggle. El Player se queda, por eso su slot esta
+## vacio. Migrarlo pide que el runner de secuencias sepa correr ventanas verticales, que todavia no.
 @export var tap_back_y_ground: AttackMovementProfile
-@export var tap_back_y_air: AttackMovementProfile
+
+## AIRE: el plunge entero como datos. Un paso con el recorte del hachazo, y su `movement` hunde a los
+## dos en WINDOW_END —arrancar la caida durante el swing sacaria al objetivo del alcance del propio
+## golpe— alineando antes al enemigo a tu altura, que es lo que hace que se sienta "bajamos juntos".
+## El estiramiento en V de los hitboxes lo pide el paso con `choreography = air_finisher`, igual que
+## el finisher del combo aereo. *(2026-07-30)*
+@export var tap_back_y_air_sequence: AttackSequence
 
 @export_subgroup("Coreografia e input", "tap_back_y_")
 ## Segundos para pulsar Y despues de un tap que se aleja del objetivo lockeado. 0 desactiva

@@ -9,16 +9,16 @@ extends SceneTree
 ##
 ##   & $GODOT --headless --path . --script res://tools/check_attack_data.gd
 
-const SEQUENCES := [
-	"res://data/sword_ground_combo.tres",
-	"res://data/sword_air_combo.tres",
-	"res://data/sword_air_charged_y.tres",
-	"res://data/sword_air_charged_y_sweet.tres",
+## Tuning de los que se sacan las secuencias a revisar. Se leen del TUNING y no de una lista de
+## rutas: una secuencia puede vivir en su propio .tres o guardada adentro del tuning (el inspector
+## crea sub-recursos inline al armar una nueva), y una lista de archivos no ve las segundas. Lo que
+## importa es lo que el arma va a correr, no donde quedo guardado.
+const TUNINGS := [
+	"res://data/sword_tuning.tres",
+]
+## Secuencias que todavia no cuelgan de ningun campo del tuning (ramas compartidas, WIP).
+const EXTRA_SEQUENCES := [
 	"res://data/sword_air_charged_y_knock.tres",
-	"res://data/sword_tap_forward_x_ground.tres",
-	"res://data/sword_tap_forward_x_air.tres",
-	"res://data/sword_tap_back_x_ground.tres",
-	"res://data/sword_tap_back_x_air.tres",
 ]
 const CLIP_NAMES_PATH := "res://data/clip_names.txt"
 
@@ -30,12 +30,14 @@ var _stuns_seen := 0
 
 func _initialize() -> void:
 	var known := _known_clip_names()
-	for path in SEQUENCES:
+	for path in EXTRA_SEQUENCES:
 		var sequence: Resource = load(path)
 		if sequence == null:
 			_fail("%s no carga" % path)
 			continue
 		_check_steps(path, sequence.get("steps"), known)
+	for path in TUNINGS:
+		_check_tuning(path, known)
 
 	print("check_attack_data: %d pasos, %d clips, %d empujones, %d stuns propios" % [
 		_steps_seen, _clips_seen, _pushes_seen, _stuns_seen])
@@ -47,6 +49,25 @@ func _initialize() -> void:
 		printerr("  FAIL: %s" % failure)
 	printerr("ATTACK DATA FAIL (%d)" % _failures.size())
 	quit(1)
+
+## Todo campo del tuning que sea un AttackSequence, sin nombrarlos uno por uno: un gesto migrado
+## agrega su campo y entra solo al chequeo. Nombrarlos a mano garantizaba que el ultimo migrado se
+## olvidara, que es justo cuando mas hace falta revisarlo.
+func _check_tuning(path: String, known: PackedStringArray) -> void:
+	var tuning: Resource = load(path)
+	if tuning == null:
+		_fail("%s no carga" % path)
+		return
+	var found := 0
+	for property in tuning.get_property_list():
+		if property.usage & PROPERTY_USAGE_STORAGE == 0:
+			continue
+		var value: Variant = tuning.get(property.name)
+		if value is AttackSequence:
+			found += 1
+			_check_steps("%s > %s" % [path, property.name], value.steps, known)
+	if found == 0:
+		_fail("%s no expone ninguna AttackSequence (campo renombrado?)" % path)
 
 ## Recorre el arbol completo: los pasos del tronco y, recursivamente, los de cada rama por espera.
 ## Sin la recursion la mitad de los combos de la Espada quedaria sin revisar — las ramas son las que
