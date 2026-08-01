@@ -24,6 +24,10 @@ Modulo componible `PlayerSprint` (nodo hijo `Sprint` del player). Tuning en `Pla
 
 El sprint **no es una velocidad aparte**: es un **nivel 0-1** que multiplica los valores que ya existen. Con el nivel en 0 el movimiento es identico al de siempre — todo lo demas del `PlayerTuning` sigue siendo el BASE.
 
+La animacion de locomocion sigue exactamente el mismo multiplicador de `MOVE_SPEED`: si el sprint
+sube la velocidad horizontal a `1.5x`, los clips Walk/Sprint se reproducen a `1.5x`. Golpes, salto,
+wall slide y stuns conservan su velocidad propia.
+
 - Carga: boton `meter_button` sostenido, sube a lo largo de `sprint_charge_seconds`. En tierra y en aire por igual.
 - Descarga: al soltar, baja a lo largo de `sprint_decay_seconds`, tambien en los dos.
 - `sprint_requires_move_input`: si `true`, frenar en seco corta la carga aunque se sostenga el boton.
@@ -102,11 +106,11 @@ Los tres canales de wall slide reparten responsabilidades limpias (ver [[Wall Sl
 - `WALL_SLIDE_ACCEL` decide **que tan rapido** llega. No cambia el destino: acorta el tiempo, asi que el tramo a potencia plena empieza antes y el slide se siente mas agresivo.
 - `WALL_SLIDE_INITIAL` decide con cuanto se **arranca**.
 
-## Estelas de sprint
+## Cinta de sprint
 
-Con el nivel por encima de `sprint_trail_min_level`, el jugador entero emite estelas que quedan atras suyo: emisor `SprintTrail` (`GPUParticles3D`) con `local_coords = false`, asi las particulas quedan en espacio de mundo y es el propio movimiento del player el que dibuja la estela. La direccion de emision se fija cada frame como el reverso de la velocidad planar (o el `forward()` si esta quieto), y el color se empuja a HDR segun el nivel para que lo agarre el glow del `WorldEnvironment`.
+Con el nivel por encima de `sprint_trail_min_level`, `SprintTrail` dibuja una cinta procedural continua, no particulas. Muestrea los `Marker3D` inferior y superior del Player en espacio de mundo y conserva las muestras por `lifetime`, igual que la estela de la [[Espada]]. Por eso el recorrido real deja un velo vertical de cuerpo completo incluso al saltar o encadenar paredes, y no una nube de motas que se desplaza por velocidad propia. Al salir del sprint deja de muestrear, pero su cola se disuelve sola.
 
-Knobs en `PlayerTuning` grupo *Dust FX*: `sprint_trail_min_level`, `sprint_trail_color`, `sprint_trail_emission_energy`, `sprint_trail_backward_speed`.
+El color se empuja a HDR segun el nivel para que lo agarre el glow del `WorldEnvironment`. Knobs de activacion/look en `PlayerTuning` grupo *Smoke FX*: `sprint_trail_min_level`, `sprint_trail_color`, `sprint_trail_emission_energy`. Forma, vida y erosion viven en `SprintTrailTuning` (`data/sprint_trail_tuning.tres`).
 
 `Player._stop_movement_fx()` corta polvo y estela de una. Lo usan los cortes tempranos del frame (stun, Mover total, dash): ahi el player no se mueve por locomocion y el calculo normal de la estela nunca llega a correr, asi que sin eso quedaria emitiendo colgada.
 
@@ -135,7 +139,7 @@ Lo aprobado antes de este cambio, y que sigue en pie salvo que el aire lo desmie
 velocidad final y aceleracion de la rampa del wall slide. *(2026-07-27)*
 
 > [!bug] Sin verificar headless
-> El cambio se commiteo sin correr `--import` ni los smokes: no habia Godot instalado en la maquina
+> El cambio se commiteo sin correr `--import`: no habia Godot instalado en la maquina
 > donde se escribio. *(2026-07-28)*
 
 ## Relacionado

@@ -36,9 +36,8 @@ En realidad `player/lock_on.gd` tiene las 4 cosas implementadas: adquisicion de 
 por direccion cuantizada a 16 direcciones (`_find_best_target`/`_quantize`), reticle
 posicionado sobre el AABB combinado de las mallas del target (`_reticle_position`),
 visibilidad condicionada a armas afuera (`has_visible_target`/`_is_weapons_out`), e
-integracion con `PlayerLocomotion.tick` (`lock_on.set_aim_direction(camera_dir)`). Ademas
-tiene cobertura en `world/smoke_test.gd` (adquiere el enemigo mas cercano en rango/angulo,
-ignora el lejano). `METODOLOGIA.md`, `Deuda Tecnica.md` y `Matriz Vault Unity Godot.md`
+integracion con `PlayerLocomotion.tick` (`lock_on.set_aim_direction(camera_dir)`).
+`METODOLOGIA.md`, `Deuda Tecnica.md` y `Matriz Vault Unity Godot.md`
 tambien lo listaban como **E0 / stub**, repitiendo la desactualizacion en 3 lugares mas.
 
 Nota: `player_swing.gd` (Cadenas), que SI esta correctamente documentado como stub real
@@ -56,16 +55,14 @@ seguian listandolo como E0/stub).
 ON_DEATH) y esta documentado como parte activa del sistema en `World Switch.md`,
 `Traversal.md`, `Enemigos.md`, `Estados de Combate Enemigo.md`, `Afiliacion de Mundo.md`,
 `Matriz Vault Unity Godot.md` y `METODOLOGIA.md`. Sin embargo, no aparece instanciado en
-ningun `.tscn` del repo (`player.tscn`, `test_scene.tscn`, `grounded_enemy.tscn`, etc.) —
-la unica referencia funcional es en `world/smoke_test.gd`, que lo instancia a mano por
-codigo dentro de un test.
+ningun `.tscn` del repo (`player.tscn`, `test_scene.tscn`, `grounded_enemy.tscn`, etc.).
 
 El sistema real de world switch en `test_scene.tscn` usa `TraversalBlock.enable_world_switch`
 (ver `traversal_block.gd`), que implementa la misma logica (`WorldManager.switch_world()`
 en `_on_hit`) de forma inline, sin depender de `WorldSwitchTrigger`.
 
 **Arreglado:** `World Switch.md` aclara ahora que `WorldSwitchTrigger` no se usa en ninguna
-escena hoy (solo en el smoke test), que `TraversalBlock` implementa su propia logica
+escena hoy, que `TraversalBlock` implementa su propia logica
 inline, y que el caso ON_DEATH sigue planeado pero sin instancia real. No se elimino
 codigo — Tutupa no confirmo que sea descartable, y el modulo sigue siendo la pieza
 planeada para ON_DEATH en enemigos.

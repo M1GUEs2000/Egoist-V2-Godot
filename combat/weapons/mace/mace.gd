@@ -54,8 +54,6 @@ func tap(_slot: World.Slot) -> void:
 	_tap_combo()
 
 func hold(slot: World.Slot, requested_level: int) -> void:
-	if _uninterruptible:
-		return
 	if slot == World.Slot.X:
 		_hold_x(requested_level)
 	else:
@@ -66,6 +64,14 @@ func hold(slot: World.Slot, requested_level: int) -> void:
 ## saltea (dueñan su propio desplazamiento).
 func is_charged_move_active() -> bool:
 	return _charged_move_active
+
+func is_attack_input_locked() -> bool:
+	return _uninterruptible or super.is_attack_input_locked()
+
+func cancel_routines() -> void:
+	super.cancel_routines()
+	_uninterruptible = false
+	_charged_move_active = false
 
 ## Preview del HUD. En el aire el X cargado cuesta 1 barra fija; en suelo cobra una barra por vuelta
 ## y se recorta a lo que alcanza, igual que _hold_x. El Y cargado cuesta 1 barra por su launcher
@@ -94,6 +100,8 @@ func _tap_combo() -> void:
 		_aerial_tap()
 		return
 	if try_queue_combo(&"ground"):
+		return
+	if is_attack_input_locked():
 		return
 	reset_hit_profile()
 	run_combo_chain(&"ground", STEP_COUNT, tuning.swing_time, _t().combo_window,
@@ -169,7 +177,7 @@ func _run_charged_spins(spin_count: int) -> void:
 # ---- Personalidad Y: launcher terrestre ----
 
 func _hold_y() -> void:
-	begin_routine()
+	var id := begin_routine()
 	reset_hit_profile()
 	# El Y cargado aereo no existe en este build (depende de un bouncer sin diseñar, ver
 	# encabezado del archivo): sostener Y en el aire cae al combo aereo normal, sin gastar meter.
@@ -182,6 +190,7 @@ func _hold_y() -> void:
 		_tap_combo()
 		return
 	var t := _t()
+	_uninterruptible = true
 	# El paso corto lleva el launcher ARMADO: el hitbox barre hacia adelante con el jugador y lanza
 	# al primer enemigo que toca DURANTE el paso, en vez de esperar a que termine para activarse por
 	# tiempo. El cuerpo atraviesa enemigos (pass_through), pero el LauncherHitbox es un Area3D propio
@@ -194,6 +203,9 @@ func _hold_y() -> void:
 	# pide su propio Mover UP + Floater (ground_y_launcher_enemy_mover); el jugador no recibe perfil.
 	run_vertical_window(_launcher_hitbox, null, t.ground_y_launcher_enemy_mover,
 			t.ground_y_dash_duration + t.ground_y_launcher_duration, t.ground_y_launcher_delay, false)
+	await wait_seconds(t.ground_y_dash_duration + t.ground_y_launcher_duration)
+	if is_routine_current(id):
+		_uninterruptible = false
 
 # ---- Aereo ----
 
@@ -201,6 +213,8 @@ func _hold_y() -> void:
 ## swing_time porque el Mazo es pesado (el air_step_time generico es para armas rapidas).
 func _aerial_tap() -> void:
 	if try_queue_combo(&"air"):
+		return
+	if is_attack_input_locked():
 		return
 	reset_hit_profile()
 	run_combo_chain(&"air", AIR_STEP_COUNT, tuning.swing_time, _t().combo_window,
@@ -225,6 +239,7 @@ func _aerial_charged_x(is_sweet_spot: bool) -> void:
 	var t := _t()
 	var id := begin_routine()
 	reset_hit_profile()
+	_uninterruptible = true
 	_charged_move_active = true
 	_player.notify_aerial_attack(tuning.swing_time)
 	play_visual_clip(ANIM_HEAVY, HEAVY_CHARGED_X_AIR.x, HEAVY_CHARGED_X_AIR.y, tuning.swing_time)
@@ -234,6 +249,7 @@ func _aerial_charged_x(is_sweet_spot: bool) -> void:
 	ComboTracker.register_hit()
 	await wait_seconds(tuning.swing_time)
 	if not is_routine_current(id):
+		_uninterruptible = false
 		_charged_move_active = false
 		return
 	if is_sweet_spot:
@@ -247,9 +263,11 @@ func _aerial_charged_x(is_sweet_spot: bool) -> void:
 		_player.notify_aerial_attack(t.air_freeze_extra_hang_time)
 		await wait_seconds(t.charged_spin_time)
 		if not is_routine_current(id):
+			_uninterruptible = false
 			_charged_move_active = false
 			return
 	reset_hit_profile()
+	_uninterruptible = false
 	_charged_move_active = false
 
 func _set_hitbox_stun(s: StunSettings) -> void:

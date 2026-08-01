@@ -4,6 +4,7 @@
 [ext_resource type="Resource" uid="uid://eyi1a88usmmc" path="res://data/arm_stun.tres" id="2_stun"]
 [ext_resource type="PackedScene" uid="uid://ccg2qrwq3kse7" path="res://visual/arm_vfx_pulse.tscn" id="3_vk5ia"]
 [ext_resource type="Script" uid="uid://br6k3bi45tkio" path="res://data/floater_settings.gd" id="4_floater"]
+[ext_resource type="Resource" uid="uid://ddidxm1eo5bu8" path="res://data/arm_tap_sequence.tres" id="5_sequence"]
 
 [sub_resource type="Resource" id="Resource_air_enemy_floater"]
 script = ExtResource("4_floater")
@@ -20,6 +21,7 @@ max_taps = 3
 cooldown_duration = 1.0
 tap_cadence = 0.3
 tap_buffer_duration = 0.15
+tap_sequence = ExtResource("5_sequence")
 hitbox_radius = 1.0
 meter_gain_on_hit = 0.01
 air_player_floater = SubResource("Resource_air_player_floater")

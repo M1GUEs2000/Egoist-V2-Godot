@@ -11,6 +11,7 @@
 [ext_resource type="Script" uid="uid://d0abkkwvpxf51" path="res://enemies/attacks/melee_attack.gd" id="7_melee"]
 [ext_resource type="Script" uid="uid://w0b3i18w442a" path="res://data/stun_settings.gd" id="8_stun"]
 [ext_resource type="Script" uid="uid://dr1ehd335mg06" path="res://combat/hitbox.gd" id="9_hitbox"]
+[ext_resource type="PackedScene" path="res://visual/vfx_stylized_smoke.tscn" id="10_push_smoke"]
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_body"]
 radius = 0.45
@@ -56,9 +57,6 @@ transparency = 1
 shading_mode = 0
 vertex_color_use_as_albedo = true
 albedo_color = Color(1, 0.15, 0.06, 1)
-emission_enabled = true
-emission = Color(1, 0.08, 0.02, 1)
-emission_energy_multiplier = 2.5
 billboard_mode = 3
 billboard_keep_scale = true
 particles_anim_h_frames = 1
@@ -113,6 +111,37 @@ particles_anim_loop = false
 [sub_resource type="QuadMesh" id="QuadMesh_dust"]
 material = SubResource("Mat_dust")
 size = Vector2(0.35, 0.35)
+
+[sub_resource type="Curve" id="Curve_push_alpha"]
+_data = [Vector2(0, 1), 0.0, 0.0, 0, 0, Vector2(0.2, 0.95), 0.0, 0.0, 0, 0, Vector2(1, 0), 0.0, 0.0, 0, 0]
+point_count = 3
+
+[sub_resource type="CurveTexture" id="CurveTex_push_alpha"]
+curve = SubResource("Curve_push_alpha")
+
+[sub_resource type="Curve" id="Curve_push_scale"]
+_data = [Vector2(0, 0.35), 0.0, 0.0, 0, 0, Vector2(0.5, 1), 0.0, 0.0, 0, 0, Vector2(1, 0.9), 0.0, 0.0, 0, 0]
+point_count = 3
+
+[sub_resource type="CurveTexture" id="CurveTex_push_scale"]
+curve = SubResource("Curve_push_scale")
+
+[sub_resource type="ParticleProcessMaterial" id="PPM_push_smoke"]
+particle_flag_rotate_y = true
+emission_shape = 1
+emission_sphere_radius = 0.22
+angle_min = -180.0
+angle_max = 180.0
+direction = Vector3(0, 1, 0)
+initial_velocity_min = 0.2
+initial_velocity_max = 0.6
+gravity = Vector3(0, 0, 0)
+damping_min = 1.2
+damping_max = 2.5
+scale_min = 0.5
+scale_max = 0.7
+scale_curve = SubResource("CurveTex_push_scale")
+alpha_curve = SubResource("CurveTex_push_alpha")
 
 [sub_resource type="SphereShape3D" id="SphereShape3D_groundsense"]
 radius = 0.6
@@ -193,6 +222,13 @@ lifetime = 0.55
 randomness = 0.4
 process_material = SubResource("PPM_run_dust")
 draw_pass_1 = SubResource("QuadMesh_dust")
+
+[node name="PushSmoke" parent="." unique_id=588691059 instance=ExtResource("10_push_smoke")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.6, 0)
+emitting = false
+amount = 34
+lifetime = 0.6
+process_material = SubResource("PPM_push_smoke")
 
 [node name="GroundSense" type="Area3D" parent="." unique_id=433909482]
 

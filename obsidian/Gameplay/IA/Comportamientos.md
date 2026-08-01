@@ -77,7 +77,7 @@ Tuberia: `GroundedEnemy._on_player_attack_telegraphed` (conectado en `_ready` a 
 - **Sin i-frames para el enemigo**: su esquive es moverse fuera de la trayectoria, no invulnerabilidad. Si jugando la hoja lo alcanza igual y se siente injusto, el gate `EnemyBase.can_receive_hit` es el lugar (mismo patron que los i-frames del dodge del player, ver [[Stun]]).
 - El receptor del telegraph deja servida la condicion `IncomingAttack` que `DEFEND` tambien consume.
 - Hojas del arbol: `limbo_engage_target` y `limbo_evade_window` en `EnemyLimboTreeBuilder`.
-- Contratos en `combat_smoke_test`: dado 0 nunca agenda, dado 1 agenda, cooldown bloquea, fuera de trayectoria/percepcion/rango no agenda, en FLEE no rolea, y la ventana activa produce `EVADE` + intent `STRAFE`.
+- Contratos del rol: dado 0 nunca agenda, dado 1 agenda, cooldown bloquea, fuera de trayectoria/percepcion/rango no agenda, en FLEE no rolea, y la ventana activa produce `EVADE` + intent `STRAFE`.
 
 ## Relacionado
 

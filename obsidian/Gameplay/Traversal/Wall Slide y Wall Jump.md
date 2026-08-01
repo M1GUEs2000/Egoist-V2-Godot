@@ -86,7 +86,7 @@ Trepar esta acotado **por construccion**: se sube acelerando hasta `final_speed`
 
 - El personaje brilla verde mientras esta pegado. La intensidad usa **exactamente la misma fraccion que la potencia del rebote**, no una escala aparte: brillo pleno significa literalmente "el wall jump sale al 100%", meseta incluida. Dejo de ser decorado y es el indicador de cuando saltar. Knobs `glow_color`, `glow_energy_min`, `glow_energy_max` en el nodo `WallSlide`.
 - El brillo va sobre las mallas del **modelo** (`Visual/...`), recolectadas recursivamente, no sobre el nodo `Mesh` — ese es la capsula placeholder y quedo con `visible = false`. Se aplica con `material_overlay` aditivo y no con `set_surface_override_material`: el override reemplazaria el material del modelo y dejaria una silueta verde plana. La intensidad se empuja por el **color** (rgb multiplicado, HDR pasado 1.0), no por `emission_energy`, porque el overlay es unshaded. El bloom lo levanta el `WorldEnvironment` (ver [[Colores de mundo]]).
-- Polvo mientras se desliza: emisor `WallSlideDust` (`GPUParticles3D`) hijo del player, que `PlayerWallSlide` prende/apaga en sync con el glow.
+- Humo mientras se desliza: emisor `WallSlideSmoke` (`SmokeStylizedVFX`) hijo del player, que `PlayerWallSlide` prende/apaga en sync con el glow. Sus nubes usan coordenadas de mundo, por lo que terminan de disolverse en la pared cuando el player se despega.
 - Mientras se desliza, la camara se planta sola frente a la pared en vez de responder al stick, y se abre a vista 2D cuando la bajada es vertical seca (ver [[Camara]]).
 
 ## Wall Impulse

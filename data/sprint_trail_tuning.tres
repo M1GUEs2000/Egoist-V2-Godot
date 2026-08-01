@@ -1,0 +1,25 @@
+[gd_resource type="Resource" script_class="SprintTrailTuning" format=3 uid="uid://cgqsfse38tgb7"]
+
+[ext_resource type="Script" uid="uid://bktqqsk1x142i" path="res://data/sprint_trail_tuning.gd" id="1_tuning"]
+
+[sub_resource type="FastNoiseLite" id="FastNoiseLite_erosion"]
+frequency = 0.03
+
+[sub_resource type="NoiseTexture2D" id="NoiseTexture2D_erosion"]
+width = 256
+height = 128
+noise = SubResource("FastNoiseLite_erosion")
+seamless = true
+
+[sub_resource type="Gradient" id="Gradient_sprint"]
+colors = PackedColorArray(1, 1, 1, 0.85, 1, 1, 1, 0)
+
+[resource]
+script = ExtResource("1_tuning")
+gradient = SubResource("Gradient_sprint")
+lifetime = 0.32
+base_fade = 0.0
+min_sample_distance = 0.05
+max_segment_length = 2.0
+erosion_noise = SubResource("NoiseTexture2D_erosion")
+erosion_strength = 0.55

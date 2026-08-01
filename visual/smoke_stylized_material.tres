@@ -1,0 +1,25 @@
+[gd_resource type="ShaderMaterial" format=3 uid="uid://mnsc8muocurr"]
+
+[ext_resource type="Shader" uid="uid://4ersqmr08pys" path="res://visual/smoke_stylized.gdshader" id="1_kpxp5"]
+
+[sub_resource type="Gradient" id="Gradient_bands"]
+interpolation_mode = 1
+offsets = PackedFloat32Array(0, 0.42, 0.72)
+colors = PackedColorArray(0.32, 0.34, 0.42, 1, 0.66, 0.68, 0.76, 1, 1, 1, 1, 1)
+
+[sub_resource type="GradientTexture1D" id="GradTex_bands"]
+gradient = SubResource("Gradient_bands")
+
+[resource]
+render_priority = 0
+shader = ExtResource("1_kpxp5")
+shader_parameter/dissolve_scale = 6.0
+shader_parameter/dissolve_bias = 0.0
+shader_parameter/flat_shaded = false
+shader_parameter/tint = Color(1, 1, 1, 1)
+shader_parameter/brightness = 1.0
+shader_parameter/shadow_bands = SubResource("GradTex_bands")
+shader_parameter/shadow_roundness = 1.0
+shader_parameter/light_attenuation = 1.15
+shader_parameter/sun_direction = Vector3(0.5, 0.707, 0.5)
+shader_parameter/ambient_floor = 0.25

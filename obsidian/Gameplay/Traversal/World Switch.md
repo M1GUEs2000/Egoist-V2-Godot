@@ -42,7 +42,7 @@ mundo destino aparece **barrido por el frente**, no todo junto.
 
 - **Origen**: el trigger pasa su posicion global a `WorldManager.switch_world(origin)` (el bloque
   golpeado, el enemigo que murio). Sin origen la onda nace en el jugador; sin jugador no hay onda y
-  el switch cae de golpe (caso del smoke test).
+  el switch cae de golpe.
 - **Gameplay**: cada `WorldMembership` se voltea cuando la onda lo alcanza. El retardo es
   `distancia / speed`, clampeado a `max_radius` para que ninguna esquina lejana tarde una eternidad
   en existir (`WorldManager.scan_delay_for`). Si el mundo vuelve a cambiar mientras una membresia

@@ -20,7 +20,7 @@ enum FinishReason {
 	DISTANCE,  # recorrio toda la `distance` (tope de seguridad)
 	FLOOR,     # toco piso (stop_on FLOOR)
 	WALL,      # choco pared (stop_on WALL)
-	ENEMY,     # golpeo enemigo (stop_on ENEMY)
+	HIT,       # el duenio recibio un golpe (stop_on HIT)
 }
 
 ## Por que se aborto el recorrido antes de completarse.
@@ -33,6 +33,7 @@ enum CancelReason {
 
 var _body: CharacterBody3D  # Player o EnemyBase.
 var _floater: Floater       # Floater del mismo cuerpo, para el hang al terminar.
+var _hurtbox: Hurtbox       # La fuente comun de impactos recibidos por el duenio.
 var _settings: MoverSettings
 var _active := false
 var _dir := Vector3.UP
@@ -43,6 +44,11 @@ var _partial_will_reach := false
 func setup(body: CharacterBody3D, floater: Floater) -> void:
 	_body = body
 	_floater = floater
+	# Las armas entregan los impactos al Hurtbox. El Mover se engancha aqui para que Stop On Hit
+	# sea una regla propia del componente, sin cambios en armas, ataques ni recursos.
+	_hurtbox = _body.get_node_or_null("Hurtbox") as Hurtbox
+	if _hurtbox != null:
+		_hurtbox.hit.connect(_on_owner_hit)
 
 ## Arranca el recorrido descrito por `settings`. Un Mover nuevo reemplaza al anterior del mismo
 ## cuerpo (el que se va emite mover_cancelled(SUPERSEDED)).
@@ -68,8 +74,24 @@ func start_mover(settings: MoverSettings) -> void:
 func cancel_mover(reason: int) -> void:
 	if not _active:
 		return
+	# El golpe entra por la regla de ataque del duenio. Si este perfil eligio Stop On Hit,
+	# termina como condicion propia del Mover y corta tambien la velocidad que dejo en el cuerpo.
+	# El bit es el historico 8, por lo que los .tres existentes no requieren migracion.
+	if reason == CancelReason.ATTACK_RULE \
+			and (_settings.stop_on & MoverSettings.STOP_ON_HIT):
+		_body.velocity = Vector3.ZERO
+		_finish(FinishReason.HIT)
+		return
 	_active = false
 	mover_cancelled.emit(reason)
+
+func _on_owner_hit(_from: Node, _damage: float) -> void:
+	if not _active or _settings == null:
+		return
+	if not (_settings.stop_on & MoverSettings.STOP_ON_HIT):
+		return
+	_body.velocity = Vector3.ZERO
+	_finish(FinishReason.HIT)
 
 func is_moving() -> bool:
 	return _active
@@ -85,7 +107,8 @@ func blocks_jump() -> bool:
 
 ## Un frame de recorrido. Lo llama el cuerpo mientras is_moving(). Acelera (accel puede ser 0),
 ## avanza por `_dir` a la velocidad del frame (recortada para clavar la distancia exacta), y corta
-## si cumplio la distancia o toco una condicion de `stop_on`. ENEMY todavia no se detecta (F4).
+## si cumplio la distancia o toco una condicion de `stop_on`. HIT entra por cancel_mover(), que es
+## la ruta comun por la que el duenio procesa un golpe recibido.
 func tick(delta: float) -> void:
 	if not _active or _body == null or delta <= 0.0:
 		return

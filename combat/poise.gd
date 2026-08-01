@@ -72,7 +72,7 @@ func would_break(amount: float, armored := false) -> bool:
 	_settle(World.now())
 	return _accumulated + amount >= effective_max(armored)
 
-## Cuanto lleva acumulado ahora mismo (ya decaido). Para el smoke y un futuro HUD de stagger.
+## Cuanto lleva acumulado ahora mismo (ya decaido). Para un futuro HUD de stagger.
 func accumulated() -> float:
 	_settle(World.now())
 	return _accumulated

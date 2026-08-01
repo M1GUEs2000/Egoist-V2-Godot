@@ -50,8 +50,8 @@ var floater: Floater
 ## Mover (primitiva vertical): recorrido por trayectoria. Se instancia por codigo en _ready.
 ## Ver combat/mover.gd.
 var mover: Mover
-@onready var _run_dust: GPUParticles3D = get_node_or_null("RunDust") as GPUParticles3D
-@onready var _sprint_trail: GPUParticles3D = get_node_or_null("SprintTrail") as GPUParticles3D
+@onready var _run_smoke: SmokeStylizedVFX = get_node_or_null("RunSmoke") as SmokeStylizedVFX
+@onready var _sprint_trail: SprintTrail = get_node_or_null("SprintTrail") as SprintTrail
 @onready var _mesh: MeshInstance3D = get_node_or_null("Mesh") as MeshInstance3D
 
 # Launch de bloque: mientras dura, el bloque es DUEÑO del arco. Impone su propia gravedad (igual
@@ -61,9 +61,6 @@ var _launch_gravity := 0.0
 var _launch_until := -999.0
 var _launch_lock_until := -999.0
 
-var _run_dust_material: ParticleProcessMaterial
-var _run_dust_base_color := Color.WHITE
-var _sprint_trail_material: ParticleProcessMaterial
 var _stun_material: StandardMaterial3D
 var _stun_feedback_color := Color.WHITE
 var _chip_material: StandardMaterial3D
@@ -86,8 +83,6 @@ func _ready() -> void:
 	lock_on.setup(self, get_viewport().get_camera_3d())
 	locomotion.setup(self, get_viewport().get_camera_3d())
 	sprint.setup(self)
-	_setup_run_dust_material()
-	_setup_sprint_trail_material()
 	_collect_combat_flash_meshes(get_node_or_null("Visual"))
 	if _combat_flash_meshes.is_empty() and _mesh != null:
 		_combat_flash_meshes.append(_mesh)
@@ -130,7 +125,7 @@ func forward() -> Vector3:
 
 ## Multiplicador del sprint para un canal (ver PlayerSprint). Único punto de acceso: los módulos
 ## de movimiento lo llaman sobre su propio valor de tuning en vez de leer el nivel a mano, y la
-## guarda de null deja que un Player armado por código (smokes) corra sin el nodo Sprint.
+## guarda de null deja que un Player armado por código corra sin el nodo Sprint.
 func sprint_scale(channel: StringName) -> float:
 	return sprint.scale(channel) if sprint != null else 1.0
 
@@ -263,9 +258,9 @@ func _physics_process(delta: float) -> void:
 	else:
 		air_state = AirState.AIRBORNE
 
-	# Polvo al correr: solo en el suelo y por encima del umbral de velocidad horizontal.
+	# Humo al correr: solo en el suelo y por encima del umbral de velocidad horizontal.
 	var planar_speed := Vector2(velocity.x, velocity.z).length()
-	_set_run_dust(World.on_solid_floor(self) and planar_speed >= tuning.run_dust_min_speed)
+	_set_run_smoke(World.on_solid_floor(self) and planar_speed >= tuning.run_dust_min_speed)
 	_set_sprint_trail()
 
 	_bleed_momentum(delta)
@@ -423,6 +418,7 @@ func _on_dodge() -> void:
 		_dodge_queued = true
 		return
 	_dodge_queued = false
+	combat.cancel_attack_routines()
 	mover.cancel_mover(Mover.CancelReason.ATTACK_RULE)
 	dash.dodge()
 
@@ -704,21 +700,23 @@ func _bleed_scale() -> float:
 func _bleed_momentum_for_scale(delta: float, rate: float, surface_scale: float) -> void:
 	bump_velocity = bump_velocity.move_toward(Vector3.ZERO, rate * surface_scale * delta)
 
-func _set_run_dust(active: bool) -> void:
-	if _run_dust == null:
+func _set_run_smoke(active: bool) -> void:
+	if _run_smoke == null:
 		return
-	# El polvo se tiñe hacia el verde de sprint siguiendo la misma rampa que la velocidad: a medio
-	# sprint el color va a medio camino. `color` multiplica al color_ramp del emisor, así que el
-	# fade de alpha del gradiente se conserva intacto.
-	if _run_dust_material != null:
-		_run_dust_material.color = _run_dust_base_color.lerp(
-				_run_dust_sprint_color(), sprint_level())
-	if _run_dust.emitting != active:
-		_run_dust.emitting = active
+	if active:
+		# Igual que PushSmoke: el look se aplica antes de reiniciar y las nubes se emiten en mundo.
+		# SmokeStylizedVFX duplica el material por instancia, asi otro player no recibe este tinte.
+		_run_smoke.tint_color = Color.WHITE.lerp(_run_smoke_sprint_color(), sprint_level())
+		if not _run_smoke.emitting:
+			_run_smoke.restart()
+			_run_smoke.emitting = true
+	elif _run_smoke.emitting:
+		# Cortar emision deja que las nubes vivas terminen su lifetime y dissolve, como el push.
+		_run_smoke.emitting = false
 
-## Color del polvo a sprint pleno, ya empujado a HDR. Multiplica solo el RGB: subir también el alpha
-## saturaría la transparencia y se perdería el fade del color_ramp del emisor.
-func _run_dust_sprint_color() -> Color:
+## Color del humo a sprint pleno, ya empujado a HDR. Multiplica solo el RGB: subir también el alpha
+## saturaría la transparencia y se perdería el dissolve del emisor.
+func _run_smoke_sprint_color() -> Color:
 	var c := tuning.run_dust_sprint_color
 	var boost := tuning.run_dust_sprint_emission_energy
 	return Color(c.r * boost, c.g * boost, c.b * boost, c.a)
@@ -727,41 +725,25 @@ func _run_dust_sprint_color() -> Color:
 ## dash): ahí el player no se mueve por locomoción y el cálculo normal de la estela nunca llega a
 ## correr, así que sin esto quedaría emitiendo colgada.
 func _stop_movement_fx() -> void:
-	_set_run_dust(false)
-	if _sprint_trail != null and _sprint_trail.emitting:
-		_sprint_trail.emitting = false
+	_set_run_smoke(false)
+	if _sprint_trail != null:
+		_sprint_trail.stop()
 
-## Estelas del sprint: cubren el cuerpo entero y salen hacia atrás. A diferencia del polvo, NO piden
-## suelo — en pleno salto o cadena de paredes seguís dejando estela, que es donde más se nota que
-## venís lanzado. El emisor está en coordenadas de mundo, así que las partículas se quedan clavadas
-## donde nacieron mientras avanzás: la estela la dibuja tu propio desplazamiento, y la velocidad
-## hacia atrás solo la despega un poco más.
+## Cinta del sprint: dos markers laterales del Player se muestrean en mundo y dibujan el recorrido
+## real como una tira continua. No pide suelo: también acompaña saltos y cadenas de paredes.
 func _set_sprint_trail() -> void:
 	if _sprint_trail == null:
 		return
 	var level := sprint_level()
 	var active := level >= tuning.sprint_trail_min_level
-	if active and _sprint_trail_material != null:
-		# La dirección se reapunta cada frame al contrario de tu rumbo: el emisor no rota con el
-		# player (está en mundo), así que sin esto las estelas saldrían siempre hacia el mismo lado.
-		var back := -_sprint_trail_direction()
-		_sprint_trail_material.direction = back
-		_sprint_trail_material.initial_velocity_min = tuning.sprint_trail_backward_speed * 0.5
-		_sprint_trail_material.initial_velocity_max = tuning.sprint_trail_backward_speed
-		# El color arranca en el umbral y sube hasta sprint pleno, así las estelas nacen tenues
-		# en vez de aparecer de golpe a intensidad máxima.
+	if active:
+		# El color arranca en el umbral y sube hasta sprint pleno, así la cinta nace tenue.
 		var ramp := inverse_lerp(tuning.sprint_trail_min_level, 1.0, level)
-		_sprint_trail_material.color = _sprint_trail_color(clampf(ramp, 0.0, 1.0))
-	if _sprint_trail.emitting != active:
-		_sprint_trail.emitting = active
-
-## Rumbo al que se le da la espalda: la dirección real de movimiento si la hay, y si estás quieto
-## (estela vertical de un salto en el lugar) el frente del personaje, para no devolver cero.
-func _sprint_trail_direction() -> Vector3:
-	var planar := Vector3(velocity.x, 0.0, velocity.z)
-	if planar.length_squared() > 0.01:
-		return planar.normalized()
-	return forward()
+		_sprint_trail.set_tint(_sprint_trail_color(clampf(ramp, 0.0, 1.0)))
+		if not _sprint_trail.is_emitting():
+			_sprint_trail.emit()
+	elif _sprint_trail.is_emitting():
+		_sprint_trail.stop()
 
 ## Color de la estela a una fracción dada, empujado a HDR igual que el polvo: el emisor es unshaded,
 ## así que el brillo sale de pasar el RGB de 1.0 para que lo agarre el glow. Solo escala el RGB para
@@ -771,35 +753,13 @@ func _sprint_trail_color(ramp: float) -> Color:
 	var boost := lerpf(1.0, tuning.sprint_trail_emission_energy, ramp)
 	return Color(c.r * boost, c.g * boost, c.b * boost, c.a)
 
-func _setup_sprint_trail_material() -> void:
-	if _sprint_trail == null:
-		return
-	var source := _sprint_trail.process_material as ParticleProcessMaterial
-	if source == null:
-		return
-	_sprint_trail_material = source.duplicate() as ParticleProcessMaterial
-	_sprint_trail.process_material = _sprint_trail_material
-
-## Copia propia del material del polvo: el ParticleProcessMaterial vive en player.tscn y lo
-## comparten todas las instancias, así que teñir el original pintaría de verde a cualquier otro
-## player de la escena. El color de arranque queda guardado como base del lerp de sprint.
-func _setup_run_dust_material() -> void:
-	if _run_dust == null:
-		return
-	var source := _run_dust.process_material as ParticleProcessMaterial
-	if source == null:
-		return
-	_run_dust_material = source.duplicate() as ParticleProcessMaterial
-	_run_dust_base_color = _run_dust_material.color
-	_run_dust.process_material = _run_dust_material
-
 func _set_double_jump_available(available: bool) -> void:
 	if _can_double_jump == available:
 		return
 	_can_double_jump = available
 	double_jump_changed.emit(_can_double_jump)
 
-## Carga el medidor de poise desde el tuning. Publico: cambiar el .tres en caliente (o el smoke)
+## Carga el medidor de poise desde el tuning. Publico: cambiar el .tres en caliente
 ## necesita re-aplicarlo, porque Poise guarda los valores, no lee el Resource cada golpe.
 func setup_poise() -> void:
 	poise.poise_max = tuning.poise_max

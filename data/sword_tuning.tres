@@ -16,9 +16,9 @@
 [ext_resource type="Script" uid="uid://b1755lpansqbo" path="res://data/attack_step.gd" id="13_c06jm"]
 [ext_resource type="Resource" uid="uid://cp27vr6bihppl" path="res://data/sword_charged_x_dash.tres" id="13_charged_x_dash"]
 [ext_resource type="Script" uid="uid://b0xd72invappo" path="res://data/attack_clip.gd" id="14_c06jm"]
-[ext_resource type="Resource" path="res://data/sword_tap_forward_y_ground.tres" id="15_tap_fwd_y_ground"]
-[ext_resource type="Resource" path="res://data/sword_tap_forward_y_air.tres" id="16_tap_fwd_y_air"]
-[ext_resource type="Resource" path="res://data/sword_tap_back_y_air.tres" id="17_tap_back_y_air"]
+[ext_resource type="Resource" uid="uid://ci25uuosadjik" path="res://data/sword_tap_forward_y_ground.tres" id="15_tap_fwd_y_ground"]
+[ext_resource type="Resource" uid="uid://cj54aytla6ylx" path="res://data/sword_tap_forward_y_air.tres" id="16_tap_fwd_y_air"]
+[ext_resource type="Resource" uid="uid://cqxame12hd5js" path="res://data/sword_tap_back_y_air.tres" id="17_tap_back_y_air"]
 
 [sub_resource type="Resource" id="Resource_air_hit_enemy_floater"]
 script = ExtResource("5_floater")

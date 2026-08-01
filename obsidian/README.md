@@ -39,7 +39,6 @@ La boveda se navega por nodos. Primero se lee este README, despues [[Arquitectur
 | [[Diccionario]] | Glosario: que significa cada termino del proyecto y como se llama en el codigo. |
 | [[Integraciones]] | Dependencias externas: Godot, Blender, LimboAI, Claude, Codex. |
 | [[Metodologia V2]] | Flujo para crear, modificar, borrar y clasificar sistemas E0-E4. |
-| [[Smoke Test]] | Qué verifica el smoke test y qué no: lógica invariante sí, valores de tuning no. |
 | [[Matriz Vault Unity Godot]] | Matriz de migracion por sistema: diseno viejo, referencia Unity y modulo Godot. |
 | [[Combate]] | Slots X/Y, espada, hitbox/hurtbox, meter, parry, input feel. |
 | [[Traversal]] | World switch, dash, salto, airdash, bloques, cadenas y momentum. |
@@ -52,6 +51,7 @@ La boveda se navega por nodos. Primero se lee este README, despues [[Arquitectur
 | [[Historia]] | Mascaras, NPCs, plot twist y finales. |
 | [[Exploracion]] | Runas, consumibles, secretos y recompensas opcionales. |
 | [[Animacion]] | Pipeline UAL, enemigo animado H1 y retarget/personaje final H3. |
+| [[VFX]] | Efectos visuales: contrato VfxInjector, reproductores (flipbook, particulas, humo) y la estela de la hoja. |
 | [[Blender Pipeline]] | Regla de arte, targets tecnicos y workflow por asset. |
 | [[Direccion de Arte]] | Estilo visual objetivo (H3): 3D pixel art estilo t3ssel8r — stack tecnico e impacto en camara/glow. |
 | [[tareas]] | Hub del kanban: subtareas por estado (pendientes, en progreso, completadas). |
@@ -65,9 +65,6 @@ La boveda se navega por nodos. Primero se lee este README, despues [[Arquitectur
 
 > [!warning]
 > Cero arte final antes de H3. H1 se gana con feel, greybox y claridad mecanica.
-
-> [!important]
-> Antes de tocar logica core se lee [[Smoke Test]]: el smoke se corre en casi toda peticion que cambia comportamiento. Verifica logica invariante, nunca valores de tuning (esos se validan jugando).
 
 ## Bases
 

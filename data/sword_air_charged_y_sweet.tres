@@ -3,16 +3,30 @@
 [ext_resource type="Resource" uid="uid://bmuejelf1t0qq" path="res://data/sword_air_charged_y_knock.tres" id="1_knock"]
 [ext_resource type="Script" uid="uid://b0xd72invappo" path="res://data/attack_clip.gd" id="2_clip"]
 [ext_resource type="Script" uid="uid://b1755lpansqbo" path="res://data/attack_step.gd" id="3_step"]
+[ext_resource type="Script" uid="uid://dsps3sxfd8wmx" path="res://data/mover_settings.gd" id="4_hlw61"]
 [ext_resource type="Script" uid="uid://b1oxel8llcohe" path="res://data/attack_sequence.gd" id="4_sequence"]
+[ext_resource type="Script" uid="uid://df6a6rp7vamdn" path="res://data/attack_movement_profile.gd" id="5_4oe03"]
 
 [sub_resource type="Resource" id="Resource_clip_a"]
 script = ExtResource("2_clip")
 clip = &"Sword_Regular_A"
 
+[sub_resource type="Resource" id="Resource_04ry6"]
+script = ExtResource("4_hlw61")
+distance = 0.0
+float_duration = 1.2
+metadata/_custom_type_script = "uid://dsps3sxfd8wmx"
+
+[sub_resource type="Resource" id="Resource_tvo07"]
+script = ExtResource("5_4oe03")
+player_travel = SubResource("Resource_04ry6")
+metadata/_custom_type_script = "uid://df6a6rp7vamdn"
+
 [sub_resource type="Resource" id="Resource_step_1"]
 script = ExtResource("3_step")
 clip = SubResource("Resource_clip_a")
 damage_scale = 0.5
+movement = SubResource("Resource_tvo07")
 choreography = &"air_diagonal_l"
 
 [sub_resource type="Resource" id="Resource_clip_b"]

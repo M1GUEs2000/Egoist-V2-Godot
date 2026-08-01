@@ -97,6 +97,11 @@ var _movement_profile_travel_done := false
 @onready var _blade_hitbox: Hitbox = $Hand/Pivot/BladeHitbox
 @onready var _air_disc_hitbox: Hitbox = get_node_or_null("AirDiscHitbox")
 @onready var _blade_mesh: MeshInstance3D = _find_charge_glow_mesh()
+## Estela de la hoja (ver visual/sword_trail.gd). Opcional: un arma sin nodo `Trail` en su escena
+## simplemente no deja estela, que es el caso del Mazo hoy. NO lleva el grupo
+## hand_attachment_payload a proposito — es top_level y genera sus vertices en mundo, asi que
+## colgarlo del hueso lo haria viajar con la mano y dejaria de ser una estela.
+@onready var _trail: SwordTrail = get_node_or_null("Trail") as SwordTrail
 
 var _blade_material: StandardMaterial3D
 ## Aura de motas de la ventana de sweet spot: se crea la primera vez que la ventana abre y
@@ -234,6 +239,12 @@ func try_queue_combo(kind: StringName) -> bool:
 		_combo_queued = true
 		_combo_queued_time = World.now()
 	return true
+
+## Un ataque en curso bloquea iniciar OTRO ataque. Los taps de un combo no usan este
+## gate directamente: primero llaman `try_queue_combo`, que conserva la ventana de
+## encadene legitima y descarta el tap si llega fuera de ella.
+func is_attack_input_locked() -> bool:
+	return _combo_playing
 
 ## Cadena de N golpes, UN tap por golpe, con ventana de encadene entre golpes.
 ## begin_step(step, finisher, wait_branch) pone la coreografía del golpe; la ventana de
@@ -594,12 +605,18 @@ func begin_damage_window(duration: float, runs_profile_hooks := true,
 		if id != _window_id:
 			return
 	_blade_hitbox.begin_swing()
+	# La estela vive exactamente la ventana de la hoja: mismo `hitbox_open`/`hitbox_close` del
+	# AttackClip, sin un segundo lugar donde tunear cuándo se dibuja el arco.
+	if _trail != null:
+		_trail.emit()
 	if _air_disc_hitbox != null and _player != null and _player.is_airborne():
 		_air_disc_hitbox.begin_swing()
 	await wait_seconds(open_time)
 	if id != _window_id:
 		return  # otro swing ya arrancó: él es dueño de los hitboxes ahora
 	_blade_hitbox.end_swing()
+	if _trail != null:
+		_trail.stop()
 	if _air_disc_hitbox != null:
 		_air_disc_hitbox.end_swing()
 	# El sobrante entre el cierre del hitbox y el fin del golpe. Con la ventana completa es 0 y esto
@@ -619,6 +636,10 @@ func end_damage_window() -> void:
 	_window_hits.clear()
 	if _blade_hitbox != null:
 		_blade_hitbox.end_swing()
+	# stop() y no un corte seco: la cola que ya se dibujó se desvanece sola por su lifetime, así un
+	# golpe interrumpido no hace desaparecer el arco de golpe.
+	if _trail != null:
+		_trail.stop()
 	if _air_disc_hitbox != null:
 		_air_disc_hitbox.end_swing()
 

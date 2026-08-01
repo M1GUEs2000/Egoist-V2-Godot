@@ -27,6 +27,9 @@
 [ext_resource type="PackedScene" uid="uid://d1mqppcblj4fm" path="res://assets/animations/Universal Animation Library 2[Standard]/Universal Animation Library 2[Standard]/Unreal-Godot/UAL2_Standard.glb" id="26_ual2"]
 [ext_resource type="Script" uid="uid://ld40uvfhry72" path="res://player/player_animation_controller.gd" id="27_anim_controller"]
 [ext_resource type="Script" uid="uid://byvqx8yq8irlk" path="res://player/player_sprint.gd" id="27_uw77l"]
+[ext_resource type="PackedScene" path="res://visual/vfx_stylized_smoke.tscn" id="28_smoke"]
+[ext_resource type="Script" path="res://visual/sprint_trail.gd" id="29_sprint_trail"]
+[ext_resource type="Resource" path="res://data/sprint_trail_tuning.tres" id="30_sprint_trail_tuning"]
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_body"]
 radius = 0.4
@@ -36,112 +39,61 @@ height = 1.8
 radius = 0.4
 height = 1.8
 
-[sub_resource type="Gradient" id="Gradient_dust"]
-offsets = PackedFloat32Array(0, 0.25, 1)
-colors = PackedColorArray(0.72, 0.68, 0.58, 0, 0.7, 0.66, 0.56, 0.5, 0.6, 0.56, 0.47, 0)
-
-[sub_resource type="GradientTexture1D" id="GradientTexture1D_dust"]
-gradient = SubResource("Gradient_dust")
-
-[sub_resource type="Curve" id="Curve_dust"]
-_data = [Vector2(0, 0.4), 0.0, 0.0, 0, 0, Vector2(0.35, 1), 0.0, 0.0, 0, 0, Vector2(1, 0), 0.0, 0.0, 0, 0]
+[sub_resource type="Curve" id="Curve_player_smoke_alpha"]
+_data = [Vector2(0, 1), 0.0, 0.0, 0, 0, Vector2(0.45, 1), 0.0, 0.0, 0, 0, Vector2(1, 0), 0.0, 0.0, 0, 0]
 point_count = 3
 
-[sub_resource type="CurveTexture" id="CurveTexture_dust"]
-curve = SubResource("Curve_dust")
+[sub_resource type="CurveTexture" id="CurveTex_player_smoke_alpha"]
+curve = SubResource("Curve_player_smoke_alpha")
 
-[sub_resource type="ParticleProcessMaterial" id="PPM_run_dust"]
-lifetime_randomness = 0.3
+[sub_resource type="Gradient" id="Gradient_player_smoke"]
+colors = PackedColorArray(1, 1, 1, 1, 0.36, 0.37, 0.45, 1)
+
+[sub_resource type="GradientTexture1D" id="GradTex_player_smoke"]
+gradient = SubResource("Gradient_player_smoke")
+
+[sub_resource type="Curve" id="Curve_player_smoke_scale"]
+_data = [Vector2(0, 0.1), 0.0, 0.0, 0, 0, Vector2(0.45, 1), 0.0, 0.0, 0, 0, Vector2(1, 0.82), 0.0, 0.0, 0, 0]
+point_count = 3
+
+[sub_resource type="CurveTexture" id="CurveTex_player_smoke_scale"]
+curve = SubResource("Curve_player_smoke_scale")
+
+[sub_resource type="ParticleProcessMaterial" id="PPM_run_smoke"]
+particle_flag_rotate_y = true
+emission_shape = 1
+emission_sphere_radius = 0.18
+angle_min = -180.0
+angle_max = 180.0
+direction = Vector3(0, 1, 0)
+initial_velocity_min = 0.2
+initial_velocity_max = 0.6
+gravity = Vector3(0, 0, 0)
+damping_min = 1.2
+damping_max = 2.5
+scale_min = 0.45
+scale_max = 0.6
+scale_curve = SubResource("CurveTex_player_smoke_scale")
+color_ramp = SubResource("GradTex_player_smoke")
+alpha_curve = SubResource("CurveTex_player_smoke_alpha")
+
+[sub_resource type="ParticleProcessMaterial" id="PPM_wall_slide_smoke"]
+particle_flag_rotate_y = true
 emission_shape = 1
 emission_sphere_radius = 0.2
+angle_min = -180.0
+angle_max = 180.0
 direction = Vector3(0, 1, 0)
-spread = 55.0
-initial_velocity_min = 0.4
-initial_velocity_max = 1.2
-gravity = Vector3(0, -1.5, 0)
-damping_min = 0.4
-damping_max = 1.0
-scale_min = 0.25
-scale_max = 0.5
-scale_curve = SubResource("CurveTexture_dust")
-color_ramp = SubResource("GradientTexture1D_dust")
-
-[sub_resource type="StandardMaterial3D" id="Mat_dust"]
-transparency = 1
-shading_mode = 0
-vertex_color_use_as_albedo = true
-albedo_color = Color(0.7, 0.66, 0.56, 1)
-billboard_mode = 3
-billboard_keep_scale = true
-particles_anim_h_frames = 1
-particles_anim_v_frames = 1
-particles_anim_loop = false
-
-[sub_resource type="QuadMesh" id="QuadMesh_dust"]
-material = SubResource("Mat_dust")
-size = Vector2(0.35, 0.35)
-
-[sub_resource type="Gradient" id="Gradient_sprint_trail"]
-offsets = PackedFloat32Array(0, 0.25, 1)
-colors = PackedColorArray(1, 1, 1, 0, 1, 1, 1, 0.85, 1, 1, 1, 0)
-
-[sub_resource type="GradientTexture1D" id="GradientTexture1D_sprint_trail"]
-gradient = SubResource("Gradient_sprint_trail")
-
-[sub_resource type="Curve" id="Curve_sprint_trail"]
-_data = [Vector2(0, 1), 0.0, 0.0, 0, 0, Vector2(1, 0), 0.0, 0.0, 0, 0]
-point_count = 2
-
-[sub_resource type="CurveTexture" id="CurveTexture_sprint_trail"]
-curve = SubResource("Curve_sprint_trail")
-
-[sub_resource type="StandardMaterial3D" id="Mat_sprint_trail"]
-transparency = 1
-blend_mode = 1
-shading_mode = 0
-vertex_color_use_as_albedo = true
-albedo_color = Color(1, 1, 1, 1)
-billboard_mode = 3
-billboard_keep_scale = true
-particles_anim_h_frames = 1
-particles_anim_v_frames = 1
-particles_anim_loop = false
-
-[sub_resource type="QuadMesh" id="QuadMesh_sprint_trail"]
-material = SubResource("Mat_sprint_trail")
-size = Vector2(0.22, 0.22)
-
-[sub_resource type="ParticleProcessMaterial" id="PPM_sprint_trail"]
-lifetime_randomness = 0.35
-emission_shape = 3
-emission_box_extents = Vector3(0.28, 0.85, 0.28)
-direction = Vector3(0, 0, -1)
-spread = 12.0
-initial_velocity_min = 0.5
-initial_velocity_max = 1.6
+initial_velocity_min = 0.15
+initial_velocity_max = 0.45
 gravity = Vector3(0, 0, 0)
-damping_min = 0.5
-damping_max = 1.5
-scale_min = 0.4
-scale_max = 1.0
-scale_curve = SubResource("CurveTexture_sprint_trail")
-color_ramp = SubResource("GradientTexture1D_sprint_trail")
-
-[sub_resource type="ParticleProcessMaterial" id="PPM_wall_dust"]
-lifetime_randomness = 0.3
-emission_shape = 1
-emission_sphere_radius = 0.22
-direction = Vector3(0, -1, 0)
-spread = 70.0
-initial_velocity_min = 0.5
-initial_velocity_max = 1.5
-gravity = Vector3(0, -3, 0)
-damping_min = 0.3
-damping_max = 0.8
-scale_min = 0.2
-scale_max = 0.45
-scale_curve = SubResource("CurveTexture_dust")
-color_ramp = SubResource("GradientTexture1D_dust")
+damping_min = 1.4
+damping_max = 2.8
+scale_min = 0.42
+scale_max = 0.58
+scale_curve = SubResource("CurveTex_player_smoke_scale")
+color_ramp = SubResource("GradTex_player_smoke")
+alpha_curve = SubResource("CurveTex_player_smoke_alpha")
 
 [sub_resource type="Curve" id="Curve_dash"]
 _data = [Vector2(0, 1), 0.0, 0.0, 0, 0, Vector2(1, 0), 0.0, 0.0, 0, 0]
@@ -242,33 +194,35 @@ shape = SubResource("CapsuleShape3D_body")
 [node name="Locomotion" type="Node" parent="." unique_id=1022513754]
 script = ExtResource("2_loco")
 
-[node name="RunDust" type="GPUParticles3D" parent="." unique_id=838510270]
+[node name="RunSmoke" parent="." unique_id=838510270 instance=ExtResource("28_smoke")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.12, 0)
 emitting = false
-amount = 20
-lifetime = 0.55
-randomness = 0.4
-process_material = SubResource("PPM_run_dust")
-draw_pass_1 = SubResource("QuadMesh_dust")
-
-[node name="WallSlideDust" type="GPUParticles3D" parent="." unique_id=1402134054]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
-emitting = false
-amount = 24
-lifetime = 0.5
-randomness = 0.4
-process_material = SubResource("PPM_wall_dust")
-draw_pass_1 = SubResource("QuadMesh_dust")
-
-[node name="SprintTrail" type="GPUParticles3D" parent="." unique_id=1402134099]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
-emitting = false
-amount = 48
-lifetime = 0.45
+amount = 14
+lifetime = 0.38
 local_coords = false
-randomness = 0.3
-process_material = SubResource("PPM_sprint_trail")
-draw_pass_1 = SubResource("QuadMesh_sprint_trail")
+randomness = 0.4
+process_material = SubResource("PPM_run_smoke")
+
+[node name="WallSlideSmoke" parent="." unique_id=1402134054 instance=ExtResource("28_smoke")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
+emitting = false
+amount = 18
+lifetime = 0.34
+local_coords = false
+randomness = 0.4
+process_material = SubResource("PPM_wall_slide_smoke")
+
+[node name="SprintTrailBottom" type="Marker3D" parent="." unique_id=1402134097]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.35, 0.28)
+
+[node name="SprintTrailTop" type="Marker3D" parent="." unique_id=1402134098]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.55, 0.28)
+
+[node name="SprintTrail" type="MeshInstance3D" parent="." unique_id=1402134099]
+script = ExtResource("29_sprint_trail")
+tuning = ExtResource("30_sprint_trail_tuning")
+base_marker = NodePath("../SprintTrailBottom")
+tip_marker = NodePath("../SprintTrailTop")
 
 [node name="Dash" type="Node3D" parent="." unique_id=1956062227]
 script = ExtResource("3_dash")

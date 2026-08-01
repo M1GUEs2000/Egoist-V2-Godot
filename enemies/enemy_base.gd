@@ -8,6 +8,10 @@ enum AirState { GROUNDED, AIRBORNE }
 
 signal stun_started(is_airborne: bool)
 signal push_started
+## El arco del push dejo de mandar en el cuerpo. Sale por las tres vias que lo apagan: el arco se
+## agoto solo, un golpe nuevo lo corto, o el cuerpo toco el piso antes de gastarlo. Existe para que
+## un efecto que arranca con `push_started` tenga siempre un cierre y no quede colgado.
+signal push_ended
 signal ragdoll_recovered
 
 ## La identidad de hostilidad define las alianzas de dano. No se usa la alerta temporal:
@@ -116,6 +120,15 @@ static func can_damage_enemy(attacker: EnemyBase, target: EnemyBase) -> bool:
 ## Velocidad horizontal minima (m/s) a partir de la cual el enemigo levanta polvo al moverse.
 ## Solo en el suelo, activo y sin stun. El look del polvo vive en el emisor RunDust de la escena.
 @export var run_dust_min_speed := 1.0
+## Color del humo del push. Blanco a proposito: NO usa color de mundo. Un humo teñido con el color
+## del mundo opuesto hablaria el mismo idioma que un bloque de world switch, que usa ese color
+## justamente para decir "te mando al otro lado" (ver [[Colores de mundo]]).
+## Blanco no significa plano: el shader lo sombrea en bandas, asi que el gris sale de la sombra y
+## no del color base (ver [[Humo del Push]]).
+@export var push_smoke_color := Color(1, 1, 1)
+## Brillo del humo del push. En 1 la banda mas clara queda blanco puro; subirlo mete la estela en
+## el bloom del glow, que esta reservado a la emision de impactos y telegraphs.
+@export_range(0.0, 2.0) var push_smoke_brightness := 1.0
 
 # --- Enemigo de world switch ---
 # Un enemigo con un WorldSwitchTrigger hijo (when = ON_DEATH) voltea el mundo de todos al morir.
@@ -188,6 +201,8 @@ var _launch_id := 0
 var _push_settings: PushSettings
 var _push_active := false     # hay un arco de push vivo (aun le queda presupuesto de caida)
 var _push_cut_y := 0.0        # altura a la que se agota el arco y pasa a caida vertical
+var _push_start_position := Vector3.ZERO
+var _push_distance_limit := 0.0
 var _push_bounced := false    # ya gasto su unico rebote de pared
 var _air_gravity := 0.0  # gravedad del vuelo actual; el push la override con su propio arco
 var _stun_tween: Tween
@@ -211,6 +226,8 @@ var _own_materials: Dictionary[MeshInstance3D, StandardMaterial3D] = {}
 @onready var stun_light: OmniLight3D = get_node_or_null("StunLight") as OmniLight3D
 @onready var hit_sparks: GPUParticles3D = get_node_or_null("HitSparks") as GPUParticles3D
 @onready var run_dust: GPUParticles3D = get_node_or_null("RunDust") as GPUParticles3D
+## Estela de humo del push. Opcional: un enemigo sin el nodo simplemente no humea.
+@onready var push_smoke: GPUParticles3D = get_node_or_null("PushSmoke") as GPUParticles3D
 @onready var ground_sense: Area3D = get_node_or_null("GroundSense") as Area3D
 @onready var ragdoll_body: RigidBody3D = get_node_or_null("Ragdoll") as RigidBody3D
 @onready var _body_shape: CollisionShape3D = get_node_or_null("CollisionShape3D") as CollisionShape3D
@@ -471,13 +488,13 @@ func apply_stun(duration: float, feedback_color := Color.TRANSPARENT) -> void:
 		_refresh_visual_state()
 		return
 	stun_started.emit(is_airborne())
-	# El golpe cancela el push (u otro impulso) en curso y lo reemplaza por un retroceso
-	# corto propio del stun, sin acumular momentum previo.
-	# El arco del push muere ACA: su distancia ya no manda, asi que vuelve a correr el decay del
-	# stun (que _update_airborne saltea mientras _push_active). Sin esto el retroceso del golpe
-	# nuevo se quedaba sin freno y el cuerpo seguia de largo con el momentum del arco viejo.
-	_push_active = false
-	_apply_stun_knockback()
+	# Un golpe nuevo solo reemplaza el arco si este perfil eligio Stop On Hit. Sin ese flag el
+	# impacto extiende el stun, pero conserva la trayectoria que el ataque anterior ya impuso.
+	var stops_push_on_hit := _push_active and _push_settings != null \
+		and _push_settings.stops_on(PushSettings.STOP_ON_HIT)
+	if not _push_active or stops_push_on_hit:
+		_end_push()
+		_apply_stun_knockback()
 	if is_airborne():
 		# El stun cambia el estado de combate, no el plan vertical. El hang solo lo inicia el perfil
 		# del ataque mediante Mover/Floater; asi extender un stun no alarga ni crea una suspension.
@@ -655,7 +672,7 @@ func push(direction: Vector3, settings: PushSettings) -> void:
 	_begin_airborne()
 	# Sin hang: el push es un arco balistico que sale al angulo pedido y aterriza a la distancia
 	# pedida. El arco termina al tocar el piso.
-	_air_gravity = settings.gravity
+	_air_gravity = settings.acceleration
 	_airborne_until = World.now()
 	_cancel_air_hold()
 	_push_settings = settings
@@ -664,26 +681,41 @@ func push(direction: Vector3, settings: PushSettings) -> void:
 	# Empujado = cae acostado. Un push sobre un enemigo en el piso tambien lo acuesta: entra igual
 	# a AIRBORNE (arco bajo), sigue su trayectoria y el ragdoll arranca al tocar el suelo.
 	_set_lying(true)
+	_start_push_smoke()
 	push_started.emit()
 
-## Resuelve la velocidad inicial del arco desde la geometria (ver PushSettings): el tiro sale a
-## `angle_degrees` y tiene que pasar por (distance, -fall_height) medido desde ACA. Con el angulo
-## y ese punto fijos hay una sola v0 posible, asi que no se tunea ninguna velocidad a mano.
-## Se llama tanto en el push original como en el rebote de pared (misma forma, otra distancia).
+## Unico lugar donde el arco del push se apaga. Centraliza el flag y la senal porque el push muere
+## por tres caminos distintos (se agota, lo corta un golpe, aterriza antes de gastarlo) y un efecto
+## enganchado al push tiene que cerrarse en los tres, no solo en el final feliz.
+func _end_push() -> void:
+	if not _push_active:
+		return
+	_push_active = false
+	_stop_push_smoke()
+	push_ended.emit()
+
+## Arranca un arco con impulso y aceleracion declarados en PushSettings. Cada rebote reinicia sus
+## limites desde el choque, pero conserva los mismos valores de tuning.
 func _start_push_arc(direction: Vector3, distance: float) -> void:
-	var speeds := _push_settings.solve_speeds(distance)
+	var speeds := _push_settings.initial_velocity()
 	velocity = direction * speeds.x
 	velocity.y = speeds.y
 	_push_active = true
-	# Presupuesto de caida del arco NUEVO: el rebote de pared reinicia su propia altura desde
-	# donde choco, no hereda lo que le quedaba al anterior.
+	_push_start_position = global_position
+	_push_distance_limit = maxf(0.0, distance)
+	# Cada rebote reinicia su propio presupuesto vertical desde donde choco.
 	_push_cut_y = global_position.y - maxf(0.0, _push_settings.fall_height)
 
 ## Gastada la altura, el arco murio: se corta el horizontal y el cuerpo baja a plomo el resto.
 func _tick_push_arc() -> void:
-	if not _push_active or global_position.y > _push_cut_y:
+	if not _push_active:
 		return
-	_push_active = false
+	var travelled := Vector2(global_position.x - _push_start_position.x, global_position.z - _push_start_position.z).length()
+	var reached_distance := _push_settings.stops_on(PushSettings.STOP_ON_DISTANCE) \
+		and _push_distance_limit > 0.0 and travelled >= _push_distance_limit
+	if not reached_distance and global_position.y > _push_cut_y:
+		return
+	_end_push()
 	velocity.x = 0.0
 	velocity.z = 0.0
 
@@ -693,12 +725,17 @@ func _tick_push_arc() -> void:
 func _tick_push_wall_bounce() -> void:
 	if not _push_active or _push_bounced or _push_settings == null:
 		return
-	if _push_settings.wall_bounce_distance <= 0.0:
-		return
 	for i in get_slide_collision_count():
 		var normal := get_slide_collision(i).get_normal()
 		if absf(normal.y) > 0.7:
 			continue  # piso/techo: no es pared, lo resuelve el aterrizaje
+		if _push_settings.stops_on(PushSettings.STOP_ON_WALL):
+			_end_push()
+			velocity.x = 0.0
+			velocity.z = 0.0
+			return
+		if _push_settings.wall_bounce_distance <= 0.0:
+			return
 		var away := Vector3(normal.x, 0.0, normal.z)
 		if away.length_squared() < 0.0001:
 			continue
@@ -923,6 +960,9 @@ func _update_airborne(delta: float) -> void:
 		_left_ground_once = true
 	var early_ground := use_ragdoll and _lying and _left_ground_once and sensed
 	if World.on_solid_floor(self) or early_ground:
+		if _push_active and _push_settings != null \
+				and _push_settings.stops_on(PushSettings.STOP_ON_FLOOR):
+			_end_push()
 		if _slam_bounce:
 			_do_bounce()
 		elif _lying:
@@ -974,7 +1014,7 @@ func _land() -> void:
 	velocity = Vector3.ZERO
 	_cancel_air_hold()  # tocar el piso corta el hang, igual que en el Player
 	_bouncing = false
-	_push_active = false
+	_end_push()
 	_push_bounced = false
 	_air_gravity = airborne_gravity  # limpia el override del push para el proximo vuelo
 
@@ -1179,6 +1219,35 @@ func _remember_hit_direction(from: Node, hit_direction: Vector3) -> void:
 ## Chispas del impacto: nacen en la superficie que mira al atacante, no en el centro del cuerpo.
 ## Salen en TODO golpe recibido, stunee o no. El emisor es `top_level`, asi que las particulas
 ## viven en el mundo: el squash, la inclinacion y el giro del enemigo no las deforman.
+## Arranca la estela del push. El emisor NO usa local_coords, asi que las nubes quedan clavadas
+## donde nacieron y el enemigo las va dejando atras: eso es lo que dibuja el recorrido del empujon
+## en vez de una nube pegada al cuerpo.
+func _start_push_smoke() -> void:
+	if push_smoke == null:
+		return
+	_apply_push_smoke_color()
+	push_smoke.restart()
+	push_smoke.emitting = true
+
+## Corta la EMISION, no las particulas vivas: las nubes que ya salieron terminan su lifetime y se
+## disuelven solas. Cortarlas de golpe haria desaparecer la estela en el aire.
+func _stop_push_smoke() -> void:
+	if push_smoke == null:
+		return
+	push_smoke.emitting = false
+
+## Pinta la estela. Se aplica por codigo aunque el color sea fijo para que el emisor no tenga que
+## guardar el mismo valor repetido en cada prefab: la fuente es el export de aca.
+func _apply_push_smoke_color() -> void:
+	if push_smoke == null:
+		return
+	# Duck typing igual que VfxInjector: sirve con SmokeStylizedVFX o cualquier emisor que exponga
+	# las mismas props, sin atar EnemyBase a una clase de VFX concreta.
+	if "tint_color" in push_smoke:
+		push_smoke.set("tint_color", push_smoke_color)
+	if "brightness" in push_smoke:
+		push_smoke.set("brightness", push_smoke_brightness)
+
 func _play_hit_sparks() -> void:
 	if hit_sparks == null:
 		return

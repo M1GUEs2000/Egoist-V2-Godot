@@ -18,8 +18,23 @@ class_name ArmTuning extends Resource
 ## Un segundo tap durante la cadencia puede esperar como maximo este tiempo. Solo hay un tap
 ## bufferizado: mas inputs no forman una rafaga ni consumen cargas por adelantado.
 @export var tap_buffer_duration := 0.5
-## Segundos que el hitbox queda activo sobre el target (ventana de detección, no viaje visual).
-@export var travel_time := 0.1
+## Secuencia mecánica del tap remoto. Su paso no lleva clip: solo abre/cierra el hitbox durante
+## `step_time`, y permite sumar tramos o variantes de datos sin convertir el Brazo en WeaponBase.
+@export var tap_sequence: AttackSequence
+
+func resolved_tap_sequence() -> AttackSequence:
+	if tap_sequence != null:
+		return tap_sequence
+	var step: AttackStep = AttackStep.new()
+	step.advances = false
+	var sequence: AttackSequence = AttackSequence.new()
+	var steps: Array[AttackStep] = []
+	steps.append(step)
+	sequence.steps = steps
+	sequence.step_time = 0.1
+	sequence.auto_chain = true
+	sequence.recovery = 0.0
+	return sequence
 ## Radio de la esfera de golpe que se posiciona sobre el target.
 @export var hitbox_radius := 0.35
 ## Meter que gana un golpe conectado. Propio y bajo, independiente de WeaponTuning/PlayerTuning.

@@ -28,6 +28,8 @@ var _aerial_charged_y_active := false
 var _directional_x_routine_id := -1
 var _directional_x_animation_done := true
 var _directional_x_mover_pending := false
+## Los launchers verticales no corren por AttackSequence, asi que necesitan su propio candado.
+var _vertical_special_input_locked := false
 # Estiramiento vertical de hitboxes del finisher aéreo (ver air_finisher_hitbox_v_scale):
 # la hoja agranda su caja y el disco esférico se cambia por una cápsula vertical mientras
 # dura el golpe. Shapes propios capturados/creados en setup().
@@ -85,6 +87,9 @@ func setup(player: Player) -> void:
 func is_charged_move_active() -> bool:
 	return _aerial_charged_y_active or attack_movement_overrides_air_hit()
 
+func is_attack_input_locked() -> bool:
+	return _vertical_special_input_locked or super.is_attack_input_locked()
+
 ## Los especiales aereos de tap X manejan su propio float/Mover (lo declara `overrides_air_hit` en
 ## su perfil). Evitan que el air-hit-stall generico reemplace el hang propio del gesto.
 func register_weapon_hit(hurtbox: Hurtbox, died: bool, cuts_air_momentum := true,
@@ -117,7 +122,7 @@ func charged_meter_cost(slot: World.Slot, held_time: float) -> float:
 ## Tap atras relativo al target lockeado seguido de Y. No consume meter y puede salir tanto
 ## en suelo como en aire porque reutiliza el launcher terrestre y sus Movers.
 func try_lock_back_y_launcher() -> bool:
-	if _t().tap_back_y_window <= 0.0:
+	if is_attack_input_locked() or _t().tap_back_y_window <= 0.0:
 		return false
 	cancel_routines()
 	reset_hit_profile()
@@ -133,7 +138,7 @@ func lock_back_y_launcher_window() -> float:
 ## Tap adelante relativo al target lockeado seguido de Y. Reusa la vuelta final de la rama
 ## X X espera X X y solicita su propio Mover horizontal para el Player; el push solo sale en aire.
 func try_lock_forward_y_push() -> bool:
-	if _t().tap_forward_y_window <= 0.0:
+	if is_attack_input_locked() or _t().tap_forward_y_window <= 0.0:
 		return false
 	cancel_routines()
 	reset_hit_profile()
@@ -146,7 +151,7 @@ func lock_forward_y_push_window() -> float:
 ## Tap adelante relativo al target lockeado seguido de X. Hace la vuelta final sin avance,
 ## retroceso ni push.
 func try_lock_forward_x_static_spin() -> bool:
-	if _t().tap_forward_x_window <= 0.0:
+	if is_attack_input_locked() or _t().tap_forward_x_window <= 0.0:
 		return false
 	cancel_routines()
 	reset_hit_profile()
@@ -160,7 +165,7 @@ func lock_forward_x_static_spin_window() -> float:
 ## Tap atras relativo al target lockeado seguido de X. Reusa la animacion del launcher, pero
 ## solo mueve al Player hacia atras: no activa hitbox vertical ni lanza al Enemy.
 func try_lock_back_x_retreat() -> bool:
-	if _t().tap_back_x_window <= 0.0:
+	if is_attack_input_locked() or _t().tap_back_x_window <= 0.0:
 		return false
 	cancel_routines()
 	reset_hit_profile()
@@ -174,6 +179,10 @@ func lock_back_x_retreat_window() -> float:
 func directional_special_is_active() -> bool:
 	return _directional_x_routine_id == _routine_id \
 			and (not _directional_x_animation_done or _directional_x_mover_pending)
+
+func cancel_routines() -> void:
+	super.cancel_routines()
+	_vertical_special_input_locked = false
 
 func _begin_directional_x() -> void:
 	_directional_x_routine_id = _routine_id
@@ -191,11 +200,13 @@ func _begin_directional_x() -> void:
 func _tap_combo() -> void:
 	# Entrada de ataque: devuelve el hitbox a su daño base. Sin esto, el bono de daño de un tap
 	# direccional RT previo (ver _apply_tap_x_meter_damage) seguiría vivo en el combo siguiente.
-	reset_hit_profile()
 	var airborne := _player.is_airborne()
 	var kind: StringName = &"air" if airborne else &"ground"
 	if try_queue_combo(kind):
 		return
+	if is_attack_input_locked():
+		return
+	reset_hit_profile()
 	run_attack_sequence(kind, _t().air_combo if airborne else _t().ground_combo)
 
 ## Lo único que un paso NO puede declarar como dato: mecánicas propias de la Espada. El dibujo del
@@ -293,6 +304,7 @@ func _run_ground_launcher() -> void:
 	_begin_launcher()
 	run_vertical_window_from_profile(_vertical_hitbox, _t().ground_charged_y, _routine_id,
 			_t().ground_charged_y_hitbox_duration)
+	_lock_vertical_special_input(_t().ground_charged_y_hitbox_duration)
 
 ## Tap atras + Y: comparte el golpe con el launcher cargado, pero su perfil deja vacio el slot del
 ## Player, asi que solo sube el Enemy. Es perfil aparte para poder tunearlo sin arrastrar al cargado.
@@ -300,6 +312,14 @@ func _run_enemy_only_launcher() -> void:
 	_begin_launcher()
 	run_vertical_window_from_profile(_vertical_hitbox, _t().tap_back_y_ground, _routine_id,
 			_t().ground_charged_y_hitbox_duration)
+	_lock_vertical_special_input(_t().ground_charged_y_hitbox_duration)
+
+func _lock_vertical_special_input(duration: float) -> void:
+	_vertical_special_input_locked = true
+	var id := _routine_id
+	await wait_seconds(duration)
+	if is_routine_current(id):
+		_vertical_special_input_locked = false
 
 ## En aire, tap atras + Y es un plunge: el hachazo conserva alcance y, al cerrarse, ambos cuerpos
 ## bajan. Los dos recorridos son WINDOW_END en el perfil del paso, asi que los arranca el cierre de

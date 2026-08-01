@@ -43,7 +43,7 @@ Combate del jugador: slots X/Y, espada, hitboxes, parry, meter, combo aereo e in
 - Slot X es ataque ligero; slot Y es ataque pesado.
 - La misma arma cambia comportamiento segun slot.
 - Las armas son procedurales hasta H3: no dependen de animaciones de combate.
-- El golpe nace de mover la **mano** alrededor del jugador, no de girar la hoja sobre un punto fijo (ver seccion Mano orbital). *(2026-07-09)*
+- El arma del jugador la mueve la animacion: el hitbox cuelga del hueso de la mano (ver seccion De donde sale el arco de un golpe).
 - El stun es universal: la fuente define potencia/duracion/tipo (`StunSettings`), pero el receptor decide si entra con su threshold (ver seccion Stun universal). *(2026-07-07)*
 - El **parry hace daño de poise, no de HP**: contragolpear a un enemigo en su ventana mete poise (monto por arma y por tipo de ataque, `WeaponTuning.parry_poise_normal/_charged_x/_charged_y`). Si quiebra la reserva → estado **vulnerable cian** + stun 1.5s + daño multiplicado (`ParryTuning`, `data/parry_tuning.tres`); si no, fogonazo blanco. El X cargado (dash) y el Y cargado terrestre (launcher) ahora también parrian. Detalle en [[Stun]] > Parry. *(2026-07-14, reemplaza el parry de stun plano; pendiente de tunear jugando)*
 - Los **proyectiles enemigos son parryables**, pero su parry es un **deflect**, no el cian: el arma da vuelta el proyectil y lo manda homing contra quien lo tiró, que se auto-staggerea comiendo el daño y el stun de su propio tiro. No abre el estado vulnerable ni usa `current_parry_poise` (`Projectile.try_parry`; knobs en `DeflectTuning`, `data/deflect_tuning.tres`). Detalle en [[Stun]] > Parry de proyectil. *(2026-07-14, pendiente de tunear jugando)*
@@ -80,26 +80,22 @@ necesita el "bouncer" todavia sin diseñar (ver [[Plan Autoridad Vertical]] F5).
 X cargado aereo sigue escribiendo `vertical_velocity` directo a proposito: es una caida recta, no un
 arco balistico.
 
-## Mano orbital
+## De donde sale el arco de un golpe
 
-Toda arma cuelga de una **mano** que orbita alrededor del jugador. El root del arma esta en el origen del player y es el eje de la orbita. *(2026-07-09)*
+**El arma del jugador la mueve la animacion**, no un tween. El `BladeHitbox` y los meshes de la hoja cuelgan del `BoneAttachment3D` del hueso de la mano (marcados con el grupo `hand_attachment_payload` en la escena del arma), asi que el arma golpea exactamente donde el clip la pone. Que tramo de clip dibuja cada golpe y en que fraccion de ese tramo el hitbox esta abierto lo declara su `AttackClip`. Ver [[Contrato AttackClip]].
 
 ```text
 Arma (WeaponBase)
-├── Hand (Node3D)            <- la mano: rota durante los swings, y asi orbita al player
-│   └── Pivot (Node3D)       <- muñeca RIGIDA: solo aleja la hoja hand_radius de la mano
-│       └── BladeHitbox      <- acompaña la hoja
-└── AirDiscHitbox            <- opcional: disco alrededor del player en golpes aereos
+├── Hand/Pivot (Node3D)      <- percha vacia tras el reparent: sostiene lo que se crea en runtime
+│   ├── BladeMesh            <- grupo hand_attachment_payload -> al hueso
+│   └── BladeHitbox          <- grupo hand_attachment_payload -> al hueso
+└── AirDiscHitbox            <- NO va al hueso: disco alrededor del player en golpes aereos
 ```
 
-- La muñeca no rota: la hoja apunta siempre radialmente hacia afuera y describe el arco porque la mano la lleva.
-- Rotar la mano en Y la pasea por un semicirculo al frente; en X la sube o baja; alejar el radio la extiende (estocada).
-- Los angulos de cada golpe (`combo_swing_angle`, `strike_angle`, etc.) miden **cuanto arco recorre la mano alrededor del jugador**.
-- Tuneables comunes en `WeaponTuning`: `hand_radius` (radio de la orbita), `hand_height` (altura), `hand_rest_yaw` (pose de reposo; negativo = a la derecha del player).
-- `_play_swing` / `_play_spin` / `swing` / `swing_up` / `thrust` viven en `WeaponBase` y mueven la mano; cada arma solo pone su coreografia.
-
 > [!warning] Contrato de escena
-> Un arma sin nodo `Hand` no carga. `WeaponBase` resuelve `$Hand/Pivot/BladeHitbox` y el mesh del glow bajo `Hand/Pivot/`.
+> Un arma sin `Hand/Pivot` no carga: `WeaponBase` resuelve esas rutas con `@onready`. Y el hitbox de la hoja tiene que llevar el grupo del payload — si se lo olvida, vuelve el problema de las dos espadas: una que se ve y otra que golpea.
+
+La **mano orbital** (un nodo `Hand` que rota alrededor del cuerpo llevando una hoja rigida, con angulos como `combo_swing_angle` y `hand_radius`) sigue viva pero solo en los **enemigos**, en `enemies/attacks/melee_attack.gd`. Sus armas todavia no se dibujan con clips.
 
 ## Loadout X/Y
 
@@ -131,7 +127,7 @@ Todos los momentos de gravedad del player (launcher float/fall, air stall, whiff
 - Al retunear la gravedad base, conservar el feel de un momento exige re-derivar su escala: `escala_nueva = escala_vieja x (g_vieja / g_nueva)`.
 - Al retunear velocidades verticales, la convencion es conservar el tiempo de subida y escalar la altura (si la gravedad se duplica, la velocidad se duplica).
 - Alturas/tiempos posicionales (launcher `height`/`hang_time`, `meet_height`) son independientes de la gravedad: no se convierten.
-- El arco del push de cada arma lleva su propia gravedad (`PushSettings.gravity`); la de la espada esta alineada con la base (-40).
+- El arco del push de cada arma lleva su propio impulso (`PushSettings.initial_speed`) y aceleracion vertical (`PushSettings.acceleration`). El angulo admite valores negativos para empujar hacia abajo. `stop_on` usa los mismos flags de Mover (Distance, Floor, Wall, Hit); por defecto Wall esta desmarcado para permitir el rebote configurado.
 - `EnemyBase.airborne_gravity` (-20) es la gravedad propia de cada enemigo, independiente de la del player; si el mundo entero debe sentirse igual de pesado, se ajusta aparte en los prefabs.
 
 ## Trampa de migracion (Godot 4.7)

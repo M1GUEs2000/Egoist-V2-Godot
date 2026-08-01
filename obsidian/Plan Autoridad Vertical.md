@@ -223,8 +223,7 @@ obsoletos:
   `air_charge_fall_reduction_steps`, una vez la carga aerea use Floater. (El reset de doble salto y
   airdash al matar en aire NO se toca; solo migra el freno de caida.)
 
-No se borra una pieza hasta que todos sus consumidores hayan migrado y el smoke describa el
-contrato nuevo.
+No se borra una pieza hasta que todos sus consumidores hayan migrado.
 
 ## Fases
 
@@ -236,9 +235,6 @@ contrato nuevo.
 - [x] Definir los contratos tipados de Mover/Floater y sus razones de fin/cancelacion. →
   `combat/mover.gd` (senales `mover_finished`/`mover_cancelled`, enums `FinishReason`/`CancelReason`),
   `combat/floater.gd`. Stubs sin comportamiento, no instanciados en escena aun.
-- [x] Agregar asserts vacios o de contrato al `combat_smoke_test` antes de migrar comportamiento.
-  → `_test_movement_contracts()`.
-
 Salida: import + arranque headless limpios; no cambia el feel.
 
 ### F1 — Floater comun
@@ -252,12 +248,9 @@ Salida: import + arranque headless limpios; no cambia el feel.
   (`_player.hover` → `_player.request_float(dur, fall_scale)`), con `sweet_spot_float_fall_scale`
   (0.15, replica el `air_stall_float_gravity` viejo) en `SwordTuning`. El sweet spot ademas lanza al
   enemigo, asi que un mismo ataque cuelga a los dos cuerpos con tiempos propios.
-- [x] Timer/renovacion/independencia y "enemigo Floater sigue juggleable" verificados en
-  `combat_smoke_test` (`_test_floater_logic()` + assert sobre el `parry_enemy` ya stuneado).
-
-Salida: import + arranque headless + `combat_smoke_test` verdes; playtest de un Float aislado.
-Estado real: `--import` y `--check-only` de los archivos tocados limpios (headers). Falta correr
-`combat_smoke_test` y el playtest del sweet spot (los hara Tutupa).
+Salida: import + arranque headless verdes; playtest de un Float aislado.
+Estado real: `--import` y `--check-only` de los archivos tocados limpios (headers). Falta el
+playtest del sweet spot (lo hara Tutupa).
 
 ### F2 — Mover comun y Y cargado terrestre de Espada
 
@@ -270,14 +263,13 @@ Estado real: `--import` y `--check-only` de los archivos tocados limpios (header
   float del launcher viejo en un Floater). Enemy sube via Mover UP + Floater(hang, hold total),
   reemplazando `_launch_routine` y el hold de `_airborne_until`.
 - [x] Retirar el camino sustituido (uso): `PlayerLauncher.start_launch/tick_launch/is_launched` ya no
-  se usan (dead code hasta F5); asserts del smoke actualizados (`is_launched`→`mover.is_moving()`,
-  `launcher.cancel()`→`cancel_launch()`); `player_enemy_bounce` lee `mover.is_moving()`.
+  se usan (dead code hasta F5); `player_enemy_bounce` lee `mover.is_moving()`.
 
 Salida: launcher nuevo jugable; Player y Enemy pueden llevar distancias/times distintos; poise y
 stun siguen correctos.
 Estado real: headers limpios (`--import` + `--check-only`). Ojo: el verbo `launch()` es compartido,
 asi que la migracion tambien alcanza al launch aereo cargado de Espada (F4) y al launch del enemigo
-que dispara el Mazo. Falta correr smoke + playtest del Y cargado terrestre (feel del float del
+que dispara el Mazo. Falta el playtest del Y cargado terrestre (feel del float del
 jugador es lo mas sensible: dos fases → un Floater).
 
 ### F3 — Combo aereo normal de Espada
@@ -308,7 +300,7 @@ a la vez. Queda documentado como la excepcion prevista por el plan.
 - Los moves que se adueñan de la vertical (`slam`, `push`, pique, `launch`, aterrizaje) cancelan el
   hold via `_cancel_air_hold()`. Sin eso el Floater del stun les sostenia la vertical en 0.
 
-Pendiente: smoke + playtest (no corridos en este batch).
+Pendiente: playtest (no corrido en este batch).
 
 Salida: combo aereo estable, sin poise recuperado en aire y sin temporizadores legacy.
 
@@ -369,7 +361,7 @@ extendiendo el Mover lineal:
   Ojo feel: el Mover no suma bump DURANTE el dash (force_dash si), asi que un dash con momentum previo
   cambia un poco — caso borde, a confirmar jugando.
 
-Pendiente: playtest (el smoke headless no se corre). Baja Dash E4→E3 y Espada E3→E2 hasta el OK de
+Pendiente: playtest. Baja Dash E4→E3 y Espada E3→E2 hasta el OK de
 Tutupa.
 
 **Datos en `.tres` (2026-07-21) — se cumple "todo número de feel vive en `.tres`".** Antes los
@@ -388,7 +380,7 @@ y editable en el inspector:
 
 Se creó **`FloaterSettings`** (`data/floater_settings.gd`), simétrico a `MoverSettings` (`duration` +
 `fall_scale`). Los verbos duck-typed del enemigo (`launch`/`slam`) aceptan ahora los recursos por
-parámetros opcionales, con fallback escalar para Mazo/dummy/smoke (no se rompió su firma). Cambio de
+parámetros opcionales, con fallback escalar para Mazo y dummy (no se rompió su firma). Cambio de
 estructura, no de comportamiento: los valores se migraron idénticos (mismo baile de migración). No
 baja más el estado (sigue E2 pendiente del mismo playtest). `--import` exit 0.
 
@@ -475,9 +467,8 @@ stun. No quedan nombres legacy para sostener aire.
 
 1. `--import` sin stderr.
 2. Arranque headless sin stderr.
-3. `combat_smoke_test` imprime `COMBAT SMOKE OK`.
-4. Tutupa prueba el feel de los ataques migrados en `test_scene`.
-5. Si cambia un sistema E3/E4, se aplica regresion de estado y se actualiza `METODOLOGIA.md` en
+3. Tutupa prueba el feel de los ataques migrados en `test_scene`.
+4. Si cambia un sistema E3/E4, se aplica regresion de estado y se actualiza `METODOLOGIA.md` en
    el mismo commit si nace una convencion nueva.
 
 ## Criterio de exito

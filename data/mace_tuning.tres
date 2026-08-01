@@ -21,7 +21,8 @@ fall_scale = 0.15
 script = ExtResource("3_push")
 distance = 22.0
 angle_degrees = 34.0
-gravity = -40.0
+initial_speed = 26.644129
+acceleration = -40.0
 
 [sub_resource type="Resource" id="Resource_macestun"]
 script = ExtResource("2_stun")
@@ -44,7 +45,8 @@ float_duration = 1.1
 script = ExtResource("3_push")
 distance = 13.0
 angle_degrees = 24.0
-gravity = -40.0
+initial_speed = 19.375738
+acceleration = -40.0
 
 [resource]
 script = ExtResource("1_tuning")

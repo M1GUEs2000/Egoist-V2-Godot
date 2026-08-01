@@ -138,7 +138,7 @@ func _target_still_valid(target: EnemyBase) -> bool:
 ## descartaba — con half_angle 60 quedaba lockeable solo el 34% del plano alrededor del jugador,
 ## y ningún valor arreglaba eso porque la magnitud medida no era "qué tan centrado está".
 func _best_camera_target() -> EnemyBase:
-	# Sin Camera3D (smokes/probes) se cae al marco del jugador: origen y eje coherentes entre sí.
+	# Sin Camera3D (probes) se cae al marco del jugador: origen y eje coherentes entre sí.
 	var origin := _cam.global_position if _cam != null else _body.global_position
 	var fwd := -_cam.global_basis.z if _cam != null else _body.forward()
 	var best: EnemyBase = null

@@ -77,7 +77,7 @@ cumplirse, se va al otro mundo dejando una grieta donde estaba. El modulo que lo
 
 ## Pendiente
 
-- Verificacion headless + smokes.
+- Verificacion headless.
 - Tunear jugando la ventana (`lifetime`) contra el `delay` del enemigo: juntos definen si la
   grieta es un premio alcanzable o una zanahoria.
 - Decidir si otros sistemas la adoptan (bloque que abre grieta, jefe que deja grietas al

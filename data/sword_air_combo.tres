@@ -51,7 +51,6 @@ choreography = &"air_spin"
 [sub_resource type="Resource" id="Resource_step_1"]
 script = ExtResource("4_step")
 clip = SubResource("Resource_clip_a")
-fires_projectile = true
 choreography = &"air_diagonal_l"
 wait_threshold = 0.2
 wait_steps = Array[ExtResource("4_step")]([SubResource("Resource_step_hop_spin"), SubResource("Resource_step_spin_push")])
@@ -111,7 +110,7 @@ script = ExtResource("1_mover")
 direction = 1
 distance = 100.0
 speed = 40.0
-stop_on = 7
+stop_on = 11
 
 [sub_resource type="Resource" id="Resource_profile_spike"]
 script = ExtResource("2_movement")

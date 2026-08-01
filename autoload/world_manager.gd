@@ -7,7 +7,7 @@ extends Node
 ## WorldScan; los números los pone data/world_scan_tuning.tres.
 ##
 ## Sin origen (y sin player en escena) no hay onda: el switch es instantáneo, como antes. Eso es lo
-## que deja al smoke test corriendo sin escena ni jugador.
+## que deja funcionar a una escena sin jugador.
 
 signal world_changed(world: World.Kind)
 ## La onda arrancó. `world` es el mundo DESTINO (de él sale el color de la onda) y `origin` el punto

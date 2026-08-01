@@ -509,12 +509,15 @@ func _start_jump() -> void:
 
 func _update_locomotion_animation() -> void:
 	var speed := _horizontal_speed()
+	# La cadencia visual sigue exactamente el canal que escala la velocidad horizontal real. Asi un
+	# bonus de +50% del sprint corre el clip a 1.5x, sin afectar ataques, saltos ni wall slide.
+	var playback_speed := _player.sprint_scale(PlayerSprint.MOVE_SPEED)
 	if speed >= sprint_speed_threshold:
-		_play_loop(sprint_animation)
+		_play_loop(sprint_animation, playback_speed)
 		return
 	var base_animation := walk_animation if speed >= moving_speed_threshold else idle_animation
 	var charging := ground_charge_blend and _player.combat != null and _player.combat.is_charging()
-	_play_loop(_locomotion_charge_composite(base_animation) if charging else base_animation)
+	_play_loop(_locomotion_charge_composite(base_animation) if charging else base_animation, playback_speed)
 
 func _horizontal_speed() -> float:
 	return Vector2(_player.velocity.x, _player.velocity.z).length()
@@ -677,9 +680,11 @@ func _animation_length(animation: StringName) -> float:
 		return 0.0
 	return _animation_player.get_animation(animation).length
 
-func _play_loop(animation: StringName) -> void:
+func _play_loop(animation: StringName, playback_speed := 1.0) -> void:
 	if not _has_animation(animation):
 		return
+	# Se actualiza aun si el clip ya estaba corriendo: el nivel de sprint cambia continuamente.
+	_animation_player.speed_scale = playback_speed
 	if _animation_player.current_animation == animation and _animation_player.is_playing():
 		return
 	_animation_player.play(animation, blend_time)
@@ -687,6 +692,7 @@ func _play_loop(animation: StringName) -> void:
 func _play_one_shot(animation: StringName) -> void:
 	if not _has_animation(animation):
 		return
+	_animation_player.speed_scale = 1.0
 	_animation_player.play(animation, blend_time)
 	_animation_player.seek(0.0, true)
 

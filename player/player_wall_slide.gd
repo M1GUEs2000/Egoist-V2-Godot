@@ -44,7 +44,7 @@ var _impulse_tuning: WallImpulseTuning
 var _glow_meshes: Array[MeshInstance3D] = []
 var _glow_material: StandardMaterial3D
 var _glow_active := false
-var _dust: GPUParticles3D
+var _smoke: SmokeStylizedVFX
 
 const ARROW_LENGTH := 2.0
 var _arrow: MeshInstance3D
@@ -59,7 +59,7 @@ func setup(body: Player) -> void:
 		var capsule := body.get_node_or_null("Mesh") as MeshInstance3D
 		if capsule != null:
 			_glow_meshes.append(capsule)
-	_dust = body.get_node_or_null("WallSlideDust") as GPUParticles3D
+	_smoke = body.get_node_or_null("WallSlideSmoke") as SmokeStylizedVFX
 	_build_arrow()
 
 ## El brillo va sobre las mallas del MODELO (Visual/...), no sobre el nodo "Mesh": ese es la capsula
@@ -266,7 +266,7 @@ func update_after_move(horizontal_velocity: Vector3, input_dir: Vector3) -> void
 	if not was_sliding:
 		_begin_slide(horizontal_velocity)
 		_set_glow(true)
-		_set_dust(true)
+		_set_smoke(true)
 	_set_impulse_surface(_find_wall_impulse_surface())
 	_update_glow()
 	_update_arrow()
@@ -446,7 +446,7 @@ func cancel() -> void:
 	is_impulsing = false
 	_set_impulse_surface(null)
 	_set_glow(false)
-	_set_dust(false)
+	_set_smoke(false)
 	_update_arrow()
 
 func _carry_impulse_into_air() -> void:
@@ -492,9 +492,15 @@ func _update_glow() -> void:
 	# de ser decorado y pasa a ser el indicador de cuándo saltar.
 	_update_glow_color(lerpf(glow_energy_min, glow_energy_max, _wall_jump_power_frac(wall_normal)))
 
-func _set_dust(active: bool) -> void:
-	if _dust != null and _dust.emitting != active:
-		_dust.emitting = active
+func _set_smoke(active: bool) -> void:
+	if _smoke == null:
+		return
+	if active and not _smoke.emitting:
+		_smoke.restart()
+		_smoke.emitting = true
+	elif not active and _smoke.emitting:
+		# Como PushSmoke: corta la emision, no las nubes que ya estan disolviendose.
+		_smoke.emitting = false
 
 ## Flecha de debug creada por código (top_level, se dibuja en espacio de mundo). Arranca oculta.
 func _build_arrow() -> void:

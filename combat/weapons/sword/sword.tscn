@@ -3,6 +3,8 @@
 [ext_resource type="Script" uid="uid://l6rxmw0losr8" path="res://combat/weapons/sword/sword.gd" id="1_sword"]
 [ext_resource type="Resource" uid="uid://cok7ui8lum50e" path="res://data/sword_tuning.tres" id="2_tuning"]
 [ext_resource type="Script" uid="uid://dr1ehd335mg06" path="res://combat/hitbox.gd" id="3_hitbox"]
+[ext_resource type="Script" uid="uid://sb1saxg44ie4" path="res://visual/sword_trail.gd" id="4_2j5np"]
+[ext_resource type="Resource" uid="uid://bj1w8k3yyuhrq" path="res://data/sword_trail_tuning.tres" id="5_fsoeg"]
 
 [sub_resource type="BoxMesh" id="BoxMesh_blade"]
 size = Vector3(0.18, 0.18, 1.5)
@@ -32,12 +34,18 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
 [node name="Pivot" type="Node3D" parent="Hand" unique_id=1623413767]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.71)
 
-[node name="BladeMesh" type="MeshInstance3D" parent="Hand/Pivot" groups=["hand_attachment_payload"] unique_id=1928621873]
+[node name="BladeMesh" type="MeshInstance3D" parent="Hand/Pivot" unique_id=1928621873 groups=["hand_attachment_payload"]]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.75)
 mesh = SubResource("BoxMesh_blade")
 surface_material_override/0 = SubResource("Mat_sword")
 
-[node name="BladeHitbox" type="Area3D" parent="Hand/Pivot" groups=["hand_attachment_payload"] unique_id=2004569022]
+[node name="TrailBase" type="Marker3D" parent="Hand/Pivot/BladeMesh" unique_id=1507836108]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0.75)
+
+[node name="TrailTip" type="Marker3D" parent="Hand/Pivot/BladeMesh" unique_id=809545687]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.75)
+
+[node name="BladeHitbox" type="Area3D" parent="Hand/Pivot" unique_id=2004569022 groups=["hand_attachment_payload"]]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.75)
 script = ExtResource("3_hitbox")
 
@@ -55,7 +63,7 @@ shape = SubResource("SphereShape3D_air_disc")
 debug_color = Color(0.66560966, 0.50965834, 0.13546959, 0.41960785)
 
 [node name="VerticalHitbox" type="Area3D" parent="." unique_id=138822131]
-transform = Transform3D(1.385, 0, 0, 0, 1.3797296, -0.12071069, 0, 0.12071069, 1.3797296, 0, 0.9296448, -1.4961276)
+transform = Transform3D(1.385, 0, 0, 0, 2.206571, -0.12071069, 0, 0.19304995, 1.3797296, 0, 0.9296448, -1.4961276)
 script = ExtResource("3_hitbox")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="VerticalHitbox" unique_id=1333213508]
@@ -69,3 +77,9 @@ damage = 5.0
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="ChargedDashHitbox" unique_id=2119546284]
 shape = SubResource("SphereShape3D_charged_dash")
+
+[node name="Trail" type="MeshInstance3D" parent="." unique_id=633984223]
+script = ExtResource("4_2j5np")
+tuning = ExtResource("5_fsoeg")
+base_marker = NodePath("../Hand/Pivot/BladeMesh/TrailBase")
+tip_marker = NodePath("../Hand/Pivot/BladeMesh/TrailTip")

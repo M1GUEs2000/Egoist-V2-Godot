@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="AttackSequence" format=3]
+[gd_resource type="Resource" script_class="AttackSequence" format=3 uid="uid://ci25uuosadjik"]
 
 [ext_resource type="Script" uid="uid://b0xd72invappo" path="res://data/attack_clip.gd" id="1_clip"]
 [ext_resource type="Script" uid="uid://b1755lpansqbo" path="res://data/attack_step.gd" id="2_step"]

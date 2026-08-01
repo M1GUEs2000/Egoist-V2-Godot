@@ -379,36 +379,29 @@ class_name PlayerTuning extends Resource
 ## Velocidad de giro al cambiar el arma entre pose activa y de descanso (grados/s).
 @export var weapon_pose_rotate_speed := 720.0
 
-@export_group("Dust FX")
-## Velocidad horizontal mínima (m/s) a partir de la cual el jugador levanta polvo al correr.
-## Solo aplica en el suelo; el look del polvo vive en el ParticleProcessMaterial del emisor RunDust.
+@export_group("Smoke FX")
+## Velocidad horizontal mínima (m/s) a partir de la cual el jugador deja humo al correr.
+## Solo aplica en el suelo; el look vive en el emisor RunSmoke.
 @export var run_dust_min_speed := 1.5
-## Color del polvo de correr con el sprint a tope. Se mezcla desde el color normal del emisor
+## Color del humo de correr con el sprint a tope. Se mezcla desde el color normal del emisor
 ## siguiendo la MISMA rampa gradual que la velocidad, así el verde entra a la par que acelerás.
 ## Default: el verde de traversal del proyecto (World.COLOR_TRAVERSAL_DASH), el mismo del wall slide.
 @export var run_dust_sprint_color := World.COLOR_TRAVERSAL_DASH
-## Intensidad HDR del polvo verde de sprint. El emisor es unshaded, así que el brillo no sale de
+## Intensidad HDR del humo verde de sprint. El emisor es unshaded, así que el brillo no sale de
 ## una emisión propia sino de empujar el color por encima de 1.0 para que lo agarre el glow del
 ## WorldEnvironment (mismo truco que Wall Impulse). 1 = sin brillo extra, 3 = 200% más brillante.
-## Solo escala el RGB: el alpha queda intacto, así el fade del color_ramp del polvo no se pierde.
+## Solo escala el RGB: el alpha queda intacto, así el dissolve del humo no se pierde.
 @export_range(1.0, 20.0, 0.25) var run_dust_sprint_emission_energy := 3.0
 
-# ESTELAS DE SPRINT: a diferencia del polvo (que nace en los pies y solo en el suelo), el emisor
-# SprintTrail cubre el cuerpo entero y funciona también en el aire. Emite en coordenadas de MUNDO,
-# así las partículas se quedan donde nacieron mientras el jugador avanza: eso es lo que dibuja la
-# estela. Encima se les da velocidad hacia atrás para que además se despeguen.
+# CINTA DE SPRINT: RibbonTrail muestrea dos markers laterales en mundo y deja una cinta continua.
 ## Nivel de sprint (0-1) a partir del cual aparecen las estelas. Por debajo el emisor está apagado,
 ## así trotar no las dispara: son la señal visual de que el sprint ya está cargado.
 @export_range(0.0, 1.0, 0.05) var sprint_trail_min_level := 0.35
-## Color de las estelas. Default: el mismo verde de traversal que el polvo y el wall slide.
+## Color de la cinta. Default: el mismo verde de traversal que el humo y el wall slide.
 @export var sprint_trail_color := World.COLOR_TRAVERSAL_DASH
-## Intensidad HDR de las estelas, con el mismo truco que el polvo: el emisor es unshaded, así que el
+## Intensidad HDR de la cinta, con el mismo truco que el humo: el material es unshaded, así que el
 ## brillo sale de empujar el RGB por encima de 1.0 para que lo levante el glow del WorldEnvironment.
 @export_range(1.0, 20.0, 0.25) var sprint_trail_emission_energy := 4.0
-## Velocidad (m/s) con la que las estelas se van hacia ATRÁS respecto a tu rumbo. 0 = quedan donde
-## nacieron y la estela sale solo de que vos avanzás; subirlo las despega más rápido.
-@export var sprint_trail_backward_speed := 2.5
-
 @export_group("Dash air hit float")
 ## Hold del jugador cuando el hitbox del dash ofensivo conecta en el aire (request_float). duration 0
 ## = sin hang; fall_scale 0 = hold total, 0.15 = deriva lenta. Ver combat/floater.gd.

@@ -20,7 +20,9 @@ Uso del [[Brazo]] dentro del combate. Su funcion no es hacer de arma nueva, sino
 ## Implementado en Godot
 
 `player/player_arm.gd` (`PlayerArm`) + `data/arm_tuning.gd` (`ArmTuning`, instancia
-`arm_tuning.tres`). Un tap (`arm_attack`) pega al target del lock-on pasivo: lockeado si hay uno
+`arm_tuning.tres`). El tap corre `arm_tap_sequence.tres`: un `AttackSequence` de un paso sin clip
+que declara su ventana; el Brazo conserva su ciclo propio de `ArmHitbox`, cargas, cadencia y target pasivo. Un
+tap (`arm_attack`) pega al target del lock-on pasivo: lockeado si hay uno
 (mismo [[Lock On]] de combos), si no el enemigo mas centrado en el cono de mira (mismo target que
 usa el snap del golpe normal sin lock). Daño y poise bajos (`damage`, `stun` en `ArmTuning`);
 genera meter propio al conectar (`meter_gain_on_hit`). `max_taps` seguidos antes de forzar

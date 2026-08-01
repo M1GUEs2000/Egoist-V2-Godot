@@ -12,7 +12,7 @@ Los hitos del proyecto en un solo lugar. El detalle de trabajo de cada uno vive 
 
 ## H0 — Fundacion *(cerrado)*
 
-Puerta de salida: world switch por triggers, enemigos/objetos respetan mundo, HUD responde y headless pasa limpio. Fundacion tecnica lista (proyecto Godot 4.7, autoloads, estructura feature-based, `Health`/`Hurtbox`/`Hitbox`, resources de tuning, `smoke_test`).
+Puerta de salida: world switch por triggers, enemigos/objetos respetan mundo, HUD responde y headless pasa limpio. Fundacion tecnica lista (proyecto Godot 4.7, autoloads, estructura feature-based, `Health`/`Hurtbox`/`Hitbox`, resources de tuning).
 
 ## H1 — Vertical Slice *(activo)*
 

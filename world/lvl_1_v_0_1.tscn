@@ -14,6 +14,7 @@
 [ext_resource type="PackedScene" uid="uid://d3jtgfi3oqa6g" path="res://assets/models/walls/wall_spiral.tscn" id="12_28ist"]
 [ext_resource type="Script" uid="uid://coemg5ljdfu7t" path="res://combat/health.gd" id="13_28ist"]
 [ext_resource type="Script" uid="uid://dvxrsptoplacw" path="res://combat/hurtbox.gd" id="14_b3nvj"]
+[ext_resource type="ArrayMesh" uid="uid://cx5be7yxidund" path="res://assets/assets_por_aprobar/Structures/Gothic DS/FreeSample/SoulGothic_FreeSample_001-8.obj" id="15_b3nvj"]
 
 [sub_resource type="Environment" id="Environment_ica1u"]
 background_mode = 1
@@ -69,7 +70,7 @@ radius = 0.55
 [node name="Lvl1 v0_1" type="Node3D" unique_id=149798636]
 
 [node name="Player" parent="." unique_id=1407604159 instance=ExtResource("1_ay86g")]
-transform = Transform3D(0.28284773, 0, -0.95916486, 0, 1, 0, 0.95916486, 0, 0.28284773, 1.9076548, 55.74325, -21.430983)
+transform = Transform3D(0.28284773, 0, -0.95916486, 0, 1, 0, 0.95916486, 0, 0.28284773, -4.700453, 63.557816, -15.794382)
 
 [node name="CameraRig" type="Node3D" parent="." unique_id=1612751166]
 script = ExtResource("5_ktyo2")
@@ -166,9 +167,8 @@ hits_to_break = 50
 transform = Transform3D(2.4990773, 6.5309087e-09, 0.06791356, -2.9685947e-09, 5.5, -4.0326426e-11, -0.06791356, -8.872951e-11, 2.4990773, 105.137856, 17.699154, -25.889507)
 enable_launch = true
 enable_world_switch = true
-launch_distance = 24.93
-launch_apex_height = 10.01
-launch_duration = 1.415
+launch_distance = 30.0
+launch_apex_height = 10.0
 dash_distance = 20.0
 dash_duration = 0.3
 dash_bop_forward_speed = 20.0
@@ -280,48 +280,8 @@ dash_bop_forward_speed = 20.0
 dash_vertical_bop_speed = 20.0
 hits_to_break = 50
 
-[node name="Pared 30m" type="Node3D" parent="." unique_id=120914216]
-transform = Transform3D(9.925, 0, 0, 0, 9.925, 0, 0, 0, 9.925, -16.637524, 55.89248, -22.544289)
-metadata/_edit_group_ = true
-
-[node name="StaticBody3D" type="StaticBody3D" parent="Pared 30m" unique_id=1532448596]
-
-[node name="MeshInstance3D" type="MeshInstance3D" parent="Pared 30m/StaticBody3D" unique_id=2067688803]
-transform = Transform3D(1, 0, 0, 0, 15, 0, 0, 0, 30, 0, 0, 0)
-mesh = SubResource("BoxMesh_m478f")
-
-[node name="CollisionShape3D" type="CollisionShape3D" parent="Pared 30m/StaticBody3D" unique_id=1857423170]
-transform = Transform3D(1, 0, 0, 0, 15, 0, 0, 0, 30, 0, 0, 0)
-shape = SubResource("ConvexPolygonShape3D_5bvi1")
-
-[node name="WorldMembership" type="Node" parent="Pared 30m" unique_id=1640611138]
-script = ExtResource("4_e571o")
-mode = 1
-paint_prototype_material = true
-metadata/_custom_type_script = "uid://cr2mf5ypgksws"
-
-[node name="Pared 30m3" type="Node3D" parent="." unique_id=868189376]
-transform = Transform3D(9.925, 0, 0, 0, 9.925, 0, 0, 0, 9.925, 5.474779, 55.89248, 155.60922)
-metadata/_edit_group_ = true
-
-[node name="StaticBody3D" type="StaticBody3D" parent="Pared 30m3" unique_id=1985887651]
-
-[node name="MeshInstance3D" type="MeshInstance3D" parent="Pared 30m3/StaticBody3D" unique_id=1935547735]
-transform = Transform3D(1, 0, 0, 0, 15, 0, 0, 0, 30, 0, 0, 0)
-mesh = SubResource("BoxMesh_m478f")
-
-[node name="CollisionShape3D" type="CollisionShape3D" parent="Pared 30m3/StaticBody3D" unique_id=1760875643]
-transform = Transform3D(1, 0, 0, 0, 15, 0, 0, 0, 30, 0, 0, 0)
-shape = SubResource("ConvexPolygonShape3D_5bvi1")
-
-[node name="WorldMembership" type="Node" parent="Pared 30m3" unique_id=2105203389]
-script = ExtResource("4_e571o")
-mode = 1
-paint_prototype_material = true
-metadata/_custom_type_script = "uid://cr2mf5ypgksws"
-
 [node name="Pared 30m2" type="Node3D" parent="." unique_id=1352145745]
-transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, -12.69558, 55.89248, -27.797804)
+transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, -29.982277, 55.89248, -27.797804)
 metadata/_edit_group_ = true
 
 [node name="StaticBody3D" type="StaticBody3D" parent="Pared 30m2" unique_id=2038539846]
@@ -335,6 +295,66 @@ transform = Transform3D(1, 0, 0, 0, 15, 0, 0, 0, 30, 0, 0, 0)
 shape = SubResource("ConvexPolygonShape3D_5bvi1")
 
 [node name="WorldMembership" type="Node" parent="Pared 30m2" unique_id=1681335404]
+script = ExtResource("4_e571o")
+mode = 1
+paint_prototype_material = true
+metadata/_custom_type_script = "uid://cr2mf5ypgksws"
+
+[node name="Pared 30m3" type="Node3D" parent="." unique_id=1533815091]
+transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, -59.07547, 55.89248, -27.797806)
+metadata/_edit_group_ = true
+
+[node name="StaticBody3D" type="StaticBody3D" parent="Pared 30m3" unique_id=386327229]
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Pared 30m3/StaticBody3D" unique_id=387946561]
+transform = Transform3D(1, 0, 0, 0, 15, 0, 0, 0, 30, 0, 0, 0)
+mesh = SubResource("BoxMesh_m478f")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Pared 30m3/StaticBody3D" unique_id=2115210683]
+transform = Transform3D(1, 0, 0, 0, 15, 0, 0, 0, 30, 0, 0, 0)
+shape = SubResource("ConvexPolygonShape3D_5bvi1")
+
+[node name="WorldMembership" type="Node" parent="Pared 30m3" unique_id=79071242]
+script = ExtResource("4_e571o")
+mode = 1
+paint_prototype_material = true
+metadata/_custom_type_script = "uid://cr2mf5ypgksws"
+
+[node name="Pared 30m4" type="Node3D" parent="." unique_id=1559708340]
+transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, -59.07547, 40.89248, -27.797806)
+metadata/_edit_group_ = true
+
+[node name="StaticBody3D" type="StaticBody3D" parent="Pared 30m4" unique_id=1284584431]
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Pared 30m4/StaticBody3D" unique_id=1295820012]
+transform = Transform3D(1, 0, 0, 0, 15, 0, 0, 0, 30, 0, 0, 0)
+mesh = SubResource("BoxMesh_m478f")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Pared 30m4/StaticBody3D" unique_id=1870331110]
+transform = Transform3D(1, 0, 0, 0, 15, 0, 0, 0, 30, 0, 0, 0)
+shape = SubResource("ConvexPolygonShape3D_5bvi1")
+
+[node name="WorldMembership" type="Node" parent="Pared 30m4" unique_id=702531978]
+script = ExtResource("4_e571o")
+mode = 1
+paint_prototype_material = true
+metadata/_custom_type_script = "uid://cr2mf5ypgksws"
+
+[node name="Pared 30m5" type="Node3D" parent="." unique_id=1023001319]
+transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, -59.07547, 25.892479, -27.797806)
+metadata/_edit_group_ = true
+
+[node name="StaticBody3D" type="StaticBody3D" parent="Pared 30m5" unique_id=1097353739]
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Pared 30m5/StaticBody3D" unique_id=521868614]
+transform = Transform3D(1, 0, 0, 0, 15, 0, 0, 0, 30, 0, 0, 0)
+mesh = SubResource("BoxMesh_m478f")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Pared 30m5/StaticBody3D" unique_id=1123980946]
+transform = Transform3D(1, 0, 0, 0, 15, 0, 0, 0, 30, 0, 0, 0)
+shape = SubResource("ConvexPolygonShape3D_5bvi1")
+
+[node name="WorldMembership" type="Node" parent="Pared 30m5" unique_id=1752839044]
 script = ExtResource("4_e571o")
 mode = 1
 paint_prototype_material = true
@@ -590,6 +610,24 @@ transform = Transform3D(10, 0, 0, 0, 1, 0, 0, 0, 10, 0, 0, 0)
 shape = SubResource("ConvexPolygonShape3D_s5n7p")
 
 [node name="WorldMembership" type="Node" parent="Plataforma 10x10_7" unique_id=2060103637]
+script = ExtResource("4_e571o")
+mode = 1
+paint_prototype_material = true
+metadata/_custom_type_script = "uid://cr2mf5ypgksws"
+
+[node name="Plataforma 10x10_19" type="StaticBody3D" parent="." unique_id=389205814]
+transform = Transform3D(1.999986, 0, 0.0074224286, 0, 2, 0, -0.0074224286, 0, 1.999986, -60.457123, 5.7875395, -15.235277)
+metadata/_edit_group_ = true
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Plataforma 10x10_19" unique_id=1600956201]
+transform = Transform3D(10, 0, 0, 0, 1, 0, 0, 0, 10, 0, 0, 0)
+mesh = SubResource("BoxMesh_ica1u")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Plataforma 10x10_19" unique_id=390854488]
+transform = Transform3D(10, 0, 0, 0, 1, 0, 0, 0, 10, 0, 0, 0)
+shape = SubResource("ConvexPolygonShape3D_s5n7p")
+
+[node name="WorldMembership" type="Node" parent="Plataforma 10x10_19" unique_id=1548471394]
 script = ExtResource("4_e571o")
 mode = 1
 paint_prototype_material = true
@@ -938,6 +976,158 @@ mode = 1
 paint_prototype_material = true
 metadata/_custom_type_script = "uid://cr2mf5ypgksws"
 
+[node name="Rebote recto3" type="Node3D" parent="." unique_id=1787707803]
+transform = Transform3D(0.9999996, 0, -0.0008946824, 0, 1.5, 0, 0.0008946824, 0, 0.9999996, -82.953606, 15.450404, 8.443604)
+metadata/_edit_group_ = true
+
+[node name="Pared rebote 1_" type="StaticBody3D" parent="Rebote recto3" unique_id=2146482659]
+transform = Transform3D(0.99999994, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
+metadata/_edit_group_ = true
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Rebote recto3/Pared rebote 1_" unique_id=642746753]
+transform = Transform3D(1, 0, 0, 0, 15, 0, 0, 0, 30, 0, 0, 0)
+mesh = SubResource("BoxMesh_m478f")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Rebote recto3/Pared rebote 1_" unique_id=945058938]
+transform = Transform3D(1, 0, 0, 0, 15, 0, 0, 0, 30, 0, 0, 0)
+shape = SubResource("ConvexPolygonShape3D_5bvi1")
+
+[node name="WorldMembership" type="Node" parent="Rebote recto3/Pared rebote 1_" unique_id=1380595757]
+script = ExtResource("4_e571o")
+mode = 1
+paint_prototype_material = true
+metadata/_custom_type_script = "uid://cr2mf5ypgksws"
+
+[node name="Pared rebote 1_2" type="StaticBody3D" parent="Rebote recto3" unique_id=2078913780]
+transform = Transform3D(0.9999999, 0, 0, 0, 1, 0, 0, 0, 1, -6.350975, 0, 23.510427)
+metadata/_edit_group_ = true
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Rebote recto3/Pared rebote 1_2" unique_id=1170128877]
+transform = Transform3D(1, 0, 0, 0, 15, 0, 0, 0, 30, 0, 0, 0)
+mesh = SubResource("BoxMesh_m478f")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Rebote recto3/Pared rebote 1_2" unique_id=554206450]
+transform = Transform3D(1, 0, 0, 0, 15, 0, 0, 0, 30, 0, 0, 0)
+shape = SubResource("ConvexPolygonShape3D_5bvi1")
+
+[node name="WorldMembership" type="Node" parent="Rebote recto3/Pared rebote 1_2" unique_id=2119179424]
+script = ExtResource("4_e571o")
+mode = 1
+paint_prototype_material = true
+metadata/_custom_type_script = "uid://cr2mf5ypgksws"
+
+[node name="Pared rebote 1_3" type="StaticBody3D" parent="Rebote recto3" unique_id=1546820916]
+transform = Transform3D(0.9999999, 0, 0, 0, 1, 0, 0, 0, 1, 0.88834, 0, 50.0001)
+metadata/_edit_group_ = true
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Rebote recto3/Pared rebote 1_3" unique_id=1941023034]
+transform = Transform3D(1, 0, 0, 0, 15, 0, 0, 0, 30, 0, 0, 0)
+mesh = SubResource("BoxMesh_m478f")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Rebote recto3/Pared rebote 1_3" unique_id=131408250]
+transform = Transform3D(1, 0, 0, 0, 15, 0, 0, 0, 30, 0, 0, 0)
+shape = SubResource("ConvexPolygonShape3D_5bvi1")
+
+[node name="WorldMembership" type="Node" parent="Rebote recto3/Pared rebote 1_3" unique_id=1206687711]
+script = ExtResource("4_e571o")
+mode = 1
+paint_prototype_material = true
+metadata/_custom_type_script = "uid://cr2mf5ypgksws"
+
+[node name="Pared rebote 1_4" type="StaticBody3D" parent="Rebote recto3" unique_id=457398052]
+transform = Transform3D(0.9999999, 0, 0, 0, 1, 0, 0, 0, 1, -6.478119, 0, 78.502686)
+metadata/_edit_group_ = true
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Rebote recto3/Pared rebote 1_4" unique_id=2005312225]
+transform = Transform3D(1, 0, 0, 0, 15, 0, 0, 0, 30, 0, 0, 0)
+mesh = SubResource("BoxMesh_m478f")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Rebote recto3/Pared rebote 1_4" unique_id=1454808401]
+transform = Transform3D(1, 0, 0, 0, 15, 0, 0, 0, 30, 0, 0, 0)
+shape = SubResource("ConvexPolygonShape3D_5bvi1")
+
+[node name="WorldMembership" type="Node" parent="Rebote recto3/Pared rebote 1_4" unique_id=1855860607]
+script = ExtResource("4_e571o")
+mode = 1
+paint_prototype_material = true
+metadata/_custom_type_script = "uid://cr2mf5ypgksws"
+
+[node name="Rebote recto4" type="Node3D" parent="." unique_id=1442843144]
+transform = Transform3D(1.0999995, -3.4810046e-07, -0.0012525552, -1.4551919e-11, 2, -0.00027237472, 0.0009841506, 0.00038910657, 1.3999994, -57.915325, 18.267223, 18.294693)
+metadata/_edit_group_ = true
+
+[node name="Pared rebote 1_" type="StaticBody3D" parent="Rebote recto4" unique_id=2126842792]
+transform = Transform3D(0.99999994, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
+metadata/_edit_group_ = true
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Rebote recto4/Pared rebote 1_" unique_id=352720779]
+transform = Transform3D(1, 0, 0, 0, 15, 0, 0, 0, 30, 0, 0, 0)
+mesh = SubResource("BoxMesh_m478f")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Rebote recto4/Pared rebote 1_" unique_id=2031919957]
+transform = Transform3D(1, 0, 0, 0, 15, 0, 0, 0, 30, 0, 0, 0)
+shape = SubResource("ConvexPolygonShape3D_5bvi1")
+
+[node name="WorldMembership" type="Node" parent="Rebote recto4/Pared rebote 1_" unique_id=1485191912]
+script = ExtResource("4_e571o")
+mode = 1
+paint_prototype_material = true
+metadata/_custom_type_script = "uid://cr2mf5ypgksws"
+
+[node name="Pared rebote 1_2" type="StaticBody3D" parent="Rebote recto4" unique_id=846546955]
+transform = Transform3D(0.9999999, 0, 0, 0, 1, 0, 0, 0, 1, -6.350975, 0, 23.510427)
+metadata/_edit_group_ = true
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Rebote recto4/Pared rebote 1_2" unique_id=416891266]
+transform = Transform3D(1, 0, 0, 0, 15, 0, 0, 0, 30, 0, 0, 0)
+mesh = SubResource("BoxMesh_m478f")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Rebote recto4/Pared rebote 1_2" unique_id=2056053785]
+transform = Transform3D(1, 0, 0, 0, 15, 0, 0, 0, 30, 0, 0, 0)
+shape = SubResource("ConvexPolygonShape3D_5bvi1")
+
+[node name="WorldMembership" type="Node" parent="Rebote recto4/Pared rebote 1_2" unique_id=1553362609]
+script = ExtResource("4_e571o")
+mode = 1
+paint_prototype_material = true
+metadata/_custom_type_script = "uid://cr2mf5ypgksws"
+
+[node name="Pared rebote 1_3" type="StaticBody3D" parent="Rebote recto4" unique_id=1061480408]
+transform = Transform3D(0.9999999, 0, 0, 0, 1, 0, 0, 0, 1, 0.88834, 0, 50.0001)
+metadata/_edit_group_ = true
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Rebote recto4/Pared rebote 1_3" unique_id=857154992]
+transform = Transform3D(1, 0, 0, 0, 15, 0, 0, 0, 30, 0, 0, 0)
+mesh = SubResource("BoxMesh_m478f")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Rebote recto4/Pared rebote 1_3" unique_id=10387802]
+transform = Transform3D(1, 0, 0, 0, 15, 0, 0, 0, 30, 0, 0, 0)
+shape = SubResource("ConvexPolygonShape3D_5bvi1")
+
+[node name="WorldMembership" type="Node" parent="Rebote recto4/Pared rebote 1_3" unique_id=1096793123]
+script = ExtResource("4_e571o")
+mode = 1
+paint_prototype_material = true
+metadata/_custom_type_script = "uid://cr2mf5ypgksws"
+
+[node name="Pared rebote 1_4" type="StaticBody3D" parent="Rebote recto4" unique_id=644428817]
+transform = Transform3D(0.9999999, 0, 0, 0, 1, 0, 0, 0, 1, -6.478119, 0, 78.502686)
+metadata/_edit_group_ = true
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Rebote recto4/Pared rebote 1_4" unique_id=1439469071]
+transform = Transform3D(1, 0, 0, 0, 15, 0, 0, 0, 30, 0, 0, 0)
+mesh = SubResource("BoxMesh_m478f")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Rebote recto4/Pared rebote 1_4" unique_id=330277816]
+transform = Transform3D(1, 0, 0, 0, 15, 0, 0, 0, 30, 0, 0, 0)
+shape = SubResource("ConvexPolygonShape3D_5bvi1")
+
+[node name="WorldMembership" type="Node" parent="Rebote recto4/Pared rebote 1_4" unique_id=1585859201]
+script = ExtResource("4_e571o")
+mode = 1
+paint_prototype_material = true
+metadata/_custom_type_script = "uid://cr2mf5ypgksws"
+
 [node name="Rebote recto2" type="Node3D" parent="." unique_id=1274862330]
 transform = Transform3D(0.70710677, 0, 0.56568545, 0, 1, 0, -0.70710677, 0, 0.56568545, 56.993217, 13.860407, -29.575666)
 metadata/_edit_group_ = true
@@ -1180,3 +1370,7 @@ hide_when_inactive = false
 
 [node name="Hurtbox2" type="Area3D" parent="FlyingEnemy" unique_id=1461108498]
 script = ExtResource("14_b3nvj")
+
+[node name="SoulGothicFreeSample0018" type="MeshInstance3D" parent="." unique_id=1365449059]
+transform = Transform3D(18.44, 0, 0, 0, 18.44, 0, 0, 0, 18.44, -6, 52, 6)
+mesh = ExtResource("15_b3nvj")

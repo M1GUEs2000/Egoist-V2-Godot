@@ -38,8 +38,6 @@ Si la boveda vieja o Unity contradicen la boveda V2, manda la boveda V2.
 - Version: Godot 4.7 stable
 - Ejecutable local: `C:/Users/Tutupa/Downloads/Godot_v4.7-stable_win64.exe/Godot_v4.7-stable_win64_console.exe`
 - Escena de prueba principal: `res://world/test_scene.tscn`
-- Smokes: `res://world/smoke_test.tscn` (regresion transversal) y
-  `res://world/combat_smoke_test.tscn` (contratos aislados de combate)
 
 ## 4. Skills instaladas
 
@@ -62,17 +60,9 @@ $GODOT="C:/Users/Tutupa/Downloads/Godot_v4.7-stable_win64.exe/Godot_v4.7-stable_
 & $GODOT --headless --path . --quit-after 2
 ```
 
-Si tocaste logica core:
-
-```powershell
-$GODOT="C:/Users/Tutupa/Downloads/Godot_v4.7-stable_win64.exe/Godot_v4.7-stable_win64_console.exe"
-& $GODOT --headless --path . res://world/smoke_test.tscn
-& $GODOT --headless --path . res://world/combat_smoke_test.tscn
-```
-
-Los smokes corren **sin** `--quit-after`: el test tarda mas de 2 frames y ese flag los
-mata a mitad de camino, con exit 0 y sin haber probado nada. Solo valen si imprimen su
-mensaje `... SMOKE OK`.
+Si tocaste logica core y hace falta verificar un contrato puntual, se escribe un script
+enfocado en `tools/` (ver `tools/check_attack_data.gd`) y se corre con `--headless --script`.
+Es un check de una cosa concreta, no una bateria de regresion.
 
 Para probar jugando:
 

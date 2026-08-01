@@ -1,0 +1,51 @@
+[gd_scene format=3 uid="uid://dii6xags02u6o"]
+
+[ext_resource type="Script" uid="uid://i52jhip4m3yr" path="res://visual/smoke_stylized_vfx.gd" id="1_smoke"]
+[ext_resource type="Material" uid="uid://mnsc8muocurr" path="res://visual/smoke_stylized_material.tres" id="2_mat"]
+[ext_resource type="ArrayMesh" path="res://visual/sm_cloud.res" id="3_cloud"]
+
+[sub_resource type="Curve" id="Curve_alpha"]
+_data = [Vector2(0, 1), 0.0, 0.0, 0, 0, Vector2(0.55, 1), 0.0, 0.0, 0, 0, Vector2(1, 0), 0.0, 0.0, 0, 0]
+point_count = 3
+
+[sub_resource type="CurveTexture" id="CurveTex_alpha"]
+curve = SubResource("Curve_alpha")
+
+[sub_resource type="Gradient" id="Gradient_color"]
+colors = PackedColorArray(1, 1, 1, 1, 0.36, 0.37, 0.45, 1)
+
+[sub_resource type="GradientTexture1D" id="GradTex_color"]
+gradient = SubResource("Gradient_color")
+
+[sub_resource type="Curve" id="Curve_scale"]
+_data = [Vector2(0, 0.12), 0.0, 0.0, 0, 0, Vector2(0.4, 1), 0.0, 0.0, 0, 0, Vector2(1, 1), 0.0, 0.0, 0, 0]
+point_count = 3
+
+[sub_resource type="CurveTexture" id="CurveTex_scale"]
+curve = SubResource("Curve_scale")
+
+[sub_resource type="ParticleProcessMaterial" id="PPM_smoke"]
+particle_flag_rotate_y = true
+emission_shape = 1
+emission_sphere_radius = 0.5
+angle_min = -180.0
+angle_max = 180.0
+direction = Vector3(-0.3, 1, 0)
+spread = 0.0
+initial_velocity_min = 3.0
+initial_velocity_max = 4.0
+gravity = Vector3(0, 0, 0)
+scale_max = 1.2
+scale_curve = SubResource("CurveTex_scale")
+color_ramp = SubResource("GradTex_color")
+alpha_curve = SubResource("CurveTex_alpha")
+
+[node name="VfxStylizedSmoke" type="GPUParticles3D" unique_id=1059561656]
+material_override = ExtResource("2_mat")
+cast_shadow = 0
+amount = 20
+lifetime = 1.5
+fixed_fps = 60
+process_material = SubResource("PPM_smoke")
+draw_pass_1 = ExtResource("3_cloud")
+script = ExtResource("1_smoke")

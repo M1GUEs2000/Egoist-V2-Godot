@@ -45,6 +45,10 @@ var _lock_back_x_tap_until := -999.0
 var _lock_forward_x_tap_until := -999.0
 ## El gesto direccional debe salir de neutral para que girar el stick no lo active.
 var _lock_direction_tap_armed := false
+## Presses descartados por el candado: su release no puede soltar el InputBuffer de un
+## press anterior (por ejemplo, X direccional que sigue reteniendo su posible cargado).
+var _ignored_attack_x_press := false
+var _ignored_attack_y_press := false
 
 @onready var buffer: InputBuffer = $InputBuffer
 
@@ -91,7 +95,15 @@ func weapon_label(weapon: WeaponBase) -> String:
 
 func cancel_input() -> void:
 	_press_id += 1
+	_ignored_attack_x_press = false
+	_ignored_attack_y_press = false
 	buffer.release()
+
+## El dodge es la excepcion intencional al compromiso de los especiales: invalida las
+## rutinas de todas las armas equipadas antes de que PlayerDash tome el movimiento.
+func cancel_attack_routines() -> void:
+	for weapon in _weapons():
+		weapon.cancel_routines()
 
 ## Sosteniendo X o Y desde el press hasta que se suelta o dispara el golpe cargado. Mismo
 ## progreso que ya alimenta el glow (vuelve a 0 al soltar); lo usan la locomoción (clamp de
@@ -115,16 +127,30 @@ func _input(event: InputEvent) -> void:
 	if _body != null and _body.is_stunned():
 		return
 	if event.is_action_pressed("attack_x"):
+		if _locked_attack_weapon() != null:
+			_ignored_attack_x_press = true
+			_on_press(slot_x, World.Slot.X)
+			return
 		_track_lock_direction_tap()
 		if not _try_lock_forward_x_static_spin() and not _try_lock_back_x_retreat():
 			_on_press(slot_x, World.Slot.X)
 	elif event.is_action_released("attack_x"):
+		if _ignored_attack_x_press:
+			_ignored_attack_x_press = false
+			return
 		buffer.release()
 	elif event.is_action_pressed("attack_y"):
+		if _locked_attack_weapon() != null:
+			_ignored_attack_y_press = true
+			_on_press(slot_y, World.Slot.Y)
+			return
 		_track_lock_direction_tap()
 		if not _try_lock_forward_y_push() and not _try_lock_back_y_launcher():
 			_on_press(slot_y, World.Slot.Y)
 	elif event.is_action_released("attack_y"):
+		if _ignored_attack_y_press:
+			_ignored_attack_y_press = false
+			return
 		buffer.release()
 ## Solo registra la primera direccion despues de neutral. Asi girar el stick de forma continua
 ## no abre un especial adelante/atras y el gesto sigue siendo relativo al target lockeado.
@@ -240,6 +266,14 @@ func _fire_hold_after_directional_special(weapon: WeaponBase, slot: World.Slot,
 func _on_press(weapon: WeaponBase, slot: World.Slot) -> void:
 	if weapon == null:
 		return
+	var locked_weapon := _locked_attack_weapon()
+	if locked_weapon != null:
+		# El mismo arma puede recibir un tap para encolar su combo. Cualquier otro
+		# ataque se descarta y, crucialmente, no arma un hold que luego cancelaría
+		# el especial activo al soltar.
+		if locked_weapon == weapon:
+			weapon.tap(slot)
+		return
 	_press_id += 1
 	attack_telegraphed.emit(_body.global_position, _body.forward())
 	_body.fire_action_world_switch()
@@ -254,6 +288,12 @@ func _on_press(weapon: WeaponBase, slot: World.Slot) -> void:
 		weapon.quaternion = _rest_rotations[weapon]
 	_set_active_weapon(weapon)
 	buffer.press_then_charge(weapon.tap.bind(slot), _fire_hold.bind(weapon, slot))
+
+func _locked_attack_weapon() -> WeaponBase:
+	for weapon in _weapons():
+		if weapon.is_attack_input_locked():
+			return weapon
+	return null
 
 ## El nivel de carga se resuelve recién al disparar el hold (no al bindear en el
 ## press), así el arma puede leer cuánto se sostuvo de verdad (ver Mazo.charge_level).

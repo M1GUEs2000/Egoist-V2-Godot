@@ -5,10 +5,13 @@
 [ext_resource type="Script" uid="uid://b1oxel8llcohe" path="res://data/attack_sequence.gd" id="3_sequence"]
 [ext_resource type="Script" uid="uid://df6a6rp7vamdn" path="res://data/attack_movement_profile.gd" id="4_movement"]
 [ext_resource type="Script" uid="uid://dsps3sxfd8wmx" path="res://data/mover_settings.gd" id="5_mover"]
+[ext_resource type="Script" uid="uid://cprdodv3kypq1" path="res://data/push_settings.gd" id="6_hq5p0"]
 
 [sub_resource type="Resource" id="Resource_clip_spin"]
 script = ExtResource("1_clip")
 clip = &"Sword_Regular_C"
+start_time = 0.5
+end_time = 0.9
 speed_bonus = 100.0
 
 [sub_resource type="Resource" id="Resource_enemy_hang"]
@@ -28,6 +31,7 @@ float_duration = 0.3
 script = ExtResource("4_movement")
 player_travel = SubResource("Resource_player_travel")
 enemy_travel = SubResource("Resource_enemy_hang")
+enemy_travel_aligns_y = true
 rt_travel_speed_bonus = 50.0
 rt_travel_acceleration_bonus = 50.0
 rt_animation_speed_bonus = 50.0
@@ -46,22 +50,19 @@ advances = false
 [sub_resource type="Resource" id="Resource_b3nvj"]
 script = ExtResource("1_clip")
 clip = &"Sword_Launcher"
-start_time = 0.3
+start_time = 0.2
 end_time = 0.6
 metadata/_custom_type_script = "uid://b0xd72invappo"
 
-[sub_resource type="Resource" id="Resource_4ybp4"]
-script = ExtResource("5_mover")
-direction = 2
-pitch_degrees = -30.0
-distance = 100.0
-speed = 20.0
-acceleration = 30.0
-metadata/_custom_type_script = "uid://dsps3sxfd8wmx"
+[sub_resource type="Resource" id="Resource_mcyvl"]
+script = ExtResource("6_hq5p0")
+wall_bounce_distance = 7.0
+metadata/_custom_type_script = "uid://cprdodv3kypq1"
 
 [sub_resource type="Resource" id="Resource_3x0vf"]
 script = ExtResource("4_movement")
-enemy_travel = SubResource("Resource_4ybp4")
+enemy_push = SubResource("Resource_mcyvl")
+enemy_push_at = 0.5
 rt_only = true
 metadata/_custom_type_script = "uid://df6a6rp7vamdn"
 
@@ -69,10 +70,41 @@ metadata/_custom_type_script = "uid://df6a6rp7vamdn"
 script = ExtResource("2_step")
 clip = SubResource("Resource_b3nvj")
 movement = SubResource("Resource_3x0vf")
+repeat = 0
+repeat_with_meter = 1
+metadata/_custom_type_script = "uid://b1755lpansqbo"
+
+[sub_resource type="Resource" id="Resource_4mqvc"]
+script = ExtResource("1_clip")
+clip = &"Sword_Dash"
+start_time = 0.2
+end_time = 0.5
+metadata/_custom_type_script = "uid://b0xd72invappo"
+
+[sub_resource type="Resource" id="Resource_m478f"]
+script = ExtResource("6_hq5p0")
+distance = 20.0
+angle_degrees = -20.5
+fall_height = 100.0
+initial_speed = 20.0
+acceleration = -30.0
+metadata/_custom_type_script = "uid://cprdodv3kypq1"
+
+[sub_resource type="Resource" id="Resource_uc55p"]
+script = ExtResource("4_movement")
+enemy_push = SubResource("Resource_m478f")
+enemy_push_at = 0.3
+metadata/_custom_type_script = "uid://df6a6rp7vamdn"
+
+[sub_resource type="Resource" id="Resource_hq5p0"]
+script = ExtResource("2_step")
+clip = SubResource("Resource_4mqvc")
+movement = SubResource("Resource_uc55p")
+repeat_with_meter = 0
 metadata/_custom_type_script = "uid://b1755lpansqbo"
 
 [resource]
 script = ExtResource("3_sequence")
-steps = Array[ExtResource("2_step")]([SubResource("Resource_step_spin"), SubResource("Resource_28ist")])
+steps = Array[ExtResource("2_step")]([SubResource("Resource_step_spin"), SubResource("Resource_28ist"), SubResource("Resource_hq5p0")])
 auto_chain = true
 recovery = 0.0

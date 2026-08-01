@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="SwordTrailTuning" format=3 uid="uid://bj1w8k3yyuhrq"]
+
+[ext_resource type="Script" uid="uid://coqj2gite5o06" path="res://data/sword_trail_tuning.gd" id="1_trail"]
+
+[sub_resource type="FastNoiseLite" id="FastNoiseLite_erosion"]
+frequency = 0.03
+
+[sub_resource type="NoiseTexture2D" id="NoiseTexture2D_erosion"]
+width = 256
+height = 128
+noise = SubResource("FastNoiseLite_erosion")
+seamless = true
+
+[sub_resource type="Gradient" id="Gradient_732ba"]
+
+[resource]
+script = ExtResource("1_trail")
+gradient = SubResource("Gradient_732ba")
+lifetime = 0.2
+min_sample_distance = 0.05
+erosion_noise = SubResource("NoiseTexture2D_erosion")

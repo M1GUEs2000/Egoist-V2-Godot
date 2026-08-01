@@ -34,8 +34,6 @@ Es el nodo que hoy concentra launcher, air-hit-stall, whiff, hover y arm-freeze 
   vigente.
 - **Arm** `player/player_arm.gd:256`: `register_arm_air_freeze`.
 - **Escena** `player/player.tscn`: nodo hijo `PlayerLauncher`.
-- **Smoke** `world/smoke_test.gd`: `launch` (108), `launcher.is_launched` (109), `launcher.cancel`
-  (164, 174, 397, 400, 418), `run_launcher_window` (398).
 
 ## Cierre Batch 9 - contrato vigente
 
@@ -49,7 +47,6 @@ Es el nodo que hoy concentra launcher, air-hit-stall, whiff, hover y arm-freeze 
   del Y aereo esta desactivado. PlayerLauncher no participa en el flujo activo de Espada.
 - Mace esta fuera del loadout y se reconstruira desde este contrato. `HitDummy` usa Mover/Floater
   reales y no expone verbos verticales legacy.
-- No se crearon, modificaron ni ejecutaron smoke tests por decision explicita del proyecto.
 
 ### Limpieza posterior
 
@@ -77,8 +74,7 @@ Superficie duck-typed (`has_method`) que invocan las armas; ver `combat/hurtbox.
 (`slam_arc`) hasta su futura reconstrucción. Espada y WeaponBase ya piden perfiles.
 
 **Dobles de test / otros implementadores:** `combat/dummies/hit_dummy.gd` implementa
-launch/slam/push/slam_bounce/slam_arc + `_airborne_until` (11-73); `world/smoke_test.gd` pushers
-inline (11, 21), `push` (484, 548), `launch` (482, 490), lee `_airborne_until` (466);
+launch/slam/push/slam_bounce/slam_arc + `_airborne_until` (11-73);
 `world/probe_animaciones_ia.gd:135` (`push`).
 
 > Ojo: `enemies/attacks/ranged_attack.gd:80` y `projectile.gd:63` tienen su propio `launch(origin,
@@ -100,7 +96,6 @@ inline (11, 21), `push` (484, 548), `launch` (482, 490), lee `_airborne_until` (
 - Wrappers en `player.gd` (230-234); reset al pisar (171).
 - `player/player_combat.gd`: aplica al llegar la carga a 1.0 en aire (116, 152), flag
   `_air_charge_fall_applied` (30, 105, 114, 150).
-- Smoke `world/smoke_test.gd` (284-328).
 - Migra a **Floater** en F4. El reset de doble salto/airdash (`apply_air_kill_reset`) **NO se toca**.
 
 ## Tuning atado al sistema viejo (`data/`)
@@ -334,13 +329,10 @@ esta stuneado no flota.
 - `Hurtbox` documenta capacidades legacy `launch/slam/push/slam_bounce`. Falta actualizar ese
   registro de verbos cuando la API final sea `request_mover`/`request_float`/bouncer o equivalente.
 
-### Dobles, smokes y docs
+### Dobles y docs
 
 - `combat/dummies/hit_dummy.gd` implementa los verbos legacy (`launch`, `slam`, `push`,
   `slam_bounce`, `slam_arc`) y `_airborne_until`. Hay que actualizarlo junto con la API nueva.
-- `world/smoke_test.gd` y `world/combat_smoke_test.gd` todavia prueban llamadas legacy y acceso a
-  `player.floater`/`enemy.floater` en algunos asserts. Al migrar autoridad, los smokes deben probar
-  que el arma pide perfiles y que el receptor solo ejecuta.
 - Actualizar [[Plan Autoridad Vertical]], [[Combate]], [[Espada]], [[Mazo]], [[Stun]] y
   [[Reset Aereo por Kill]] cuando se cierre la API final.
 

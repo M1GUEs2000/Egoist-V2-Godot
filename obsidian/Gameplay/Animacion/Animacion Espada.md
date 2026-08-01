@@ -56,6 +56,37 @@ Espejo del terrestre: diagonales con A/B, vueltas de la rama espera con C y el h
 | Y cargado en piso (launcher) | `Sword_Heavy_Combo` de 0.90 a 1.30 s |
 | Y cargado en aire | `Sword_Heavy_Combo` de 2.40 a 2.70 s |
 
+## Estela de la hoja
+
+El arco que deja la hoja al golpear tiene nodo propio: [[Trail]]. Lo que importa desde acá es que la
+estela **sale del hueso `hand_r`**, o sea del mismo clip que reproduce este documento, y que la
+prende y apaga la ventana de daño del golpe — no hay un segundo lugar donde el arco pueda
+desincronizarse de la animación.
+
+## H3
+
+Cambiar la estela procedural por una **slash card**: mesh de arco autorado con UV espejada y textura
+channel-packed, compuesta en capas base / highlight / support.
+
+Es el intercambio inverso al de hoy, y ninguno de los dos es mejor en abstracto:
+
+| | Estela procedural (hoy, H1) | Slash card (H3) |
+|---|---|---|
+| De donde sale la forma | El recorrido real del hueso | Un mesh autorado |
+| Alineacion con la animacion | Gratis, es la animacion misma | **A mano**, golpe por golpe |
+| Libertad para dirigir el corte | Ninguna: si la animacion es fea, la estela es fea | Total, no queda atada al arma |
+| Coste de un gesto nuevo | Cero | Autorar y alinear |
+
+Espera a H3 a proposito: la card recien se paga cuando existan los ataques de Espada hechos en
+Blender y haya animacion final que valga la pena alinear. Antes de eso la sincronia vale mas que el
+control, con cuatro gestos por dos tramos y el dano ya saliendo del `AttackClip`.
+
+De las capas del marco, la que mas se nota y hoy **no existe** es el **highlight**: mas chico que la
+base, mas brillante y con el taper agresivo que corresponde a una espada (el Mazo pediria uno romo).
+Sobre lo que ya esta es una segunda tira mas delgada con su propio gradiente. El `base_fade` del
+tuning de hoy es un sustituto pobre de esa capa. La capa de **impacto** ya tiene donde vivir:
+`VfxInjector.spawn_impact`, que `WeaponBase` llama al conectar.
+
 ## Relacionado
 
 - [[Player]]

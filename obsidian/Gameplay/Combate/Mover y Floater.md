@@ -107,16 +107,22 @@ if target is EnemyBase:
 
 | Slot | Que es |
 |---|---|
-| `player_travel` + `player_direction` | Recorrido del Player. `PROFILE` respeta la direccion del `MoverSettings` (verticales); `PLAYER_FORWARD` / `PLAYER_BACK` la recalculan contra el facing y clonan el perfil. |
+| `player_travel` | Recorrido del Player, y tambien su hang: el Floater sale de `player_travel.float_duration`, no de un slot aparte. Colgar sin viajar es `distance = 0`. |
 | `player_travel_at_window_end` | El recorrido del Player espera al cierre de la ventana de dano en vez de salir con el golpe. Gemelo de `WINDOW_END`: en un plunge, caer durante el swing te saca de rango. |
-| `player_hang` | Hang del Player AL INICIAR el golpe. Solo vale en ataques sin recorrido (ver abajo). |
-| `enemy_travel` + `enemy_travel_at` | Recorrido del Enemy y en que momento sale. Ver la seccion siguiente. |
+| `enemy_travel` + `enemy_travel_at` | Recorrido del Enemy y en que momento sale, con su hang en `float_duration` igual que el del Player. Ver la seccion siguiente. |
 | `enemy_travel_aligns_y` | Antes de mover al enemigo, lo sube/baja a tu altura. Es lo que hace que un plunge se sienta "bajamos juntos". Solo alinea si el Mover va a entrar (aereo y quebrado). |
-| `enemy_on_hit` | Hang de cada enemigo que conecta, renovado por golpe. `null` = cae al hold generico del arma. |
-| `rt_*_bonus` | Bonos en % de la variante RT sobre los slots del Player. Ver mas abajo. |
-| `rt_only` | El movimiento del golpe existe SOLO con RT: sin barra el perfil entero no se cobra. |
-| `rt_fires_projectile` + `rt_projectile_enemy_mover` | Disparo al cerrar el recorrido y el launcher que aplica. Siempre premio de RT. Un recorrido cancelado no dispara. |
+| `enemy_push` + `enemy_push_at` | Empujon en arco al enemigo y en que fraccion del golpe se arma (normalizado 0-1). No es un Mover: usa su propio impulso inicial, angulo y aceleracion vertical. Vive aca igual porque un empujon es exactamente "que le hace el golpe a la posicion". |
+| `rt_*_bonus` | Bonos en % de la variante RT sobre los slots de arriba. Ver mas abajo. |
+| `rt_only` | El golpe existe SOLO con RT. Dentro de una secuencia se omite el paso entero sin barra, lo que permite declarar [ataque normal, remate RT] en el mismo auto-chain. |
+| `rt_projectile_enemy_mover` | Launcher que el proyectil aplica al impactar. Quien dispara es el paso (`AttackStep.fires_projectile`), no el cierre del recorrido. |
 | `overrides_air_hit` | El golpe se hace cargo de la vertical del Player: el arma no le aplica encima su air-hit-stall generico. Aplica con RT y sin RT: es regla del gesto, no recompensa. |
+
+> [!warning] Un solo slot por cuerpo, a proposito
+> El hang dejo de ser un campo aparte (`player_hang` / `enemy_on_hit`). Los dos podian convivir con
+> el recorrido en el mismo perfil, y esa es la fuente de los conflictos de vertical: un Floater
+> arrancado mientras corre un Mover no se aplica **durante** el recorrido pero si despues, y en el
+> enemigo el Mover directamente le mataba el Floater declarado al lado. Con un solo slot el conflicto
+> no se puede ni declarar.
 
 Reglas que se mantienen: un slot por cuerpo, un perfil por gesto (dos gestos que hoy se sienten igual llevan perfiles separados), y un slot en `null` significa "este golpe no hace eso". Un perfil entero en `null` significa que el golpe no mueve a nadie — es el caso real de tap adelante + X en suelo.
 
@@ -136,16 +142,11 @@ El mismo slot `enemy_travel` alimenta tres momentos, y **solo el perfil puede di
 
 `enemy_travel` **no tiene bonos de RT**: hoy ningun gesto que mueva al Enemy tiene variante RT (los taps de Y son gratis, los cargados cobran barra entera y sin rama), asi que serian sliders muertos. Se agregan cuando exista el primer caso real.
 
-### Quien pide el hang del Player: el arma o el Mover
+### El hang lo pide siempre el Mover
 
-Hay dos formas de colgar al Player y **no son intercambiables ni deben convivir**:
+El hang de un golpe sale de `float_duration` del propio Mover (`player_travel` / `enemy_travel`), que lo detona en `_finish`: al cerrar el recorrido, y solo si NO se cancelo. **Colgar sin viajar es `distance = 0`** — el Mover corre un frame, termina y detona su Floater.
 
-| | Quien lo dispara | Cuando |
-|---|---|---|
-| `player_hang` | El arma, via `Player.request_float` (con sus gates de piso y dash) | Al iniciar el golpe |
-| `player_travel.float_duration` | El propio Mover, directo al componente, en `_finish` | Al cerrar el recorrido, y solo si NO se cancelo |
-
-La regla es: **si hay recorrido, el hang lo pide el Mover; si no hay recorrido, lo pide el arma.** No es prolijidad — un Floater arrancado mientras corre un Mover **no se aplica nunca**: en `TOTAL` el loop del Player hace `return` antes de leer el Floater, y en `PARTIAL` el Mover le sobreescribe la vertical el mismo frame. Por eso no existe un `player_hang_at`: el momento no es una eleccion, lo decide si el golpe viaja o no. `run_attack_movement` emite un `push_warning` si un perfil trae los dos, en vez de fallar en silencio.
+No hay una segunda via, y eso es deliberado: un Floater arrancado mientras corre un Mover **no se aplica durante el recorrido** (en `TOTAL` el loop del Player hace `return` antes de leer el Floater, y en `PARTIAL` el Mover le sobreescribe la vertical el mismo frame) pero **si despues**, asi que "no se aplica nunca" era falso y el hang se colaba tarde. En el enemigo era peor: `request_mover` llama `_cancel_air_hold()`, o sea que el recorrido mataba el hang declarado justo al lado. Con un solo slot por cuerpo el conflicto no se puede declarar.
 
 ### RT como porcentaje, no como perfil aparte
 

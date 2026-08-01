@@ -1,6 +1,7 @@
 class_name PlayerArm extends Node
 ## Brazo: puño remoto, habilidad permanente del jugador (ver obsidian/Gameplay/Brazo). No es
-## WeaponBase: no ocupa slot X/Y, no usa el motor de combos/swing orbital de las armas.
+## WeaponBase: no ocupa slot X/Y ni usa su motor de combos/swing orbital. Sus taps usan un
+## AttackSequence mecanico, pero conservan el ciclo propio de hitbox remoto.
 ## Un solo boton (tap) con dos usos segun el target resuelto:
 ## - Combate: golpea al target del lock-on pasivo (lockeado si hay uno, si no el más cercano en
 ##   el cono de mira — mismo target que usa PlayerLocomotion para el snap del golpe normal). Daño
@@ -24,8 +25,8 @@ var _taps_used := 0
 ## `_taps_used` sube de 0 y se re-arma solo mientras queden golpes por devolver (ver _refresh_regen).
 var _regen_at := -999.0
 var _traversal_cooldown_until := -999.0
-var _swing_id := 0
 var _player: Player
+var _swing_id := 0
 
 ## Solo un segundo tap puede esperar a la cadencia. Vence rapido para que mashear no convierta un
 ## input aislado en una rafaga tardia.
@@ -39,7 +40,7 @@ var _next_tap_ready_at := -999.0
 func _ready() -> void:
 	if tuning == null:
 		tuning = ArmTuning.new()
-	_marker.visible = false
+		_marker.visible = false
 
 ## Punto morado sobre quien recibiria el golpe/teletransporte AHORA (lock-on pasivo del Brazo):
 ## no depende de armas afuera ni de estar atacando, a diferencia del reticle de combate (ver
@@ -183,7 +184,7 @@ func _tap_enemy(target: EnemyBase) -> void:
 	if _taps_used >= tuning.max_taps:
 		return  # sin margen: la recuperacion la hace _refresh_regen, no este camino
 
-	# Se gasta el tap ACA (antes del await): si no, taps mas rapidos que travel_time se
+	# Se gasta el tap ACA (antes del await): si no, taps mas rapidos que el paso se
 	# colarian todos antes de que el primero llegue a incrementar el contador.
 	_taps_used += 1
 	if _taps_used == 1:
@@ -193,12 +194,30 @@ func _tap_enemy(target: EnemyBase) -> void:
 	_notify_taps()
 
 	_swing_id += 1
-	var id := _swing_id
+	_run_tap_sequence(target, tuning.resolved_tap_sequence(), _swing_id)
+
+## El Brazo no tiene animacion: su secuencia reproduce pasos mecanicos y conserva el contrato
+## original de cada tap: abre el hitbox sobre el target, espera su ventana y lo cierra solo si no
+## empezo un tap nuevo. La secuencia solo declara cuantos pasos hay y cuanto dura cada uno.
+func _run_tap_sequence(target: EnemyBase, sequence: AttackSequence, id: int) -> void:
+	if sequence == null:
+		return
+	for step in sequence.steps:
+		for _pass_index in step.repeat:
+			if not is_instance_valid(target):
+				return
+			_begin_tap_sequence_step(target, step)
+			var duration: float = sequence.step_time if sequence.step_time > 0.0 else 0.1
+			await get_tree().create_timer(maxf(0.01, duration)).timeout
+			if id != _swing_id:
+				return
+			_hitbox.end_swing()
+
+func _begin_tap_sequence_step(target: EnemyBase, step: AttackStep) -> void:
+	_hitbox.damage = tuning.damage * step.damage_scale
+	_hitbox.stun = step.stun if step.stun != null else tuning.stun
 	_hitbox.global_position = target.global_position
 	_hitbox.begin_swing()
-	await get_tree().create_timer(maxf(0.01, tuning.travel_time)).timeout
-	if id == _swing_id:
-		_hitbox.end_swing()
 
 ## Empuja al jugador hacia el bloque de dash marcado (dash forzado, ver PlayerDash.force_dash,
 ## a lo largo de `tuning.teleport_duration` segundos) y lo activa al llegar (mismo efecto que

@@ -7,9 +7,10 @@
 script = ExtResource("1_mover")
 direction = 2
 pitch_degrees = -30.0
-distance = 6.0
-speed = 18.0
-stop_on = 7
+distance = 100.0
+speed = 20.0
+acceleration = 10.0
+stop_on = 15
 
 [resource]
 script = ExtResource("2_movement")

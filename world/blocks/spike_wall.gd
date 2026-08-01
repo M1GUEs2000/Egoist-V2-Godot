@@ -15,7 +15,8 @@ class_name SpikeWall extends StaticBody3D
 @export var damage := 10.0
 @export var push_horizontal_speed := 9.0
 @export var push_vertical_speed := 5.5
-@export var enemy_push_gravity := -25.0
+@export var enemy_push_initial_speed := 7.268509
+@export var enemy_push_acceleration := -25.0
 ## Metros a los que el pinche manda al enemigo (el player usa push_horizontal/vertical_speed:
 ## su stun es otro sistema). Ver PushSettings: se tunea el destino, no la fuerza.
 @export var enemy_push_distance := 5.0
@@ -107,7 +108,8 @@ func _on_body_entered(body: Node3D) -> void:
 	enemy_push.distance = enemy_push_distance
 	enemy_push.angle_degrees = enemy_push_angle
 	enemy_push.fall_height = enemy_push_fall_height
-	enemy_push.gravity = enemy_push_gravity
+	enemy_push.initial_speed = enemy_push_initial_speed
+	enemy_push.acceleration = enemy_push_acceleration
 	enemy.apply_spike_hit(damage, push_dir, hazard_stun, enemy_push, hazard_stun_color)
 
 func _normal_away_from(world_position: Vector3) -> Vector3:

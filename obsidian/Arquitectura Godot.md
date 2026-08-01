@@ -40,7 +40,8 @@ enemies/    EnemyBase, GroundedEnemy, Perception, GroundLocomotion, attacks/ (Me
             ai_spec/  spec YAML del arbol: estados, blackboard, perfiles, hojas
 ui/         HUD, ActionLoadoutMenu
 visual/     CameraRig, CameraOcclusionFade, WorldVisual, LandingIndicator, WorldScan (+ world_scan.gdshader)
-world/      test_scene, smoke_test (transversal), combat_smoke_test, wall_slide_probe, blocks, pickups
+world/      test_scene, wall_slide_probe, blocks, pickups
+tools/      checks headless enfocados (check_attack_data, generate_clip_names)
 obsidian/   esta boveda
 ```
 
@@ -66,6 +67,7 @@ obsidian/
     Historia/Historia.md
     Exploracion/Exploracion.md
     Animacion/Animacion.md
+    VFX/VFX.md
   Tareas/
     backlog.md              <- fuente de subtareas (plugin Tasks)
     hitos.md                <- los hitos H0-H5 en un solo nodo
@@ -103,6 +105,7 @@ Los custom statuses del plugin viven en la config local (`.obsidian/`, no versio
 | [[Historia]] | `Gameplay/Historia/` | Lore, mascaras, NPCs y final. |
 | [[Exploracion]] | `Gameplay/Exploracion/` | Runas, consumibles, secretos y rutas opcionales. |
 | [[Animacion]] | `Gameplay/Animacion/` | Pipeline UAL y piloto animado de enemigos H1; retarget/personaje final H3. Subnotas: [[Player]] (locomocion, ninja jump, slide), [[Animacion Espada]], [[Animacion Mazo]]. |
+| [[VFX]] | `Gameplay/VFX/` | Capa de efectos visuales: contrato `VfxInjector`, reproductores y bundles. Subnota: [[Trail]] (estela de la hoja). |
 
 ## Registro del roster de armas
 
@@ -147,12 +150,11 @@ Los custom statuses del plugin viven en la config local (`.obsidian/`, no versio
 $GODOT="C:/Users/Tutupa/Downloads/Godot_v4.7-stable_win64.exe"
 & $GODOT --headless --path . --import
 & $GODOT --headless --path . --quit-after 2
-& $GODOT --headless --path . res://world/smoke_test.tscn
-& $GODOT --headless --path . res://world/combat_smoke_test.tscn
 ```
 
-> [!warning]
-> Los smokes corren **sin** `--quit-after`: tardan mas de 2 frames y ese flag los mata a mitad de camino, con exit 0 y sin haber probado nada. Cada uno solo vale si imprime su mensaje `... SMOKE OK`.
+Cuando un contrato puntual necesita comprobarse, se escribe un script enfocado en `tools/`
+(ver `tools/check_attack_data.gd`) y se corre con `--headless --script`. Es un check de una
+cosa concreta; el feel lo aprueba Tutupa jugando.
 
 ## Relacionado
 

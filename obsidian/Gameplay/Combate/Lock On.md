@@ -30,7 +30,7 @@ izquierda-derecha respecto al forward de camara (`_screen_angle`). `nearest_in_c
 queda aparte para el snap de ataque sin lock (usado por `PlayerLocomotion._attack_direction`, sin
 tocar el lock persistente). Reticle sobre el AABB combinado de las mallas del target
 (`_reticle_position`), visibilidad condicionada a lock activo + armas afuera
-(`has_visible_target`/`_is_weapons_out`). Cobertura en `world/smoke_test.gd`.
+(`has_visible_target`/`_is_weapons_out`).
 
 `visual/camera_rig.gd`: mientras `player.lock_on.is_locked`, `CameraRig` deja el modo libre
 (`_update_free`, con rotacion manual por stick) y entra a `_update_locked` — mantiene el yaw libre

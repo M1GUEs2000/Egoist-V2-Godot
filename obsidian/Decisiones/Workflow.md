@@ -13,7 +13,7 @@ status: active
 
 | Quien        | Que                                                          |
 | ------------ | ------------------------------------------------------------ |
-| Codex/Claude | Codigo Godot, refactors, smoke tests, documentacion tecnica. |
+| Codex/Claude | Codigo Godot, refactors, documentacion tecnica.              |
 | Tutupa       | Playtest, tuning, diseno, Blender, aprobacion de feel.       |
 
 ## Ritual de cierre

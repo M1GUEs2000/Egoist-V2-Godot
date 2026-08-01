@@ -27,7 +27,7 @@ Los ataques son componentes. Un enemigo puede no tener ataques, tener melee, ran
 Antes, "este enemigo no pega de cerca" pedia **escribir una subclase por enemigo** que vaciara `_attacks` a mano — asi funcionaba el viejo `RangedDead`. Esa subclase ya no existe: hoy es una casilla en el inspector.
 
 > [!info] Un ataque no equipado queda INERTE, no invisible-pero-peligroso
-> `GroundedEnemy._collect_attacks` no lo registra, asi que nunca recibe `try_attack`; sin `try_attack` no hay `begin_swing`, y sin `begin_swing` su `Hitbox` jamas prende el `monitoring` (arranca en `false`, ver `Hitbox._ready`). Ademas el dueño le apaga la malla: un solo-ranged no pasea con una espada colgando. Cubierto por asserts en el smoke de combate.
+> `GroundedEnemy._collect_attacks` no lo registra, asi que nunca recibe `try_attack`; sin `try_attack` no hay `begin_swing`, y sin `begin_swing` su `Hitbox` jamas prende el `monitoring` (arranca en `false`, ver `Hitbox._ready`). Ademas el dueño le apaga la malla: un solo-ranged no pasea con una espada colgando.
 
 `AttackLoadout` es **politica pura**: solo contesta `allows(attack)`. Quien recorre los hijos, los registra y les apaga la malla es el dueño — el modulo no toca a sus hermanos.
 

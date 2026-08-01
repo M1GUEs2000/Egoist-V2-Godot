@@ -26,14 +26,13 @@ La verdad operativa vive en esta boveda y en `METODOLOGIA.md` del repo Godot. La
 
 | Quien  | Que hace                                                                       |
 | ------ | ------------------------------------------------------------------------------ |
-| Codex  | Codigo Godot, refactors, pruebas headless, smoke tests, notas tecnicas.        |
+| Codex  | Codigo Godot, refactors, pruebas headless, notas tecnicas.                     |
 | Tutupa | Diseno, tuning en `.tres`, editor/playtest, Blender, aprobacion de feel E3/E4. |
 
 ## Flujo de cierre
 
 1. Verificar headless.
-2. Correr smoke test si toca core.
-3. Probar en `test_scene` cuando toque feel.
+2. Probar en `test_scene` cuando toque feel.
 4. Actualizar estado E0-E4 si cambio.
 5. Actualizar esta boveda si cambia la verdad del proyecto.
 6. Commit al cerrar una feature que funcione.

@@ -39,9 +39,9 @@ En el suelo el input tiene autoridad instantanea: la velocidad horizontal es `di
 
 Cuando otro modulo toma el control del movimiento la inercia del input se resetea via `PlayerLocomotion.set_air_velocity()`: al terminar un dash queda apuntando a la salida del dash a velocidad de carrera; el lock post wall jump/rebote y el stun la borran (el impulso real de esas mecanicas vive en `bump_velocity`, ver [[Momentum y Bump]]).
 
-## Polvo al correr
+## Humo al correr
 
-El jugador levanta polvo en el suelo por encima de `run_dust_min_speed` (`PlayerTuning`, grupo *Dust FX*): emisor `RunDust` (`GPUParticles3D`) a los pies, que `Player._set_run_dust` prende/apaga cada frame segun `is_on_floor()` + velocidad horizontal. Se apaga en stun, launch y dash. Los enemigos de suelo tienen el mismo polvo: `EnemyBase` lo maneja en `tick_base` con el export `run_dust_min_speed` (excepcion de tuning por escena de enemigos). Look tuneable en el `ParticleProcessMaterial` de cada emisor. *(2026-07-10)*
+El jugador deja humo 3D en el suelo por encima de `run_dust_min_speed` (`PlayerTuning`, grupo *Smoke FX*): emisor `RunSmoke` (`SmokeStylizedVFX`) a los pies, que `Player._set_run_smoke` prende/apaga cada frame segun `is_on_floor()` + velocidad horizontal. Se apaga en stun, launch y dash. Sus nubes quedan en coordenadas de mundo, asi el recorrido se lee como estela y no como humo pegado al cuerpo; el tinte progresa hacia el verde HDR con el nivel de sprint. Los enemigos de suelo conservan su polvo actual: `EnemyBase` lo maneja en `tick_base` con el export `run_dust_min_speed` (excepcion de tuning por escena de enemigos). *(2026-08-01)*
 
 ## Tuning
 

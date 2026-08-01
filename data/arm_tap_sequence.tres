@@ -1,0 +1,32 @@
+[gd_resource type="Resource" script_class="AttackSequence" format=3 uid="uid://ddidxm1eo5bu8"]
+
+[ext_resource type="Script" uid="uid://b1755lpansqbo" path="res://data/attack_step.gd" id="1_step"]
+[ext_resource type="Script" uid="uid://b1oxel8llcohe" path="res://data/attack_sequence.gd" id="2_sequence"]
+[ext_resource type="Script" uid="uid://dsps3sxfd8wmx" path="res://data/mover_settings.gd" id="3_axn7w"]
+[ext_resource type="Script" uid="uid://df6a6rp7vamdn" path="res://data/attack_movement_profile.gd" id="4_im3af"]
+
+[sub_resource type="Resource" id="Resource_p201h"]
+script = ExtResource("3_axn7w")
+direction = 2
+distance = 0.5
+stop_on = 15
+float_duration = 0.1
+float_fall_scale = 0.2
+metadata/_custom_type_script = "uid://dsps3sxfd8wmx"
+
+[sub_resource type="Resource" id="Resource_tvm5x"]
+script = ExtResource("4_im3af")
+enemy_travel = SubResource("Resource_p201h")
+metadata/_custom_type_script = "uid://df6a6rp7vamdn"
+
+[sub_resource type="Resource" id="Resource_tap"]
+script = ExtResource("1_step")
+movement = SubResource("Resource_tvm5x")
+repeat = 3
+advances = false
+
+[resource]
+script = ExtResource("2_sequence")
+steps = Array[ExtResource("1_step")]([SubResource("Resource_tap")])
+step_time = 0.1
+recovery = 0.0

@@ -8,11 +8,13 @@ class_name MoverSettings extends Resource
 ## cuerpo; no hay fisica compartida ni un target=BOTH dentro del componente.
 
 ## Bits de `stop_on`. DISTANCE es el limite de seguridad y siempre deberia estar prendido; FLOOR,
-## WALL y ENEMY permiten que una coreografia termine antes por contacto.
+## WALL y HIT permiten que una coreografia termine antes por contacto.
 const STOP_ON_DISTANCE := 1
 const STOP_ON_FLOOR := 2
 const STOP_ON_WALL := 4
-const STOP_ON_ENEMY := 8
+## El duenio recibio un golpe. Conserva el bit 8 que antes se mostraba como "Enemy", para que
+## todos los perfiles existentes mantengan exactamente su configuracion.
+const STOP_ON_HIT := 8
 
 enum Mode {
 	TOTAL,
@@ -72,10 +74,10 @@ func direction_vector(player_forward: Vector3) -> Vector3:
 @export var speed := 12.0
 ## Aceleracion en m/s^2: positiva acelera, negativa frena, 0 mantiene la velocidad constante.
 @export var acceleration := 0.0
-## Condiciones de fin combinables (flags). DISTANCE siempre actua como tope; FLOOR/WALL/ENEMY
+## Condiciones de fin combinables (flags). DISTANCE siempre actua como tope; FLOOR/WALL/HIT
 ## cortan antes por contacto. Ej.: un dash cargado usa DISTANCE|WALL (atraviesa enemigos, frena en
 ## pared); un launcher usa solo DISTANCE.
-@export_flags("Distance:1", "Floor:2", "Wall:4", "Enemy:8") var stop_on := STOP_ON_DISTANCE
+@export_flags("Distance:1", "Floor:2", "Wall:4", "Hit:8") var stop_on := STOP_ON_DISTANCE
 ## TOTAL ejecuta `move_and_slide` por su cuenta y toma el movimiento completo. PARTIAL solo controla
 ## Y dentro del tick normal del Player, para conservar contactos y movimiento horizontal.
 @export var mode := Mode.TOTAL

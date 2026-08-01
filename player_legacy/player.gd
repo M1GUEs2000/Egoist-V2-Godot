@@ -391,7 +391,7 @@ func _set_double_jump_available(available: bool) -> void:
 	_can_double_jump = available
 	double_jump_changed.emit(_can_double_jump)
 
-## Carga el medidor de poise desde el tuning. Publico: cambiar el .tres en caliente (o el smoke)
+## Carga el medidor de poise desde el tuning. Publico: cambiar el .tres en caliente
 ## necesita re-aplicarlo, porque Poise guarda los valores, no lee el Resource cada golpe.
 func setup_poise() -> void:
 	poise.poise_max = tuning.poise_max

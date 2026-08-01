@@ -50,9 +50,9 @@ Al agotarse la lista se repite el ultimo valor. Si el jugador esta subiendo (`ve
 
 ## Estado
 
-E1. Implementado con knobs y asserts en `world/smoke_test.gd`, pero falta:
+E1. Implementado con sus knobs, pero falta:
 
-- Correr Godot/headless y confirmar `SMOKE OK`.
+- Correr Godot/headless.
 - Probar jugando que la secuencia `100% -> 80% -> 50% -> 10%` corta el abuso de cargas sin apagar el flow.
 - Ajustar `air_charge_fall_reduction_steps` en `player_tuning.tres`.
 

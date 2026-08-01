@@ -645,7 +645,7 @@ func _on_player_attack_telegraphed(origin: Vector3, direction: Vector3) -> void:
 		return
 	if flat_dir.normalized().dot(to_me.normalized()) < EVADE_TRAJECTORY_DOT:
 		return
-	# Extremos deterministas: 0 nunca esquiva (off del pasivo), 1 siempre (el smoke depende de ambos).
+	# Extremos deterministas: 0 nunca esquiva (off del pasivo), 1 siempre.
 	if evade_chance < 1.0 and randf() >= evade_chance:
 		return
 	_last_evade_at = World.now()

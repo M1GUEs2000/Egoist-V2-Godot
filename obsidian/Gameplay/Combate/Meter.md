@@ -98,7 +98,7 @@ Mientras un ataque esta cargado, el tramo de meter que va a consumir **late** so
 > [!bug] El modo de falla es que mienta
 > `charged_meter_cost` (lo que el HUD promete) y `spend_charged` (lo que se cobra) son dos numeros
 > distintos que tienen que coincidir. Si se separan, el HUD marca barras que no se gastan — o peor,
-> se gastan sin aviso. Hay un assert en `combat_smoke_test.gd` que los ata.
+> se gastan sin aviso.
 
 ## Futuro
 

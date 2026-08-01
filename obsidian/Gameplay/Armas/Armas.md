@@ -79,10 +79,12 @@ func _default_tuning() -> WeaponTuning: return MiArmaTuning.new()
 
 `WeaponBase` ya trae la ventana de daño, el runner de secuencias, el push, el parry, la progresion por kills, el glow de carga y el cobro de los `AttackMovementProfile`. El arma pone **solo su personalidad**: que hace X, que hace Y, tap contra hold, y los ganchos direccionales (`try_lock_back_y_launcher` y familia) si los usa.
 
-Dos ganchos opcionales que vas a querer:
+Ganchos opcionales que vas a querer:
 
-- `on_sequence_step(step, chain_step, finisher)` — mecanicas del arma que no son dato, reconocidas por `AttackStep.choreography`. **No dibuja nada**: el dibujo es el clip.
+- `on_sequence_step(step, chain_step, finisher, duration)` — mecanicas del arma que no son dato, reconocidas por `AttackStep.choreography`. **No dibuja nada**: el dibujo es el clip.
 - `is_charged_move_active()` — si el arma tiene cargados que mueven al Player a proposito, para que el corte de momentum aereo los deje pasar.
+- `begin_sequence_step_damage_window(step, duration, runs_profile_hooks, clip)` — si un golpe cobra con un hitbox propio en vez de la hoja (el X cargado de la Espada usa su `ChargedDashHitbox`). Sobrescribirlo evita duplicar el runner entero.
+- `sequence_step_movement_profile(step)` — ajustar el perfil de un paso con contexto de runtime sin mutar el `.tres` (el sweet spot aereo de la Espada reapunta el Mover en 3D al target lockeado).
 
 ### 3. El tuning
 
@@ -117,7 +119,7 @@ func _tap_combo() -> void:
 | Como avanza | un tap por golpe, dentro de `chain_window` | los pasos salen solos, uno tras otro |
 | Ramifica por espera | si | no: no hay espera que medir |
 | Encola taps | si | no, el tap arranca su propio combo |
-| Ejemplos | tap X terrestre, tap X aereo | cargados, secuencias de RT |
+| Ejemplos | tap X terrestre, tap X aereo | cargados, taps direccionales, secuencias de RT |
 
 O sea que **un cargado puede ser tres animaciones** con tres ventanas de dano, tres `damage_scale` y un Mover distinto en cada tramo, sin una linea de codigo nueva:
 
@@ -138,7 +140,7 @@ Dos detalles del gesto que no tiene el combo:
 
 ### 5. Las animaciones
 
-Cada golpe se dibuja con un `AttackClip`: que clip, de que segundo a que segundo, cuanto dura de verdad, y **en que fraccion de ese tramo el hitbox esta abierto** (`hitbox_open` / `hitbox_close`, normalizados 0-1). Ese ultimo par es lo que hace que el golpe pegue en el impacto y no durante todo el swing.
+Cada golpe se dibuja con un `AttackClip`: que clip, de que segundo a que segundo, cuanto mas rapido sale que sus vecinos (`speed_bonus`, en %), y **en que fraccion de ese tramo el hitbox esta abierto** (`hitbox_open` / `hitbox_close`, normalizados 0-1). Ese ultimo par es lo que hace que el golpe pegue en el impacto y no durante todo el swing.
 
 El clip tiene que existir en la libreria del `AnimationPlayer` del maniqui. La libreria base es UAL2; lo que no esta ahi se copia en runtime:
 
@@ -153,8 +155,7 @@ Los tiempos van en **segundos, no en frames**: es 3D con esqueleto UAL y el `Ani
 
 Un arma **nunca** escribe la velocidad de nadie. Declara `MoverSettings` / `FloaterSettings` dentro de un `AttackMovementProfile` y el dueño de cada cuerpo los aplica (ver [[Mover y Floater]]).
 
-- Golpes de una cadena → el perfil va en el `AttackStep`, o sea que el beat en el que sale el Mover es tuning.
-- Especiales (cargados, taps direccionales) → el perfil va suelto en el tuning del arma, uno por gesto. Van **todos**, aunque tengan slots vacios.
+El perfil vive **dentro del `AttackStep`** que lo emite, tanto en un combo como en un especial: el beat en el que sale el Mover es tuning. Solo queda suelto en el tuning del arma el gesto que todavia no puede ser secuencia — el tap atras + Y terrestre de la Espada, que sale por una ventana vertical.
 
 `WeaponBase` los cobra solo, en el momento que el perfil declare (`BEFORE_DAMAGE`, `ON_HIT`, `WINDOW_END`). El arma no pide nada.
 
@@ -167,7 +168,7 @@ Un arma **nunca** escribe la velocidad de nadie. Declara `MoverSettings` / `Floa
 
 ### 8. Verificar
 
-Los pasos de `METODOLOGIA.md`: `--import`, los dos smokes, y **jugarla**. El feel no lo aprueba un smoke.
+Los pasos de `METODOLOGIA.md`: `--import`, `--quit-after 2`, y **jugarla**. El feel no lo aprueba un check headless. Si hace falta comprobar que los `.tres` del arma quedaron sanos (un clip que apunta a una animacion inexistente, un paso sin empujon), correr `tools/check_attack_data.gd`.
 
 ---
 
@@ -181,10 +182,9 @@ El inspector se agrupa por **tipo de ataque, nunca por tipo de dato**. No existe
 |---|---|---|
 | `@export_category` | Familia de ataque | Ataques normales (tap) · Cargados (hold) · Taps direccionales |
 | `@export_group` | Golpe concreto, con prefijo de nombre para que el inspector lo recorte | `Tap Y atras`, prefijo `tap_back_y_` |
-| `@export_subgroup` | Tramo y primitiva | `Suelo — Mover`, `Aire — Mover`, `Aire — Floater` |
-| Campo | Cuerpo receptor | `tap_back_y_air_player_mover` / `tap_back_y_air_enemy_mover` |
+| `@export_subgroup` | Coreografia e input del golpe | `Coreografia, input y dano RT` |
 
-Los ataques que ya migraron no llegan al ultimo nivel: en vez de campos por cuerpo llevan **un Resource por gesto** (`AttackMovementProfile`) o **por cadena** (`AttackSequence`), y los campos sueltos que quedan debajo son los que no son posicion. Ver las dos secciones de abajo.
+Ningun ataque llega ya a un campo por cuerpo: cada gesto es **un `AttackSequence`**, y dentro de cada paso vive el `AttackMovementProfile` con los slots de cada cuerpo. Los campos sueltos que quedan debajo del grupo son los que no son posicion (ventanas, costes, bonos de dano). Ver las secciones de abajo.
 
 Reglas:
 
@@ -200,24 +200,30 @@ Cuando un golpe acumula muchas primitivas, sus campos sueltos dejan de caber: la
 
 ```
 @export_group("Tap X atras", "tap_back_x_")
-  tap_back_x_ground · tap_back_x_air
-  @export_subgroup("Coreografia e input")
-    tap_back_x_window · tap_back_x_air_spins · tap_back_x_meter_air_spins
+  tap_back_x_ground_sequence · tap_back_x_air_sequence
+  @export_subgroup("Coreografia, input y dano RT")
+    tap_back_x_window · tap_back_x_ground_meter_damage_bonus · tap_back_x_air_meter_damage_bonus
 ```
+
+Las vueltas no aparecen: son `repeat` / `repeat_with_meter` del paso dentro de la secuencia.
 
 El perfil responde una sola pregunta: **que le hace este golpe a la posicion de los cuerpos.** Ventanas, vueltas y coste de meter NO entran — si entra todo, el Resource deja de tener un tema y vuelve a ser una bolsa. Los slots y su semantica estan en [[Mover y Floater]] > Perfil de movimiento por ataque.
 
-### Todos los especiales llevan perfil, aunque tengan slots vacios
+### Todos los golpes llevan perfil, aunque tengan slots vacios
 
-Un `AttackMovementProfile` va en **todos** los ataques especiales del arma —taps direccionales y cargados— y no solo en los que hoy mueven a alguien. Un slot vacio adentro no es un olvido: es la forma de decir "este golpe no hace eso", y es lo que permite **agregar o sacar movimiento sin tocar codigo**. La rutina del golpe ya no pide Movers por su cuenta; `WeaponBase` los cobra desde el perfil en el momento que el perfil declare. *(2026-07-29)*
+Un `AttackMovementProfile` va en **todos** los golpes, no solo en los que hoy mueven a alguien. Un slot vacio adentro no es un olvido: es la forma de decir "este golpe no hace eso", y es lo que permite **agregar o sacar movimiento sin tocar codigo**. La rutina del golpe no pide Movers por su cuenta; `WeaponBase` los cobra desde el perfil en el momento que el perfil declare.
 
-Esto invierte a proposito la regla de arriba para el caso de los perfiles. La regla original ("no se crean campos vacios por simetria") se escribio porque un campo vacio y un campo olvidado se ven igual en el inspector — el problema real que dejaron los cinco huecos de RT. Dentro de un perfil por gesto ese costo desaparece: el hueco tiene vecinos que le dan contexto y una semantica documentada. La regla sigue viva para los campos **sueltos** del tuning.
+Esto invierte a proposito la regla de arriba para el caso de los perfiles. La regla original ("no se crean campos vacios por simetria") se escribio porque un campo vacio y un campo olvidado se ven igual en el inspector. Dentro de un perfil por gesto ese costo desaparece: el hueco tiene vecinos que le dan contexto y una semantica documentada. La regla sigue viva para los campos **sueltos** del tuning.
 
-Una sola excepcion, porque ahi un slot mentiria: **X cargado**. No mueve al Player con un Mover sino con `force_dash`, que trae i-frames, hitbox propio y reposicionamiento al atravesar al objetivo. Cambiarlo a Mover no seria prender un slot, seria rediseñar el move y perder esas tres cosas.
+El **X cargado** es el caso donde un slot mentiria y aun asi lleva perfil: no mueve al Player con el Mover del slot sino con `force_dash`, que trae i-frames, hitbox propio y reposicionamiento al atravesar al objetivo. Su perfil declara el resto; el recorrido sigue siendo `force_dash`.
 
 ### Los combos tambien son datos
 
-Un `AttackSequence` por cadena, con un `AttackStep` por golpe. Cada paso trae su clip, su duracion, su `damage_scale`, y **su propio `AttackMovementProfile`** — asi que "el Mover sale en el tercer golpe" se declara en el inspector. Las ramas por espera cuelgan del propio paso (`wait_threshold` / `wait_steps`): tardar mas de ese umbral en encadenar reemplaza toda la cola de la cadena. *(2026-07-30)*
+Un `AttackSequence` por cadena, con un `AttackStep` por golpe. Cada paso trae su clip, su `damage_scale`, su `stun` propio, cuantas veces sale (`repeat` / `repeat_with_meter`), si dispara el proyectil del arma (`fires_projectile`), y **su propio `AttackMovementProfile`** — asi que "el Mover sale en el tercer golpe" se declara en el inspector. Las ramas por espera cuelgan del propio paso (`wait_threshold` / `wait_steps`): tardar mas de ese umbral en encadenar reemplaza toda la cola de la cadena. *(2026-07-30)*
+
+El `stun` por paso existe porque "un paso = un golpe" tambien multiplico el stun: si los cuatro golpes de una cadena comen el poise entero del arma, el primer swing quiebra igual que el finisher y no hay progresion posible. Es un `StunSettings` entero y no un multiplicador porque un golpe aereo suele querer `airborne` en 0 —que el Floater lo sostenga en vez de congelarlo— y eso no se expresa escalando un numero. **Nunca bajar `poise_damage` a 0 en un golpe aereo**: el Floater del enemigo tiene un gate de poise quebrado, asi que sin quiebre no lo sostiene y el juggle se cae.
+
+La duracion de un paso no se declara en segundos: la base la pone `step_time` de la cadena (o el `swing_time` del arma) y el clip la escala con su `speed_bonus` en porcentaje. Un numero absoluto por paso obligaba a saber de antemano cuanto dura el golpe y quedaba desincronizado al retunear la cadena.
 
 Una cadena es un **arbol**, no una linea con una desviacion. Como la rama cuelga del paso, los pasos de una rama pueden declarar la suya, y se puede ramificar tantas veces como golpes tenga el combo: `X X espera X espera X X X` es un paso con rama cuyo primer paso tiene otra. El aereo de [[Espada]] usa dos puntos de espera distintos (tras el golpe 1 a vueltas, tras el 2 al plunge).
 
@@ -235,7 +241,7 @@ El primer intento fue un perfil por **variante** (gesto x tramo x RT), o sea el 
 
 La forma correcta es la que ya usa [[Sprint]] con sus canales: **el valor base vive una sola vez y RT entra como bono en % aplicado en el consumidor.** "Sin RT" pasa a ser multiplicar por `1.0` en vez de una rama con datos propios, y un hueco deja de existir porque `0%` es un valor legitimo.
 
-Regla general para cualquier arma: **si la variante es "lo mismo pero mas", va porcentaje; si es otro golpe, va estructura.** Cuando una variante agrega algo que la base no tiene, se marca con un flag (`rt_only`, `rt_fires_projectile`) en vez de duplicar el perfil — un bool es mas barato que un Resource y no se puede desincronizar del base.
+Regla general para cualquier arma: **si la variante es "lo mismo pero mas", va porcentaje; si es otro golpe, va estructura.** Cuando una variante agrega algo que la base no tiene, se marca con un flag (`rt_only`, o un `repeat_with_meter` sobre un paso en `repeat = 0`) en vez de duplicar el perfil — un bool es mas barato que un Resource y no se puede desincronizar del base.
 
 Lo que NO entra al modelo porcentual: valores clampeados donde un bono no tiene a donde ir (`fall_scale`), y los perfiles que no le pertenecen al dueno del ataque (el launcher del proyectil). Esos van a mano.
 

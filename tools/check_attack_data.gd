@@ -5,7 +5,7 @@ extends SceneTree
 ##
 ## Carga los .tres REALES y valida lo que un typo o un guardado a destiempo rompen en silencio: un
 ## `speed_bonus = null` serializado, un clip que apunta a una animacion inexistente, o un paso que
-## quedo sin empujon tras la migracion. No corre gameplay ni toca los smokes.
+## quedo sin empujon tras la migracion. No corre gameplay.
 ##
 ##   & $GODOT --headless --path . --script res://tools/check_attack_data.gd
 

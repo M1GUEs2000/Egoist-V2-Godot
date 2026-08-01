@@ -42,22 +42,22 @@ class_name AttackClip extends Resource
     @export var clip: StringName        # nombre en el AnimationPlayer
     @export var start_time := 0.0       # segundo del clip donde arranca el tramo
     @export var end_time := -1.0        # -1 = hasta el final
-    @export var duration := 0.0         # segundos REALES del golpe; 0 = velocidad natural
+    @export var speed_bonus := 0.0      # % mas rapido que sus vecinos; 0 = la duracion que le toca
     @export_range(0.0, 1.0) var hitbox_open := 0.0
     @export_range(0.0, 1.0) var hitbox_close := 1.0
+    var duration := 0.0                 # NO exportado: el resultado ya resuelto, de paso al animador
 
 # combat/attack_clip_player.gd (Trabajo A):
-signal hitbox_should_open
-signal hitbox_should_close
 signal clip_finished
 func play_attack_clip(c: AttackClip) -> void
 func cancel() -> void
 ```
 
-Dos decisiones que no son arbitrarias:
+Tres decisiones que no son arbitrarias:
 
-- **`hitbox_open` / `hitbox_close` van normalizados 0-1** sobre `duration`, no en segundos. Cambiar cuanto dura el golpe no tiene que invalidar la ventana de daño.
-- **`start_time` / `end_time` / `duration` van en SEGUNDOS, no en frames.** Es 3D con esqueleto UAL y el `AnimationPlayer` de Godot trabaja en segundos. Traducir a frames seria inventar una unidad que el motor no tiene.
+- **`hitbox_open` / `hitbox_close` van normalizados 0-1** sobre la duracion, no en segundos. Cambiar cuanto dura el golpe no tiene que invalidar la ventana de daño.
+- **`start_time` / `end_time` van en SEGUNDOS, no en frames.** Es 3D con esqueleto UAL y el `AnimationPlayer` de Godot trabaja en segundos. Traducir a frames seria inventar una unidad que el motor no tiene.
+- **La duracion es un porcentaje, no un absoluto.** `speed_bonus` escala la base que pone la cadena (`AttackSequence.step_time`, o el `swing_time` del arma). Un override en segundos obligaba a saber de antemano cuanto dura el golpe para decir "este sale un toque mas rapido", y al retunear la cadena seguia pisando con el valor viejo. `duration` sobrevive como variable no exportada: es el resultado ya resuelto viajando al animador, y exportarlo seria un segundo lugar donde tocar lo mismo.
 
 El componente **no** decide daño, no abre hitboxes por su cuenta y no sabe que arma lo usa: reproduce el tramo y avisa. Quien conecta esas señales a una ventana de daño es el secuenciador.
 

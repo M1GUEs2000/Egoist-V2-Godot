@@ -58,8 +58,8 @@ Arma de mas dano. Controla masas. Tiene bastante knockback. Tumba a los enemigos
   paso corto es horizontal, via `force_dash`): "eleva enemigos pero no al jugador" ya se cumple.
 - `combat/weapons/mace/mace.gd` define `Mace extends WeaponBase` (no hereda de
   `Sword`): coreografía propia sobre el motor genérico de `WeaponBase`.
-- Sus swings mueven la mano alrededor del jugador, igual que la Espada (ver Mano orbital
-  en [[Combate]]); el palo va rigido, apuntando hacia afuera. *(2026-07-09)*
+- Sus golpes los dibuja la animacion, igual que la Espada: el hitbox cuelga del hueso de la mano
+  y el tramo de clip lo declara el `AttackClip` del golpe (ver [[Contrato AttackClip]]).
 - Tap X/Y terrestre: combo de 3 (swing, swing, smash AOE) vía `run_combo_chain` con el
   parámetro nuevo `wait_branch_extra_steps` — la rama espera agrega 2 smashes más
   (5 golpes totales) en vez de solo cambiar coreografía como la Espada. *(2026-07-09)*
