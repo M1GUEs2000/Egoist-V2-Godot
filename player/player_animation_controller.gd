@@ -21,7 +21,11 @@ const UAL1_ANIMATIONS := [&"Idle", &"Walk", &"Sprint"]
 # Clips WIP fuera de UAL1/UAL2, todavia sin aprobar jugando.
 # Mismo mecanismo de copia a la libreria que _import_ual1_animations.
 const SWORD_LAUNCHER_SCENE := preload("res://animaciones/Sword_LauncherV1.glb")
-const CUSTOM_ANIMATIONS := [&"Sword_Launcher"]
+## Cada fuente WIP con los clips que aporta. Agregar un clip nuevo = una línea acá (y su gemela en
+## tools/generate_clip_names.gd, que mantiene copia deliberada).
+const CUSTOM_ANIMATION_SOURCES := [
+	[SWORD_LAUNCHER_SCENE, [&"Sword_Launcher"]],
+]
 const HAND_ATTACHMENT_PAYLOAD_GROUP := &"hand_attachment_payload"
 
 # Nombres REALES de los .glb importados (verificados con Godot listando get_animation_list):
@@ -34,7 +38,9 @@ const HAND_ATTACHMENT_PAYLOAD_GROUP := &"hand_attachment_payload"
 @export var jump_loop_animation: StringName = &"NinjaJump_Idle"
 @export var jump_land_animation: StringName = &"NinjaJump_Land"
 @export var slide_start_animation: StringName = &"Slide_Start"
-@export var slide_loop_animation: StringName = &"Slide"
+# El ciclo del wall slide es el MISMO Sprint del suelo, puesto perpendicular a la pared por
+# wall_slide_tilt_degrees. Hubo un clip propio (Wall_Run, de Mixamo) y se descartó.
+@export var slide_loop_animation: StringName = &"Sprint"
 @export var slide_exit_animation: StringName = &"Slide_Exit"
 # Arma en mano: los nodos marcados hand_attachment_payload en la escena del arma (meshes y
 # BladeHitbox) se sacan juntos del Pivot orbital y cuelgan del hueso. Queda una sola arma:
@@ -96,8 +102,8 @@ const HAND_ATTACHMENT_PAYLOAD_GROUP := &"hand_attachment_payload"
 @export_range(0.0, 1.5, 0.01) var land_hold_time := 0.4
 ## El maniquí encara la pared durante el wall slide (false = de espaldas a la pared).
 @export var face_wall := true
-## El clip UAL Slide es un deslizamiento de suelo. Este giro local lo pone erguido
-## contra el muro sin alterar la orientación física del Player.
+## Giro local que acuesta el clip contra el muro, sin tocar la orientación física del Player.
+## -90 lo deja perpendicular a la pared.
 @export_range(-180.0, 180.0, 1.0) var wall_slide_tilt_degrees := -90.0
 ## Suaviza la transición visual de salto a wall slide; no afecta el estado mecánico.
 @export_range(0.0, 0.5, 0.01) var wall_slide_orientation_blend_time := 0.18
@@ -380,9 +386,14 @@ func _stop_stun_visual() -> void:
 
 # ---- Capa 2: wall slide ----
 
-## True si esta capa es dueña del frame (deslizando o saliendo del slide).
+## True si esta capa es dueña del frame (pegado a la pared o saliendo del slide).
+##
+## La condición es el CONTACTO (`can_attach`), no el slide: en cuanto el jugador está en posición de
+## engancharse, el maniquí ya adopta la pose contra la pared aunque todavía no haya apretado el
+## botón. Así la pose es el aviso visual de que el wall slide está disponible, y apretar el botón
+## solo agrega el movimiento — el personaje no cambia de forma al enganchar.
 func _update_slide_visual(delta: float) -> bool:
-	if _player.wall_slide.is_sliding:
+	if _player.wall_slide.can_attach:
 		if not _slide_active:
 			_slide_active = true
 			_slide_exit_until = -INF
@@ -392,7 +403,7 @@ func _update_slide_visual(delta: float) -> bool:
 				or _animation_player.current_animation != slide_start_animation:
 			# Entrada terminada — o pisada por un override de arma: sostiene el loop.
 			_play_loop(slide_loop_animation)
-		_face_wall_normal(_player.wall_slide.wall_normal, delta)
+		_face_wall_normal(_player.wall_slide.contact_normal, delta)
 		return true
 	if _slide_active:
 		_slide_active = false
@@ -428,8 +439,8 @@ func _face_wall_normal(wall_normal: Vector3, delta: float) -> void:
 		return
 	var target_transform := _visual.global_transform.looking_at(
 			_visual.global_position + facing.normalized(), Vector3.UP)
-	# look_at alinea el frente del maniquí con la normal; el giro local convierte la
-	# pose horizontal de Slide en una pose vertical, apoyada contra esa pared.
+	# look_at alinea el frente del maniquí con la normal; el giro local lo deja perpendicular a
+	# la pared, apoyado contra ella.
 	target_transform.basis = target_transform.basis * Basis(
 			Vector3.RIGHT, deg_to_rad(wall_slide_tilt_degrees))
 	# El cuerpo apunta hacia su desplazamiento sobre el plano del muro: conserva el
@@ -443,9 +454,9 @@ func _face_wall_normal(wall_normal: Vector3, delta: float) -> void:
 	var blend_weight := 1.0
 	if wall_slide_orientation_blend_time > 0.0:
 		blend_weight = clampf(delta / wall_slide_orientation_blend_time, 0.0, 1.0)
-	# slerp convierte ambas Basis a Quaternion: tras componer tilt + giro sobre la
-	# pared pueden quedar con un error decimal de ortogonalidad. Normalizarlas aquÃ­
-	# evita el error de Godot sin cambiar la orientaciÃ³n visual buscada.
+	# slerp convierte ambas Basis a Quaternion: tras componer tilt + giro sobre la pared pueden
+	# quedar con un error decimal de ortogonalidad. Ortonormalizarlas acá evita el error de Godot
+	# sin cambiar la orientación visual buscada.
 	var current_basis := _visual.global_basis.orthonormalized()
 	var target_basis := target_transform.basis.orthonormalized()
 	_visual.global_basis = current_basis.slerp(target_basis, blend_weight)
@@ -552,22 +563,24 @@ func _import_ual1_animations() -> void:
 				library.add_animation(animation_name, source_animation.duplicate(true))
 	source_root.free()
 
-## Clips WIP fuera de UAL1/UAL2 (ver CUSTOM_ANIMATIONS): mismo mecanismo de copia.
+## Clips WIP fuera de UAL1/UAL2 (ver CUSTOM_ANIMATION_SOURCES): mismo mecanismo de copia.
 func _import_custom_animations() -> void:
-	var source_root := SWORD_LAUNCHER_SCENE.instantiate()
-	var source_player := _find_animation_player(source_root)
-	if source_player == null:
-		source_root.free()
-		return
 	var library := _animation_player.get_animation_library(&"")
-	if library != null:
-		for animation_name in CUSTOM_ANIMATIONS:
+	if library == null:
+		return
+	for source: Array in CUSTOM_ANIMATION_SOURCES:
+		var source_root: Node = (source[0] as PackedScene).instantiate()
+		var source_player := _find_animation_player(source_root)
+		if source_player == null:
+			source_root.free()
+			continue
+		for animation_name: StringName in source[1]:
 			if _has_animation(animation_name):
 				continue
 			var source_animation := source_player.get_animation(animation_name)
 			if source_animation != null:
 				library.add_animation(animation_name, source_animation.duplicate(true))
-	source_root.free()
+		source_root.free()
 
 ## Devuelve (creándola la primera vez) la versión aérea del clip de ataque: los tracks de
 ## los huesos de air_lower_body_bones se reemplazan por los del loop de salto, así las

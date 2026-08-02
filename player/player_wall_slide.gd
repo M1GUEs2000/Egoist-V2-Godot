@@ -15,12 +15,24 @@ class_name PlayerWallSlide extends Node
 
 var is_sliding := false
 var wall_normal := Vector3.ZERO
+## True cuando se cumplen TODAS las condiciones del enganche menos apretar el botón: pared válida,
+## en el aire, empuje real contra ella y sin cooldown. Es lo que lee la animación — la pose contra
+## la pared aparece por contacto, no por slide, así el jugador ve "acá te podés enganchar" ANTES de
+## gastar el input. Mientras deslizás sigue en true (el contacto no desaparece por engancharse).
+var can_attach := false
+## Normal de la pared que se está tocando, haya slide o no. Deslizando es la misma que `wall_normal`;
+## sin slide es lo único que orienta la pose de contacto, porque `wall_normal` solo vive con el slide.
+var contact_normal := Vector3.ZERO
 ## True mientras el slide esta usando una WallImpulseSurface y ya capturo direccion.
 var is_impulsing := false
 ## Direccion horizontal fija tomada del primer input tangencial valido en la pared actual.
 var impulse_direction := Vector3.ZERO
 
 var _body: Player
+## Hasta cuándo vale el toque del botón de wall slide. El enganche NO es automático: pedirlo es
+## parte de la ejecución. La ventana (`wall_slide_request_buffer`) deja pedirlo un instante antes
+## de llegar al muro, así no hay que clavar el frame del contacto.
+var _request_until := -999.0
 var _ignore_until := -999.0
 var _move_lock_until := -999.0
 var _grace_until := -999.0
@@ -234,6 +246,10 @@ func _climb_fallback_tangent(normal: Vector3) -> Vector3:
 func update_after_move(horizontal_velocity: Vector3, input_dir: Vector3) -> void:
 	if _body == null:
 		return
+	# El contacto se recalcula entero cada frame: cada return de acá abajo significa "no hay pared
+	# a la que engancharse ahora", y la animación tiene que apagarse igual que el slide.
+	can_attach = false
+	contact_normal = Vector3.ZERO
 	if World.now() < _ignore_until or _body.is_on_floor():
 		cancel()
 		return
@@ -244,6 +260,10 @@ func update_after_move(horizontal_velocity: Vector3, input_dir: Vector3) -> void
 		# Contacto perdido: ventana de gracia (coyote) antes de cortar, así el estado no
 		# titila en esquinas o micro-separaciones; se mantiene con la última normal conocida.
 		if is_sliding and World.now() < _grace_until:
+			# El slide sigue vivo con la última normal conocida, así que el contacto visual también:
+			# si no, la pose parpadearía en cada micro-separación que la gracia existe para tapar.
+			can_attach = true
+			contact_normal = wall_normal
 			return
 		_carry_impulse_into_air()
 		cancel()
@@ -257,6 +277,16 @@ func update_after_move(horizontal_velocity: Vector3, input_dir: Vector3) -> void
 	var push_speed := horizontal_velocity.dot(-normal)
 	# Para ENGANCHAR hace falta empuje real contra la pared; ya deslizando se mantiene solo.
 	if not is_sliding and push_speed < _body.tuning.wall_slide_min_push_speed:
+		return
+	# Desde acá el enganche está habilitado y solo falta el botón: es exactamente lo que la pose
+	# contra la pared anuncia. Se marca ANTES del pedido a propósito — sin esto la animación
+	# dependería del input y dejaría de ser un aviso previo.
+	can_attach = true
+	contact_normal = normal
+	# ...y además pedirlo con el botón. Rozar una pared en el aire ya no te pega solo: el slide es
+	# una acción que se ejecuta, no un estado en el que se cae. Se consume el pedido al enganchar
+	# para que un toque valga UN enganche y no quede armado el resto de la ventana.
+	if not is_sliding and not _consume_request():
 		return
 
 	var was_sliding := is_sliding
@@ -304,6 +334,20 @@ func _begin_slide(horizontal_velocity: Vector3) -> void:
 	# Red de seguridad de tuning: con un final por debajo del inicial la rampa FRENARIA en vez de
 	# acelerar, que no es lo que nadie espera al mover esos knobs. Se aplana a "no acelera".
 	_slide_final_speed = maxf(_slide_final_speed, _slide_speed)
+
+## Toque del botón de wall slide. Solo ARMA el pedido: el enganche real lo resuelve
+## update_after_move cuando además haya pared y empuje contra ella.
+func request_slide() -> void:
+	if _body == null:
+		return
+	_request_until = World.now() + _body.tuning.wall_slide_request_buffer
+
+## True si hay un pedido vigente, y lo gasta.
+func _consume_request() -> bool:
+	if World.now() >= _request_until:
+		return false
+	_request_until = -999.0
+	return true
 
 func try_wall_jump(_input_dir: Vector3) -> bool:
 	if _body == null:
@@ -434,6 +478,8 @@ func _release_by_input() -> void:
 func cancel() -> void:
 	is_sliding = false
 	wall_normal = Vector3.ZERO
+	can_attach = false
+	contact_normal = Vector3.ZERO
 	_slide_direction = Vector3.ZERO
 	_slide_speed = 0.0
 	_slide_final_speed = 0.0

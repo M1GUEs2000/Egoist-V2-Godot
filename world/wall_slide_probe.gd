@@ -23,6 +23,10 @@ func _ready() -> void:
 
 func _physics_process(_delta: float) -> void:
 	_frames += 1
+	# El enganche pide el boton de wall slide. Se pide SOLO hasta el primer enganche: repetirlo
+	# despues taparia justo lo que este probe mide (un flicker se reengancharia solo).
+	if _transitions == 0:
+		_player.wall_slide.request_slide()
 	var sliding: bool = _player.wall_slide.is_sliding
 	if sliding:
 		_slide_frames += 1

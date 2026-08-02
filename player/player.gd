@@ -149,6 +149,8 @@ func _unhandled_input(event: InputEvent) -> void:
 		_on_jump()
 	elif event.is_action_pressed("dodge"):
 		_on_dodge()
+	elif event.is_action_pressed("wall_slide"):
+		wall_slide.request_slide()
 	elif event.is_action_pressed("lock_on"):
 		lock_on.toggle_lock()
 	elif lock_on.is_locked and event.is_action_pressed("camera_left"):

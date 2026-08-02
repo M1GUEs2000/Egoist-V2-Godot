@@ -103,6 +103,11 @@ class_name PlayerTuning extends Resource
 @export_range(0.01, 0.5, 0.01) var double_jump_burst_size := 0.12
 
 @export_group("Wall slide")
+## Cuánto vale un toque del botón de wall slide (LT) para engancharse, en segundos. El enganche ya
+## no es automático: hace falta pedirlo. La ventana existe para no exigir el frame exacto — se puede
+## pedir el slide un instante ANTES de tocar la pared y engancha igual al llegar. Una vez enganchado
+## el slide se mantiene solo (assist): el botón no se sostiene, se suelta con el stick hacia afuera.
+@export var wall_slide_request_buffer := 0.2
 ## Velocidad mínima de empuje CONTRA la pared para engancharse al slide (m/s).
 @export var wall_slide_min_push_speed := 2.0
 ## Velocidad de presion contra la pared mientras se eslidea: mantiene el contacto fisico

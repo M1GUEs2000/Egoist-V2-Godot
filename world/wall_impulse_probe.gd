@@ -17,6 +17,9 @@ func _ready() -> void:
 
 func _physics_process(_delta: float) -> void:
 	_frames += 1
+	# El slide ya no engancha solo: hay que pedirlo con el boton hasta pegarse al muro.
+	if not _player.wall_slide.is_sliding:
+		_player.wall_slide.request_slide()
 	if _player.wall_slide.is_impulsing and _captured_direction == Vector3.ZERO:
 		_captured_direction = _player.wall_slide.impulse_direction
 		assert(_captured_direction.length_squared() > 0.9,
