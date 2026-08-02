@@ -1,11 +1,7 @@
-[gd_resource type="Resource" script_class="ParryTuning" format=3]
+[gd_resource type="Resource" script_class="ParryTuning" format=3 uid="uid://dr1f5pcud0d3u"]
 
-[ext_resource type="Script" path="res://data/parry_tuning.gd" id="1_parry"]
+[ext_resource type="Script" uid="uid://bigora80cvsii" path="res://data/parry_tuning.gd" id="1_parry"]
 
 [resource]
 script = ExtResource("1_parry")
-stun_duration = 1.5
-vulnerable_duration = 1.5
-damage_multiplier = 2.0
-cyan_color = Color(0.3, 0.85, 1, 1)
-cyan_emission_energy = 3.0
+cyan_emission_energy = 1.0

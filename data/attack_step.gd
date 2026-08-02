@@ -15,6 +15,11 @@ class_name AttackStep extends Resource
 ## nada y dura lo que diga la secuencia; sirve para pasos puramente mecanicos.
 @export var clip: AttackClip
 
+## Abre el hitbox vertical propio del arma en vez de hoja/disco. El arma resuelve cual es ese
+## hitbox; el runner conserva el mismo AttackClip y AttackMovementProfile, de modo que un launcher
+## sigue siendo un paso declarativo de AttackSequence.
+@export var uses_vertical_hitbox := false
+
 ## Multiplicador de dano de ESTE paso sobre el dano base del arma. Existe porque partir una cadena
 ## en N impactos multiplica el dano por N sin tocar un solo numero: un flurry de tres suele querer
 ## 1.0 / 0.6 / 0.6 y no 3x plano. 1.0 = el dano de lista del arma.

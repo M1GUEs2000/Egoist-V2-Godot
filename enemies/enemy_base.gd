@@ -56,6 +56,13 @@ static func can_damage_enemy(attacker: EnemyBase, target: EnemyBase) -> bool:
 # color del lenguaje de impacto — amarillo = stuneado, rojo = hazard (SpikeWall), blanco = absorbido.
 # Solo emision, sin tocar el albedo: el enemigo no cambia de color, se enciende un instante.
 ## Color del fogonazo del golpe absorbido.
+## Color del fogonazo de todo golpe que conecta.
+@export var hit_flash_color := Color(1.0, 0.05, 0.02, 1.0)
+## Energia HDR del fogonazo de impacto.
+@export var hit_flash_energy := 3.0
+## Duracion del fogonazo de impacto, en segundos.
+@export var hit_flash_time := 0.15
+
 @export var poise_chip_color := Color(1.0, 1.0, 1.0, 1.0)
 ## Emision del fogonazo absorbido. Requiere el glow del WorldEnvironment para el bloom.
 @export var poise_chip_energy := 2.0
@@ -106,7 +113,7 @@ static func can_damage_enemy(attacker: EnemyBase, target: EnemyBase) -> bool:
 ## Segundos desde el golpe en los que ya recupero su tamaño normal. Mayor que in_time.
 @export var stun_squash_out_time := 0.09
 ## Energia de emision del material durante stun. Sin bloom, solo enciende la superficie.
-@export var stun_emission_energy := 1.8
+@export var stun_emission_energy := 1.0
 ## Energia de la luz amarilla durante stun.
 @export var stun_light_energy := 1.6
 ## Alcance de la luz amarilla durante stun, en metros.
@@ -214,6 +221,8 @@ var _ragdoll_until := -999.0
 var _world_switch: WorldSwitchTrigger  # null = enemigo normal; presente = voltea el mundo al morir
 var _death_flash_tween: Tween
 var _chip_tween: Tween
+var _hit_flash_tween: Tween
+var _hit_flash_active := false
 var _announced_color := Color.WHITE  # ultimo color de mundo que mostro; lo hereda el fogonazo
 # Los materiales de la escena son SubResources: Godot los comparte entre instancias, asi que
 # pintarlos directo tine a TODOS los enemigos. Cada instancia se queda con su copia propia.
@@ -319,7 +328,7 @@ func _world_switch_color() -> Color:
 ## El latido: la emision del cuerpo sube y baja sola mientras el enemigo esta vivo y entero.
 ## Se corta durante el stun (ahi manda el amarillo) y al morir (ahi manda el fogonazo).
 func _process(_delta: float) -> void:
-	if not is_world_switch() or _dead or not _is_active or is_stunned():
+	if not is_world_switch() or _dead or not _is_active or is_stunned() or _is_hit_flashing():
 		return
 	var wave := 0.5 + 0.5 * sin(World.now() * world_switch_pulse_speed * TAU)
 	var energy := lerpf(world_switch_pulse_min_energy, world_switch_pulse_max_energy, wave)
@@ -464,6 +473,7 @@ func take_hit_from_enemy(hits: float = 1.0, hit_direction: Vector3 = Vector3.ZER
 		cancel_vertical_control()
 	_remember_hit_direction(attacker, hit_direction)
 	_play_hit_sparks()
+	_play_hit_flash()
 	var died := health.take_damage(hits)
 	if not died:
 		if is_armored():
@@ -805,6 +815,7 @@ func apply_spike_hit(damage: float, push_direction: Vector3, stun: StunSettings,
 	if push_direction.length_squared() > 0.0001:
 		_last_hit_direction = push_direction.normalized()
 	_play_hit_sparks()
+	_play_hit_flash()
 	var died := health.take_damage(damage)
 	if died:
 		return true
@@ -853,6 +864,7 @@ func on_hurtbox_hit(from: Node, damage: float, hit_direction: Vector3, stun: Stu
 		return
 	_remember_hit_direction(from, hit_direction)
 	_play_hit_sparks()
+	_play_hit_flash()
 	if hostility == Hostility.PASSIVE:
 		_on_passive_attacked(from)
 	elif from is EnemyBase:
@@ -1258,6 +1270,26 @@ func _play_hit_sparks() -> void:
 	hit_sparks.restart()
 	hit_sparks.emitting = true
 
+## El rojo es un estado visual temporal que tambien consulta `_refresh_visual_state`, asi que el
+## refresh amarillo/cian del stun no lo puede tapar en el mismo frame.
+func _play_hit_flash() -> void:
+	if _dead or not _is_active or hit_flash_time <= 0.0:
+		return
+	_hit_flash_active = true
+	if _hit_flash_tween != null and _hit_flash_tween.is_valid():
+		_hit_flash_tween.kill()
+	_hit_flash_tween = create_tween()
+	_hit_flash_tween.tween_interval(hit_flash_time)
+	_hit_flash_tween.tween_callback(_end_hit_flash)
+	_refresh_visual_state()
+
+func _is_hit_flashing() -> bool:
+	return _hit_flash_active and not _dead and _is_active
+
+func _end_hit_flash() -> void:
+	_hit_flash_active = false
+	_refresh_visual_state()
+
 func _apply_stun_knockback() -> void:
 	var direction := Vector3(_last_hit_direction.x, 0.0, _last_hit_direction.z)
 	if direction.length_squared() < 0.0001:
@@ -1385,6 +1417,7 @@ func _die() -> void:
 
 func _refresh_visual_state() -> void:
 	var color := normal_color
+	var hit_flashing := _is_hit_flashing()
 	if is_world_switch():
 		# El enemigo de world switch no usa el rojo comun: anuncia el mundo al que manda.
 		_announced_color = _world_switch_color()
@@ -1393,6 +1426,8 @@ func _refresh_visual_state() -> void:
 		color = Color(0.2, 0.2, 0.2, 1.0)
 	elif not _is_active:
 		color = inactive_color
+	elif hit_flashing:
+		color = hit_flash_color
 	elif is_armored():
 		color = Color(0.6, 0.2, 0.9, 1.0)
 	elif is_stunned():
@@ -1418,8 +1453,11 @@ func _refresh_visual_state() -> void:
 			var mesh_instance := mesh as MeshInstance3D
 			var material := _own_material_for(mesh_instance)
 			material.albedo_color = color
-			material.emission_enabled = stunned or pulsing
-			if stunned:
+			material.emission_enabled = stunned or pulsing or hit_flashing
+			if hit_flashing:
+				material.emission = hit_flash_color
+				material.emission_energy_multiplier = hit_flash_energy
+			elif stunned:
 				material.emission = color
 				# Vulnerable por parry = celeste brilloso: mas emision que el stun amarillo comun.
 				material.emission_energy_multiplier = parry_tuning.cyan_emission_energy \

@@ -115,7 +115,7 @@ El stun se gana por **poise** (stagger acumulado), no golpe a golpe. La fuente d
 - Entrada normal: `receive_stun` / `try_apply_stun` (comen poise y stunean solo si quiebran). `apply_stun` queda como aplicacion directa, ignorando el poise (ej. parry).
 - La armadura no da inmunidad: **suma reserva** (`armor_poise_bonus`), y la pierde al romperse.
 - Cada quiebre degrada la reserva del enemigo un escalon (`poise_break_levels`); el player **no degrada**. Sin golpes por 20 s, la reserva vuelve al 100%.
-- Tres colores de impacto: **blanco** = poise absorbido (no quebro), **amarillo** = stuneado, **rojo** = hazard.
+- Cuatro colores de impacto: **rojo** = golpe conectado (fogonazo breve), **blanco** = poise absorbido (no quebro), **amarillo** = stuneado y **celeste** = vulnerable por parry.
 - El player puede ser stunned: `PlayerStun` mantiene duracion/modo y emite `stunned_started` / `stunned_ended`. Durante el stun se bloquea input y se cancelan locomotion, wall slide, launcher, dash y el buffer de combate (`PlayerCombat.cancel_input`). Mientras dura, su mesh emite amarillo (`stun_color` / `stun_emission_energy` en `PlayerTuning`).
 - Modos del player (`PlayerStun.Mode`): `STILL` (quieto, sin input) y `PUSH` (sin input + empuje horizontal + velocidad vertical; para pinchos, rebotes y golpes que desplazan).
 - Tuning en `PlayerTuning` grupo Stun: `default_stun_duration`, `stun_gravity_scale`, `stun_bump_decay`, mas el subgrupo Poise (`poise_max`, `armor_poise_bonus`, `poise_decay_per_second`, `poise_break_levels`, `poise_recovery_time`) y el fogonazo blanco (`poise_chip_color` / `poise_chip_emission_energy` / `poise_chip_time`).

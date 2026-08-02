@@ -261,10 +261,11 @@ si `dash.is_invulnerable()`, sin tocar poise. Tuning: `PlayerTuning.dodge_iframe
 
 ## Lenguaje de color del impacto
 
-Tres colores, tres cosas distintas. Se leen sin HUD:
+Cuatro colores, cuatro cosas distintas. Se leen sin HUD:
 
 | Color | Que significa | Donde vive |
 |---|---|---|
+| **Rojo (fogonazo)** | Todo golpe que conecta: acuse breve de dano. Tiene prioridad visual incluso si el mismo golpe entra a stun; al vencer vuelve al amarillo/celeste/normal que corresponda. | `hit_flash_color` / `hit_flash_energy` / `hit_flash_time` (`EnemyBase`). |
 | **Blanco** | El golpe **comio poise pero no quebro**: "te di, aguanto". Solo emision, un destello — el albedo no se toca, asi que no cambia el color del cuerpo. | `poise_chip_color` / `poise_chip_energy` / `poise_chip_time` (`EnemyBase`); mismos knobs en `PlayerTuning`. *(2026-07-13)* |
 | **Amarillo** | **Stuneado**: la reserva se quebro. Pinta albedo + emision + `StunLight`. | `_stun_feedback_color` (`EnemyBase`), `stun_color` (`PlayerTuning`). |
 | **Rojo** | **Hazard** (`SpikeWall`): stun + daño + push. El rojo distingue el peligro del entorno del impacto de combate. | `hazard_stun_color` (`SpikeWall`). *(2026-07-12)* |

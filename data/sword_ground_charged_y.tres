@@ -1,0 +1,58 @@
+[gd_resource type="Resource" script_class="AttackSequence" format=3 uid="uid://c0if3ppeo1aj2"]
+
+[ext_resource type="Script" uid="uid://b0xd72invappo" path="res://data/attack_clip.gd" id="1_clip"]
+[ext_resource type="Script" uid="uid://b1755lpansqbo" path="res://data/attack_step.gd" id="2_step"]
+[ext_resource type="Script" uid="uid://b1oxel8llcohe" path="res://data/attack_sequence.gd" id="3_sequence"]
+[ext_resource type="Script" uid="uid://dsps3sxfd8wmx" path="res://data/mover_settings.gd" id="4_mover"]
+[ext_resource type="Script" uid="uid://df6a6rp7vamdn" path="res://data/attack_movement_profile.gd" id="5_movement"]
+
+[sub_resource type="Resource" id="Resource_clip_launcher"]
+script = ExtResource("1_clip")
+clip = &"Sword_Launcher"
+start_time = 0.3
+end_time = 0.8
+speed_bonus = 50.0
+hitbox_open = 0.125
+hitbox_close = 0.575
+
+[sub_resource type="Resource" id="Resource_enemy_mover"]
+script = ExtResource("4_mover")
+distance = 5.0
+speed = 33.0
+stop_on = 3
+float_duration = 0.5
+
+[sub_resource type="Resource" id="Resource_player_mover"]
+script = ExtResource("4_mover")
+distance = 5.0
+speed = 20.0
+acceleration = 10.0
+stop_on = 3
+float_duration = 0.5
+float_fall_scale = 0.1
+
+[sub_resource type="Resource" id="Resource_launcher_movement"]
+script = ExtResource("5_movement")
+player_travel = SubResource("Resource_player_mover")
+enemy_travel = SubResource("Resource_enemy_mover")
+enemy_travel_at = 0
+rt_travel_speed_bonus = 50.0
+rt_travel_acceleration_bonus = 50.0
+rt_animation_speed_bonus = 50.0
+rt_player_hang_bonus = 50.0
+rt_enemy_hang_bonus = 50.0
+
+[sub_resource type="Resource" id="Resource_launcher_step"]
+script = ExtResource("2_step")
+clip = SubResource("Resource_clip_launcher")
+uses_vertical_hitbox = true
+movement = SubResource("Resource_launcher_movement")
+repeat_with_meter = 2
+advances = false
+choreography = &"charged_y_ground_launcher"
+
+[resource]
+script = ExtResource("3_sequence")
+steps = Array[ExtResource("2_step")]([SubResource("Resource_launcher_step")])
+step_time = 0.4
+auto_chain = true

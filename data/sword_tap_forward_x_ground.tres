@@ -3,6 +3,7 @@
 [ext_resource type="Script" uid="uid://b0xd72invappo" path="res://data/attack_clip.gd" id="1_clip"]
 [ext_resource type="Script" uid="uid://b1755lpansqbo" path="res://data/attack_step.gd" id="2_step"]
 [ext_resource type="Script" uid="uid://b1oxel8llcohe" path="res://data/attack_sequence.gd" id="3_sequence"]
+[ext_resource type="Script" uid="uid://dsps3sxfd8wmx" path="res://data/mover_settings.gd" id="4_1iorj"]
 [ext_resource type="Script" uid="uid://df6a6rp7vamdn" path="res://data/attack_movement_profile.gd" id="4_foryh"]
 
 [sub_resource type="Resource" id="Resource_clip_spin"]
@@ -11,8 +12,16 @@ clip = &"Sword_Regular_C"
 start_time = 0.5
 end_time = 0.9
 
+[sub_resource type="Resource" id="Resource_m478f"]
+script = ExtResource("4_1iorj")
+direction = 2
+distance = 1.0
+stop_on = 5
+metadata/_custom_type_script = "uid://dsps3sxfd8wmx"
+
 [sub_resource type="Resource" id="Resource_uoent"]
 script = ExtResource("4_foryh")
+player_travel = SubResource("Resource_m478f")
 rt_animation_speed_bonus = 100.0
 metadata/_custom_type_script = "uid://df6a6rp7vamdn"
 

@@ -88,16 +88,11 @@ class_name SwordTuning extends WeaponTuning
 @export var charged_dash_behind_offset := 1.2
 
 @export_group("Y cargado suelo — launcher", "ground_charged_y_")
-## Que le hace el gesto a la posicion de los cuerpos (ver data/attack_movement_profile.gd). Sube a
-## los dos: `player_travel` es el ascenso del Player con su Float final incluido (no depende de
-## PlayerTuning) y `enemy_travel` el del Enemy, en BEFORE_DAMAGE para que el Stun del mismo golpe ya
-## lo vea en el aire — que es lo que convierte el golpe en un abre-juggle y no en un empujon.
-@export var ground_charged_y: AttackMovementProfile
+## Gesto completo como AttackSequence de un paso. Declara el recorte de Sword_Launcher, su ventana
+## vertical y el perfil que eleva Player y Enemy; el Enemy sale BEFORE_DAMAGE para abrir el juggle.
+@export var ground_charged_y_sequence: AttackSequence
 
-@export_subgroup("Coreografia", "ground_charged_y_")
-## Segundos que queda activo el hitbox vertical del launcher. Lo comparte el tap atras + Y, que usa
-## el mismo golpe con otro perfil.
-@export var ground_charged_y_hitbox_duration := 0.18
+@export_subgroup("Hitbox", "ground_charged_y_")
 ## Si el launcher cobra daño ademas de elevar. Apagarlo lo deja como puro abre-juggle.
 @export var ground_charged_y_deals_damage := true
 
@@ -224,6 +219,8 @@ class_name SwordTuning extends WeaponTuning
 ## golpe ya lo vea en el aire y el launcher abra juggle. El Player se queda, por eso su slot esta
 ## vacio. Migrarlo pide que el runner de secuencias sepa correr ventanas verticales, que todavia no.
 @export var tap_back_y_ground: AttackMovementProfile
+## Duracion activa de la ventana vertical legacy del tap atras+Y terrestre.
+@export var tap_back_y_ground_hitbox_duration := 0.18
 
 ## AIRE: el plunge entero como datos. Un paso con el recorte del hachazo, y su `movement` hunde a los
 ## dos en WINDOW_END —arrancar la caida durante el swing sacaria al objetivo del alcance del propio

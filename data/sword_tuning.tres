@@ -10,9 +10,10 @@
 [ext_resource type="Resource" uid="uid://dvbrlkg0ej7eb" path="res://data/sword_air_combo.tres" id="8_air_combo"]
 [ext_resource type="Resource" uid="uid://rmsrsx1p06k2" path="res://data/sword_air_charged_y.tres" id="9_air_charged_y"]
 [ext_resource type="Resource" uid="uid://ko6507d5mv0o" path="res://data/sword_air_charged_y_sweet.tres" id="10_air_charged_y_sweet"]
-[ext_resource type="Resource" uid="uid://d0mt6oeaedokk" path="res://data/sword_tap_forward_x_ground.tres" id="11_tap_fwd_x_ground"]
+[ext_resource type="Resource" uid="uid://c0if3ppeo1aj2" path="res://data/sword_ground_charged_y.tres" id="11_ground_charged_y"]
 [ext_resource type="Script" uid="uid://b1oxel8llcohe" path="res://data/attack_sequence.gd" id="12_kqt3o"]
 [ext_resource type="Resource" uid="uid://b6o7mn3n42fdr" path="res://data/sword_tap_forward_x_air.tres" id="12_tap_fwd_x_air"]
+[ext_resource type="Resource" uid="uid://d0mt6oeaedokk" path="res://data/sword_tap_forward_x_ground.tres" id="12_tap_fwd_x_ground"]
 [ext_resource type="Script" uid="uid://b1755lpansqbo" path="res://data/attack_step.gd" id="13_c06jm"]
 [ext_resource type="Resource" uid="uid://cp27vr6bihppl" path="res://data/sword_charged_x_dash.tres" id="13_charged_x_dash"]
 [ext_resource type="Script" uid="uid://b0xd72invappo" path="res://data/attack_clip.gd" id="14_c06jm"]
@@ -35,27 +36,6 @@ poise_damage = 10.0
 grounded = 0.9
 airborne = 0.9
 metadata/_custom_type_script = "uid://w0b3i18w442a"
-
-[sub_resource type="Resource" id="Resource_ground_y_enemy_mover"]
-script = ExtResource("4_mover")
-distance = 5.0
-speed = 33.0
-stop_on = 3
-float_duration = 0.5
-
-[sub_resource type="Resource" id="Resource_ground_y_player_mover"]
-script = ExtResource("4_mover")
-distance = 5.0
-speed = 33.333333
-stop_on = 3
-float_duration = 0.5
-float_fall_scale = 0.1
-
-[sub_resource type="Resource" id="Resource_profile_ground_charged_y"]
-script = ExtResource("6_movement")
-player_travel = SubResource("Resource_ground_y_player_mover")
-enemy_travel = SubResource("Resource_ground_y_enemy_mover")
-enemy_travel_at = 0
 
 [sub_resource type="Resource" id="Resource_swordpush"]
 script = ExtResource("3_push")
@@ -219,10 +199,10 @@ air_hit_enemy_floater = SubResource("Resource_air_hit_enemy_floater")
 charged_x_dash_sequence = ExtResource("13_charged_x_dash")
 charged_dash_damage = 5.0
 charged_dash_stun = SubResource("Resource_810ig")
-ground_charged_y = SubResource("Resource_profile_ground_charged_y")
+ground_charged_y_sequence = ExtResource("11_ground_charged_y")
 aerial_charged_y_sequence = ExtResource("9_air_charged_y")
 aerial_charged_y_sweet_sequence = ExtResource("10_air_charged_y_sweet")
-tap_forward_x_ground_sequence = ExtResource("11_tap_fwd_x_ground")
+tap_forward_x_ground_sequence = ExtResource("12_tap_fwd_x_ground")
 tap_forward_x_air_sequence = ExtResource("12_tap_fwd_x_air")
 tap_back_x_ground_sequence = SubResource("Resource_6vrif")
 tap_back_x_air_sequence = SubResource("Resource_73axi")

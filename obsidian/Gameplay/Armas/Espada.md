@@ -49,8 +49,8 @@ Arma base / equilibrada. Velocidad media. Sirve para mantener el flujo del comba
 
 ## Estado Godot
 
-- **Casi todo el arma son datos.** Los dos combos, los cuatro taps direccionales, el X cargado y la
-  Y cargada aerea corren por el runner de secuencias (`WeaponBase.run_attack_sequence`): cada uno es
+- **Casi todo el arma son datos.** Los dos combos, los cuatro taps direccionales y los cargados X/Y
+  corren por el runner de secuencias (`WeaponBase.run_attack_sequence`): cada uno es
   un `AttackSequence` en su propio `.tres`. En `sword.gd` queda solo lo que no es dato — si el gesto
   cuesta barra, si exige estar en el aire, encarar al objetivo, los locks de facing/movimiento y el
   fallback sin barra. Ver [[Armas]] > Los combos tambien son datos. *(2026-07-30)*
@@ -102,8 +102,8 @@ El hold simetrico del jugador, `air_hit_player_floater`, vive en `WeaponTuning`:
 | `charged_x_dash_sequence` | El X cargado entero: un paso, con el clip que declara cuando abre y cierra su hitbox y el `AttackMovementProfile` del recorrido. El dano no sale de la hoja sino del `ChargedDashHitbox`, y el sweet spot aereo con lock-on reapunta el Mover en 3D al objetivo. |
 | `charged_dash_damage` / `charged_dash_hit_radius` / `charged_dash_stun` | Hitbox propio del dash en la espada, separado del dash de movimiento del dodge. |
 | `charged_dash_behind_offset` | Distancia de salida al otro lado del primer enemigo impactado, medida sobre la trayectoria del dash. |
-| `ground_charged_y_hitbox_duration` / `ground_charged_y_deals_damage` | Ventana activa y dano del launcher terrestre. |
-| `ground_charged_y` | Perfil del launcher Y terrestre: Mover UP de cada cuerpo, cada uno con su Floater de hang en el tope. El del Enemy en `BEFORE_DAMAGE`, para que el Stun del mismo golpe ya lo vea en el aire. |
+| `ground_charged_y_sequence` | La Y cargada terrestre como secuencia de un paso: el `AttackClip` declara el recorte de `Sword_Launcher` y su ventana; el paso usa `VerticalHitbox` y su perfil sube a ambos cuerpos, con Enemy en `BEFORE_DAMAGE`. |
+| `ground_charged_y_deals_damage` | Si el `VerticalHitbox` del launcher terrestre cobra daño además de elevar. |
 | `aerial_charged_y_sequence` | La Y cargada aerea entera como datos: tres pasos con `auto_chain`, y el Mover diagonal del Enemy dentro del perfil del ultimo. Reemplazo del perfil suelto `aerial_charged_y`. |
 | `aerial_charged_y_sweet_sequence` | La misma Y cargada aerea soltada en la ventana de sweet spot: cinco pasos (A B A B + remate). null = el sweet spot no cambia nada y sale la version normal. |
 
@@ -118,7 +118,7 @@ Ventanas en segundos; `0` desactiva el gesto. El contrato de input esta en [[Tap
 | Tap adelante + X | `tap_forward_x_ground_sequence` · `tap_forward_x_air_sequence` | `tap_forward_x_window` · `tap_forward_x_ground_meter_damage_bonus` · `tap_forward_x_air_meter_damage_bonus` |
 | Tap atras + X | `tap_back_x_ground_sequence` · `tap_back_x_air_sequence` | `tap_back_x_window` · `tap_back_x_ground_meter_damage_bonus` · `tap_back_x_air_meter_damage_bonus` |
 | Tap adelante + Y | `tap_forward_y_ground_sequence` · `tap_forward_y_air_sequence`. Van partidas por tramo porque el empujon al enemigo (`enemy_push` del perfil) solo sale en aire; con una sola secuencia habria empujado tambien en piso. | `tap_forward_y_window` |
-| Tap atras + Y | SUELO: `tap_back_y_ground`, perfil suelto y no secuencia — es el unico gesto que sale por una ventana vertical (`run_vertical_window_from_profile`), que el runner todavia no sabe correr. Sube al Enemy en `BEFORE_DAMAGE`; el slot del Player queda vacio. AIRE: `tap_back_y_air_sequence` (plunge: los dos bajan en `WINDOW_END`, con `enemy_travel_aligns_y`). | `tap_back_y_window` |
+| Tap atras + Y | SUELO: `tap_back_y_ground`, perfil suelto y no secuencia; sigue usando la ventana vertical legacy porque el gesto comparte el golpe pero no la secuencia del cargado. Sube al Enemy en `BEFORE_DAMAGE`; el slot del Player queda vacio. AIRE: `tap_back_y_air_sequence` (plunge: los dos bajan en `WINDOW_END`, con `enemy_travel_aligns_y`). | `tap_back_y_window` · `tap_back_y_ground_hitbox_duration` |
 
 > [!info] Las vueltas son repeticiones del paso, no un `int`
 > `tap_forward_x_spins` y familia dejaron de existir: cada vuelta es una repeticion del paso

@@ -232,6 +232,9 @@ func begin_sequence_step_damage_window(step: AttackStep, duration: float,
 		return
 	_begin_charged_dash_window(duration, clip)
 
+func sequence_step_vertical_hitbox(step: AttackStep) -> Hitbox:
+	return _vertical_hitbox if step.uses_vertical_hitbox else null
+
 ## El X cargado viaja con Mover. Normalmente usa el forward del Player; el sweet spot aereo con
 ## lock-on clona el perfil y reemplaza solo la direccion por el vector 3D hacia ese target.
 func sequence_step_movement_profile(step: AttackStep) -> AttackMovementProfile:
@@ -296,23 +299,25 @@ func _hold_y() -> void:
 		# ponytail: sin barra no hay launcher — cae al tap terrestre normal, igual que la Y aérea.
 		_tap_combo()
 		return
-	_run_ground_launcher()
+	_run_ground_launcher(sweet_spot)
 
 ## Launcher cargado: eleva al Player y al Enemy. Los dos Movers salen de su perfil; la ventana los
 ## reparte en su momento (el del Enemy antes del dano, el del Player con el hitbox).
-func _run_ground_launcher() -> void:
-	_begin_launcher()
-	run_vertical_window_from_profile(_vertical_hitbox, _t().ground_charged_y, _routine_id,
-			_t().ground_charged_y_hitbox_duration)
-	_lock_vertical_special_input(_t().ground_charged_y_hitbox_duration)
+##
+## `with_meter` es el modificador comun del secuenciador: en taps significa RT y en un cargado
+## significa haber soltado en sweet spot. Asi el mismo `repeat_with_meter` puede declarar el
+## segundo golpe sin crear otra AttackSequence ni otro flag solo para este launcher.
+func _run_ground_launcher(with_meter := false) -> void:
+	_begin_launcher(false)
+	run_attack_sequence(&"charged_y_ground", _t().ground_charged_y_sequence, with_meter)
 
 ## Tap atras + Y: comparte el golpe con el launcher cargado, pero su perfil deja vacio el slot del
 ## Player, asi que solo sube el Enemy. Es perfil aparte para poder tunearlo sin arrastrar al cargado.
 func _run_enemy_only_launcher() -> void:
 	_begin_launcher()
 	run_vertical_window_from_profile(_vertical_hitbox, _t().tap_back_y_ground, _routine_id,
-			_t().ground_charged_y_hitbox_duration)
-	_lock_vertical_special_input(_t().ground_charged_y_hitbox_duration)
+			_t().tap_back_y_ground_hitbox_duration)
+	_lock_vertical_special_input(_t().tap_back_y_ground_hitbox_duration)
 
 func _lock_vertical_special_input(duration: float) -> void:
 	_vertical_special_input_locked = true
@@ -518,13 +523,15 @@ func _fire_tap_x_meter_projectile(enemy_mover: MoverSettings) -> void:
 			_t().tap_x_meter_projectile_lifetime, tuning.stun)
 
 ## Parte visual y de control comun a ambas variantes del launcher.
-func _begin_launcher() -> void:
+func _begin_launcher(play_visual := true) -> void:
 	_face_locked_target()
 	_player.locomotion.lock_facing(tuning.swing_time)
 	_player.locomotion.lock_movement(tuning.swing_time)
 	_player.bump_velocity = Vector3.ZERO
-	# Tramo 0.2-0.8 de Sword_Launcher (clip propio, WIP en animaciones/).
-	play_visual_clip(ANIM_LAUNCHER, 0.2, 0.8, tuning.swing_time)
+	if play_visual:
+		# El tap atrás+Y terrestre aún usa la ventana vertical legacy; la Y cargada ya trae
+		# este mismo tramo en su AttackSequence.
+		play_visual_clip(ANIM_LAUNCHER, 0.2, 0.8, tuning.swing_time)
 
 ## El launcher no hereda el facing del tap atras: con lock-on siempre barre hacia el objetivo.
 ## Se proyecta al suelo porque look_at no debe inclinar al Player aunque el enemigo este arriba.
@@ -626,6 +633,8 @@ func _on_charged_dash_hit(hurtbox: Hurtbox, died: bool) -> void:
 		_place_behind_target(target)
 	register_weapon_hit(hurtbox, died, false)
 	if _sweet_spot_dash:
+		# El sweet spot de X solo agrega UN launcher al dash. El segundo paso `with_meter`
+		# pertenece al Y cargado soltado en su propia ventana de sweet spot.
 		_run_ground_launcher()
 
 ## Solo el sweet spot aereo puede orientar el dash en los tres ejes hacia el lock-on.

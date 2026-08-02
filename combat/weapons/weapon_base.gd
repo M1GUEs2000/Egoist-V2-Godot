@@ -240,11 +240,12 @@ func try_queue_combo(kind: StringName) -> bool:
 		_combo_queued_time = World.now()
 	return true
 
-## Un ataque en curso bloquea iniciar OTRO ataque. Los taps de un combo no usan este
-## gate directamente: primero llaman `try_queue_combo`, que conserva la ventana de
-## encadene legitima y descarta el tap si llega fuera de ella.
+## Solo un GESTO ya decidido bloquea iniciar otro ataque. Un combo normal sigue
+## aceptando un cargado o un tap direccional que lo reemplace; esos son precisamente
+## sus cancelaciones intencionales. Los taps del combo usan `try_queue_combo` para
+## conservar su ventana de encadene.
 func is_attack_input_locked() -> bool:
-	return _combo_playing
+	return _combo_playing and _combo_auto
 
 ## Cadena de N golpes, UN tap por golpe, con ventana de encadene entre golpes.
 ## begin_step(step, finisher, wait_branch) pone la coreografía del golpe; la ventana de
@@ -485,15 +486,22 @@ func _begin_sequence_step(step: AttackStep, chain_step: int, finisher: bool, dur
 	# `with_meter` viaja hasta acá porque los bonos RT del perfil (distancia, velocidad, hang del
 	# Player y del Enemy) se aplican en el consumidor: sin esto un gesto pagado hace las vueltas de
 	# RT pero cobra el movimiento como si fuera gratis, y un perfil `rt_only` no sale nunca.
-	if run_attack_movement(movement, id, with_meter, true, duration):
-		on_attack_movement_started(id)
-	# Los hooks de cierre (EnemyTravelAt.WINDOW_END, player_travel_at_window_end) se cobran al cerrar
-	# el último paso Y al cerrar cualquier paso que traiga perfil propio. Lo segundo es lo que hace
-	# que "el Mover sale en el tercer golpe" funcione de verdad: si solo los cobrara el finisher, un
-	# paso intermedio con recorrido diferido lo declararía y no pasaría nada. Un paso sin perfil no
-	# cobra nada aunque se lo pidas — _run_window_end_travel no hace nada si no hay nada declarado.
-	begin_sequence_step_damage_window(step, duration, finisher or movement != null, step.clip)
-	ComboTracker.register_hit()
+	var vertical_hitbox := sequence_step_vertical_hitbox(step)
+	if vertical_hitbox != null:
+		# Un launcher sigue siendo un paso de secuencia: su clip decide cuándo abre y cuánto dura,
+		# pero el Mover del Player sale al abrir su hitbox vertical, no al empezar el swing.
+		run_vertical_window_from_profile(vertical_hitbox, movement, id,
+				step.clip.open_seconds(duration), step.clip.open_delay(duration), with_meter)
+	else:
+		if run_attack_movement(movement, id, with_meter, true, duration):
+			on_attack_movement_started(id)
+		# Los hooks de cierre (EnemyTravelAt.WINDOW_END, player_travel_at_window_end) se cobran al cerrar
+		# el último paso Y al cerrar cualquier paso que traiga perfil propio. Lo segundo es lo que hace
+		# que "el Mover sale en el tercer golpe" funcione de verdad: si solo los cobrara el finisher, un
+		# paso intermedio con recorrido diferido lo declararía y no pasaría nada. Un paso sin perfil no
+		# cobra nada aunque se lo pidas — _run_window_end_travel no hace nada si no hay nada declarado.
+		begin_sequence_step_damage_window(step, duration, finisher or movement != null, step.clip)
+		ComboTracker.register_hit()
 	if step.fires_projectile:
 		var launcher: MoverSettings = null
 		if step.movement != null:
@@ -533,6 +541,11 @@ func on_sequence_step(_step: AttackStep, _chain_step: int, _finisher: bool,
 func begin_sequence_step_damage_window(_step: AttackStep, duration: float,
 		runs_profile_hooks: bool, clip: AttackClip) -> void:
 	begin_damage_window(duration, runs_profile_hooks, clip)
+
+## null usa hoja/disco. Un arma con hitbox vertical propio lo devuelve para los pasos que lo
+## declaren; el runner se encarga de abrirlo con el timing del AttackClip.
+func sequence_step_vertical_hitbox(_step: AttackStep) -> Hitbox:
+	return null
 
 ## Permite ajustar el perfil de movimiento de un paso con contexto de runtime sin mutar el .tres.
 ## El caso actual es el sweet spot aereo de Espada: el Mover conserva sus numeros, pero apunta en

@@ -96,6 +96,11 @@ func _check_step(path: String, step: Variant, known: PackedStringArray) -> void:
 	_check_step_stun(path, step)
 
 	var movement: Variant = step.get("movement")
+	if step.get("uses_vertical_hitbox"):
+		if clip == null:
+			_fail("%s: paso vertical sin AttackClip" % path)
+		if movement == null:
+			_fail("%s: paso vertical sin AttackMovementProfile" % path)
 	if movement == null:
 		return
 	var push: Variant = movement.get("enemy_push")
